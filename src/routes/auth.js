@@ -162,7 +162,7 @@ router.post('/otp/send', h(async (req, res) => {
 
 router.post('/otp/verify-reset', h(async (req, res) => {
   const ident = str(req.body.identifier || req.body.mobile || req.body.email, 150).trim();
-  const otp = str(req.body.otp, 10).trim();
+  const otp = str(req.body.otp || req.body.otp_code, 10).trim();
   const newPassword = String(req.body.new_password || req.body.password || '').trim();
 
   if (!ident || !otp || !newPassword) throw new HttpError(400, 'Identifier, OTP code, and new password are required');
