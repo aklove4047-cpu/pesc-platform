@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Purvanchal Education &amp; Skill Council (PESC) – Autonomous Skill &amp; Vocational Council</title>
-  <meta name="description" content="Purvanchal Education & Skill Council provides nationwide franchise affiliation, skill certification, verifiable online marksheets, certificates, and student portals.">
+  <title>Purvanchal Education &amp; Skill Council (PESC) – Autonomous Vocational Education &amp; Franchise Council</title>
+  <meta name="description" content="Purvanchal Education & Skill Council provides nationwide computer centre franchise affiliation, skill certifications, online verifiable marksheets, student portals, and regional monitoring.">
   <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
@@ -19,30 +19,40 @@
       </div>
     </a>
     <div class="nav-links">
-      <a href="#about">About Council</a>
+      <a href="#about">About</a>
       <a href="#courses">Courses</a>
       <a href="#verify" style="color:#fde047; font-weight:700;">🔍 Verify Credentials</a>
+      <a href="#packages">Affiliation Packages</a>
       <a href="#portals">Portals</a>
-      <a href="/student">🎓 Student Panel</a>
-      <a href="/coordinator">👔 Coordinator</a>
-      <a href="/login">Centre Login</a>
+      <a href="#downloads">Downloads</a>
+      <a href="/login" style="font-weight:600;">Sign In</a>
       <a href="#apply" class="btn-cta">Apply for Franchise</a>
     </div>
   </nav>
+
+  <!-- News & Announcements Ticker -->
+  <div class="news-ticker">
+    <div class="ticker-title">📢 Latest Updates</div>
+    <div style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+      <span>• Session 2026-27 Affiliation window open with 50% concession on registration</span> &nbsp; | &nbsp;
+      <span>• Mandatory Online QR Code Verification implemented on all certificates</span> &nbsp; | &nbsp;
+      <span>• Autonomous Skill &amp; Vocational Certifications recognized across India</span>
+    </div>
+  </div>
 
   <main>
     <!-- Hero Banner -->
     <section class="hero">
       <div class="hero-pill">
-        🏛️ AUTONOMOUS SKILL &amp; VOCATIONAL EDUCATION COUNCIL · REGD. UNDER GOVT. FRAMEWORK
+        🏛️ AUTONOMOUS VOCATIONAL EDUCATION &amp; SKILL COUNCIL · REGD. UNDER INDIAN TRUST ACT · ISO 9001:2015 CERTIFIED
       </div>
       <h1>Purvanchal Education &amp; Skill Council</h1>
       <p>
-        Pioneering vocational and technical education across India. Empowering affiliated computer and skill training centres with autonomous digital portals, tamper-proof marksheets, verifiable certificates, and digital student identity credentials.
+        Pioneering vocational, computer, and technical education across India. Empowering affiliated computer academies and coaching institutes with automated franchise subdomains, audited digital marksheets, tamper-proof QR certificates, and digital student identity credentials.
       </p>
       <div class="hero-cta">
         <a href="#verify" class="btn gold" style="font-size:1.05rem; padding:13px 26px;">🔍 Verify Certificate / Marksheet</a>
-        <a href="/student" class="btn alt" style="font-size:1.05rem; padding:13px 24px;">🎓 Student Portal Access</a>
+        <a href="#portals" class="btn alt" style="font-size:1.05rem; padding:13px 24px;">🚀 Access Digital Portals</a>
         <a href="#apply" class="btn" style="font-size:1.05rem; padding:13px 24px;">🏢 Apply for Franchise Centre</a>
       </div>
 
@@ -58,7 +68,7 @@
         </div>
         <div class="stat-box">
           <b>100+</b>
-          <span>Skill &amp; Vocational Courses</span>
+          <span>Skill &amp; Vocational Programs</span>
         </div>
         <div class="stat-box">
           <b>100%</b>
@@ -71,10 +81,10 @@
     <section class="card" id="verify" style="border: 2px solid #d4af37; box-shadow: 0 15px 35px rgba(212, 175, 55, 0.2);">
       <div style="text-align:center; margin-bottom:20px;">
         <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
-          🛡️ NATIONAL DIGITAL VERIFICATION PORTAL
+          🛡️ NATIONAL DIGITAL CREDENTIAL VERIFICATION PORTAL
         </span>
         <h2 style="font-size:1.8rem; margin:10px 0 4px;">Instant Verification of Council Documents</h2>
-        <p class="muted">Check the authenticity of Certificates and Statement of Marks issued by Purvanchal Education &amp; Skill Council</p>
+        <p class="muted">Employers, institutions, and candidates can verify the authenticity of official PESC Certificates and Statements of Marks</p>
       </div>
 
       <div class="tabs" style="justify-content:center; max-width:440px; margin:0 auto 20px;">
@@ -86,8 +96,13 @@
       <div id="certTabContent">
         <form id="vf" class="row" style="max-width:650px; margin:0 auto;">
           <div style="flex:1;">
-            <label for="cn">Certificate Number or Token</label>
+            <label for="cn">Certificate Number or QR Token</label>
             <input id="cn" name="cert_no" placeholder="e.g. PESC/2026/000001" required>
+            <div style="margin-top:8px; font-size:0.84rem; color:#64748b;">
+              ✨ <b>Sample Demo:</b>
+              <button type="button" class="chip-btn" id="demoCertBtn">PESC/2026/000001</button>
+              <span class="muted">(Click to auto-verify)</span>
+            </div>
           </div>
           <div style="align-self:end;">
             <button class="btn gold" style="width:100%;">Verify Certificate</button>
@@ -101,7 +116,13 @@
         <form id="mf" class="row" style="max-width:650px; margin:0 auto;">
           <div style="flex:1;">
             <label for="mn">Marksheet No / Candidate Roll No / Student Code</label>
-            <input id="mn" name="mrk_query" placeholder="e.g. PESC/MRK/2026/000001 or Roll No" required>
+            <input id="mn" name="mrk_query" placeholder="e.g. 2026101 or PESC/MRK/2026/000001" required>
+            <div style="margin-top:8px; font-size:0.84rem; color:#64748b;">
+              ✨ <b>Sample Demos:</b>
+              <button type="button" class="chip-btn" id="demoMrkBtn">2026101</button>
+              <button type="button" class="chip-btn" id="demoMrkNoBtn">PESC/MRK/2026/000001</button>
+              <span class="muted">(Click to auto-verify)</span>
+            </div>
           </div>
           <div style="align-self:end;">
             <button class="btn gold" style="width:100%;">Verify Marksheet</button>
@@ -111,11 +132,11 @@
       </div>
     </section>
 
-    <!-- Council Portals Gateway Section -->
+    <!-- Council Portals Gateway Section with 1-Click Access -->
     <section class="card" id="portals">
       <div style="text-align:center; margin-bottom:24px;">
         <h2>Council Digital Portals Gateway</h2>
-        <p class="muted">Secure online workspaces tailored for students, franchise centres, regional coordinators, and head office</p>
+        <p class="muted">Dedicated, role-based cloud workspaces for candidates, centre directors, state coordinators, and central leadership</p>
       </div>
 
       <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
@@ -124,9 +145,14 @@
           <div>
             <div style="font-size:2.2rem; margin-bottom:8px;">🎓</div>
             <h3>Student Panel</h3>
-            <p class="muted" style="margin-bottom:14px;">Enrolled students can view candidate profile, check examination results, download official Marksheet PDF, download Certificate PDF, and print Digital ID cards.</p>
+            <p class="muted" style="margin-bottom:12px;">Enrolled students can view candidate profiles, verify results, print digital ID cards, and download verifiable certificate PDFs.</p>
+            <div class="demo-cred-box">
+              🔑 <b>Demo Login:</b><br>
+              ID: <code>2026101</code><br>
+              Password: <code>student123</code>
+            </div>
           </div>
-          <a href="/student" class="btn" style="width:100%; text-align:center;">Open Student Panel</a>
+          <a href="/student" class="btn" style="width:100%; text-align:center; margin-top:14px;">Open Student Panel</a>
         </div>
 
         <!-- Centre Portal -->
@@ -134,9 +160,14 @@
           <div>
             <div style="font-size:2.2rem; margin-bottom:8px;">🏢</div>
             <h3>Franchise Centre Portal</h3>
-            <p class="muted" style="margin-bottom:14px;">For centre directors and staff. Manage admissions, assign courses, enter subject examination marks, apply for certificates, and recharge centre wallet.</p>
+            <p class="muted" style="margin-bottom:12px;">For affiliated institute directors. Process admissions, assign syllabi, enter examination marks, order certificates, and manage council wallet.</p>
+            <div class="demo-cred-box">
+              🔑 <b>Demo Login:</b><br>
+              ID: <code>owner@navya.test</code><br>
+              Password: <code>owner123</code>
+            </div>
           </div>
-          <a href="/portal" class="btn alt" style="width:100%; text-align:center;">Access Centre Portal</a>
+          <a href="/portal" class="btn alt" style="width:100%; text-align:center; margin-top:14px;">Access Centre Portal</a>
         </div>
 
         <!-- Coordinator Portal -->
@@ -144,9 +175,14 @@
           <div>
             <div style="font-size:2.2rem; margin-bottom:8px;">👔</div>
             <h3>Coordinator Panel</h3>
-            <p class="muted" style="margin-bottom:14px;">Regional state &amp; territory officers. Supervise affiliated centres, review pending marksheets, approve certificate applications, and export territory CSV reports.</p>
+            <p class="muted" style="margin-bottom:12px;">Regional state &amp; territory officers. Monitor affiliated centres, inspect marksheets, approve certificate issues, and export territory CSV reports.</p>
+            <div class="demo-cred-box">
+              🔑 <b>Demo Login:</b><br>
+              ID: <code>coord@pescouncil.in</code><br>
+              Password: <code>coord123</code>
+            </div>
           </div>
-          <a href="/coordinator" class="btn gold" style="width:100%; text-align:center;">Open Coordinator Panel</a>
+          <a href="/coordinator" class="btn gold" style="width:100%; text-align:center; margin-top:14px;">Open Coordinator Panel</a>
         </div>
 
         <!-- Head Office Admin -->
@@ -154,9 +190,14 @@
           <div>
             <div style="font-size:2.2rem; margin-bottom:8px;">🏛️</div>
             <h3>Head Office Admin</h3>
-            <p class="muted" style="margin-bottom:14px;">Central council executive portal. Approve &amp; provision franchise applications, manage courses, oversee national finances, and download comprehensive Excel/CSV reports.</p>
+            <p class="muted" style="margin-bottom:12px;">Executive council administration. Review and approve franchise applications, configure courses, manage national finances, and view audit trails.</p>
+            <div class="demo-cred-box">
+              🔑 <b>Admin Login:</b><br>
+              ID: <code>admin@pescouncil.in</code><br>
+              Password: <code>admin</code>
+            </div>
           </div>
-          <a href="/admin" class="btn alt" style="width:100%; text-align:center;">Admin Portal</a>
+          <a href="/admin" class="btn alt" style="width:100%; text-align:center; margin-top:14px;">Admin Portal</a>
         </div>
       </div>
     </section>
@@ -166,7 +207,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
         <div>
           <h2>Affiliated Skill &amp; Vocational Programs</h2>
-          <p class="muted">Industry-oriented curricula designed for employment and entrepreneurship</p>
+          <p class="muted">Industry-recognized curricula designed for employment, government examinations, and self-entrepreneurship</p>
         </div>
         <a href="#apply" class="btn sm gold">Affiliate Courses at Your Centre</a>
       </div>
@@ -175,19 +216,125 @@
       </div>
     </section>
 
+    <!-- Franchise Affiliation Packages -->
+    <section class="card" id="packages">
+      <div style="text-align:center; margin-bottom:26px;">
+        <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
+          AFFILIATION TIERS
+        </span>
+        <h2>Centre Affiliation Plans &amp; Benefits</h2>
+        <p class="muted">Choose the ideal affiliation plan for your computer academy or vocational skill centre</p>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+        <!-- Silver Plan -->
+        <div class="pkg-card">
+          <h3 style="color:var(--navy); font-size:1.3rem;">Silver Affiliation</h3>
+          <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">Ideal for rural coaching centres &amp; basic computer labs</p>
+          <div style="font-size:2rem; font-weight:800; color:var(--navy); margin-bottom:16px;">₹11,000 <span style="font-size:0.9rem; font-weight:400; color:#64748b;">/ Lifetime</span></div>
+          <ul style="list-style:none; line-height:2; font-size:0.9rem; margin-bottom:24px; color:#334155;">
+            <li>✓ Official Centre Affiliation Certificate</li>
+            <li>✓ Authorization for 5 Basic IT Courses</li>
+            <li>✓ Centre Management Portal Access</li>
+            <li>✓ Online QR Code Marksheets</li>
+            <li>✓ Student Digital ID Card Maker</li>
+            <li>✗ Dedicated Subdomain Website</li>
+            <li>✗ District Exclusivity</li>
+          </ul>
+          <a href="#apply" class="btn alt" style="text-align:center; margin-top:auto;">Apply for Silver</a>
+        </div>
+
+        <!-- Gold Plan (Popular) -->
+        <div class="pkg-card popular">
+          <div class="pkg-badge">Most Popular</div>
+          <h3 style="color:var(--navy); font-size:1.3rem;">Gold Affiliation</h3>
+          <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">For established academies &amp; vocational institutes</p>
+          <div style="font-size:2rem; font-weight:800; color:var(--navy); margin-bottom:16px;">₹21,000 <span style="font-size:0.9rem; font-weight:400; color:#64748b;">/ Lifetime</span></div>
+          <ul style="list-style:none; line-height:2; font-size:0.9rem; margin-bottom:24px; color:#334155;">
+            <li>✓ Framed Council Affiliation Certificate + Hologram</li>
+            <li>✓ Authorization for All 100+ Skill Courses</li>
+            <li>✓ Dedicated Subdomain (<b>yourcentre.pescouncil.in</b>)</li>
+            <li>✓ Free Examination &amp; Marksheet Software</li>
+            <li>✓ Student Admission Kits &amp; Syllabus Books</li>
+            <li>✓ ₹5,000 Pre-loaded Council Wallet Credit</li>
+            <li>✓ Regional Coordinator Support Desk</li>
+          </ul>
+          <a href="#apply" class="btn gold" style="text-align:center; margin-top:auto;">Apply for Gold</a>
+        </div>
+
+        <!-- Diamond Plan -->
+        <div class="pkg-card">
+          <h3 style="color:var(--navy); font-size:1.3rem;">District Master Franchise</h3>
+          <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">Exclusive territory rights for an entire district</p>
+          <div style="font-size:2rem; font-weight:800; color:var(--navy); margin-bottom:16px;">₹51,000 <span style="font-size:0.9rem; font-weight:400; color:#64748b;">/ Lifetime</span></div>
+          <ul style="list-style:none; line-height:2; font-size:0.9rem; margin-bottom:24px; color:#334155;">
+            <li>✓ 100% Exclusive District Territory Authorization</li>
+            <li>✓ Right to Affiliate New Sub-Centres in District</li>
+            <li>✓ Revenue Share on All Student Certifications</li>
+            <li>✓ Dedicated Territory Coordinator Dashboard</li>
+            <li>✓ Annual Council Convention Invitation</li>
+            <li>✓ Priority Examination &amp; Fast-Track Delivery</li>
+          </ul>
+          <a href="#apply" class="btn alt" style="text-align:center; margin-top:auto;">Apply for Master Franchise</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Document Downloads Center -->
+    <section class="card" id="downloads">
+      <div style="margin-bottom:20px;">
+        <h2>Council Downloads Center</h2>
+        <p class="muted">Official prospectuses, affiliation applications, syllabus guidelines, and student enrolment templates</p>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+        <div class="download-item">
+          <div>
+            <b>📘 Franchise Affiliation Prospectus 2026</b>
+            <p class="muted" style="font-size:0.8rem; margin-top:4px;">Rules, norms, fees, and infrastructure standards for new centres</p>
+          </div>
+          <a href="#apply" class="btn sm">View &amp; Apply</a>
+        </div>
+
+        <div class="download-item">
+          <div>
+            <b>📋 Student Offline Admission Form</b>
+            <p class="muted" style="font-size:0.8rem; margin-top:4px;">Printable physical admission form for walk-in candidates</p>
+          </div>
+          <a href="#portals" class="btn sm alt">Admission Kit</a>
+        </div>
+
+        <div class="download-item">
+          <div>
+            <b>📚 Complete Course Syllabus Catalog</b>
+            <p class="muted" style="font-size:0.8rem; margin-top:4px;">Module-wise syllabus for DCA, ADCA, Tally, CCC, Hardware, Yoga</p>
+          </div>
+          <a href="#courses" class="btn sm gold">Browse Syllabus</a>
+        </div>
+
+        <div class="download-item">
+          <div>
+            <b>📜 Sample Marksheet &amp; Certificate Format</b>
+            <p class="muted" style="font-size:0.8rem; margin-top:4px;">Specimen showing tamper-proof hologram &amp; QR code verification</p>
+          </div>
+          <a href="#verify" class="btn sm">Test Demo</a>
+        </div>
+      </div>
+    </section>
+
     <!-- Franchise Partnership & Benefits -->
     <section class="card" id="franchise">
       <div style="text-align:center; margin-bottom:24px;">
         <span class="hero-pill" style="color:var(--navy); border-color:#93c5fd; background:#dbeafe;">
-          PARTNERSHIP OPPORTUNITY
+          PARTNERSHIP HIGHLIGHTS
         </span>
-        <h2>Why Partner with PESC Council?</h2>
-        <p class="muted">Join India's fastest-growing autonomous skill education council and elevate your computer &amp; vocational institute</p>
+        <h2>Why Computer Academies Choose PESC Council</h2>
+        <p class="muted">Autonomous skill education powered by modern cloud technology, transparency, and nationwide recognition</p>
       </div>
 
       <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
         <div class="stat" style="background:#fff;">
-          <h3 style="color:var(--navy); margin-bottom:6px;">🌐 Dedicated Subdomain Website</h3>
+          <h3 style="color:var(--navy); margin-bottom:6px;">🌐 Automated Subdomain Website</h3>
           <p class="muted">Every approved franchise centre gets an automated official web address e.g. <b>yourcentre.pescouncil.in</b> with local branding.</p>
         </div>
         <div class="stat" style="background:#fff;">
@@ -258,20 +405,20 @@
       <div id="sr"></div>
     </section>
 
-    <!-- About Council Section -->
+    <!-- About Council & Legal Accreditation Section -->
     <section class="card" id="about">
       <h2>About Purvanchal Education &amp; Skill Council (PESC)</h2>
       <p style="margin-bottom:14px; font-size:0.95rem; line-height:1.7;">
-        <b>Purvanchal Education &amp; Skill Council (PESC)</b> is an autonomous council established with the visionary goal of fostering vocational, technical, computer, and skill-based educational excellence across rural and urban territories of India.
+        <b>Purvanchal Education &amp; Skill Council (PESC)</b> is an autonomous national educational organization established with the visionary mission of fostering vocational, technical, computer, and skill-based educational excellence across India.
       </p>
       <div class="row" style="margin-top:16px;">
         <div style="background:#f8fafc; padding:16px; border-radius:10px; border-left:4px solid var(--navy);">
-          <h4>Council Objectives</h4>
-          <p class="muted" style="margin-top:6px; font-size:0.88rem;">To standardize vocational training, bridge industry skill gaps, provide standardized syllabi, and deliver universally verifiable certifications for students.</p>
+          <h4>Autonomous Statutory Framework</h4>
+          <p class="muted" style="margin-top:6px; font-size:0.88rem;">Registered under the Indian Public Trust Act 1882, working in adherence to the National Education Policy guidelines for skill-based vocational literacy.</p>
         </div>
         <div style="background:#f8fafc; padding:16px; border-radius:10px; border-left:4px solid #d4af37;">
-          <h4>Quality Standards &amp; Transparency</h4>
-          <p class="muted" style="margin-top:6px; font-size:0.88rem;">100% digital governance with real-time QR code verification, audited marksheet evaluations, automated student portals, and regional coordinator monitoring.</p>
+          <h4>ISO 9001:2015 Certified Quality Governance</h4>
+          <p class="muted" style="margin-top:6px; font-size:0.88rem;">100% digital governance with real-time QR code verification, audited marksheet evaluations, automated student portals, and regional coordinator oversight.</p>
         </div>
       </div>
     </section>
@@ -295,7 +442,7 @@
           <span style="color:#d4af37;">Purvanchal Education &amp; Skill Council</span>
         </div>
         <p style="font-size:0.85rem; line-height:1.6; color:#94a3b8;">
-          An autonomous organization dedicated to vocational training, computer education, and nationwide skill development initiatives.
+          An autonomous organization dedicated to vocational training, computer education, and nationwide skill development initiatives. Registered under Indian Trust Act 1882 · ISO 9001:2015 Certified.
         </p>
       </div>
 
@@ -316,6 +463,7 @@
           <li><a href="#verify">🔍 Verify Certificate</a></li>
           <li><a href="#verify">📊 Verify Marksheet</a></li>
           <li><a href="#courses">Affiliated Programs</a></li>
+          <li><a href="#packages">Affiliation Packages</a></li>
           <li><a href="#apply">Apply for Franchise</a></li>
           <li><a href="#status">Check Application Status</a></li>
         </ul>

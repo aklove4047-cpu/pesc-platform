@@ -1,16 +1,139 @@
 const argon2 = require('./hash');
 const crypto = require('crypto');
 const db = require('./db');
+
 (async () => {
-  const email = (process.env.SEED_ADMIN_EMAIL || '').toLowerCase();
-  if (!email) { console.error('Set SEED_ADMIN_EMAIL (and SEED_ADMIN_PASSWORD) in .env'); process.exit(1); }
-  let pw = process.env.SEED_ADMIN_PASSWORD; let generated = false;
-  if (!pw) { pw = crypto.randomBytes(12).toString('base64url'); generated = true; }
-  if (pw.length < 10) { console.error('SEED_ADMIN_PASSWORD must be 10+ chars'); process.exit(1); }
-  if (!db.prepare('SELECT 1 FROM users WHERE email=?').get(email))
-    db.prepare("INSERT INTO users(email,name,role,password_hash,status,created_at) VALUES(?,?, 'super_admin', ?, 'active', ?)").run(email, 'Super Admin', await argon2.hash(pw), Date.now());
-  else console.log('Admin already exists; password unchanged.');
-  const ins = db.prepare('INSERT OR IGNORE INTO courses(code,name,duration_months,fee_paise) VALUES(?,?,?,?)');
-  [['DCA', 'Diploma in Computer Applications', 12, 600000], ['ADCA', 'Advanced Diploma in Computer Applications', 18, 900000], ['TALLY', 'Tally with GST', 3, 300000]].forEach((c) => ins.run(...c));
-  console.log(`Seeded. Admin: ${email}` + (generated ? `  generated password: ${pw}  (change it)` : ''));
+  console.log('Seeding PESC Council Platform database…');
+
+  // 1. Super Admin
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL || 'admin@pescouncil.in').toLowerCase();
+  const adminPw = process.env.SEED_ADMIN_PASSWORD || 'Admin#12345678';
+  let admin = db.prepare('SELECT id FROM users WHERE email=?').get(adminEmail);
+  if (!admin) {
+    const r = db.prepare("INSERT INTO users(email,name,role,password_hash,status,created_at) VALUES(?,?, 'super_admin', ?, 'active', ?)")
+      .run(adminEmail, 'Super Admin (Head Office)', await argon2.hash(adminPw), Date.now());
+    admin = { id: r.lastInsertRowid };
+    console.log(`Created Super Admin: ${adminEmail}`);
+  }
+
+  // 2. Comprehensive Course Catalog (Vocational, IT, Technical & Skill Development)
+  const coursesData = [
+    ['DCA', 'Diploma in Computer Applications', 12, 600000, 100, 33],
+    ['ADCA', 'Advanced Diploma in Computer Applications', 18, 900000, 100, 33],
+    ['TALLY', 'Tally Prime with GST & Accounting', 3, 350000, 100, 33],
+    ['CCC', 'Course on Computer Concepts', 3, 250000, 100, 33],
+    ['PGDCA', 'Post Graduate Diploma in Computer Applications', 12, 1200000, 100, 33],
+    ['DTP', 'Desktop Publishing & Graphic Designing', 6, 450000, 100, 33],
+    ['HARDWARE', 'Diploma in Computer Hardware & Networking (CHN)', 6, 550000, 100, 33],
+    ['YOGA', 'Diploma in Yoga & Naturopathy Education', 12, 750000, 100, 33],
+    ['FASHION', 'Diploma in Fashion Designing & Garment Fabrication', 12, 800000, 100, 33],
+  ];
+  const insCourse = db.prepare('INSERT OR IGNORE INTO courses(code,name,duration_months,fee_paise,total_marks,pass_marks,subjects,active) VALUES(?,?,?,?,?,?,\'[]\',1)');
+  coursesData.forEach(c => insCourse.run(...c));
+  const defaultCourse = db.prepare("SELECT id FROM courses WHERE code='DCA'").get() || db.prepare('SELECT id FROM courses LIMIT 1').get();
+
+  // 3. Regional State Coordinator
+  const coordEmail = 'coord@pescouncil.in';
+  let coord = db.prepare('SELECT id FROM users WHERE email=?').get(coordEmail);
+  if (!coord) {
+    const r = db.prepare("INSERT INTO users(email,name,role,password_hash,state,status,created_at) VALUES(?,?,'coordinator',?,'Uttar Pradesh','active',?)")
+      .run(coordEmail, 'Vikram Singh (State Coordinator)', await argon2.hash('Coord#12345678'), Date.now());
+    coord = { id: r.lastInsertRowid };
+    console.log(`Created Coordinator: ${coordEmail}`);
+  }
+
+  // 4. Franchise Centre 1 (Navya Computer Institute, Varanasi)
+  const owner1Email = 'owner@navya.test';
+  let owner1 = db.prepare('SELECT id FROM users WHERE email=?').get(owner1Email);
+  if (!owner1) {
+    const r = db.prepare("INSERT INTO users(email,name,role,password_hash,status,created_at) VALUES(?,?,'centre_owner',?,'active',?)")
+      .run(owner1Email, 'Ravi Verma (Centre Director)', await argon2.hash('OwnerPass#12345'), Date.now());
+    owner1 = { id: r.lastInsertRowid };
+  }
+  let centre1 = db.prepare('SELECT id FROM centres WHERE slug=?').get('navya');
+  if (!centre1) {
+    const r = db.prepare("INSERT INTO centres(centre_code,name,slug,owner_user_id,coordinator_id,state,district,address,pin,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,'active',?)")
+      .run('PESC00001', 'Navya Computer Institute', 'navya', owner1.id, coord.id, 'Uttar Pradesh', 'Varanasi', 'B-12, Lanka Road, Near BHU Gate, Varanasi', '221005', Date.now());
+    centre1 = { id: r.lastInsertRowid };
+    db.prepare('UPDATE users SET centre_id=? WHERE id=?').run(centre1.id, owner1.id);
+
+    // Initial centre wallet balance: ₹50,000.00
+    db.prepare("INSERT OR REPLACE INTO wallets(centre_id,balance_paise) VALUES(?,?)").run(centre1.id, 5000000);
+    console.log(`Created Centre: Navya Computer Institute (PESC00001)`);
+  }
+
+  // Assign courses to centre 1
+  const allCourses = db.prepare('SELECT id FROM courses').all();
+  const insCC = db.prepare('INSERT OR IGNORE INTO centre_courses(centre_id,course_id) VALUES(?,?)');
+  allCourses.forEach(c => insCC.run(centre1.id, c.id));
+
+  // 5. Franchise Centre 2 (Apex Skill Academy, Farrukhabad)
+  const owner2Email = 'director@apexskills.com';
+  let owner2 = db.prepare('SELECT id FROM users WHERE email=?').get(owner2Email);
+  if (!owner2) {
+    const r = db.prepare("INSERT INTO users(email,name,role,password_hash,status,created_at) VALUES(?,?,'centre_owner',?,'active',?)")
+      .run(owner2Email, 'Rajesh Kumar Sharma', await argon2.hash('OwnerPass#12345'), Date.now());
+    owner2 = { id: r.lastInsertRowid };
+  }
+  let centre2 = db.prepare('SELECT id FROM centres WHERE slug=?').get('apexskills');
+  if (!centre2) {
+    const r = db.prepare("INSERT INTO centres(centre_code,name,slug,owner_user_id,coordinator_id,state,district,address,pin,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,'active',?)")
+      .run('PESC00002', 'Apex Skill & Computer Academy', 'apexskills', owner2.id, coord.id, 'Uttar Pradesh', 'Farrukhabad', 'Station Road, Kaimganj, Farrukhabad', '209502', Date.now());
+    centre2 = { id: r.lastInsertRowid };
+    db.prepare('UPDATE users SET centre_id=? WHERE id=?').run(centre2.id, owner2.id);
+    db.prepare("INSERT OR REPLACE INTO wallets(centre_id,balance_paise) VALUES(?,?)").run(centre2.id, 2500000);
+  }
+  allCourses.forEach(c => insCC.run(centre2.id, c.id));
+
+  // 6. Pending Franchise Application (For Admin to test 1-click Review & Approve)
+  const appNo = 'PESC-APP-2026-000002';
+  if (!db.prepare('SELECT id FROM franchise_applications WHERE app_no=?').get(appNo)) {
+    db.prepare(`INSERT INTO franchise_applications(app_no,owner_name,centre_name,mobile,email,address,state,district,pin,slug,status,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,'Submitted',?)`)
+      .run(appNo, 'Suresh Chandra Gupta', 'National Institute of IT & Skills', '9838123456', 'suresh@niitskills.org', 'Civil Lines, Gorakhpur', 'Uttar Pradesh', 'Gorakhpur', '273001', 'niit-gorakhpur', Date.now());
+    console.log(`Created sample pending franchise application: ${appNo}`);
+  }
+
+  // 7. Sample Student (Rahul Sharma)
+  const studentEmail = 'rahul@student.pescouncil.in';
+  let studentUser = db.prepare('SELECT id FROM users WHERE email=?').get(studentEmail);
+  if (!studentUser) {
+    const r = db.prepare("INSERT INTO users(email,name,role,password_hash,centre_id,status,created_at) VALUES(?,?,'student',?,?,'active',?)")
+      .run(studentEmail, 'Rahul Sharma', await argon2.hash('Student@12345'), centre1.id, Date.now());
+    studentUser = { id: r.lastInsertRowid };
+  }
+  let student = db.prepare('SELECT id FROM students WHERE student_code=?').get('PESC00001-2026-00001');
+  if (!student) {
+    const r = db.prepare(`INSERT INTO students(student_code,centre_id,user_id,name,father_name,mobile,email,dob,course_id,session,status,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,'active',?)`)
+      .run('PESC00001-2026-00001', centre1.id, studentUser.id, 'Rahul Sharma', 'Anand Kumar Sharma', '9876543210', studentEmail, '2002-05-15', defaultCourse.id, '2026-27', Date.now());
+    student = { id: r.lastInsertRowid };
+    console.log('Created Student: Rahul Sharma (Roll No: 2026101)');
+  }
+
+  // 8. Approved Marksheet with subjects
+  let mrk = db.prepare('SELECT id FROM marksheets WHERE marksheet_no=?').get('PESC/MRK/2026/000001');
+  if (!mrk) {
+    const subjects = JSON.stringify([
+      { code: 'DCA101', name: 'Computer Fundamentals & OS', max_theory: 70, obt_theory: 62, max_practical: 30, obt_practical: 28, total_max: 100, total_obt: 90, pass_marks: 33, result: 'PASS' },
+      { code: 'DCA102', name: 'MS Office & Data Entry', max_theory: 70, obt_theory: 58, max_practical: 30, obt_practical: 27, total_max: 100, total_obt: 85, pass_marks: 33, result: 'PASS' },
+      { code: 'DCA103', name: 'Database Management (DBMS)', max_theory: 70, obt_theory: 60, max_practical: 30, obt_practical: 29, total_max: 100, total_obt: 89, pass_marks: 33, result: 'PASS' },
+      { code: 'DCA104', name: 'Internet & Web Technologies', max_theory: 70, obt_theory: 63, max_practical: 30, obt_practical: 27, total_max: 100, total_obt: 90, pass_marks: 33, result: 'PASS' }
+    ]);
+    db.prepare(`INSERT INTO marksheets(marksheet_no,token,student_id,centre_id,course_id,exam_session,roll_no,subjects,total_max,total_obtained,percentage,grade,result,status,issue_date,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'Approved',?,?)`)
+      .run('PESC/MRK/2026/000001', 'sample_mrk_token_123456789', student.id, centre1.id, defaultCourse.id, 'Annual 2026', '2026101', subjects, 400, 354, 88.5, 'A+', 'PASS', Date.now(), Date.now());
+    console.log('Created sample marksheet: PESC/MRK/2026/000001');
+  }
+
+  // 9. Valid Verifiable Certificate
+  let cert = db.prepare('SELECT id FROM certificates WHERE cert_no=?').get('PESC/2026/000001');
+  if (!cert) {
+    db.prepare(`INSERT INTO certificates(cert_no,token,student_id,centre_id,course_id,status,issued_at,created_at)
+      VALUES(?,?,?,?,?,'Valid',?,?)`)
+      .run('PESC/2026/000001', 'sample_cert_token_123456789', student.id, centre1.id, defaultCourse.id, Date.now(), Date.now());
+    console.log('Created sample certificate: PESC/2026/000001');
+  }
+
+  console.log('✅ PESC database seeded with complete council data!');
 })();

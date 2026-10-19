@@ -95,6 +95,40 @@ if (tabCertBtn && tabMrkBtn) {
   };
 }
 
+// Quick Sample Demo Test Handlers
+const demoCertBtn = $('#demoCertBtn');
+if (demoCertBtn) {
+  demoCertBtn.onclick = () => {
+    const inp = $('#cn');
+    if (inp) {
+      inp.value = 'PESC/2026/000001';
+      $('#vf').dispatchEvent(new Event('submit'));
+    }
+  };
+}
+
+const demoMrkBtn = $('#demoMrkBtn');
+if (demoMrkBtn) {
+  demoMrkBtn.onclick = () => {
+    const inp = $('#mn');
+    if (inp) {
+      inp.value = '2026101';
+      $('#mf').dispatchEvent(new Event('submit'));
+    }
+  };
+}
+
+const demoMrkNoBtn = $('#demoMrkNoBtn');
+if (demoMrkNoBtn) {
+  demoMrkNoBtn.onclick = () => {
+    const inp = $('#mn');
+    if (inp) {
+      inp.value = 'PESC/MRK/2026/000001';
+      $('#mf').dispatchEvent(new Event('submit'));
+    }
+  };
+}
+
 // Slug Check
 let st;
 const slugInput = $('#slug');
@@ -194,7 +228,7 @@ guard(async () => {
         ['Centre Name', (r) => `<b>${esc(r.name)}</b>`],
         ['District', (r) => esc(r.district)],
         ['State', (r) => esc(r.state)],
-        ['Web Portal', (r) => `<a href="http://${esc(r.slug)}.localhost:3000" target="_blank" class="muted" style="text-decoration:underline;">${esc(r.slug)}.pescouncil.in</a>`],
+        ['Web Portal', (r) => `<a href="/portal" class="muted" style="text-decoration:underline;">${esc(r.slug)}.pescouncil.in</a>`],
       ], d.centres, 'No centres registered yet');
     }
   } catch (_) {}

@@ -708,3 +708,116 @@ footer {
   .hero { padding: 30px 10px; }
   .id-card-body { grid-template-columns: 1fr; justify-items: center; text-align: center; }
 }
+
+/* News Ticker Bar */
+.news-ticker {
+  background: linear-gradient(90deg, #b45309, #d4af37);
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.ticker-title {
+  background: #061838;
+  color: #fde047;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* Interactive Test Chips */
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: monospace;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 4px;
+  transition: all 0.15s ease;
+}
+.chip-btn:hover {
+  background: #0a2a5e;
+  color: #fff;
+  border-color: #0a2a5e;
+  transform: translateY(-1px);
+}
+
+/* Portal Demo Credential Box */
+.demo-cred-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: #475569;
+}
+.demo-cred-box code {
+  background: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Pricing / Package Cards */
+.pkg-card {
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.pkg-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+.pkg-card.popular {
+  border-color: #d4af37;
+  position: relative;
+  background: linear-gradient(180deg, #fffcf0 0%, #ffffff 100%);
+}
+.pkg-badge {
+  position: absolute;
+  top: -12px;
+  right: 20px;
+  background: #d4af37;
+  color: #061838;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+/* Download Card */
+.download-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 14px 18px;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+.download-item:hover {
+  background: #f1f5f9;
+}
+
