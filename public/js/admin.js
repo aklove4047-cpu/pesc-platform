@@ -58,12 +58,13 @@ const views = {
         ['Centre Name', (r) => `<b>${esc(r.name)}</b>`],
         ['Subdomain', (r) => `<a href="http://${esc(r.slug)}.localhost:3000" target="_blank" class="muted" style="text-decoration:underline;">${esc(r.slug)}</a>`],
         ['Location', (r) => `${esc(r.district)}, ${esc(r.state)}`],
-        ['Students', (r) => `<b>${r.students}</b>`],
+        ['Students', (r) => `<button class="btn sm" data-a="view_centre_students" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff;" title="Manage this centre's students">👥 ${r.students} Students</button>`],
         ['Status', (r) => badge(r.status)],
         ['Actions', (r) => `
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn sm alt" data-a="edit_centre" data-id="${r.id}" title="Edit Centre Information">✏️ Edit</button>
             ${r.status === 'active' ? `<button class="btn sm danger" data-a="suspend" data-id="${r.id}">Suspend</button>` : r.status === 'suspended' ? `<button class="btn sm" data-a="unsuspend" data-id="${r.id}">Activate</button>` : ''}
-            <button class="btn sm alt" data-a="courses" data-id="${r.id}">Assign Courses</button>
+            <button class="btn sm alt" data-a="courses" data-id="${r.id}">Courses</button>
             ${coordinators.length ? `<button class="btn sm alt" data-a="coord" data-id="${r.id}">Coordinator</button>` : ''}
           </div>
         `],
@@ -86,6 +87,7 @@ const views = {
     `;
     V._courses = courses;
     V._coords = coordinators;
+    V._centres = centres;
   },
 
   async Courses() {
@@ -97,7 +99,12 @@ const views = {
         ['Course Code', (r) => `<b style="font-family:monospace;">${esc(r.code)}</b>`],
         ['Course Title', (r) => `<b>${esc(r.name)}</b>`],
         ['Duration', (r) => `${r.duration_months} Months`],
+        ['Total Marks', (r) => r.total_marks || 100],
         ['Course Fee', (r) => inr(r.fee_paise)],
+        ['Status', (r) => r.active ? `<span class="badge Valid">Active</span>` : `<span class="badge Rejected">Inactive</span>`],
+        ['Actions', (r) => `
+          <button class="btn sm alt" data-a="edit_course" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.code)}" data-dur="${r.duration_months}" data-fee="${Math.round(r.fee_paise/100)}" data-marks="${r.total_marks || 100}" data-active="${r.active}">✏️ Edit</button>
+        `],
       ], courses)}
 
       <h3 style="margin-top:28px;">Add New Skill Course</h3>
@@ -323,18 +330,33 @@ const views = {
   },
 
   async Students() {
+    const filterCid = V._activeCentreFilter || '';
     const [{ students }, { centres }, { courses }] = await Promise.all([
-      api('/api/admin/students'),
+      api('/api/admin/students' + (filterCid ? `?centre_id=${filterCid}` : '')),
       api('/api/admin/centres'),
       api('/api/admin/courses'),
     ]);
+
+    V._centres = centres;
+    V._courses = courses;
+    const activeCentre = centres.find(c => c.id == filterCid);
+
     V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
         <div>
-          <h2>All India Enrolled Candidates</h2>
-          <p class="muted">Central student registry across all affiliated franchise centres</p>
+          <h2>${activeCentre ? `Candidates for: ${esc(activeCentre.name)}` : 'All India Enrolled Candidates'}</h2>
+          <p class="muted">${activeCentre ? `Managing ${students.length} students enrolled in ${esc(activeCentre.name)} (${esc(activeCentre.centre_code)})` : 'Central student registry across all affiliated franchise centres'}</p>
         </div>
-        <span class="badge active">${students.length} Total Enrolled</span>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:6px; background:#f1f5f9; padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1;">
+            <b style="font-size:0.85rem; color:#475569;">🏢 Filter by Centre:</b>
+            <select id="studentCentreFilter" style="padding:4px 8px; border-radius:6px; border:1px solid #94a3b8; font-size:0.88rem; background:#fff;">
+              <option value="">All Centres (National Directory)</option>
+              ${centres.map(c => `<option value="${c.id}" ${filterCid == c.id ? 'selected' : ''}>${esc(c.name)} (${esc(c.centre_code)}) - ${c.students || 0} Students</option>`).join('')}
+            </select>
+          </div>
+          <span class="badge active">${students.length} Students</span>
+        </div>
       </div>
       ${table([
         ['Student Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.student_code)}</b>`],
@@ -344,14 +366,15 @@ const views = {
         ['Contact', (r) => `${esc(r.mobile || '—')}<br><span class="muted">${esc(r.email || '—')}</span>`],
         ['Status', (r) => badge(r.status)],
         ['Actions', (r) => `
-          <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button class="btn sm gold" data-a="c_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}">📜 Direct Issue Cert</button>
-            <button class="btn sm gold" data-a="m_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}">📊 Direct Issue Marksheet</button>
-            ${r.user_id ? `<button class="btn sm alt" data-a="resetpw" data-id="${r.user_id}" data-name="${esc(r.name)}">Reset Pass</button>` : ''}
-            <a href="/student" target="_blank" class="btn sm" style="text-decoration:none;">Student View</a>
+          <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            <button class="btn sm alt" data-a="edit_student" data-id="${r.id}" title="Edit Student Profile">✏️ Edit</button>
+            <button class="btn sm gold" data-a="c_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}" title="Issue Certificate">📜 Cert</button>
+            <button class="btn sm gold" data-a="m_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}" title="Issue Marksheet">📊 Marksheet</button>
+            ${r.user_id ? `<button class="btn sm alt" data-a="resetpw" data-id="${r.user_id}" data-name="${esc(r.name)}" title="Reset Password">Pass</button>` : ''}
+            <button class="btn sm danger" data-a="del_student" data-id="${r.id}" data-name="${esc(r.name)}" title="Delete Student">🗑️</button>
           </div>
         `],
-      ], students, 'No students registered across centres yet.')}
+      ], students, filterCid ? `No students found for ${activeCentre ? activeCentre.name : 'this centre'}.` : 'No students registered across centres yet.')}
 
       <h3 style="margin-top:28px;">➕ Direct Candidate Enrolment (Head Office Admission)</h3>
       <p class="muted" style="margin-bottom:12px;">Enrol a student directly into any affiliated centre with immediate portal access.</p>
@@ -359,7 +382,7 @@ const views = {
         <div>
           <label>Select Affiliated Centre *</label>
           <select name="centre_id" required>
-            ${centres.map(c => `<option value="${c.id}">${esc(c.name)} (${esc(c.centre_code)}) - ${esc(c.district)}</option>`).join('')}
+            ${centres.map(c => `<option value="${c.id}" ${filterCid == c.id ? 'selected' : ''}>${esc(c.name)} (${esc(c.centre_code)}) - ${esc(c.district)}</option>`).join('')}
           </select>
         </div>
         <div>
@@ -378,6 +401,14 @@ const views = {
         <div style="align-self:end;"><button class="btn gold">Enrol Student</button></div>
       </form>
     `;
+
+    const cSel = $('#studentCentreFilter');
+    if (cSel) {
+      cSel.onchange = (e) => {
+        V._activeCentreFilter = e.target.value;
+        views.Students();
+      };
+    }
   },
 
   async Notices() {
@@ -478,6 +509,37 @@ const show = (n) => {
   return guard(() => views[n]());
 };
 
+function showModal(title, bodyHtml, onSave) {
+  let m = document.getElementById('adminModalOverlay');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'adminModalOverlay';
+    m.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:9999; display:grid; place-items:center; padding:16px; overflow-y:auto; backdrop-filter:blur(3px);';
+    document.body.appendChild(m);
+  }
+  m.innerHTML = `
+    <div style="background:#fff; border-radius:14px; max-width:640px; width:100%; box-shadow:var(--shadow-lg); border:1px solid #cbd5e1; overflow:hidden;">
+      <div style="background:var(--navy); color:#fff; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; font-size:1.15rem; color:#fff;">${title}</h3>
+        <button id="modalCloseBtn" type="button" style="background:none; border:none; color:#fff; font-size:1.4rem; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+      <div style="padding:20px; max-height:calc(85vh - 120px); overflow-y:auto;">
+        ${bodyHtml}
+      </div>
+    </div>
+  `;
+  m.style.display = 'grid';
+  document.getElementById('modalCloseBtn').onclick = () => { m.style.display = 'none'; };
+  const f = m.querySelector('form');
+  if (f && onSave) {
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      await onSave(new FormData(f));
+      m.style.display = 'none';
+    };
+  }
+}
+
 V.addEventListener('click', (e) => {
   const b = e.target.closest('[data-a]');
   if (!b) return;
@@ -486,7 +548,134 @@ V.addEventListener('click', (e) => {
 
   guard(async () => {
     const post = (p, body = {}) => api(p, { method: 'POST', body });
-    if (a === 'approve') {
+    if (a === 'view_centre_students') {
+      V._activeCentreFilter = id;
+      current = 'Students';
+      document.querySelectorAll('#tabs button').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === 'Students');
+      });
+      await views.Students();
+      return;
+    } else if (a === 'edit_centre') {
+      const { centre: c } = await api(`/api/admin/centres/${id}`);
+      showModal(`✏️ Edit Centre: ${c.name} (${c.centre_code})`, `
+        <form id="editCentreModalForm">
+          <div class="row">
+            <div><label>Centre Name *</label><input name="name" value="${esc(c.name)}" required></div>
+            <div><label>Director / Owner Name</label><input name="owner_name" value="${esc(c.owner_name || '')}"></div>
+            <div><label>Mobile Number</label><input name="owner_mobile" value="${esc(c.owner_mobile || '')}"></div>
+            <div><label>Email ID</label><input name="owner_email" type="email" value="${esc(c.owner_email || '')}"></div>
+            <div><label>State</label><input name="state" value="${esc(c.state || '')}"></div>
+            <div><label>District</label><input name="district" value="${esc(c.district || '')}"></div>
+            <div style="grid-column: span 2;"><label>Full Address</label><input name="address" value="${esc(c.address || '')}"></div>
+            <div><label>PIN Code</label><input name="pin" value="${esc(c.pin || '')}"></div>
+            <div>
+              <label>Centre Status</label>
+              <select name="status">
+                <option value="active" ${c.status === 'active' ? 'selected' : ''}>Active</option>
+                <option value="suspended" ${c.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+                <option value="deactivated" ${c.status === 'deactivated' ? 'selected' : ''}>Deactivated</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn alt" onclick="document.getElementById('adminModalOverlay').style.display='none'">Cancel</button>
+            <button type="submit" class="btn gold">Save Centre Details</button>
+          </div>
+        </form>
+      `, async (formData) => {
+        const payload = Object.fromEntries(formData.entries());
+        await api(`/api/admin/centres/${id}`, { method: 'PUT', body: payload });
+        toast('Centre updated successfully!');
+        await views.Centres();
+      });
+      return;
+    } else if (a === 'edit_student') {
+      const [{ student: s }, { centres }, { courses }] = await Promise.all([
+        api(`/api/admin/students/${id}`),
+        api('/api/admin/centres'),
+        api('/api/admin/courses'),
+      ]);
+      showModal(`✏️ Edit Student Profile: ${s.name} (${s.student_code})`, `
+        <form id="editStudentModalForm">
+          <div class="row">
+            <div><label>Candidate Full Name *</label><input name="name" value="${esc(s.name)}" required></div>
+            <div><label>Father's Name</label><input name="father_name" value="${esc(s.father_name || '')}"></div>
+            <div><label>Mobile Number</label><input name="mobile" value="${esc(s.mobile || '')}"></div>
+            <div><label>Email Address</label><input name="email" type="email" value="${esc(s.email || '')}"></div>
+            <div><label>Date of Birth</label><input name="dob" type="date" value="${esc(s.dob || '')}"></div>
+            <div><label>Academic Session</label><input name="session" value="${esc(s.session || '2026-27')}"></div>
+            <div>
+              <label>Assigned Centre *</label>
+              <select name="centre_id" required>
+                ${centres.map(c => `<option value="${c.id}" ${c.id === s.centre_id ? 'selected' : ''}>${esc(c.name)} (${esc(c.centre_code)})</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>Enrolled Course *</label>
+              <select name="course_id" required>
+                ${courses.map(co => `<option value="${co.id}" ${co.id === s.course_id ? 'selected' : ''}>${esc(co.code)} - ${esc(co.name)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>Status</label>
+              <select name="status">
+                <option value="active" ${s.status === 'active' ? 'selected' : ''}>Active</option>
+                <option value="inactive" ${s.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                <option value="completed" ${s.status === 'completed' ? 'selected' : ''}>Completed</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn alt" onclick="document.getElementById('adminModalOverlay').style.display='none'">Cancel</button>
+            <button type="submit" class="btn gold">Save Student Profile</button>
+          </div>
+        </form>
+      `, async (formData) => {
+        const payload = Object.fromEntries(formData.entries());
+        await api(`/api/admin/students/${id}`, { method: 'PUT', body: payload });
+        toast('Student profile updated successfully!');
+        await views.Students();
+      });
+      return;
+    } else if (a === 'del_student') {
+      if (!confirm(`Are you sure you want to permanently delete candidate ${b.dataset.name}? This will remove all their records.`)) return;
+      await api(`/api/admin/students/${id}`, { method: 'DELETE' });
+      toast('Student deleted successfully!');
+      await views.Students();
+      return;
+    } else if (a === 'edit_course') {
+      const d = b.dataset;
+      showModal(`✏️ Edit Course: ${d.code} - ${d.name}`, `
+        <form id="editCourseModalForm">
+          <div class="row">
+            <div><label>Course Code *</label><input name="code" value="${esc(d.code)}" required></div>
+            <div><label>Course Title *</label><input name="name" value="${esc(d.name)}" required></div>
+            <div><label>Duration (Months) *</label><input name="duration_months" type="number" min="1" value="${d.dur}" required></div>
+            <div><label>Course Fee (₹) *</label><input name="fee_rupees" type="number" min="0" value="${d.fee}" required></div>
+            <div><label>Total Examination Marks</label><input name="total_marks" type="number" min="1" value="${d.marks || 100}"></div>
+            <div>
+              <label>Status</label>
+              <select name="active">
+                <option value="1" ${d.active === '1' ? 'selected' : ''}>Active</option>
+                <option value="0" ${d.active === '0' ? 'selected' : ''}>Inactive / Archived</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn alt" onclick="document.getElementById('adminModalOverlay').style.display='none'">Cancel</button>
+            <button type="submit" class="btn gold">Save Course Details</button>
+          </div>
+        </form>
+      `, async (formData) => {
+        const payload = Object.fromEntries(formData.entries());
+        payload.active = payload.active === '1';
+        await api(`/api/admin/courses/${id}`, { method: 'PUT', body: payload });
+        toast('Course updated successfully!');
+        await views.Courses();
+      });
+      return;
+    } else if (a === 'approve') {
       const r = await api(`/api/admin/applications/${id}/approve`, { method: 'POST' }).catch((x) => {
         if (x.data && x.data.step) throw new Error(`Failed at ${x.data.step}: ${x.data.error}`);
         throw x;

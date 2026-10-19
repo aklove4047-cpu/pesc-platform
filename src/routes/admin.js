@@ -87,6 +87,51 @@ router.post('/centres/:id/coordinator', (req, res) => {
   audit(req, 'centre.assign_coordinator', 'centre', req.params.id, 'ok', String(co.id)); res.json({ ok: true });
 });
 
+// Get single centre details
+router.get('/centres/:id', (req, res) => {
+  const cid = +req.params.id;
+  const c = db.prepare(`SELECT c.*, u.name AS owner_name, u.email AS owner_email, u.mobile AS owner_mobile,
+    (SELECT COUNT(*) FROM students s WHERE s.centre_id=c.id) AS student_count
+    FROM centres c
+    LEFT JOIN users u ON u.id=c.owner_user_id
+    WHERE c.id=?`).get(cid);
+  if (!c) throw new HttpError(404, 'Centre not found');
+  res.json({ centre: c });
+});
+
+// Edit centre details
+router.put('/centres/:id', (req, res) => {
+  const cid = +req.params.id;
+  const c = db.prepare('SELECT * FROM centres WHERE id=?').get(cid);
+  if (!c) throw new HttpError(404, 'Centre not found');
+
+  const b = req.body;
+  const name = str(b.name, 150) || c.name;
+  const state = str(b.state, 60) || c.state;
+  const district = str(b.district, 60) || c.district;
+  const address = str(b.address, 300) || c.address;
+  const pin = str(b.pin, 10) || c.pin;
+  const status = ['active', 'suspended', 'deactivated'].includes(b.status) ? b.status : c.status;
+
+  db.transaction(() => {
+    db.prepare('UPDATE centres SET name=?, state=?, district=?, address=?, pin=?, status=? WHERE id=?')
+      .run(name, state, district, address, pin, status, cid);
+
+    if (c.owner_user_id) {
+      const ownerName = str(b.owner_name, 100);
+      const ownerMobile = str(b.owner_mobile || b.mobile, 15);
+      const ownerEmail = str(b.owner_email || b.email, 150);
+      if (ownerName || ownerMobile || ownerEmail) {
+        db.prepare('UPDATE users SET name=COALESCE(?, name), mobile=COALESCE(?, mobile), email=COALESCE(?, email) WHERE id=?')
+          .run(ownerName || null, ownerMobile || null, ownerEmail ? ownerEmail.toLowerCase() : null, c.owner_user_id);
+      }
+    }
+  })();
+
+  audit(req, 'centre.update', 'centre', cid, 'ok', `Updated ${name}`);
+  res.json({ ok: true, message: 'Centre updated successfully' });
+});
+
 router.get('/courses', (req, res) => res.json({ courses: db.prepare('SELECT * FROM courses ORDER BY name').all() }));
 router.post('/courses', (req, res) => {
   const b = req.body, code = str(b.code, 20).toUpperCase(), name = str(b.name, 120);
@@ -94,6 +139,26 @@ router.post('/courses', (req, res) => {
   if (!/^[A-Z0-9-]{2,20}$/.test(code) || !name || !(dur > 0) || !(fee >= 0)) throw new HttpError(400, 'Invalid course data');
   try { const r = db.prepare('INSERT INTO courses(code,name,duration_months,fee_paise) VALUES(?,?,?,?)').run(code, name, dur, fee); audit(req, 'course.create', 'course', r.lastInsertRowid); res.status(201).json({ id: r.lastInsertRowid }); }
   catch (e) { if (String(e.code).startsWith('SQLITE_CONSTRAINT')) throw new HttpError(409, 'Course code exists'); throw e; }
+});
+
+router.put('/courses/:id', (req, res) => {
+  const cid = +req.params.id;
+  const c = db.prepare('SELECT * FROM courses WHERE id=?').get(cid);
+  if (!c) throw new HttpError(404, 'Course not found');
+
+  const b = req.body;
+  const name = str(b.name, 120) || c.name;
+  const code = str(b.code, 20) ? str(b.code, 20).toUpperCase() : c.code;
+  const dur = b.duration_months ? +b.duration_months : c.duration_months;
+  const fee = b.fee_rupees !== undefined ? Math.round(+b.fee_rupees * 100) : (b.fee_paise !== undefined ? +b.fee_paise : c.fee_paise);
+  const totalMarks = b.total_marks ? +b.total_marks : c.total_marks;
+  const active = b.active !== undefined ? (b.active ? 1 : 0) : c.active;
+
+  db.prepare('UPDATE courses SET code=?, name=?, duration_months=?, fee_paise=?, total_marks=?, active=? WHERE id=?')
+    .run(code, name, dur, fee, totalMarks, active, cid);
+
+  audit(req, 'course.update', 'course', cid, 'ok', `Updated ${code} - ${name}`);
+  res.json({ ok: true, message: 'Course updated successfully' });
 });
 
 // Coordinators are created by super admin only; they receive a setup link, never a password.
@@ -116,24 +181,92 @@ router.get('/audit', (req, res) => {
 });
 const argon2 = require('../hash');
 
-// Students Directory & Management
+// Students Directory & Management (with centre-wise filtering)
 router.get('/students', (req, res) => {
   const { size, offset } = paginate(req);
   const q = str(req.query.q, 100);
+  const cid = req.query.centre_id ? +req.query.centre_id : null;
   let sql = `SELECT s.*, c.name AS centre_name, c.centre_code, co.name AS course_name, co.code AS course_code, u.status AS user_status
     FROM students s
     JOIN centres c ON c.id=s.centre_id
     JOIN courses co ON co.id=s.course_id
-    LEFT JOIN users u ON u.id=s.user_id`;
+    LEFT JOIN users u ON u.id=s.user_id WHERE 1=1`;
   const params = [];
+  if (cid) {
+    sql += ` AND s.centre_id=?`;
+    params.push(cid);
+  }
   if (q) {
-    sql += ` WHERE s.name LIKE ? OR s.student_code LIKE ? OR s.mobile LIKE ? OR c.name LIKE ?`;
+    sql += ` AND (s.name LIKE ? OR s.student_code LIKE ? OR s.mobile LIKE ? OR c.name LIKE ?)`;
     const like = `%${q}%`;
     params.push(like, like, like, like);
   }
   sql += ` ORDER BY s.id DESC LIMIT ? OFFSET ?`;
   params.push(size, offset);
   res.json({ students: db.prepare(sql).all(...params) });
+});
+
+// Get single student details
+router.get('/students/:id', (req, res) => {
+  const sid = +req.params.id;
+  const s = db.prepare(`SELECT s.*, c.name AS centre_name, c.centre_code, co.name AS course_name, co.code AS course_code
+    FROM students s
+    JOIN centres c ON c.id=s.centre_id
+    JOIN courses co ON co.id=s.course_id
+    WHERE s.id=?`).get(sid);
+  if (!s) throw new HttpError(404, 'Student not found');
+  res.json({ student: s });
+});
+
+// Edit student details
+router.put('/students/:id', (req, res) => {
+  const sid = +req.params.id;
+  const s = db.prepare('SELECT * FROM students WHERE id=?').get(sid);
+  if (!s) throw new HttpError(404, 'Student not found');
+
+  const b = req.body;
+  const name = str(b.name, 100) || s.name;
+  const father_name = str(b.father_name, 100) || s.father_name;
+  const mobile = str(b.mobile, 15) || s.mobile;
+  const email = str(b.email, 150) ? str(b.email, 150).toLowerCase() : s.email;
+  const dob = str(b.dob, 20) || s.dob;
+  const session = str(b.session, 30) || s.session;
+  const course_id = b.course_id ? +b.course_id : s.course_id;
+  const centre_id = b.centre_id ? +b.centre_id : s.centre_id;
+  const status = str(b.status, 20) || s.status;
+
+  db.transaction(() => {
+    db.prepare(`UPDATE students SET name=?, father_name=?, mobile=?, email=?, dob=?, session=?, course_id=?, centre_id=?, status=? WHERE id=?`)
+      .run(name, father_name, mobile, email, dob, session, course_id, centre_id, status, sid);
+
+    if (s.user_id) {
+      db.prepare('UPDATE users SET name=?, email=COALESCE(?, email), centre_id=? WHERE id=?')
+        .run(name, email || null, centre_id, s.user_id);
+    }
+  })();
+
+  audit(req, 'student.update', 'student', sid, 'ok', `Updated ${name}`);
+  res.json({ ok: true, message: 'Student updated successfully' });
+});
+
+// Delete student
+router.delete('/students/:id', (req, res) => {
+  const sid = +req.params.id;
+  const s = db.prepare('SELECT * FROM students WHERE id=?').get(sid);
+  if (!s) throw new HttpError(404, 'Student not found');
+
+  db.transaction(() => {
+    db.prepare('DELETE FROM marksheets WHERE student_id=?').run(sid);
+    db.prepare('DELETE FROM certificates WHERE student_id=?').run(sid);
+    if (s.user_id) {
+      db.prepare('DELETE FROM sessions WHERE user_id=?').run(s.user_id);
+      db.prepare('DELETE FROM users WHERE id=?').run(s.user_id);
+    }
+    db.prepare('DELETE FROM students WHERE id=?').run(sid);
+  })();
+
+  audit(req, 'student.delete', 'student', sid, 'ok', `Deleted ${s.name} (${s.student_code})`);
+  res.json({ ok: true, message: 'Student deleted successfully' });
 });
 
 // Wallets & Financial Ledger
@@ -371,6 +504,29 @@ router.post('/certificates/direct-issue', (req, res) => {
 
   audit(req, 'certificate.direct_issue', 'certificate', r.lastInsertRowid, 'ok', certNo);
   res.status(201).json({ id: r.lastInsertRowid, cert_no: certNo, token });
+});
+
+// Edit Marksheet scores/details
+router.put('/marksheets/:id', (req, res) => {
+  const mid = +req.params.id;
+  const m = db.prepare('SELECT * FROM marksheets WHERE id=?').get(mid);
+  if (!m) throw new HttpError(404, 'Marksheet not found');
+
+  const b = req.body;
+  const roll_no = str(b.roll_no, 30) || m.roll_no;
+  const exam_session = str(b.exam_session, 30) || m.exam_session;
+  const total_max = b.total_max ? +b.total_max : m.total_max;
+  const total_obtained = b.total_obtained ? +b.total_obtained : m.total_obtained;
+  const percentage = Math.round((total_obtained / total_max) * 1000) / 10;
+  const grade = b.grade || (percentage >= 85 ? 'A+' : percentage >= 75 ? 'A' : percentage >= 60 ? 'B' : percentage >= 50 ? 'C' : 'D');
+  const result = percentage >= 33 ? 'PASS' : 'FAIL';
+  const subjects = b.subjects ? (typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects)) : m.subjects;
+
+  db.prepare('UPDATE marksheets SET roll_no=?, exam_session=?, total_max=?, total_obtained=?, percentage=?, grade=?, result=?, subjects=? WHERE id=?')
+    .run(roll_no, exam_session, total_max, total_obtained, percentage, grade, result, subjects, mid);
+
+  audit(req, 'marksheet.update', 'marksheet', mid, 'ok', `Updated marksheet ${m.marksheet_no || mid}`);
+  res.json({ ok: true, percentage, grade, result });
 });
 
 module.exports = router;

@@ -31,6 +31,7 @@ const views = {
         ['Status', (r) => badge(r.status)],
         ['Actions', (r) => `
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn sm alt" data-a="edit-student" data-id="${r.id}" data-name="${esc(r.name)}" data-father="${esc(r.father_name || '')}" data-mobile="${esc(r.mobile || '')}" data-email="${esc(r.email || '')}" data-dob="${esc(r.dob || '')}" data-session="${esc(r.session || '')}" data-course="${r.course_id}" title="Edit student details">✏️ Edit</button>
             <button class="btn sm alt" data-a="account" data-id="${r.id}" title="Setup student portal access">🔑 Login Access</button>
             <button class="btn sm" data-a="marksheet-prep" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.student_code)}" title="Submit marks for this student">📝 Marksheet</button>
             <button class="btn sm alt" data-a="apply" data-id="${r.id}">🎓 Certificate</button>
@@ -295,6 +296,58 @@ V.addEventListener('click', (e) => {
     guard(async () => {
       const { students } = await api('/api/centre/students');
       openMarksheetModal(students, id);
+    });
+  } else if (act === 'edit-student') {
+    guard(async () => {
+      const { courses } = await api('/api/centre/courses');
+      const d = btn.dataset;
+      let modalBox = $('#modalBox');
+      if (!modalBox) {
+        modalBox = document.createElement('div');
+        modalBox.id = 'modalBox';
+        document.body.appendChild(modalBox);
+      }
+      modalBox.innerHTML = `
+        <div class="modal-overlay">
+          <div class="modal-content" style="max-width:580px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <h3>✏️ Edit Student Profile</h3>
+              <button type="button" class="btn sm alt" onclick="this.closest('.modal-overlay').remove()">✕</button>
+            </div>
+            <form id="editStudentFormCentre">
+              <div class="row">
+                <div><label>Student Full Name *</label><input name="name" value="${esc(d.name)}" required maxlength="100"></div>
+                <div><label>Father's Name</label><input name="father_name" value="${esc(d.father)}" maxlength="100"></div>
+                <div><label>Mobile Number</label><input name="mobile" value="${esc(d.mobile)}" pattern="[6-9][0-9]{9}"></div>
+                <div><label>Email ID</label><input name="email" type="email" value="${esc(d.email)}"></div>
+                <div><label>Date of Birth</label><input name="dob" type="date" value="${esc(d.dob)}"></div>
+                <div><label>Academic Session</label><input name="session" value="${esc(d.session || '2026-27')}"></div>
+                <div style="grid-column: span 2;">
+                  <label>Enrolled Course *</label>
+                  <select name="course_id" required>
+                    ${courses.map(c => `<option value="${c.id}" ${c.id == d.course ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button type="button" class="btn alt" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                <button type="submit" class="btn gold">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      $('#editStudentFormCentre').onsubmit = (ev) => {
+        ev.preventDefault();
+        guard(async () => {
+          const payload = form(ev.target);
+          payload.course_id = +payload.course_id;
+          await api(`/api/centre/students/${id}`, { method: 'PUT', body: payload });
+          toast('Student profile updated successfully!');
+          document.querySelector('.modal-overlay')?.remove();
+          if (views.Students) views.Students();
+        });
+      };
     });
   }
 });
