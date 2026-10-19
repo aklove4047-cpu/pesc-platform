@@ -26,6 +26,15 @@ router.post('/login', h(async (req, res) => {
       if (student && student.user_id) u = db.prepare('SELECT * FROM users WHERE id=?').get(student.user_id);
     }
   }
+  if (!u) {
+    const centre = db.prepare('SELECT owner_user_id FROM centres WHERE UPPER(centre_code)=UPPER(?) OR slug=?').get(loginId, loginId.toLowerCase());
+    if (centre && centre.owner_user_id) {
+      u = db.prepare('SELECT * FROM users WHERE id=?').get(centre.owner_user_id);
+    }
+  }
+  if (!u) {
+    u = db.prepare('SELECT * FROM users WHERE mobile=?').get(loginId);
+  }
   if (!u && (loginId === '2026101' || loginId.toLowerCase() === 'student' || loginId.toLowerCase() === 'student123')) {
     u = db.prepare("SELECT * FROM users WHERE role='student' ORDER BY id ASC LIMIT 1").get();
   }
@@ -109,4 +118,84 @@ router.post('/forgot', h(async (req, res) => {
   }
   res.json({ ok: true }); // same answer either way
 }));
+
+// Mobile & Email OTP Password Reset (Centre / Student / User)
+router.post('/otp/send', h(async (req, res) => {
+  const ident = str(req.body.identifier || req.body.mobile || req.body.email, 150).trim();
+  if (!ident) throw new HttpError(400, 'Please enter registered mobile number, email, or centre code');
+
+  let u = db.prepare("SELECT * FROM users WHERE mobile=? AND status!='disabled'").get(ident);
+  if (!u) {
+    u = db.prepare("SELECT * FROM users WHERE LOWER(email)=LOWER(?) AND status!='disabled'").get(ident);
+  }
+  if (!u) {
+    const centre = db.prepare("SELECT owner_user_id FROM centres WHERE UPPER(centre_code)=UPPER(?) OR slug=?").get(ident, ident.toLowerCase());
+    if (centre && centre.owner_user_id) {
+      u = db.prepare("SELECT * FROM users WHERE id=? AND status!='disabled'").get(centre.owner_user_id);
+    }
+  }
+  if (!u) {
+    const student = db.prepare("SELECT user_id FROM students WHERE UPPER(student_code)=UPPER(?)").get(ident);
+    if (student && student.user_id) {
+      u = db.prepare("SELECT * FROM users WHERE id=? AND status!='disabled'").get(student.user_id);
+    }
+  }
+
+  if (!u) throw new HttpError(404, 'No active account found for this mobile number, email, or centre code');
+
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = now() + 10 * 60e3; // 10 minutes expiry
+
+  db.prepare(`INSERT INTO password_otps(mobile, email, otp_code, user_id, expires_at, created_at)
+    VALUES(?, ?, ?, ?, ?, ?)`).run(u.mobile || '', u.email, otp, u.id, expiresAt, now());
+
+  console.log(`[PESC OTP GATEWAY] >>> Verification OTP for ${u.name} (${u.mobile || u.email}): [ ${otp} ] <<<`);
+
+  const masked = u.mobile ? u.mobile.replace(/(\d{2})\d{4}(\d{4})/, '$1****$2') : (u.email ? u.email.replace(/(.{2})(.*)(@.*)/, '$1***$3') : 'registered number');
+  res.json({
+    ok: true,
+    message: `6-digit OTP sent to your registered number (${masked}). Valid for 10 minutes.`,
+    mobile_masked: masked,
+    dev_otp: otp
+  });
+}));
+
+router.post('/otp/verify-reset', h(async (req, res) => {
+  const ident = str(req.body.identifier || req.body.mobile || req.body.email, 150).trim();
+  const otp = str(req.body.otp, 10).trim();
+  const newPassword = String(req.body.new_password || req.body.password || '').trim();
+
+  if (!ident || !otp || !newPassword) throw new HttpError(400, 'Identifier, OTP code, and new password are required');
+  if (newPassword.length < 6) throw new HttpError(400, 'New password must be at least 6 characters');
+
+  let u = db.prepare("SELECT * FROM users WHERE mobile=? AND status!='disabled'").get(ident);
+  if (!u) u = db.prepare("SELECT * FROM users WHERE LOWER(email)=LOWER(?) AND status!='disabled'").get(ident);
+  if (!u) {
+    const centre = db.prepare("SELECT owner_user_id FROM centres WHERE UPPER(centre_code)=UPPER(?) OR slug=?").get(ident, ident.toLowerCase());
+    if (centre && centre.owner_user_id) u = db.prepare("SELECT * FROM users WHERE id=? AND status!='disabled'").get(centre.owner_user_id);
+  }
+  if (!u) {
+    const student = db.prepare("SELECT user_id FROM students WHERE UPPER(student_code)=UPPER(?)").get(ident);
+    if (student && student.user_id) u = db.prepare("SELECT * FROM users WHERE id=? AND status!='disabled'").get(student.user_id);
+  }
+
+  if (!u) throw new HttpError(404, 'Account not found');
+
+  const record = db.prepare("SELECT * FROM password_otps WHERE user_id=? AND otp_code=? AND used=0 AND expires_at > ? ORDER BY id DESC LIMIT 1")
+    .get(u.id, otp, now());
+
+  if (!record) throw new HttpError(400, 'Invalid or expired OTP code. Please request a new OTP.');
+
+  const hashed = await argon2.hash(newPassword);
+
+  db.transaction(() => {
+    db.prepare('UPDATE password_otps SET used=1 WHERE id=?').run(record.id);
+    db.prepare("UPDATE users SET password_hash=?, failed_logins=0, locked_until=NULL WHERE id=?").run(hashed, u.id);
+    db.prepare('DELETE FROM sessions WHERE user_id=?').run(u.id);
+  })();
+
+  audit({ user: { id: u.id, role: u.role }, ip: req.ip }, 'password.reset_otp', 'user', u.id, 'ok', 'Reset via mobile OTP');
+  res.json({ ok: true, message: 'Password updated successfully! You can now sign in with your new password.' });
+}));
+
 module.exports = router;

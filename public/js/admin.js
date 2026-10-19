@@ -368,9 +368,9 @@ const views = {
         ['Actions', (r) => `
           <div style="display:flex; gap:4px; flex-wrap:wrap;">
             <button class="btn sm alt" data-a="edit_student" data-id="${r.id}" title="Edit Student Profile">✏️ Edit</button>
+            <button class="btn sm" data-a="view_student_creds" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff;" title="View Student Login ID and Password">🔑 ID/Pass</button>
             <button class="btn sm gold" data-a="c_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}" title="Issue Certificate">📜 Cert</button>
             <button class="btn sm gold" data-a="m_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}" title="Issue Marksheet">📊 Marksheet</button>
-            ${r.user_id ? `<button class="btn sm alt" data-a="resetpw" data-id="${r.user_id}" data-name="${esc(r.name)}" title="Reset Password">Pass</button>` : ''}
             <button class="btn sm danger" data-a="del_student" data-id="${r.id}" data-name="${esc(r.name)}" title="Delete Student">🗑️</button>
           </div>
         `],
@@ -637,6 +637,86 @@ V.addEventListener('click', (e) => {
         toast('Student profile updated successfully!');
         await views.Students();
       });
+      return;
+    } else if (a === 'view_student_creds') {
+      const { credentials: c } = await api(`/api/admin/students/${id}/credentials`);
+      showModal(`🔑 Student Login Credentials: ${c.name}`, `
+        <div style="margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px; background:#f8fafc; padding:12px; border-radius:10px; border:1px solid #e2e8f0;">
+            <div style="font-size:2.2rem;">🎓</div>
+            <div>
+              <h3 style="margin:0; color:var(--navy);">${esc(c.name)}</h3>
+              <p class="muted" style="margin:2px 0;">Course: <b>${esc(c.course_name)}</b> · Centre: <b>${esc(c.centre_name)} (${esc(c.centre_code)})</b></p>
+            </div>
+          </div>
+
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:16px; margin-bottom:16px;">
+            <h4 style="margin:0 0 10px; color:#166534;">📋 Current Student Credentials</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.92rem;">
+              <div><b>Login ID / Student Code:</b><br><code style="font-size:1.05rem; background:#fff; padding:3px 8px; border-radius:4px; border:1px solid #cbd5e1; display:inline-block; margin-top:3px; color:var(--navy); font-weight:bold;">${esc(c.student_code)}</code></div>
+              <div><b>Login Email:</b><br><code style="font-size:0.95rem; background:#fff; padding:3px 8px; border-radius:4px; border:1px solid #cbd5e1; display:inline-block; margin-top:3px;">${esc(c.email)}</code></div>
+              <div><b>Registered Mobile:</b><br><span style="color:#334155;">${esc(c.mobile || '—')}</span></div>
+              <div><b>Login Password:</b><br><code style="font-size:1.1rem; background:#fef08a; padding:3px 8px; border-radius:4px; border:1px solid #fde047; display:inline-block; margin-top:3px; color:#854d0e; font-weight:bold;">${esc(c.password)}</code></div>
+            </div>
+            <div style="margin-top:14px;">
+              <button type="button" class="btn sm" id="btnCopyCreds" style="background:#16a34a; color:#fff;">📋 Copy Login Message for WhatsApp/SMS</button>
+            </div>
+          </div>
+
+          <form id="resetStudentPassForm" style="border:1px solid #e2e8f0; border-radius:10px; padding:16px; background:#fff;">
+            <h4 style="margin:0 0 10px; color:var(--navy);">⚡ Change / Set New Password</h4>
+            <div style="display:flex; gap:10px; align-items:flex-end;">
+              <div style="flex:1;">
+                <label>New Password (min 6 characters)</label>
+                <input name="password" id="newStudentPassInput" required minlength="6" value="Student@123" placeholder="Enter new password">
+              </div>
+              <button type="button" class="btn sm alt" id="btnGenPass" style="margin-bottom:2px;">🎲 Generate</button>
+              <button type="submit" class="btn sm gold" style="margin-bottom:2px;">Update Password</button>
+            </div>
+          </form>
+        </div>
+      `, async () => {});
+
+      const shareText = `*Purvanchal Education & Skill Council (PESC)*\n` +
+        `🎓 *Student Portal Login Details*\n` +
+        `• *Candidate Name:* ${c.name}\n` +
+        `• *Student Code / ID:* ${c.student_code}\n` +
+        `• *Login Password:* ${c.password}\n` +
+        `• *Centre:* ${c.centre_name} (${c.centre_code})\n` +
+        `• *Student Portal URL:* ${c.portal_url || window.location.origin + '/student'}`;
+
+      const btnCopy = document.getElementById('btnCopyCreds');
+      if (btnCopy) {
+        btnCopy.onclick = () => {
+          navigator.clipboard.writeText(shareText).then(() => {
+            toast('Credentials copied! Ready to paste on WhatsApp/SMS.');
+          }).catch(() => {
+            prompt('Copy credentials:', shareText);
+          });
+        };
+      }
+
+      const btnGen = document.getElementById('btnGenPass');
+      if (btnGen) {
+        btnGen.onclick = () => {
+          const pass = 'Pesc#' + Math.floor(1000 + Math.random() * 9000);
+          const inp = document.getElementById('newStudentPassInput');
+          if (inp) inp.value = pass;
+        };
+      }
+
+      const pf = document.getElementById('resetStudentPassForm');
+      if (pf) {
+        pf.onsubmit = async (e) => {
+          e.preventDefault();
+          const newPass = document.getElementById('newStudentPassInput').value.trim();
+          if (!newPass || newPass.length < 6) return alert('Password must be at least 6 characters');
+          await api(`/api/admin/students/${id}/set-password`, { method: 'POST', body: { password: newPass } });
+          toast(`Password updated successfully to: ${newPass}`);
+          document.getElementById('adminModalOverlay').style.display = 'none';
+          await views.Students();
+        };
+      }
       return;
     } else if (a === 'del_student') {
       if (!confirm(`Are you sure you want to permanently delete candidate ${b.dataset.name}? This will remove all their records.`)) return;

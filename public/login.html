@@ -134,15 +134,142 @@
     window.handleLogin = handleLogin;
     document.getElementById('f').addEventListener('submit', handleLogin);
 
+    // Forgot Password via Mobile OTP Modal
+    const modalHtml = `
+      <div id="otpModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65); z-index:9999; place-items:center; padding:16px; backdrop-filter:blur(3px);">
+        <div style="background:#fff; border-radius:14px; max-width:440px; width:100%; box-shadow:var(--shadow-lg); border:1px solid #cbd5e1; overflow:hidden;">
+          <div style="background:var(--navy); color:#fff; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:1.15rem; color:#fff;">🔐 Reset Password via Mobile OTP</h3>
+            <button id="closeOtpModal" type="button" style="background:none; border:none; color:#fff; font-size:1.4rem; cursor:pointer; line-height:1;">&times;</button>
+          </div>
+          <div style="padding:22px;">
+            <div id="otpMsg" style="display:none; padding:10px 14px; border-radius:8px; font-size:0.86rem; margin-bottom:14px;"></div>
+
+            <!-- Step 1: Send OTP -->
+            <div id="otpStep1">
+              <label style="font-weight:600; font-size:0.88rem; display:block; margin-bottom:6px;">Registered Mobile, Email or Centre Code *</label>
+              <input id="otpIdentInput" type="text" placeholder="e.g. 9876543210 or PESC00001" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:14px; font-size:0.95rem;">
+              <button id="btnSendOtp" class="btn gold" style="width:100%; padding:11px; font-weight:600;">📱 Send 6-Digit OTP</button>
+            </div>
+
+            <!-- Step 2: Verify OTP & New Password -->
+            <div id="otpStep2" style="display:none;">
+              <p class="muted" id="otpTargetNote" style="font-size:0.84rem; margin-bottom:12px;"></p>
+              <label style="font-weight:600; font-size:0.88rem; display:block; margin-bottom:6px;">Enter 6-Digit OTP *</label>
+              <input id="otpCodeInput" type="text" maxlength="6" placeholder="123456" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; font-size:1.1rem; letter-spacing:4px; font-family:monospace; text-align:center;">
+
+              <label style="font-weight:600; font-size:0.88rem; display:block; margin-bottom:6px;">Create New Password *</label>
+              <input id="newPwInput" type="password" placeholder="Minimum 6 characters" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:16px; font-size:0.95rem;">
+
+              <button id="btnVerifyOtp" class="btn" style="width:100%; padding:11px; font-weight:600;">✅ Verify OTP &amp; Reset Password</button>
+              <div style="margin-top:10px; text-align:center;">
+                <button type="button" id="btnResendOtp" style="background:none; border:none; color:#2563eb; cursor:pointer; font-size:0.84rem;">← Change Number / Resend OTP</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const otpModal = document.getElementById('otpModal');
+    const closeOtpModal = document.getElementById('closeOtpModal');
+    const otpMsg = document.getElementById('otpMsg');
+    const otpStep1 = document.getElementById('otpStep1');
+    const otpStep2 = document.getElementById('otpStep2');
+    const otpIdentInput = document.getElementById('otpIdentInput');
+    const otpCodeInput = document.getElementById('otpCodeInput');
+    const newPwInput = document.getElementById('newPwInput');
+    const btnSendOtp = document.getElementById('btnSendOtp');
+    const btnVerifyOtp = document.getElementById('btnVerifyOtp');
+    const btnResendOtp = document.getElementById('btnResendOtp');
+    const otpTargetNote = document.getElementById('otpTargetNote');
+
+    let activeIdent = '';
+
     document.getElementById('fg').onclick = (e) => {
       e.preventDefault();
-      const email = emailInput.value.trim();
-      if (!email) return toast('Enter your email first', false);
-      guard(async () => {
-        await api('/api/auth/forgot', { method: 'POST', body: { email } });
-        toast('If the account exists, a reset link was sent.');
-      });
+      otpModal.style.display = 'grid';
+      otpStep1.style.display = 'block';
+      otpStep2.style.display = 'none';
+      otpMsg.style.display = 'none';
+      otpIdentInput.value = emailInput.value.trim();
+      otpIdentInput.focus();
     };
+
+    closeOtpModal.onclick = () => { otpModal.style.display = 'none'; };
+
+    btnSendOtp.onclick = async () => {
+      const val = otpIdentInput.value.trim();
+      if (!val) {
+        showOtpAlert('Please enter your registered mobile number, email, or centre code.', true);
+        return;
+      }
+      btnSendOtp.disabled = true;
+      btnSendOtp.textContent = 'Sending OTP…';
+      try {
+        const res = await api('/api/auth/otp/send', { method: 'POST', body: { identifier: val } });
+        activeIdent = val;
+        showOtpAlert(res.message, false);
+        otpTargetNote.textContent = `Verification OTP sent to ${res.mobile_masked || val}`;
+        if (res.dev_otp) {
+          otpCodeInput.value = res.dev_otp; // Auto-populate for fast testing/demo
+        }
+        otpStep1.style.display = 'none';
+        otpStep2.style.display = 'block';
+        otpCodeInput.focus();
+      } catch (err) {
+        showOtpAlert(err.message || 'Failed to send OTP. Please check your credentials.', true);
+      } finally {
+        btnSendOtp.disabled = false;
+        btnSendOtp.textContent = '📱 Send 6-Digit OTP';
+      }
+    };
+
+    btnResendOtp.onclick = () => {
+      otpStep2.style.display = 'none';
+      otpStep1.style.display = 'block';
+      otpMsg.style.display = 'none';
+    };
+
+    btnVerifyOtp.onclick = async () => {
+      const otp = otpCodeInput.value.trim();
+      const newPw = newPwInput.value.trim();
+      if (!otp || otp.length < 4) {
+        showOtpAlert('Please enter valid 6-digit OTP code.', true);
+        return;
+      }
+      if (!newPw || newPw.length < 6) {
+        showOtpAlert('New password must be at least 6 characters long.', true);
+        return;
+      }
+      btnVerifyOtp.disabled = true;
+      btnVerifyOtp.textContent = 'Updating Password…';
+      try {
+        const res = await api('/api/auth/otp/verify-reset', {
+          method: 'POST',
+          body: { identifier: activeIdent, otp, new_password: newPw }
+        });
+        otpModal.style.display = 'none';
+        toast(res.message || 'Password reset successfully!');
+        emailInput.value = activeIdent;
+        pwInput.value = newPw;
+        pwInput.focus();
+      } catch (err) {
+        showOtpAlert(err.message || 'OTP verification failed. Please try again.', true);
+      } finally {
+        btnVerifyOtp.disabled = false;
+        btnVerifyOtp.textContent = '✅ Verify OTP & Reset Password';
+      }
+    };
+
+    function showOtpAlert(msg, isError) {
+      otpMsg.textContent = msg;
+      otpMsg.style.display = 'block';
+      otpMsg.style.background = isError ? '#fee2e2' : '#dcfce7';
+      otpMsg.style.color = isError ? '#991b1b' : '#166534';
+      otpMsg.style.border = isError ? '1px solid #f87171' : '1px solid #86efac';
+    }
   </script>
 </body>
 </html>

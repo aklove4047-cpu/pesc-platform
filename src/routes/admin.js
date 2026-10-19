@@ -269,6 +269,64 @@ router.delete('/students/:id', (req, res) => {
   res.json({ ok: true, message: 'Student deleted successfully' });
 });
 
+// View student credentials (for Head Office Admin)
+router.get('/students/:id/credentials', (req, res) => {
+  const sid = +req.params.id;
+  const s = db.prepare(`SELECT s.*, c.name AS centre_name, c.centre_code, co.name AS course_name, co.code AS course_code,
+    u.id AS user_id, u.email AS user_email, u.mobile AS user_mobile, u.status AS user_status
+    FROM students s
+    JOIN centres c ON c.id=s.centre_id
+    JOIN courses co ON co.id=s.course_id
+    LEFT JOIN users u ON u.id=s.user_id
+    WHERE s.id=?`).get(sid);
+  if (!s) throw new HttpError(404, 'Student not found');
+
+  const defaultEmail = s.user_email || s.email || `${s.student_code.toLowerCase()}@student.pescouncil.in`;
+  res.json({
+    credentials: {
+      student_id: s.id,
+      student_code: s.student_code,
+      name: s.name,
+      father_name: s.father_name,
+      mobile: s.mobile || s.user_mobile,
+      email: defaultEmail,
+      password: s.initial_password || 'Student@123',
+      centre_name: s.centre_name,
+      centre_code: s.centre_code,
+      course_name: s.course_name,
+      portal_url: `${cfg.PUBLIC_URL}/student`,
+      status: s.status,
+    },
+  });
+});
+
+// Set or reset student password directly (for Head Office Admin)
+router.post('/students/:id/set-password', h(async (req, res) => {
+  const sid = +req.params.id;
+  const password = str(req.body.password, 64);
+  if (!password || password.length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
+
+  const s = db.prepare('SELECT s.*, u.id AS uid FROM students s LEFT JOIN users u ON u.id=s.user_id WHERE s.id=?').get(sid);
+  if (!s) throw new HttpError(404, 'Student not found');
+
+  const hash = await argon2.hash(password);
+
+  db.transaction(() => {
+    db.prepare('UPDATE students SET initial_password=? WHERE id=?').run(password, sid);
+    if (s.uid) {
+      db.prepare("UPDATE users SET password_hash=?, failed_logins=0, locked_until=NULL, status='active' WHERE id=?").run(hash, s.uid);
+    } else {
+      const userEmail = s.email || `${s.student_code.toLowerCase()}@student.pescouncil.in`;
+      const uIns = db.prepare("INSERT INTO users(email,name,role,password_hash,centre_id,status,created_at) VALUES(?,?,'student',?,?,'active',?)")
+        .run(userEmail, s.name, hash, s.centre_id, now());
+      db.prepare('UPDATE students SET user_id=? WHERE id=?').run(uIns.lastInsertRowid, sid);
+    }
+  })();
+
+  audit(req, 'student.set_password', 'student', sid, 'ok', `Updated credentials for ${s.name} (${s.student_code})`);
+  res.json({ ok: true, message: 'Password updated successfully', password });
+}));
+
 // Wallets & Financial Ledger
 router.get('/wallets', (req, res) => {
   const rows = db.prepare(`SELECT c.id AS centre_id, COALESCE(w.balance_paise, 0) AS balance_paise, c.name AS centre_name, c.centre_code, c.district, c.state, c.status AS centre_status

@@ -156,5 +156,76 @@ const db = require('./db');
     }
   }
 
-  console.log('✅ PESC database seeded with complete council data!');
+  // 11. Ensure each active centre has 10 enrolled students with credentials, marksheets, and certificates
+  const studentNames = [
+    { name: 'Ananya Sharma', father: 'Sunil Sharma', dob: '2003-04-12' },
+    { name: 'Rohan Gupta', father: 'Manoj Gupta', dob: '2002-09-18' },
+    { name: 'Pooja Verma', father: 'Ramesh Verma', dob: '2001-11-25' },
+    { name: 'Amitabh Mishra', father: 'Santosh Mishra', dob: '2000-03-30' },
+    { name: 'Kavita Yadav', father: 'Devendra Yadav', dob: '2003-07-14' },
+    { name: 'Saurabh Pandey', father: 'Hari Shankar Pandey', dob: '2002-01-20' },
+    { name: 'Neha Srivastava', father: 'Pradeep Srivastava', dob: '2001-08-05' },
+    { name: 'Vikas Maurya', father: 'Ram Dulare Maurya', dob: '2002-12-10' },
+    { name: 'Divya Chauhan', father: 'Rakesh Chauhan', dob: '2003-05-22' },
+    { name: 'Alok Tiwari', father: 'Brijesh Tiwari', dob: '2000-10-15' },
+  ];
+
+  const studentHash = await argon2.hash('Student@123');
+
+  for (const c of allCentres) {
+    const existing = db.prepare('SELECT id, student_code FROM students WHERE centre_id=?').all(c.id);
+    const needed = 10 - existing.length;
+    if (needed > 0) {
+      const coursesList = db.prepare('SELECT id, code, name FROM courses').all();
+      for (let i = 0; i < needed; i++) {
+        const item = studentNames[i % studentNames.length];
+        const studentIndex = existing.length + i + 1;
+        const codeNum = String(studentIndex).padStart(5, '0');
+        const sCode = `${c.centre_code || 'PESC' + String(c.id).padStart(5, '0')}-2026-${codeNum}`;
+        const email = `student${c.id}_${studentIndex}@student.pescouncil.in`;
+        const phone = `98${String(c.id).padStart(2, '0')}${String(studentIndex).padStart(2, '0')}1234`.slice(0, 10);
+        const selCourse = coursesList[i % coursesList.length];
+
+        // Insert user
+        let user = db.prepare('SELECT id FROM users WHERE email=?').get(email);
+        if (!user) {
+          const uRes = db.prepare("INSERT INTO users(email,name,role,password_hash,mobile,centre_id,status,created_at) VALUES(?,?, 'student', ?, ?, ?, 'active', ?)")
+            .run(email, item.name, studentHash, phone, c.id, Date.now() - (studentIndex * 86400000));
+          user = { id: uRes.lastInsertRowid };
+        }
+
+        // Insert student
+        const sRes = db.prepare(`INSERT INTO students(student_code,centre_id,user_id,name,father_name,mobile,email,dob,course_id,session,initial_password,status,created_at)
+          VALUES(?,?,?,?,?,?,?,?,?,?,'Student@123','active',?)`)
+          .run(sCode, c.id, user.id, item.name, item.father, phone, email, item.dob, selCourse.id, '2026-27', Date.now() - (studentIndex * 86400000));
+        const newStudentId = sRes.lastInsertRowid;
+
+        // Create Marks & Marksheet
+        const rollNo = `2026${c.id}${String(studentIndex).padStart(3, '0')}`;
+        const mrkNo = `PESC/MRK/2026/${String(c.id).padStart(3, '0')}${codeNum}`;
+        const mrkToken = crypto.randomBytes(16).toString('hex');
+        const subjects = JSON.stringify([
+          { code: `${selCourse.code}-101`, name: 'Core Foundations & Technology Theory', max_theory: 70, obt_theory: 58 + (i % 10), max_practical: 30, obt_practical: 26 + (i % 4), total_max: 100, total_obt: 84 + (i % 12), pass_marks: 33, result: 'PASS' },
+          { code: `${selCourse.code}-102`, name: 'Applied Laboratory & Practical Execution', max_theory: 70, obt_theory: 55 + (i % 12), max_practical: 30, obt_practical: 27 + (i % 3), total_max: 100, total_obt: 82 + (i % 13), pass_marks: 33, result: 'PASS' },
+          { code: `${selCourse.code}-103`, name: 'Professional Documentation & Case Study', max_theory: 70, obt_theory: 60 + (i % 8), max_practical: 30, obt_practical: 28 + (i % 2), total_max: 100, total_obt: 88 + (i % 10), pass_marks: 33, result: 'PASS' },
+          { code: `${selCourse.code}-104`, name: 'Comprehensive Project & Viva-Voce', max_theory: 70, obt_theory: 62 + (i % 7), max_practical: 30, obt_practical: 29, total_max: 100, total_obt: 91 + (i % 8), pass_marks: 33, result: 'PASS' },
+        ]);
+        const totalObtained = 330 + (i * 5);
+        const percentage = +(totalObtained / 4).toFixed(1);
+
+        db.prepare(`INSERT INTO marksheets(marksheet_no,token,student_id,centre_id,course_id,exam_session,roll_no,subjects,total_max,total_obtained,percentage,grade,result,status,issue_date,created_at)
+          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'PASS','Approved',?,?)`)
+          .run(mrkNo, mrkToken, newStudentId, c.id, selCourse.id, 'Session 2026', rollNo, subjects, 400, totalObtained, percentage, percentage >= 85 ? 'A+' : 'A', Date.now(), Date.now());
+
+        // Create Valid Certificate
+        const certNo = `PESC/2026/${String(c.id).padStart(3, '0')}${codeNum}`;
+        const certToken = crypto.randomBytes(16).toString('hex');
+        db.prepare(`INSERT INTO certificates(cert_no,token,student_id,centre_id,course_id,status,issued_at,created_at)
+          VALUES(?,?,?,?,?,'Valid',?,?)`)
+          .run(certNo, certToken, newStudentId, c.id, selCourse.id, Date.now(), Date.now());
+      }
+    }
+  }
+
+  console.log('✅ PESC database seeded with 10 students per centre and complete council data!');
 })();
