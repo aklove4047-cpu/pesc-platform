@@ -4,8 +4,10 @@ services:
     env: node
     plan: free
     buildCommand: npm install
-    startCommand: node src/server.js
+    startCommand: node src/seed.js && node src/server.js
     envVars:
+      - key: NODE_VERSION
+        value: 22
       - key: NODE_ENV
         value: production
       - key: PORT

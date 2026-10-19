@@ -9,7 +9,7 @@
     "seed": "node --env-file=.env src/seed.js",
     "test": "node --test tests/flow.test.js"
   },
-  "engines": { "node": ">=18" },
+  "engines": { "node": ">=22" },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
