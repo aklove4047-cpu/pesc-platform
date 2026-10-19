@@ -1,17 +1,126 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login – PESC</title><link rel="stylesheet" href="/assets/css/style.css"></head><body>
-<nav class="nav"><b>PESC</b><a href="/">Home</a></nav><main style="max-width:420px"><section class="card"><h2>Login</h2>
-<form id="f"><label>Email</label><input name="email" type="email" required autocomplete="username"><label>Password</label><input name="password" type="password" required autocomplete="current-password"><br><br><button>Sign in</button>
-<p><a href="#" id="fg" class="muted">Forgot password?</a></p></form></section></main>
-<script src="/assets/js/app.js"></script><script>
-$('#f').onsubmit = (e) => {
-  e.preventDefault();
-  guard(async () => {
-    const d = await api('/api/auth/login', { method: 'POST', body: form(e.target) });
-    if (['super_admin', 'admin'].includes(d.user.role)) location = '/admin';
-    else if (d.user.role === 'coordinator') location = '/coordinator';
-    else if (d.user.role === 'student') location = '/student';
-    else location = '/portal';
-  });
-};
-$('#fg').onclick = (e) => { e.preventDefault(); const email = $('[name=email]').value; if (!email) return toast('Enter your email first', false); guard(async () => { await api('/api/auth/forgot', { method: 'POST', body: { email } }); toast('If the account exists, a reset link was sent.'); }); };
-</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login – Purvanchal Education & Skill Council</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body style="display:flex; flex-direction:column; min-height:100vh;">
+  <nav class="nav">
+    <a href="/" class="brand">
+      <div class="brand-logo">P</div>
+      <div class="brand-text">
+        <b>PESC Council</b>
+        <span>Purvanchal Education & Skill Council</span>
+      </div>
+    </a>
+    <div class="nav-links" style="margin-left:auto;">
+      <a href="/">← Back to Home</a>
+    </div>
+  </nav>
+
+  <main style="max-width:440px; margin:40px auto; width:100%; padding:0 16px; flex:1;">
+    <section class="card" style="box-shadow:var(--shadow-lg);">
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="width:56px; height:56px; margin:0 auto 12px; background:var(--navy); color:#fff; border-radius:12px; display:grid; place-items:center; font-size:1.6rem; font-weight:800; border:2px solid var(--gold);">
+          P
+        </div>
+        <h2 style="color:var(--navy); margin-bottom:6px;">Sign In to Portal</h2>
+        <p class="muted" style="font-size:0.88rem;">Super Admin, Coordinator, Centre & Student Login</p>
+      </div>
+
+      <div id="errMsg" style="display:none; background:#fee2e2; color:#991b1b; padding:12px 14px; border-radius:8px; border:1px solid #f87171; font-size:0.88rem; margin-bottom:16px;"></div>
+
+      <form id="f" method="POST" onsubmit="handleLogin(event)">
+        <label style="font-weight:600; font-size:0.88rem; margin-bottom:6px; display:block;">Email or Login ID</label>
+        <input name="email" id="email" type="text" required autocomplete="username" placeholder="e.g. admin@pescouncil.in" style="width:100%; padding:10px 14px; margin-bottom:14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.95rem;">
+
+        <label style="font-weight:600; font-size:0.88rem; margin-bottom:6px; display:block;">Password</label>
+        <input name="password" id="password" type="password" required autocomplete="current-password" placeholder="••••••••" style="width:100%; padding:10px 14px; margin-bottom:18px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.95rem;">
+
+        <button id="subBtn" class="btn" style="width:100%; padding:12px; font-size:1rem; font-weight:600; cursor:pointer;">
+          Sign In
+        </button>
+
+        <div style="margin-top:18px; text-align:center; font-size:0.85rem;">
+          <a href="#" id="fg" class="muted" style="text-decoration:none;">Forgot password?</a>
+        </div>
+      </form>
+
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid #e2e8f0; font-size:0.82rem; color:#64748b; text-align:center;">
+        <b>Default Super Admin ID:</b> <code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">admin@pescouncil.in</code>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/js/app.js"></script>
+  <script>
+    const errBox = document.getElementById('errMsg');
+    const emailInput = document.getElementById('email');
+    const pwInput = document.getElementById('password');
+    const subBtn = document.getElementById('subBtn');
+
+    // Auto-fill from URL params if present and clean URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('email')) emailInput.value = params.get('email');
+    if (params.has('password')) pwInput.value = params.get('password');
+    if (params.has('email') || params.has('password')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // Auto-redirect if already logged in
+    (async () => {
+      try {
+        const me = await api('/api/auth/me');
+        if (me && me.user) {
+          if (['super_admin', 'admin'].includes(me.user.role)) location = '/admin';
+          else if (me.user.role === 'coordinator') location = '/coordinator';
+          else if (me.user.role === 'student') location = '/student';
+          else location = '/portal';
+        }
+      } catch (_) {}
+    })();
+
+    async function handleLogin(e) {
+      if (e) e.preventDefault();
+      errBox.style.display = 'none';
+      errBox.textContent = '';
+      subBtn.disabled = true;
+      subBtn.textContent = 'Signing in…';
+
+      try {
+        const body = {
+          email: emailInput.value.trim(),
+          password: pwInput.value
+        };
+        const d = await api('/api/auth/login', { method: 'POST', body });
+        if (['super_admin', 'admin'].includes(d.user.role)) {
+          location.href = '/admin';
+        } else if (d.user.role === 'coordinator') {
+          location.href = '/coordinator';
+        } else if (d.user.role === 'student') {
+          location.href = '/student';
+        } else {
+          location.href = '/portal';
+        }
+      } catch (err) {
+        errBox.textContent = err.message || 'Invalid credentials or login failed';
+        errBox.style.display = 'block';
+        subBtn.disabled = false;
+        subBtn.textContent = 'Sign In';
+      }
+    }
+
+    document.getElementById('fg').onclick = (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      if (!email) return toast('Enter your email first', false);
+      guard(async () => {
+        await api('/api/auth/forgot', { method: 'POST', body: { email } });
+        toast('If the account exists, a reset link was sent.');
+      });
+    };
+  </script>
+</body>
+</html>
