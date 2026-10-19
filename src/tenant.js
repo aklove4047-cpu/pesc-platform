@@ -6,8 +6,11 @@ const resolveSlug = (slug) => db.prepare('SELECT * FROM centres WHERE slug=?').g
 function slugOf(hostHeader) {
   const host = String(hostHeader || '').toLowerCase().split(':')[0];
   const base = cfg.BASE_DOMAIN;
-  if (host === base || host === 'localhost') return { kind: 'main' };
-  if (host.endsWith('.' + base)) {
+  if (host === base || host === 'localhost' || host === '127.0.0.1') return { kind: 'main' };
+  if (host.endsWith('.trycloudflare.com')) return { kind: 'main' };
+  if (process.env.RENDER_EXTERNAL_HOSTNAME && host === process.env.RENDER_EXTERNAL_HOSTNAME.toLowerCase()) return { kind: 'main' };
+  if (host.endsWith('.onrender.com') && (base === 'onrender.com' || !base || base === 'localhost')) return { kind: 'main' };
+  if (base && base !== 'onrender.com' && host.endsWith('.' + base)) {
     const sub = host.slice(0, -(base.length + 1));
     if (sub.includes('.')) return { kind: 'invalid' };
     if (cfg.RESERVED.has(sub)) return { kind: 'main' };
