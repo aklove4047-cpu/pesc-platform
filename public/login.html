@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login – Purvanchal Education & Skill Council</title>
   <link rel="stylesheet" href="/assets/css/style.css">
+  <style>
+    .pw-wrap { position: relative; width: 100%; margin-bottom: 18px; }
+    .pw-wrap input { width: 100%; padding: 10px 42px 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; }
+    .pw-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #64748b; padding: 4px; }
+  </style>
 </head>
 <body style="display:flex; flex-direction:column; min-height:100vh;">
   <nav class="nav">
@@ -37,10 +42,18 @@
         <input name="email" id="email" type="text" required autocomplete="username" placeholder="e.g. admin@pescouncil.in" style="width:100%; padding:10px 14px; margin-bottom:14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.95rem;">
 
         <label style="font-weight:600; font-size:0.88rem; margin-bottom:6px; display:block;">Password</label>
-        <input name="password" id="password" type="password" required autocomplete="current-password" placeholder="••••••••" style="width:100%; padding:10px 14px; margin-bottom:18px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.95rem;">
+        <div class="pw-wrap">
+          <input name="password" id="password" type="password" required autocomplete="current-password" placeholder="••••••••">
+          <button type="button" class="pw-toggle" id="pwToggle" title="Toggle password visibility">👁️</button>
+        </div>
 
         <button id="subBtn" class="btn" style="width:100%; padding:12px; font-size:1rem; font-weight:600; cursor:pointer;">
           Sign In
+        </button>
+
+        <!-- Quick 1-Click Fill Button for Convenience -->
+        <button type="button" id="fillAdminBtn" style="margin-top:12px; width:100%; padding:9px; background:#f0fdf4; color:#166534; border:1px dashed #86efac; border-radius:8px; font-size:0.85rem; font-weight:600; cursor:pointer;">
+          ⚡ Auto-fill Super Admin Details
         </button>
 
         <div style="margin-top:18px; text-align:center; font-size:0.85rem;">
@@ -49,7 +62,8 @@
       </form>
 
       <div style="margin-top:20px; padding-top:16px; border-top:1px solid #e2e8f0; font-size:0.82rem; color:#64748b; text-align:center;">
-        <b>Default Super Admin ID:</b> <code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">admin@pescouncil.in</code>
+        <b>Super Admin:</b> <code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">admin@pescouncil.in</code><br>
+        <span style="font-size:0.78rem; color:#94a3b8;">Password: <code>Admin#12345678</code></span>
       </div>
     </section>
   </main>
@@ -60,24 +74,38 @@
     const emailInput = document.getElementById('email');
     const pwInput = document.getElementById('password');
     const subBtn = document.getElementById('subBtn');
+    const pwToggle = document.getElementById('pwToggle');
+    const fillAdminBtn = document.getElementById('fillAdminBtn');
 
-    // Auto-fill from URL params if present and clean URL
-    const params = new URLSearchParams(window.location.search);
-    if (params.has('email')) emailInput.value = params.get('email');
-    if (params.has('password')) pwInput.value = params.get('password');
-    if (params.has('email') || params.has('password')) {
+    // Clean any query string or hash immediately
+    if (window.location.search || window.location.hash) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+
+    // Toggle password visibility
+    pwToggle.onclick = () => {
+      const isPw = pwInput.type === 'password';
+      pwInput.type = isPw ? 'text' : 'password';
+      pwToggle.textContent = isPw ? '🙈' : '👁️';
+    };
+
+    // Auto-fill button
+    fillAdminBtn.onclick = () => {
+      emailInput.value = 'admin@pescouncil.in';
+      pwInput.value = 'Admin#12345678';
+      errBox.style.display = 'none';
+      toast('Super Admin credentials filled!');
+    };
 
     // Auto-redirect if already logged in
     (async () => {
       try {
         const me = await api('/api/auth/me');
         if (me && me.user) {
-          if (['super_admin', 'admin'].includes(me.user.role)) location = '/admin';
-          else if (me.user.role === 'coordinator') location = '/coordinator';
-          else if (me.user.role === 'student') location = '/student';
-          else location = '/portal';
+          if (['super_admin', 'admin'].includes(me.user.role)) location.href = '/admin';
+          else if (me.user.role === 'coordinator') location.href = '/coordinator';
+          else if (me.user.role === 'student') location.href = '/student';
+          else location.href = '/portal';
         }
       } catch (_) {}
     })();
@@ -86,14 +114,21 @@
       if (e) e.preventDefault();
       errBox.style.display = 'none';
       errBox.textContent = '';
+
+      const emailVal = emailInput.value.trim();
+      const pwVal = pwInput.value;
+
+      if (!emailVal || !pwVal) {
+        errBox.textContent = 'Please enter both email and password';
+        errBox.style.display = 'block';
+        return;
+      }
+
       subBtn.disabled = true;
       subBtn.textContent = 'Signing in…';
 
       try {
-        const body = {
-          email: emailInput.value.trim(),
-          password: pwInput.value
-        };
+        const body = { email: emailVal, password: pwVal };
         const d = await api('/api/auth/login', { method: 'POST', body });
         if (['super_admin', 'admin'].includes(d.user.role)) {
           location.href = '/admin';
