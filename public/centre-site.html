@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Affiliated Training Centre – PESC Council</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="brand">
+      <div class="brand-logo">P</div>
+      <div class="brand-text">
+        <b id="nm">PESC Training Centre</b>
+        <span>Purvanchal Education &amp; Skill Council Affiliated Centre</span>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="/student">🎓 Student Panel</a>
+      <a href="/login" class="btn-cta" style="padding:6px 14px; font-size:0.82rem;">Centre Login</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="hero-pill">
+        OFFICIALLY RECOGNIZED TRAINING CENTRE · PURVANCHAL EDUCATION &amp; SKILL COUNCIL
+      </div>
+      <h1 id="h">Loading centre…</h1>
+      <p id="p">Authorized partner for skill and computer education certifications.</p>
+      <div class="hero-cta">
+        <a href="#verify" class="btn gold">🔍 Verify Certificate / Marksheet</a>
+        <a href="/student" class="btn alt">🎓 Student Portal</a>
+        <a href="/login" class="btn">Centre Staff Login</a>
+      </div>
+    </section>
+
+    <section class="card" id="verify">
+      <div style="text-align:center; margin-bottom:16px;">
+        <h2>Verify Student Credentials</h2>
+        <p class="muted">Check valid Certificates or Marksheets issued through this training centre</p>
+      </div>
+      <form id="vf" class="row" style="max-width:600px; margin:0 auto;">
+        <div style="flex:1;">
+          <label>Certificate No. / Marksheet No. / Roll No.</label>
+          <input name="query" placeholder="e.g. PESC/2026/000001 or PESC/MRK/2026/000001" required>
+        </div>
+        <div style="align-self:end;">
+          <button class="btn gold">Verify</button>
+        </div>
+      </form>
+      <div id="vr" style="max-width:600px; margin:0 auto;"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div style="text-align:center; font-size:0.85rem; color:#94a3b8;">
+      <p>© 2026 Purvanchal Education &amp; Skill Council (PESC). All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="/assets/js/app.js"></script>
+  <script>
+    guard(async () => {
+      const d = await api('/api/public/site');
+      document.title = `${d.name} – PESC Affiliated Training Centre`;
+      $('#nm').textContent = d.name;
+      $('#h').textContent = d.name;
+      $('#p').textContent = `${d.district}, ${d.state} · Official Centre Code: ${d.code}`;
+    });
+
+    $('#vf').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const q = encodeURIComponent(form(e.target).query.trim());
+        let d = await api('/api/public/verify?cert_no=' + q);
+        if (!d || d.status === 'Not Found') {
+          d = await api('/api/public/verify-marksheet?marksheet_no=' + q + '&roll_no=' + q);
+        }
+
+        if (!d || d.status === 'Not Found') {
+          $('#vr').innerHTML = '<div style="padding:14px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; margin-top:14px;"><span class="badge Rejected">NOT FOUND</span><p class="muted" style="margin-top:4px;">No record found matching this credential number.</p></div>';
+          return;
+        }
+
+        if (d.type === 'Marksheet') {
+          $('#vr').innerHTML = `
+            <div class="verify-result-box" style="margin-top:14px;">
+              <span class="badge ${d.status}">${d.status} MARKSHEET</span>
+              <p style="margin-top:8px;"><b>Candidate:</b> ${esc(d.holder)} (Roll: ${esc(d.roll_no)})<br><b>Course:</b> ${esc(d.course)} · <b>Score:</b> ${d.total_obtained}/${d.total_max} (${d.percentage}%) Grade ${esc(d.grade)}</p>
+            </div>
+          `;
+        } else {
+          $('#vr').innerHTML = `
+            <div class="verify-result-box" style="margin-top:14px;">
+              <span class="badge ${d.status}">${d.status} CERTIFICATE</span>
+              <p style="margin-top:8px;"><b>Candidate:</b> ${esc(d.holder)}<br><b>Course:</b> ${esc(d.course)}<br>No. ${esc(d.certificate_no)} · Issued ${esc(d.issued_on)}</p>
+            </div>
+          `;
+        }
+      });
+    };
+  </script>
+</body>
+</html>

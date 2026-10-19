@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login – PESC</title><link rel="stylesheet" href="/assets/css/style.css"></head><body>
+<nav class="nav"><b>PESC</b><a href="/">Home</a></nav><main style="max-width:420px"><section class="card"><h2>Login</h2>
+<form id="f"><label>Email</label><input name="email" type="email" required autocomplete="username"><label>Password</label><input name="password" type="password" required autocomplete="current-password"><br><br><button>Sign in</button>
+<p><a href="#" id="fg" class="muted">Forgot password?</a></p></form></section></main>
+<script src="/assets/js/app.js"></script><script>
+$('#f').onsubmit = (e) => {
+  e.preventDefault();
+  guard(async () => {
+    const d = await api('/api/auth/login', { method: 'POST', body: form(e.target) });
+    if (['super_admin', 'admin'].includes(d.user.role)) location = '/admin';
+    else if (d.user.role === 'coordinator') location = '/coordinator';
+    else if (d.user.role === 'student') location = '/student';
+    else location = '/portal';
+  });
+};
+$('#fg').onclick = (e) => { e.preventDefault(); const email = $('[name=email]').value; if (!email) return toast('Enter your email first', false); guard(async () => { await api('/api/auth/forgot', { method: 'POST', body: { email } }); toast('If the account exists, a reset link was sent.'); }); };
+</script></body></html>

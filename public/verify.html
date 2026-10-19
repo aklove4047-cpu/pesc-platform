@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Official Document Verification – PESC Council</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="brand">
+      <div class="brand-logo">P</div>
+      <div class="brand-text">
+        <b>PESC Council</b>
+        <span>National Verification Portal</span>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="/">Council Home</a>
+      <a href="/login" class="btn-cta" style="padding:6px 14px; font-size:0.82rem;">Sign In</a>
+    </div>
+  </nav>
+
+  <main style="max-width:700px;">
+    <section class="card">
+      <div style="text-align:center; margin-bottom:20px;">
+        <span class="hero-pill" style="color:#0a2a5e; border-color:#d4af37; background:#fef3c7;">
+          🛡️ PESC OFFICIAL VERIFICATION SYSTEM
+        </span>
+        <h2 style="margin-top:8px;">Online Document Validation</h2>
+        <p class="muted">Instant digital authenticity verification for credentials issued by Purvanchal Education &amp; Skill Council</p>
+      </div>
+
+      <div id="r" style="text-align:center; padding:30px 10px;">
+        <div style="font-size:2rem; margin-bottom:8px;">🔍</div>
+        <p class="muted">Checking council digital records and cryptographic seal…</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/js/app.js"></script>
+  <script>
+    guard(async () => {
+      const path = location.pathname;
+      const token = encodeURIComponent(path.split('/').pop());
+      let d;
+
+      if (path.includes('/marksheet/')) {
+        d = await api('/api/public/verify/marksheet/' + token);
+      } else {
+        d = await api('/api/public/verify/' + token);
+      }
+
+      if (!d || d.status === 'Not Found') {
+        $('#r').innerHTML = `
+          <div style="padding:20px; background:#fef2f2; border:1px solid #fecaca; border-radius:12px;">
+            <div style="font-size:3rem; margin-bottom:8px;">❌</div>
+            <h3 style="color:#b91c1c;">Invalid or Record Not Found</h3>
+            <p class="muted">The requested document token or identifier was not found in the council's database. Please check the token or contact the issuing authority.</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (d.type === 'Marksheet') {
+        $('#r').innerHTML = `
+          <div class="verify-result-box" style="text-align:left;">
+            <div class="verify-seal-watermark">PESC</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+              <div>
+                <span class="badge ${d.status}">${d.status} MARKSHEET</span>
+                <h3 style="margin:6px 0 0; color:var(--navy); font-size:1.4rem;">Official Statement of Marks</h3>
+              </div>
+              <div style="text-align:right;">
+                <span class="muted" style="font-size:0.8rem;">Marksheet No.</span>
+                <p style="font-family:monospace; font-weight:700; color:var(--navy); margin:0;">${esc(d.marksheet_no)}</p>
+              </div>
+            </div>
+
+            <div class="grid" style="grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+              <div>
+                <p class="muted" style="font-size:0.8rem; margin-bottom:2px;">Candidate Name (Masked)</p>
+                <b style="font-size:1.05rem; color:#0f172a;">${esc(d.holder)}</b>
+              </div>
+              <div>
+                <p class="muted" style="font-size:0.8rem; margin-bottom:2px;">Roll / Student Code</p>
+                <b>${esc(d.roll_no || d.student_code)}</b>
+              </div>
+              <div>
+                <p class="muted" style="font-size:0.8rem; margin-bottom:2px;">Course Enrolled</p>
+                <b>${esc(d.course)}</b>
+              </div>
+              <div>
+                <p class="muted" style="font-size:0.8rem; margin-bottom:2px;">Exam Session</p>
+                <b>${esc(d.session)}</b>
+              </div>
+              <div style="grid-column: span 2;">
+                <p class="muted" style="font-size:0.8rem; margin-bottom:2px;">Affiliated Training Centre</p>
+                <b>${esc(d.centre)} (${esc(d.centre_code)})</b>
+              </div>
+            </div>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; display:flex; justify-content:space-around; text-align:center;">
+              <div>
+                <span class="muted" style="font-size:0.75rem;">TOTAL SCORE</span>
+                <p style="font-weight:700; font-size:1.15rem; color:var(--navy); margin:2px 0 0;">${d.total_obtained} / ${d.total_max}</p>
+              </div>
+              <div>
+                <span class="muted" style="font-size:0.75rem;">PERCENTAGE</span>
+                <p style="font-weight:700; font-size:1.15rem; color:var(--navy); margin:2px 0 0;">${d.percentage}%</p>
+              </div>
+              <div>
+                <span class="muted" style="font-size:0.75rem;">GRADE</span>
+                <p style="font-weight:700; font-size:1.15rem; color:var(--navy); margin:2px 0 0;">${esc(d.grade)}</p>
+              </div>
+              <div>
+                <span class="muted" style="font-size:0.75rem;">RESULT</span>
+                <p style="margin:2px 0 0;">${badge(d.result)}</p>
+              </div>
+            </div>
+
+            <div style="margin-top:16px; font-size:0.8rem; color:#64748b; text-align:center;">
+              ✅ Cryptographically validated on ${new Date().toLocaleDateString('en-IN')} via Purvanchal Education &amp; Skill Council Official Central Ledger.
+            </div>
+          </div>
+        `;
+      } else {
+        $('#r').innerHTML = `
+          <div class="verify-result-box" style="text-align:left;">
+            <div class="verify-seal-watermark">PESC</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+              <div>
+                <span class="badge ${d.status}">${d.status} CERTIFICATE</span>
+                <h3 style="margin:6px 0 0; color:var(--navy); font-size:1.4rem;">Course Completion Certificate</h3>
+              </div>
+              <div style="text-align:right;">
+                <span class="muted" style="font-size:0.8rem;">Certificate No.</span>
+                <p style="font-family:monospace; font-weight:700; color:var(--navy); margin:0;">${esc(d.certificate_no)}</p>
+              </div>
+            </div>
+
+            <div class="grid" style="grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+              <div>
+                <p class="muted" style="font-size:0.8rem; margin-bottom:2px;">Candidate Name (Masked)</p>
+                <b style="font-size:1.05rem; color:#0f172a;">${esc(d.holder)}</b>
+              </div>
+              <div>
+                <p class="muted" style="font-size:0.8rem; margin-bottom:2px;">Issued On</p>
+                <b>${esc(d.issued_on)}</b>
+              </div>
+              <div style="grid-column: span 2;">
+                <p class="muted" style="font-size:0.8rem; margin-bottom:2px;">Course Completed</p>
+                <b style="font-size:1.05rem; color:var(--navy);">${esc(d.course)}</b>
+              </div>
+              <div style="grid-column: span 2;">
+                <p class="muted" style="font-size:0.8rem; margin-bottom:2px;">Affiliated Training Centre</p>
+                <b>${esc(d.centre)}</b>
+              </div>
+            </div>
+
+            <div style="margin-top:16px; font-size:0.8rem; color:#64748b; text-align:center;">
+              ✅ Cryptographically validated on ${new Date().toLocaleDateString('en-IN')} via Purvanchal Education &amp; Skill Council Central Registry.
+            </div>
+          </div>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>

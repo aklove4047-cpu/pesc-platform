@@ -1,0 +1,251 @@
+process.env.NODE_ENV = 'test';
+process.env.DB_FILE = require('path').join(require('os').tmpdir(), `pesc-test-${Date.now()}.db`);
+process.env.BASE_DOMAIN = 'pescouncil.test';
+process.env.PUBLIC_URL = 'http://pescouncil.test';
+process.env.PAYMENT_WEBHOOK_SECRET = 'testsecret';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const http = require('http');
+const crypto = require('crypto');
+const argon2 = require('../src/hash');
+const db = require('../src/db');
+const app = require('../src/app');
+
+let server, port;
+const MAIN = 'pescouncil.test';
+function call(method, path, { host = MAIN, body, cookie, raw, headers = {} } = {}) {
+  return new Promise((resolve, reject) => {
+    const data = raw ?? (body ? JSON.stringify(body) : null);
+    const req = http.request({ port, method, path, headers: { Host: host, ...(data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {}), ...(cookie ? { Cookie: cookie } : {}), ...headers } }, (res) => {
+      const chunks = []; res.on('data', (c) => chunks.push(c));
+      res.on('end', () => { const buf = Buffer.concat(chunks); let json = null; try { json = JSON.parse(buf.toString()); } catch {}
+        const sc = res.headers['set-cookie']; resolve({ status: res.statusCode, json, buf, type: res.headers['content-type'], cookie: sc ? sc[0].split(';')[0] : null }); });
+    });
+    req.on('error', reject); if (data) req.write(data); req.end();
+  });
+}
+const login = async (host, email, password) => { const r = await call('POST', '/api/auth/login', { host, body: { email, password } }); assert.equal(r.status, 200, JSON.stringify(r.json)); return r.cookie; };
+const setupLink = (email) => { const n = db.prepare("SELECT payload FROM notifications WHERE to_addr=? AND template='centre_activated' ORDER BY id DESC").get(email); return new URL(JSON.parse(n.payload).url).searchParams.get('token'); };
+const apply = (o) => call('POST', '/api/public/apply', { body: { owner_name: 'Ravi Kumar', centre_name: 'Navya Computer Centre', mobile: '9876543210', email: 'ravi@example.com', address: '12 Main Road', state: 'Uttar Pradesh', district: 'Farrukhabad', pin: '209625', slug: 'navya', terms: true, ...o } });
+
+let admin, A = {}, B = {};
+test.before(async () => {
+  db.prepare("INSERT INTO users(email,name,role,password_hash,status,created_at) VALUES('admin@pesc.test','Admin','super_admin',?,'active',?)").run(await argon2.hash('AdminPass#12345'), Date.now());
+  db.prepare("INSERT INTO courses(code,name,duration_months,fee_paise) VALUES('DCA','Diploma in Computer Applications',12,600000)").run();
+  await new Promise((r) => { server = app.listen(0, () => { port = server.address().port; r(); }); });
+  admin = await login(MAIN, 'admin@pesc.test', 'AdminPass#12345');
+});
+test.after(() => server.close());
+
+test('public application validation, reserved + duplicate slugs', async () => {
+  assert.equal((await apply({ slug: 'admin' })).status, 409);
+  assert.equal((await apply({ mobile: '12345' })).status, 400);
+  const ok = await apply({}); assert.equal(ok.status, 201); assert.match(ok.json.application_no, /^PESC-APP-/);
+  assert.equal((await apply({ email: 'x@example.com', mobile: '9876543211' })).status, 409); // same slug
+  assert.equal((await apply({ slug: 'other', email: 'ravi@example.com' })).status, 409);       // same email
+  const b = await apply({ slug: 'abc', email: 'sita@example.com', mobile: '9123456789', owner_name: 'Sita Devi', centre_name: 'ABC Institute' }); assert.equal(b.status, 201);
+});
+
+test('admin endpoints require auth', async () => {
+  assert.equal((await call('GET', '/api/admin/stats')).status, 401);
+  assert.equal((await call('GET', '/api/admin/stats', { cookie: admin })).status, 200);
+});
+
+test('approval provisions centre, owner sets password, tenant login + isolation', async () => {
+  const apps = (await call('GET', '/api/admin/applications', { cookie: admin })).json.applications;
+  for (const a of apps) { const r = await call('POST', `/api/admin/applications/${a.id}/approve`, { cookie: admin }); assert.equal(r.status, 200, JSON.stringify(r.json)); }
+  assert.equal((await call('POST', `/api/admin/applications/${apps[0].id}/approve`, { cookie: admin })).status, 409); // no double provisioning
+  const centres = db.prepare('SELECT * FROM centres ORDER BY id').all();
+  assert.equal(centres.length, 2); assert.ok(centres.every((c) => c.status === 'active' && /^PESC\d{5}$/.test(c.centre_code)));
+  // pending owner cannot log in before setup
+  assert.equal((await call('POST', '/api/auth/login', { host: 'navya.pescouncil.test', body: { email: 'ravi@example.com', password: 'whatever12345' } })).status, 401);
+  for (const [email, slug, o] of [['ravi@example.com', 'navya', A], ['sita@example.com', 'abc', B]]) {
+    const t = setupLink(email);
+    assert.equal((await call('POST', '/api/auth/setup', { body: { token: t, password: 'short' } })).status, 400);
+    assert.equal((await call('POST', '/api/auth/setup', { body: { token: t, password: 'OwnerPass#12345' } })).status, 200);
+    assert.equal((await call('POST', '/api/auth/setup', { body: { token: t, password: 'OwnerPass#12345' } })).status, 400); // single use
+    o.host = `${slug}.pescouncil.test`; o.cookie = await login(o.host, email, 'OwnerPass#12345');
+    o.centre = db.prepare('SELECT * FROM centres WHERE slug=?').get(slug);
+  }
+  // A's account cannot be used on B's host
+  assert.equal((await call('POST', '/api/auth/login', { host: B.host, body: { email: 'ravi@example.com', password: 'OwnerPass#12345' } })).status, 401);
+  assert.equal((await call('GET', '/api/centre/dashboard', { host: B.host, cookie: A.cookie })).status, 403);
+  // tenant host cannot reach admin API
+  assert.equal((await call('GET', '/api/admin/stats', { host: A.host, cookie: admin })).status, 404);
+});
+
+test('unknown subdomain 404, suspended restricted, reserved goes to main', async () => {
+  assert.equal((await call('GET', '/', { host: 'nope.pescouncil.test' })).status, 404);
+  assert.equal((await call('GET', '/', { host: 'a.b.pescouncil.test' })).status, 404);
+  assert.equal((await call('GET', '/', { host: 'www.pescouncil.test' })).status, 200);
+  assert.equal((await call('POST', `/api/admin/centres/${B.centre.id}/suspend`, { cookie: admin, body: {} })).status, 400); // reason required
+  assert.equal((await call('POST', `/api/admin/centres/${B.centre.id}/suspend`, { cookie: admin, body: { reason: 'non-payment' } })).status, 200);
+  assert.equal((await call('GET', '/', { host: B.host })).status, 403);
+  assert.equal((await call('POST', `/api/admin/centres/${B.centre.id}/activate`, { cookie: admin, body: { reason: 'paid' } })).status, 200);
+  assert.equal((await call('GET', '/healthz', { host: A.host })).json.tenant, 'navya');
+});
+
+test('students are tenant scoped; certificates issue, verify, revoke', async () => {
+  const course = db.prepare('SELECT id FROM courses').get();
+  assert.equal((await call('POST', `/api/admin/centres/${A.centre.id}/courses`, { cookie: admin, body: { course_ids: [course.id] } })).status, 200);
+  const s = await call('POST', '/api/centre/students', { host: A.host, cookie: A.cookie, body: { name: 'Anil Kumar', mobile: '9000000001', course_id: course.id } });
+  assert.equal(s.status, 201);
+  assert.equal((await call('POST', '/api/centre/students', { host: B.host, cookie: B.cookie, body: { name: 'X', course_id: course.id } })).status, 400); // course not assigned to B
+  assert.equal((await call('GET', `/api/centre/students/${s.json.id}`, { host: B.host, cookie: B.cookie })).status, 404);       // cross-tenant read
+  assert.equal((await call('GET', `/api/centre/students/${s.json.id}`, { host: A.host, cookie: A.cookie })).status, 200);
+  const c = await call('POST', '/api/centre/certificates', { host: A.host, cookie: A.cookie, body: { student_id: s.json.id } }); assert.equal(c.status, 201);
+  assert.equal((await call('POST', '/api/centre/certificates', { host: A.host, cookie: A.cookie, body: { student_id: s.json.id } })).status, 409);
+  assert.equal((await call('POST', `/api/certificates/${c.json.id}/decision`, { host: A.host, cookie: A.cookie, body: { decision: 'approve' } })).status, 403); // centre cannot self-approve
+  const ap = await call('POST', `/api/certificates/${c.json.id}/decision`, { cookie: admin, body: { decision: 'approve' } });
+  assert.equal(ap.status, 200); assert.match(ap.json.cert_no, /^PESC\/\d{4}\/\d{6}$/);
+  const token = db.prepare('SELECT token FROM certificates WHERE id=?').get(c.json.id).token;
+  const v = await call('GET', `/api/public/verify/${token}`); assert.equal(v.json.status, 'Valid'); assert.equal(v.json.holder, 'A*** K****'); assert.ok(!JSON.stringify(v.json).includes('9000000001'));
+  assert.equal((await call('GET', `/api/public/verify/${token}x`)).json.status, 'Not Found');
+  const pdf = await call('GET', `/api/certificates/${c.json.id}/pdf`, { host: A.host, cookie: A.cookie }); assert.equal(pdf.status, 200); assert.equal(pdf.type, 'application/pdf');
+  assert.equal((await call('GET', `/api/certificates/${c.json.id}/pdf`, { host: B.host, cookie: B.cookie })).status, 404);
+  assert.equal((await call('POST', `/api/certificates/${c.json.id}/decision`, { cookie: admin, body: { decision: 'revoke', reason: 'error' } })).status, 200);
+  assert.equal((await call('GET', `/api/public/verify/${token}`)).json.status, 'Revoked');
+});
+
+test('payments: signature, idempotency, amount check, ledger', async () => {
+  const o = await call('POST', '/api/centre/wallet/recharge', { host: A.host, cookie: A.cookie, body: { amount_rupees: 500 } }); assert.equal(o.status, 201);
+  const send = (payload, key = 'testsecret') => { const raw = JSON.stringify(payload); return call('POST', '/api/webhooks/payment', { raw, headers: { 'x-signature': crypto.createHmac('sha256', key).update(raw).digest('hex') } }); };
+  const ev = { provider_ref: o.json.provider_ref, status: 'paid', amount_paise: 50000 };
+  assert.equal((await send(ev, 'wrong')).status, 401);
+  assert.equal((await send({ ...ev, amount_paise: 1 })).status, 400);
+  assert.equal((await send(ev)).status, 200);
+  assert.equal((await send(ev)).json.duplicate, true);
+  const w = await call('GET', '/api/centre/wallet', { host: A.host, cookie: A.cookie });
+  assert.equal(w.json.balance_paise, 50000); assert.equal(w.json.ledger.length, 1);
+});
+
+test('provisioning failure is recoverable (resume, no duplicates)', async () => {
+  await apply({ slug: 'retry', email: 'r@example.com', mobile: '9111111111', owner_name: 'R', centre_name: 'Retry' });
+  const a = db.prepare("SELECT id FROM franchise_applications WHERE slug='retry'").get();
+  db.prepare("INSERT INTO users(email,name,role,status,created_at) VALUES('r@example.com','Someone','admin','active',?)").run(Date.now()); // collides with owner email
+  const r1 = await call('POST', `/api/admin/applications/${a.id}/approve`, { cookie: admin }); assert.equal(r1.status, 502); assert.equal(r1.json.step, 'create_owner');
+  db.prepare("DELETE FROM users WHERE email='r@example.com'").run();
+  const r2 = await call('POST', `/api/admin/applications/${a.id}/approve`, { cookie: admin }); assert.equal(r2.status, 200);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM centres WHERE slug='retry'").get().n, 1);
+});
+
+test('marksheets: submit, approve, public verification, and PDF generation', async () => {
+  const student = db.prepare('SELECT id, student_code FROM students LIMIT 1').get();
+  const submitRes = await call('POST', '/api/marksheets/submit', {
+    host: A.host,
+    cookie: A.cookie,
+    body: {
+      student_id: student.id,
+      exam_session: '2026',
+      roll_no: '2026001',
+      subjects: [
+        { code: 'DCA101', name: 'Computer Fundamentals', max_theory: 70, obt_theory: 60, max_practical: 30, obt_practical: 25 },
+        { code: 'DCA102', name: 'MS Office Suite', max_theory: 70, obt_theory: 55, max_practical: 30, obt_practical: 28 },
+      ],
+    },
+  });
+  assert.equal(submitRes.status, 201);
+  assert.equal(submitRes.json.total_max, 200);
+  assert.equal(submitRes.json.total_obtained, 168);
+  assert.equal(submitRes.json.percentage, 84);
+  assert.equal(submitRes.json.grade, 'A');
+  assert.equal(submitRes.json.result, 'PASS');
+
+  const mrkId = submitRes.json.id;
+
+  // Pending marksheets queue
+  const pending = await call('GET', '/api/marksheets/pending', { cookie: admin });
+  assert.equal(pending.status, 200);
+  assert.ok(pending.json.marksheets.some((m) => m.id === mrkId));
+
+  // Approve marksheet
+  const appRes = await call('POST', `/api/marksheets/${mrkId}/decision`, {
+    cookie: admin,
+    body: { decision: 'approve' },
+  });
+  assert.equal(appRes.status, 200);
+  assert.match(appRes.json.marksheet_no, /^PESC\/MRK\/\d{4}\/\d{6}$/);
+
+  // Public verification by marksheet number
+  const v1 = await call('GET', `/api/public/verify-marksheet?marksheet_no=${encodeURIComponent(appRes.json.marksheet_no)}`);
+  assert.equal(v1.status, 200);
+  assert.equal(v1.json.status, 'Approved');
+  assert.equal(v1.json.percentage, 84);
+  assert.equal(v1.json.result, 'PASS');
+
+  // Public verification by QR token
+  const token = db.prepare('SELECT token FROM marksheets WHERE id=?').get(mrkId).token;
+  const v2 = await call('GET', `/api/public/verify/marksheet/${token}`);
+  assert.equal(v2.status, 200);
+  assert.equal(v2.json.status, 'Approved');
+
+  // PDF download
+  const pdf = await call('GET', `/api/marksheets/${mrkId}/pdf`, { host: A.host, cookie: A.cookie });
+  assert.equal(pdf.status, 200);
+  assert.equal(pdf.type, 'application/pdf');
+});
+
+test('student panel: account setup, login, profile, and digital ID card', async () => {
+  const student = db.prepare('SELECT id, student_code FROM students LIMIT 1').get();
+  // Centre provisions student account
+  const accRes = await call('POST', `/api/centre/students/${student.id}/account`, {
+    host: A.host,
+    cookie: A.cookie,
+    body: { password: 'StudentPass#12345' },
+  });
+  assert.equal(accRes.status, 200);
+  assert.equal(accRes.json.login_id, student.student_code);
+
+  // Student logs in using student_code
+  const studentCookie = await login(MAIN, student.student_code, 'StudentPass#12345');
+  assert.ok(studentCookie);
+
+  // Profile view
+  const prof = await call('GET', '/api/student/profile', { cookie: studentCookie });
+  assert.equal(prof.status, 200);
+  assert.equal(prof.json.student.student_code, student.student_code);
+
+  // Marksheets view
+  const mrks = await call('GET', '/api/student/marksheets', { cookie: studentCookie });
+  assert.equal(mrks.status, 200);
+  assert.ok(mrks.json.marksheets.length >= 1);
+
+  // ID Card view
+  const idc = await call('GET', '/api/student/id-card', { cookie: studentCookie });
+  assert.equal(idc.status, 200);
+  assert.equal(idc.json.id_card.student_code, student.student_code);
+});
+
+test('coordinator panel & reports with CSV export', async () => {
+  // Create coordinator
+  const hash = await argon2.hash('CoordPass#12345');
+  const coordUser = db.prepare("INSERT INTO users(email, name, role, password_hash, status, created_at) VALUES('coord@pesc.test', 'UP Coordinator', 'coordinator', ?, 'active', ?)")
+    .run(hash, Date.now());
+  const coordId = coordUser.lastInsertRowid;
+
+  // Assign coordinator to Centre A
+  await call('POST', `/api/admin/centres/${A.centre.id}/coordinator`, {
+    cookie: admin,
+    body: { coordinator_id: coordId },
+  });
+
+  const coordCookie = await login(MAIN, 'coord@pesc.test', 'CoordPass#12345');
+  assert.ok(coordCookie);
+
+  // Coordinator dashboard
+  const dash = await call('GET', '/api/coordinator/dashboard', { cookie: coordCookie });
+  assert.equal(dash.status, 200);
+  assert.equal(dash.json.stats.centres_total, 1);
+
+  // Reports with CSV export
+  const csvAdm = await call('GET', '/api/reports/admissions?format=csv', { cookie: coordCookie });
+  assert.equal(csvAdm.status, 200);
+  assert.match(csvAdm.type, /text\/csv/);
+  assert.ok(csvAdm.buf.toString().includes('Student Code'));
+
+  const csvMrk = await call('GET', '/api/reports/marksheets?format=csv', { cookie: admin });
+  assert.equal(csvMrk.status, 200);
+  assert.match(csvMrk.type, /text\/csv/);
+  assert.ok(csvMrk.buf.toString().includes('Marksheet No'));
+});
+
