@@ -51,20 +51,10 @@
           Sign In
         </button>
 
-        <!-- Quick 1-Click Fill Button for Convenience -->
-        <button type="button" id="fillAdminBtn" style="margin-top:12px; width:100%; padding:9px; background:#f0fdf4; color:#166534; border:1px dashed #86efac; border-radius:8px; font-size:0.85rem; font-weight:600; cursor:pointer;">
-          ⚡ Auto-fill Super Admin Details
-        </button>
-
         <div style="margin-top:18px; text-align:center; font-size:0.85rem;">
           <a href="#" id="fg" class="muted" style="text-decoration:none;">Forgot password?</a>
         </div>
       </form>
-
-      <div style="margin-top:20px; padding-top:16px; border-top:1px solid #e2e8f0; font-size:0.82rem; color:#64748b; text-align:center;">
-        <b>Super Admin:</b> <code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">admin@pescouncil.in</code><br>
-        <span style="font-size:0.78rem; color:#94a3b8;">Password: <code>Admin#12345678</code></span>
-      </div>
     </section>
   </main>
 
@@ -75,7 +65,6 @@
     const pwInput = document.getElementById('password');
     const subBtn = document.getElementById('subBtn');
     const pwToggle = document.getElementById('pwToggle');
-    const fillAdminBtn = document.getElementById('fillAdminBtn');
 
     // Clean any query string or hash immediately
     if (window.location.search || window.location.hash) {
@@ -87,14 +76,6 @@
       const isPw = pwInput.type === 'password';
       pwInput.type = isPw ? 'text' : 'password';
       pwToggle.textContent = isPw ? '🙈' : '👁️';
-    };
-
-    // 1-Click Auto-login button
-    fillAdminBtn.onclick = async () => {
-      emailInput.value = 'admin@pescouncil.in';
-      pwInput.value = 'Admin#12345678';
-      errBox.style.display = 'none';
-      await handleLogin();
     };
 
     // Auto-redirect if already logged in
