@@ -89,12 +89,12 @@
       pwToggle.textContent = isPw ? '🙈' : '👁️';
     };
 
-    // Auto-fill button
-    fillAdminBtn.onclick = () => {
+    // 1-Click Auto-login button
+    fillAdminBtn.onclick = async () => {
       emailInput.value = 'admin@pescouncil.in';
       pwInput.value = 'Admin#12345678';
       errBox.style.display = 'none';
-      toast('Super Admin credentials filled!');
+      await handleLogin();
     };
 
     // Auto-redirect if already logged in
@@ -102,26 +102,28 @@
       try {
         const me = await api('/api/auth/me');
         if (me && me.user) {
-          if (['super_admin', 'admin'].includes(me.user.role)) location.href = '/admin';
-          else if (me.user.role === 'coordinator') location.href = '/coordinator';
-          else if (me.user.role === 'student') location.href = '/student';
-          else location.href = '/portal';
+          if (['super_admin', 'admin'].includes(me.user.role)) window.location.replace('/admin');
+          else if (me.user.role === 'coordinator') window.location.replace('/coordinator');
+          else if (me.user.role === 'student') window.location.replace('/student');
+          else window.location.replace('/portal');
         }
       } catch (_) {}
     })();
 
     async function handleLogin(e) {
-      if (e) e.preventDefault();
+      if (e) {
+        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+      }
       errBox.style.display = 'none';
       errBox.textContent = '';
 
       const emailVal = emailInput.value.trim();
-      const pwVal = pwInput.value;
+      const pwVal = pwInput.value.trim();
 
       if (!emailVal || !pwVal) {
         errBox.textContent = 'Please enter both email and password';
         errBox.style.display = 'block';
-        return;
+        return false;
       }
 
       subBtn.disabled = true;
@@ -131,13 +133,13 @@
         const body = { email: emailVal, password: pwVal };
         const d = await api('/api/auth/login', { method: 'POST', body });
         if (['super_admin', 'admin'].includes(d.user.role)) {
-          location.href = '/admin';
+          window.location.replace('/admin');
         } else if (d.user.role === 'coordinator') {
-          location.href = '/coordinator';
+          window.location.replace('/coordinator');
         } else if (d.user.role === 'student') {
-          location.href = '/student';
+          window.location.replace('/student');
         } else {
-          location.href = '/portal';
+          window.location.replace('/portal');
         }
       } catch (err) {
         errBox.textContent = err.message || 'Invalid credentials or login failed';
@@ -145,6 +147,7 @@
         subBtn.disabled = false;
         subBtn.textContent = 'Sign In';
       }
+      return false;
     }
 
     window.handleLogin = handleLogin;
