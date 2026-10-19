@@ -114,10 +114,10 @@ router.get('/students', (req, res) => {
 
 // Wallets & Financial Ledger
 router.get('/wallets', (req, res) => {
-  const rows = db.prepare(`SELECT w.centre_id, w.balance_paise, c.name AS centre_name, c.centre_code, c.district, c.state, c.status AS centre_status
-    FROM wallets w
-    JOIN centres c ON c.id=w.centre_id
-    ORDER BY w.balance_paise DESC`).all();
+  const rows = db.prepare(`SELECT c.id AS centre_id, COALESCE(w.balance_paise, 0) AS balance_paise, c.name AS centre_name, c.centre_code, c.district, c.state, c.status AS centre_status
+    FROM centres c
+    LEFT JOIN wallets w ON w.centre_id=c.id
+    ORDER BY balance_paise DESC, c.id DESC`).all();
   res.json({ wallets: rows });
 });
 
@@ -127,12 +127,11 @@ router.post('/wallets/:centre_id/adjust', (req, res) => {
   const amountPaise = Math.round(+req.body.amount_rupees * 100);
   const reason = str(req.body.reason, 200) || 'Head Office Balance Adjustment';
   if (!['credit', 'debit'].includes(kind) || !(amountPaise > 0)) throw new HttpError(400, 'Valid kind and positive amount required');
-  const w = db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(cid);
-  if (!w) throw new HttpError(404, 'Centre wallet not found');
+  const w = db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(cid) || { balance_paise: 0 };
   let newBal = kind === 'credit' ? w.balance_paise + amountPaise : w.balance_paise - amountPaise;
   if (newBal < 0) throw new HttpError(400, 'Insufficient balance for debit');
   db.transaction(() => {
-    db.prepare('UPDATE wallets SET balance_paise=? WHERE centre_id=?').run(newBal, cid);
+    db.prepare('INSERT INTO wallets(centre_id, balance_paise) VALUES(?,?) ON CONFLICT(centre_id) DO UPDATE SET balance_paise=excluded.balance_paise').run(cid, newBal);
     const ref = `ADMIN-ADJ-${Date.now()}-${rand(4)}`;
     db.prepare(`INSERT INTO wallet_transactions(centre_id,kind,amount_paise,balance_after,reference,description,created_by,created_at)
       VALUES(?,?,?,?,?,?,?,?)`).run(cid, kind, amountPaise, newBal, ref, reason, req.user.id, now());

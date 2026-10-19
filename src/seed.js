@@ -85,6 +85,14 @@ const db = require('./db');
   }
   allCourses.forEach(c => insCC.run(centre2.id, c.id));
 
+  // Ensure wallets exist for all centres
+  const allCentres = db.prepare('SELECT id FROM centres').all();
+  for (const c of allCentres) {
+    if (!db.prepare('SELECT 1 FROM wallets WHERE centre_id=?').get(c.id)) {
+      db.prepare('INSERT OR REPLACE INTO wallets(centre_id,balance_paise) VALUES(?,?)').run(c.id, 5000000);
+    }
+  }
+
   // 6. Pending Franchise Application (For Admin to test 1-click Review & Approve)
   const appNo = 'PESC-APP-2026-000002';
   if (!db.prepare('SELECT id FROM franchise_applications WHERE app_no=?').get(appNo)) {
