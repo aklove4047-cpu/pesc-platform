@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: pesc-platform
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: BASE_DOMAIN
+        value: onrender.com
+      - key: SEED_ADMIN_EMAIL
+        value: admin@pescouncil.in
+      - key: SEED_ADMIN_PASSWORD
+        value: Admin#12345678
+      - key: PAYMENT_WEBHOOK_SECRET
+        generateValue: true
