@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const db = require('../db');
 const argon2 = require('../hash');
 const { requireRole } = require('../auth');
-const { HttpError, now, str, h, audit, paginate, next: counter } = require('../lib');
+const { HttpError, now, str, h, audit, paginate, next: counter, nextStudentCode } = require('../lib');
 
 router.use(requireRole('centre_owner', 'centre_staff'));
 const cid = (req) => req.user.centre_id;
@@ -40,12 +40,13 @@ function studentInput(req) {
 }
 router.post('/students', (req, res) => {
   const s = studentInput(req);
+  let code;
   const id = db.transaction(() => {
-    const code = `${db.prepare('SELECT centre_code c FROM centres WHERE id=?').get(cid(req)).c}-${new Date().getFullYear()}-${String(counter('student:' + cid(req))).padStart(5, '0')}`;
+    code = nextStudentCode(cid(req));
     return db.prepare('INSERT INTO students(student_code,centre_id,name,father_name,mobile,email,dob,course_id,session,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
       .run(code, cid(req), s.name, s.father_name, s.mobile, s.email, s.dob, s.course_id, s.session, now()).lastInsertRowid;
   })();
-  audit(req, 'student.create', 'student', id); res.status(201).json({ id });
+  audit(req, 'student.create', 'student', id); res.status(201).json({ id, student_code: code });
 });
 router.put('/students/:id', (req, res) => {
   const s = studentInput(req);

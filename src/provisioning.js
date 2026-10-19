@@ -4,7 +4,7 @@ const db = require('./db');
 const cfg = require('./config');
 const notify = require('./notify');
 const { resolveSlug } = require('./tenant');
-const { HttpError, now, sha, rand, next, audit } = require('./lib');
+const { HttpError, now, sha, rand, next, nextCentreCode, audit } = require('./lib');
 
 const getApp = (id) => db.prepare('SELECT * FROM franchise_applications WHERE id=?').get(id);
 const hostOf = (slug) => `${slug}.${cfg.BASE_DOMAIN}`;
@@ -22,7 +22,7 @@ const STEPS = [
     if (a.centre_id) return 'centre exists';
     if (resolveSlug(a.slug)) throw new Error('Slug already taken');
     const owner = db.prepare('SELECT id FROM users WHERE email=?').get(a.email.toLowerCase());
-    const code = 'PESC' + String(next('centre')).padStart(5, '0');
+    const code = nextCentreCode();
     const r = db.prepare("INSERT INTO centres(centre_code,name,slug,owner_user_id,state,district,address,pin,status,created_at) VALUES(?,?,?,?,?,?,?,?,'provisioning',?)")
       .run(code, a.centre_name, a.slug, owner.id, a.state, a.district, a.address, a.pin, now());
     db.prepare('UPDATE franchise_applications SET centre_id=? WHERE id=?').run(r.lastInsertRowid, a.id);

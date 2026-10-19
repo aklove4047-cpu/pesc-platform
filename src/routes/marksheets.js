@@ -4,7 +4,7 @@ const QR = require('qrcode');
 const db = require('../db');
 const cfg = require('../config');
 const { requireRole, requireAuth } = require('../auth');
-const { HttpError, now, rand, str, h, audit, next: counter } = require('../lib');
+const { HttpError, now, rand, str, h, audit, next: counter, nextMarksheetNo } = require('../lib');
 
 const SEL = `SELECT m.*, s.name AS student_name, s.student_code, s.father_name, s.dob,
   co.name AS course_name, co.code AS course_code, co.duration_months,
@@ -36,7 +36,7 @@ router.get('/pending', requireRole('super_admin', 'admin', 'coordinator'), (req,
 });
 
 // Create/Submit a marksheet request (centre role)
-router.post('/submit', requireRole('centre_owner', 'centre_staff'), (req, res) => {
+const submitMarksheet = (req, res) => {
   const cid = req.user.centre_id;
   const sid = +req.body.student_id;
   const examSession = str(req.body.exam_session, 40) || '2026';
@@ -102,7 +102,10 @@ router.post('/submit', requireRole('centre_owner', 'centre_staff'), (req, res) =
 
   audit(req, 'marksheet.submit', 'marksheet', rowId);
   res.status(201).json({ id: rowId, total_max: totalMax, total_obtained: totalObtained, percentage, grade, result });
-});
+};
+
+router.post('/submit', requireRole('centre_owner', 'centre_staff'), submitMarksheet);
+router.post('/', requireRole('centre_owner', 'centre_staff'), submitMarksheet);
 
 // Decision on marksheet (admin or coordinator)
 router.post('/:id/decision', requireRole('super_admin', 'admin', 'coordinator'), (req, res) => {
@@ -127,8 +130,7 @@ router.post('/:id/decision', requireRole('super_admin', 'admin', 'coordinator'),
       if (d === 'reject') {
         db.prepare("UPDATE marksheets SET status='Rejected', reason=?, decided_by=? WHERE id=?").run(reason, req.user.id, m.id);
       } else {
-        const year = new Date().getFullYear();
-        const no = `PESC/MRK/${year}/${String(counter('mrk:' + year)).padStart(6, '0')}`;
+        const no = nextMarksheetNo();
         db.prepare("UPDATE marksheets SET status='Approved', marksheet_no=?, token=?, issue_date=?, decided_by=? WHERE id=?")
           .run(no, rand(24), now(), req.user.id, m.id);
       }

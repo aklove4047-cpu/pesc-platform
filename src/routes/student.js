@@ -28,8 +28,8 @@ router.get('/profile', (req, res) => {
   res.json({ student: s });
 });
 
-// Student Marksheets
-router.get('/marksheets', (req, res) => {
+// Student Marksheets (supports both /marksheets and /marksheet)
+const handleMarksheets = (req, res) => {
   const s = getStudent(req);
   const rows = db.prepare(`
     SELECT m.id, m.marksheet_no, m.token, m.roll_no, m.exam_session,
@@ -46,11 +46,13 @@ router.get('/marksheets', (req, res) => {
   for (const r of rows) {
     try { r.subjects = JSON.parse(r.subjects); } catch { r.subjects = []; }
   }
-  res.json({ marksheets: rows });
-});
+  res.json({ marksheets: rows, marksheet: rows[0] || null });
+};
+router.get('/marksheets', handleMarksheets);
+router.get('/marksheet', handleMarksheets);
 
-// Student Certificates
-router.get('/certificates', (req, res) => {
+// Student Certificates (supports both /certificates and /certificate)
+const handleCertificates = (req, res) => {
   const s = getStudent(req);
   const rows = db.prepare(`
     SELECT cert.id, cert.cert_no, cert.token, cert.status, cert.issued_at, cert.created_at,
@@ -62,8 +64,10 @@ router.get('/certificates', (req, res) => {
     ORDER BY cert.id DESC
   `).all(s.id);
 
-  res.json({ certificates: rows });
-});
+  res.json({ certificates: rows, certificate: rows[0] || null });
+};
+router.get('/certificates', handleCertificates);
+router.get('/certificate', handleCertificates);
 
 // Student Digital ID Card data
 router.get('/id-card', (req, res) => {

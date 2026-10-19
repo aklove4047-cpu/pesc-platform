@@ -5,7 +5,7 @@ const QR = require('qrcode');
 const db = require('../db');
 const cfg = require('../config');
 const { requireRole, requireAuth } = require('../auth');
-const { HttpError, now, rand, str, h, audit, next: counter } = require('../lib');
+const { HttpError, now, rand, str, h, audit, next: counter, nextCertificateNo } = require('../lib');
 
 const SEL = `SELECT c.*, s.name AS student_name, s.student_code, co.name AS course_name, ce.name AS centre_name, ce.centre_code, ce.coordinator_id
   FROM certificates c JOIN students s ON s.id=c.student_id JOIN courses co ON co.id=c.course_id JOIN centres ce ON ce.id=c.centre_id`;
@@ -31,7 +31,7 @@ router.post('/:id/decision', requireRole('super_admin', 'admin', 'coordinator'),
       if (c.status !== 'Pending') throw new HttpError(409, `Certificate is already ${c.status}`);
       if (d === 'reject') db.prepare("UPDATE certificates SET status='Rejected', reason=?, decided_by=? WHERE id=?").run(reason, req.user.id, c.id);
       else {
-        const no = `PESC/${new Date().getFullYear()}/${String(counter('cert:' + new Date().getFullYear())).padStart(6, '0')}`;
+        const no = nextCertificateNo();
         db.prepare("UPDATE certificates SET status='Valid', cert_no=?, token=?, issued_at=?, decided_by=? WHERE id=?").run(no, rand(24), now(), req.user.id, c.id);
       }
     }

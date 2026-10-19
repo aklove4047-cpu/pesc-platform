@@ -13,12 +13,22 @@ const slugProblem = (slug) => {
 };
 router.get('/slug-check', (req, res) => { const s = str(req.query.slug, 40).toLowerCase(); const p = slugProblem(s); res.json({ available: !p, reason: p }); });
 
-router.post('/apply', h(async (req, res) => {
+const handleApply = h(async (req, res) => {
   const b = req.body || {};
-  const a = { owner_name: str(b.owner_name, 100), centre_name: str(b.centre_name, 150), mobile: str(b.mobile, 15), email: str(b.email, 200).toLowerCase(),
-    address: str(b.address, 400), state: str(b.state, 60), district: str(b.district, 60), pin: str(b.pin, 6), slug: str(b.slug, 40).toLowerCase() };
+  const slug = str(b.slug, 40).toLowerCase() || str(b.centre_name || b.institute_name, 30).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const a = {
+    owner_name: str(b.owner_name, 100),
+    centre_name: str(b.centre_name || b.institute_name, 150),
+    mobile: str(b.mobile || b.phone || b.owner_phone, 15),
+    email: str(b.email || b.owner_email, 200).toLowerCase(),
+    address: str(b.address, 400),
+    state: str(b.state, 60),
+    district: str(b.district, 60),
+    pin: str(b.pin || b.pincode, 6) || '221001',
+    slug
+  };
   if (Object.values(a).some((v) => !v)) throw new HttpError(400, 'All fields are required');
-  if (!b.terms) throw new HttpError(400, 'Terms must be accepted');
+  if (!b.terms && !b.declaration) throw new HttpError(400, 'Terms must be accepted');
   if (!/^[6-9]\d{9}$/.test(a.mobile)) throw new HttpError(400, 'Enter a valid 10-digit mobile number');
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a.email)) throw new HttpError(400, 'Enter a valid email');
   if (!/^\d{6}$/.test(a.pin)) throw new HttpError(400, 'Enter a valid 6-digit PIN code');
@@ -27,12 +37,17 @@ router.post('/apply', h(async (req, res) => {
     throw new HttpError(409, 'An application with this email or mobile already exists');
   if (db.prepare('SELECT 1 FROM users WHERE email=?').get(a.email)) throw new HttpError(409, 'This email is already registered');
   const appNo = `PESC-APP-${new Date().getFullYear()}-${String(counter('application')).padStart(6, '0')}`;
+  let rowId;
   try {
-    db.prepare(`INSERT INTO franchise_applications(app_no,owner_name,centre_name,mobile,email,address,state,district,pin,slug,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,'Submitted',?)`)
+    const r = db.prepare(`INSERT INTO franchise_applications(app_no,owner_name,centre_name,mobile,email,address,state,district,pin,slug,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,'Submitted',?)`)
       .run(appNo, a.owner_name, a.centre_name, a.mobile, a.email, a.address, a.state, a.district, a.pin, a.slug, now());
+    rowId = r.lastInsertRowid;
   } catch (e) { if (String(e.code).startsWith('SQLITE_CONSTRAINT')) throw new HttpError(409, 'Subdomain is not available'); throw e; }
-  res.status(201).json({ application_no: appNo, status: 'Submitted' });
-}));
+  res.status(201).json({ id: rowId, application_no: appNo, status: 'Submitted' });
+});
+
+router.post('/apply', handleApply);
+router.post('/apply-centre', handleApply);
 
 router.get('/application/:no', (req, res) => {
   const a = db.prepare('SELECT app_no,status,decision_reason,centre_name,slug FROM franchise_applications WHERE app_no=? AND mobile=?').get(str(req.params.no, 40), str(req.query.mobile, 15));

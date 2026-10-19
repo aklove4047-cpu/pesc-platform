@@ -42,6 +42,24 @@ router.post('/applications/:id/approve', h(async (req, res) => {
   res.status(r.ok ? 200 : 502).json(r);
 }));
 
+router.post('/applications/:id/decision', h(async (req, res) => {
+  const d = str(req.body.decision, 10);
+  if (d === 'approve') {
+    const r = await provisioning.approve(+req.params.id, req);
+    return res.status(r.ok ? 200 : 502).json(r);
+  }
+  const status = d === 'reject' ? 'Rejected' : str(req.body.status, 30);
+  const reason = str(req.body.reason, 300);
+  if (!['Under Review', 'Documents Required', 'Rejected'].includes(status)) throw new HttpError(400, 'Invalid decision');
+  if (['Documents Required', 'Rejected'].includes(status) && !reason) throw new HttpError(400, 'Reason is required');
+  const a = db.prepare('SELECT * FROM franchise_applications WHERE id=?').get(+req.params.id);
+  if (!a) throw new HttpError(404, 'Not found');
+  if (['Approved', 'Rejected', 'Cancelled'].includes(a.status)) throw new HttpError(409, `Application is already ${a.status}`);
+  db.prepare('UPDATE franchise_applications SET status=?, decision_reason=?, decided_by=?, decided_at=? WHERE id=?').run(status, reason || null, req.user.id, now(), a.id);
+  audit(req, 'application.' + status.toLowerCase().replace(/ /g, '_'), 'application', a.id, 'ok', reason);
+  res.json({ ok: true });
+}));
+
 router.get('/centres', (req, res) => {
   const { size, offset } = paginate(req);
   res.json({ centres: db.prepare(`SELECT c.id,c.centre_code,c.name,c.slug,c.state,c.district,c.status,c.coordinator_id,
@@ -90,6 +108,12 @@ router.post('/coordinators', requireRole('super_admin'), (req, res) => {
   audit(req, 'coordinator.create', 'user', r.lastInsertRowid); res.status(201).json({ id: r.lastInsertRowid });
 });
 router.get('/coordinators', (req, res) => res.json({ coordinators: db.prepare("SELECT id,name,email,state,status FROM users WHERE role='coordinator'").all() }));
+
+router.get('/audit', (req, res) => {
+  const { size, offset } = paginate(req);
+  const rows = db.prepare('SELECT * FROM audit_logs ORDER BY id DESC LIMIT ? OFFSET ?').all(size, offset);
+  res.json({ logs: rows });
+});
 const argon2 = require('../hash');
 
 // Students Directory & Management
@@ -123,8 +147,11 @@ router.get('/wallets', (req, res) => {
 
 router.post('/wallets/:centre_id/adjust', (req, res) => {
   const cid = +req.params.centre_id;
-  const kind = str(req.body.kind, 10);
-  const amountPaise = Math.round(+req.body.amount_rupees * 100);
+  const kind = str(req.body.kind || req.body.type, 10);
+  const amountRupees = req.body.amount_rupees !== undefined ? +req.body.amount_rupees
+    : req.body.amount !== undefined ? +req.body.amount
+    : (+req.body.amount_paise / 100);
+  const amountPaise = Math.round(amountRupees * 100);
   const reason = str(req.body.reason, 200) || 'Head Office Balance Adjustment';
   if (!['credit', 'debit'].includes(kind) || !(amountPaise > 0)) throw new HttpError(400, 'Valid kind and positive amount required');
   const w = db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(cid) || { balance_paise: 0 };
@@ -190,7 +217,7 @@ router.delete('/notices/:id', (req, res) => {
 });
 
 // Direct Centre Creation (Instant Onboarding)
-const { next: counter } = require('../lib');
+const { next: counter, nextCentreCode, nextStudentCode } = require('../lib');
 const { resolveSlug } = require('../tenant');
 
 router.post('/centres/direct-create', h(async (req, res) => {
@@ -214,8 +241,7 @@ router.post('/centres/direct-create', h(async (req, res) => {
   const hashed = await argon2.hash(password);
 
   const result = db.transaction(() => {
-    const codeNum = counter('centre:code');
-    const centreCode = `PESC${String(codeNum).padStart(5, '0')}`;
+    const centreCode = nextCentreCode();
 
     const u = db.prepare("INSERT INTO users(email,name,mobile,password_hash,role,state,status,created_at) VALUES(?,?,?,?,'centre_owner',?,'active',?)")
       .run(email, owner_name, mobile, hashed, state, now());
@@ -270,7 +296,7 @@ router.post('/students/direct-enroll', h(async (req, res) => {
   const hash = await argon2.hash(password);
 
   const result = db.transaction(() => {
-    const sCode = `${centre.centre_code}-${new Date().getFullYear()}-${String(counter('student:' + centreId)).padStart(5, '0')}`;
+    const sCode = nextStudentCode(centreId);
     const s = db.prepare(`INSERT INTO students(student_code,centre_id,name,father_name,mobile,email,dob,course_id,session,created_at)
       VALUES(?,?,?,?,?,?,?,?,?,?)`)
       .run(sCode, centreId, name, father_name, mobile, email, dob, courseId, session, now());
