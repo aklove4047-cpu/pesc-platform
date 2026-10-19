@@ -46,21 +46,44 @@ const views = {
       api('/api/admin/courses'),
       api('/api/admin/coordinators'),
     ]);
-    V.innerHTML = '<h2>Affiliated Centres Management</h2>' + table([
-      ['Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.centre_code)}</b>`],
-      ['Centre Name', (r) => `<b>${esc(r.name)}</b>`],
-      ['Subdomain', (r) => `<a href="http://${esc(r.slug)}.localhost:3000" target="_blank" class="muted" style="text-decoration:underline;">${esc(r.slug)}</a>`],
-      ['Location', (r) => `${esc(r.district)}, ${esc(r.state)}`],
-      ['Students', (r) => `<b>${r.students}</b>`],
-      ['Status', (r) => badge(r.status)],
-      ['Actions', (r) => `
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          ${r.status === 'active' ? `<button class="btn sm danger" data-a="suspend" data-id="${r.id}">Suspend</button>` : r.status === 'suspended' ? `<button class="btn sm" data-a="unsuspend" data-id="${r.id}">Activate</button>` : ''}
-          <button class="btn sm alt" data-a="courses" data-id="${r.id}">Assign Courses</button>
-          ${coordinators.length ? `<button class="btn sm alt" data-a="coord" data-id="${r.id}">Coordinator</button>` : ''}
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2>Affiliated Centres Management</h2>
+          <p class="muted">Manage accredited computer centres, assign vocational courses, and appoint regional coordinators</p>
         </div>
-      `],
-    ], centres);
+      </div>
+      ${table([
+        ['Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.centre_code)}</b>`],
+        ['Centre Name', (r) => `<b>${esc(r.name)}</b>`],
+        ['Subdomain', (r) => `<a href="http://${esc(r.slug)}.localhost:3000" target="_blank" class="muted" style="text-decoration:underline;">${esc(r.slug)}</a>`],
+        ['Location', (r) => `${esc(r.district)}, ${esc(r.state)}`],
+        ['Students', (r) => `<b>${r.students}</b>`],
+        ['Status', (r) => badge(r.status)],
+        ['Actions', (r) => `
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            ${r.status === 'active' ? `<button class="btn sm danger" data-a="suspend" data-id="${r.id}">Suspend</button>` : r.status === 'suspended' ? `<button class="btn sm" data-a="unsuspend" data-id="${r.id}">Activate</button>` : ''}
+            <button class="btn sm alt" data-a="courses" data-id="${r.id}">Assign Courses</button>
+            ${coordinators.length ? `<button class="btn sm alt" data-a="coord" data-id="${r.id}">Coordinator</button>` : ''}
+          </div>
+        `],
+      ], centres)}
+
+      <h3 style="margin-top:28px;">⚡ Quick Onboard Centre (Offline Affiliation / Direct MOU)</h3>
+      <p class="muted" style="margin-bottom:12px;">Instantly provision an active centre, create the owner account, assign courses, and pre-fund council wallet.</p>
+      <form id="centreDirectForm" class="row">
+        <div><label>Centre Name *</label><input name="name" required maxlength="150" placeholder="e.g. Modern Skill Academy"></div>
+        <div><label>Owner / Director Name *</label><input name="owner_name" required maxlength="100" placeholder="e.g. Sunil Kumar"></div>
+        <div><label>Owner Email ID *</label><input name="email" type="email" required placeholder="sunil@modernskill.in"></div>
+        <div><label>Mobile Number *</label><input name="mobile" required placeholder="9876543210"></div>
+        <div><label>State *</label><input name="state" required value="Uttar Pradesh"></div>
+        <div><label>District *</label><input name="district" required placeholder="e.g. Lucknow"></div>
+        <div><label>Requested Subdomain *</label><input name="slug" required placeholder="e.g. modernskill"></div>
+        <div><label>Initial Wallet Credit (₹)</label><input name="initial_credit_rupees" type="number" min="0" value="10000"></div>
+        <div><label>Temporary Password</label><input name="password" value="Centre@12345"></div>
+        <div style="align-self:end;"><button class="btn gold">⚡ Create &amp; Activate Centre</button></div>
+      </form>
+    `;
     V._courses = courses;
     V._coords = coordinators;
   },
@@ -299,6 +322,142 @@ const views = {
     };
   },
 
+  async Students() {
+    const [{ students }, { centres }, { courses }] = await Promise.all([
+      api('/api/admin/students'),
+      api('/api/admin/centres'),
+      api('/api/admin/courses'),
+    ]);
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2>All India Enrolled Candidates</h2>
+          <p class="muted">Central student registry across all affiliated franchise centres</p>
+        </div>
+        <span class="badge active">${students.length} Total Enrolled</span>
+      </div>
+      ${table([
+        ['Student Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.student_code)}</b>`],
+        ['Candidate Name', (r) => `<b>${esc(r.name)}</b><br><span class="muted">Father: ${esc(r.father_name || '—')}</span>`],
+        ['Course', (r) => `<b>${esc(r.course_code || '')}</b> - ${esc(r.course_name)}`],
+        ['Affiliated Centre', (r) => `<b>${esc(r.centre_name)}</b><br><span class="muted">${esc(r.centre_code)}</span>`],
+        ['Contact', (r) => `${esc(r.mobile || '—')}<br><span class="muted">${esc(r.email || '—')}</span>`],
+        ['Status', (r) => badge(r.status)],
+        ['Actions', (r) => `
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn sm gold" data-a="c_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}">📜 Direct Issue Cert</button>
+            <button class="btn sm gold" data-a="m_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}">📊 Direct Issue Marksheet</button>
+            ${r.user_id ? `<button class="btn sm alt" data-a="resetpw" data-id="${r.user_id}" data-name="${esc(r.name)}">Reset Pass</button>` : ''}
+            <a href="/student" target="_blank" class="btn sm" style="text-decoration:none;">Student View</a>
+          </div>
+        `],
+      ], students, 'No students registered across centres yet.')}
+
+      <h3 style="margin-top:28px;">➕ Direct Candidate Enrolment (Head Office Admission)</h3>
+      <p class="muted" style="margin-bottom:12px;">Enrol a student directly into any affiliated centre with immediate portal access.</p>
+      <form id="studentDirectForm" class="row">
+        <div>
+          <label>Select Affiliated Centre *</label>
+          <select name="centre_id" required>
+            ${centres.map(c => `<option value="${c.id}">${esc(c.name)} (${esc(c.centre_code)}) - ${esc(c.district)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label>Select Vocational Course *</label>
+          <select name="course_id" required>
+            ${courses.map(co => `<option value="${co.id}">${esc(co.code)} - ${esc(co.name)} (${co.duration_months} M)</option>`).join('')}
+          </select>
+        </div>
+        <div><label>Candidate Full Name *</label><input name="name" required maxlength="100" placeholder="e.g. Priya Sharma"></div>
+        <div><label>Father's Name</label><input name="father_name" maxlength="100" placeholder="e.g. Ramesh Sharma"></div>
+        <div><label>Mobile Number</label><input name="mobile" placeholder="9876543210"></div>
+        <div><label>Email Address</label><input name="email" type="email" placeholder="priya@example.com"></div>
+        <div><label>Date of Birth</label><input name="dob" type="date"></div>
+        <div><label>Academic Session</label><input name="session" value="2026-27"></div>
+        <div><label>Portal Password</label><input name="password" value="Student@123"></div>
+        <div style="align-self:end;"><button class="btn gold">Enrol Student</button></div>
+      </form>
+    `;
+  },
+
+  async Notices() {
+    const { notices } = await api('/api/admin/notices');
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2>Council Notice Board & Announcements</h2>
+          <p class="muted">Publish official circulars, examination schedules, and affiliation updates to website ticker and portals</p>
+        </div>
+      </div>
+      ${table([
+        ['Category', (r) => `<span class="badge ${r.pinned ? 'Valid' : 'Pending'}">${esc(r.category)}</span>`],
+        ['Title & Content', (r) => `<b>${esc(r.title)}</b><br><span class="muted">${esc(r.content)}</span>${r.link ? `<br><a href="${esc(r.link)}" target="_blank" style="color:#2563eb; font-size:0.8rem;">🔗 ${esc(r.link)}</a>` : ''}`],
+        ['Audience', (r) => `<span style="text-transform:capitalize;">${esc(r.target)}</span>`],
+        ['Pinned', (r) => r.pinned ? '📌 Yes' : 'No'],
+        ['Status', (r) => r.active ? `<span class="badge Valid">Active</span>` : `<span class="badge Rejected">Hidden</span>`],
+        ['Actions', (r) => `
+          <div style="display:flex; gap:6px;">
+            <button class="btn sm alt" data-a="notice_toggle" data-id="${r.id}">${r.active ? 'Hide' : 'Activate'}</button>
+            <button class="btn sm danger" data-a="notice_del" data-id="${r.id}">Delete</button>
+          </div>
+        `],
+      ], notices, 'No circulars or notices published yet.')}
+
+      <h3 style="margin-top:28px;">📢 Publish New Council Notice / Announcement</h3>
+      <form id="noticeForm" class="row">
+        <div><label>Notice Headline / Title *</label><input name="title" required maxlength="200" placeholder="e.g. Schedule for Annual Vocational Exams 2026"></div>
+        <div>
+          <label>Category *</label>
+          <select name="category" required>
+            <option value="General">General Notice</option>
+            <option value="Affiliation">Franchise & Affiliation</option>
+            <option value="Examination">Examination & Results</option>
+            <option value="Academic">Academic Curriculum</option>
+            <option value="Event">Council Event / Seminar</option>
+          </select>
+        </div>
+        <div>
+          <label>Target Audience *</label>
+          <select name="target" required>
+            <option value="all">Everyone (Website Ticker + All Portals)</option>
+            <option value="public">Public Website Only</option>
+            <option value="centres">Affiliated Centres Only</option>
+            <option value="students">Students Only</option>
+          </select>
+        </div>
+        <div><label>Action Link (Optional)</label><input name="link" placeholder="e.g. #apply or #verify"></div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:24px;">
+          <label style="cursor:pointer; display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" name="pinned" value="1" style="width:auto;"> Pin to top of Notice Board
+          </label>
+        </div>
+        <div style="grid-column: span 2;"><label>Full Announcement Details *</label><textarea name="content" rows="3" required placeholder="Enter the official notification circular text here…"></textarea></div>
+        <div style="align-self:end;"><button class="btn gold">📢 Publish Announcement</button></div>
+      </form>
+    `;
+  },
+
+  async Wallets() {
+    const { wallets } = await api('/api/admin/wallets');
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2>Centre Digital Wallets & Financial Balances</h2>
+          <p class="muted">Directly credit and monitor centre digital wallets for course affiliations & certificate issuance</p>
+        </div>
+      </div>
+      ${table([
+        ['Code', (r) => `<b style="font-family:monospace;">${esc(r.centre_code)}</b>`],
+        ['Centre Name', (r) => `<b>${esc(r.centre_name)}</b><br><span class="muted">${esc(r.district)}, ${esc(r.state)}</span>`],
+        ['Wallet Balance', (r) => `<b style="font-size:1.15rem; color:#15803d;">${inr(r.balance_paise)}</b>`],
+        ['Status', (r) => badge(r.centre_status)],
+        ['Actions', (r) => `
+          <button class="btn sm gold" data-a="wallet_adj" data-id="${r.centre_id}" data-name="${esc(r.centre_name)}">⚡ Add / Credit Balance</button>
+        `],
+      ], wallets, 'No centre wallets found.')}
+    `;
+  },
+
   async Audit() {
     const { logs } = await api('/api/admin/audit?size=50');
     V.innerHTML = '<h2>Security Audit Log</h2>' + table([
@@ -369,6 +528,32 @@ V.addEventListener('click', (e) => {
       const r = ask('Rejection reason');
       if (!r) return;
       await post(`/api/marksheets/${id}/decision`, { decision: 'reject', reason: r });
+    } else if (a === 'wallet_adj') {
+      const amt = ask(`Enter amount in Rupees (₹) to credit to ${b.dataset.name}:`);
+      if (!amt || isNaN(amt) || +amt <= 0) return;
+      const note = ask('Enter note/reason (e.g. Offline Payment / Promotion credit):') || 'Head Office Balance Credit';
+      await post(`/api/admin/wallets/${id}/adjust`, { kind: 'credit', amount_rupees: +amt, reason: note });
+      toast(`Successfully credited ₹${amt} to centre wallet!`);
+    } else if (a === 'resetpw') {
+      const np = ask(`Enter new password for ${b.dataset.name} (minimum 6 characters):`) || 'Pesc#2026';
+      await post(`/api/admin/users/${id}/reset-password`, { password: np });
+      toast(`Password updated to: ${np}`);
+    } else if (a === 'c_direct_issue') {
+      if (!confirm(`Issue official verified certificate immediately for candidate ${b.dataset.name}?`)) return;
+      const res = await post('/api/admin/certificates/direct-issue', { student_id: +id });
+      toast(`Certificate issued: ${res.cert_no}!`);
+    } else if (a === 'm_direct_issue') {
+      const obt = ask(`Enter total marks obtained (out of 400) for candidate ${b.dataset.name}:`) || '340';
+      if (isNaN(obt) || +obt <= 0 || +obt > 400) return alert('Invalid score. Must be 1 to 400.');
+      const res = await post('/api/admin/marksheets/direct-issue', { student_id: +id, total_max: 400, total_obtained: +obt });
+      toast(`Marksheet issued: ${res.marksheet_no} (${res.percentage}% Grade ${res.grade})!`);
+    } else if (a === 'notice_toggle') {
+      await post(`/api/admin/notices/${id}/toggle`);
+      toast('Notice status updated!');
+    } else if (a === 'notice_del') {
+      if (!confirm('Are you sure you want to permanently delete this announcement?')) return;
+      await api(`/api/admin/notices/${id}`, { method: 'DELETE' });
+      toast('Notice deleted!');
     }
     toast('Action completed');
     await views[current]();
@@ -380,6 +565,18 @@ V.addEventListener('submit', (e) => {
   guard(async () => {
     if (e.target.id === 'cf') await api('/api/admin/courses', { method: 'POST', body: form(e.target) });
     if (e.target.id === 'kf') await api('/api/admin/coordinators', { method: 'POST', body: form(e.target) });
+    if (e.target.id === 'centreDirectForm') {
+      const r = await api('/api/admin/centres/direct-create', { method: 'POST', body: form(e.target) });
+      toast(`Centre ${r.centreCode} created successfully! Subdomain: ${r.slug}`);
+    }
+    if (e.target.id === 'studentDirectForm') {
+      const r = await api('/api/admin/students/direct-enroll', { method: 'POST', body: form(e.target) });
+      toast(`Student enrolled successfully! Code: ${r.studentCode}`);
+    }
+    if (e.target.id === 'noticeForm') {
+      await api('/api/admin/notices', { method: 'POST', body: form(e.target) });
+      toast('Announcement published successfully!');
+    }
     toast('Saved successfully!');
     await views[current]();
   });

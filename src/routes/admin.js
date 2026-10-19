@@ -90,5 +90,262 @@ router.post('/coordinators', requireRole('super_admin'), (req, res) => {
   audit(req, 'coordinator.create', 'user', r.lastInsertRowid); res.status(201).json({ id: r.lastInsertRowid });
 });
 router.get('/coordinators', (req, res) => res.json({ coordinators: db.prepare("SELECT id,name,email,state,status FROM users WHERE role='coordinator'").all() }));
-router.get('/audit', (req, res) => { const { size, offset } = paginate(req); res.json({ logs: db.prepare('SELECT * FROM audit_logs ORDER BY id DESC LIMIT ? OFFSET ?').all(size, offset) }); });
+const argon2 = require('../hash');
+
+// Students Directory & Management
+router.get('/students', (req, res) => {
+  const { size, offset } = paginate(req);
+  const q = str(req.query.q, 100);
+  let sql = `SELECT s.*, c.name AS centre_name, c.centre_code, co.name AS course_name, co.code AS course_code, u.status AS user_status
+    FROM students s
+    JOIN centres c ON c.id=s.centre_id
+    JOIN courses co ON co.id=s.course_id
+    LEFT JOIN users u ON u.id=s.user_id`;
+  const params = [];
+  if (q) {
+    sql += ` WHERE s.name LIKE ? OR s.student_code LIKE ? OR s.mobile LIKE ? OR c.name LIKE ?`;
+    const like = `%${q}%`;
+    params.push(like, like, like, like);
+  }
+  sql += ` ORDER BY s.id DESC LIMIT ? OFFSET ?`;
+  params.push(size, offset);
+  res.json({ students: db.prepare(sql).all(...params) });
+});
+
+// Wallets & Financial Ledger
+router.get('/wallets', (req, res) => {
+  const rows = db.prepare(`SELECT w.centre_id, w.balance_paise, c.name AS centre_name, c.centre_code, c.district, c.state, c.status AS centre_status
+    FROM wallets w
+    JOIN centres c ON c.id=w.centre_id
+    ORDER BY w.balance_paise DESC`).all();
+  res.json({ wallets: rows });
+});
+
+router.post('/wallets/:centre_id/adjust', (req, res) => {
+  const cid = +req.params.centre_id;
+  const kind = str(req.body.kind, 10);
+  const amountPaise = Math.round(+req.body.amount_rupees * 100);
+  const reason = str(req.body.reason, 200) || 'Head Office Balance Adjustment';
+  if (!['credit', 'debit'].includes(kind) || !(amountPaise > 0)) throw new HttpError(400, 'Valid kind and positive amount required');
+  const w = db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(cid);
+  if (!w) throw new HttpError(404, 'Centre wallet not found');
+  let newBal = kind === 'credit' ? w.balance_paise + amountPaise : w.balance_paise - amountPaise;
+  if (newBal < 0) throw new HttpError(400, 'Insufficient balance for debit');
+  db.transaction(() => {
+    db.prepare('UPDATE wallets SET balance_paise=? WHERE centre_id=?').run(newBal, cid);
+    const ref = `ADMIN-ADJ-${Date.now()}-${rand(4)}`;
+    db.prepare(`INSERT INTO wallet_transactions(centre_id,kind,amount_paise,balance_after,reference,description,created_by,created_at)
+      VALUES(?,?,?,?,?,?,?,?)`).run(cid, kind, amountPaise, newBal, ref, reason, req.user.id, now());
+  })();
+  audit(req, 'wallet.adjust', 'wallet', cid, 'ok', `${kind} ${amountPaise / 100} INR: ${reason}`);
+  res.json({ ok: true, balance_paise: newBal });
+});
+
+// User Password Reset by Admin
+router.post('/users/:id/reset-password', h(async (req, res) => {
+  const uid = +req.params.id;
+  const u = db.prepare('SELECT id,email,role,name FROM users WHERE id=?').get(uid);
+  if (!u) throw new HttpError(404, 'User not found');
+  const newPw = str(req.body.password, 64) || 'Pesc#2026';
+  const hashed = await argon2.hash(newPw);
+  db.prepare('UPDATE users SET password_hash=?, failed_logins=0, locked_until=NULL WHERE id=?').run(hashed, uid);
+  audit(req, 'user.reset_password', 'user', uid, 'ok', `Reset by admin to ${newPw}`);
+  res.json({ ok: true, message: `Password reset successfully for ${u.name} (${u.email})`, new_password: newPw });
+}));
+
+// Council Notices Management
+router.get('/notices', (req, res) => {
+  res.json({ notices: db.prepare('SELECT n.*, u.name AS author_name FROM notices n LEFT JOIN users u ON u.id=n.created_by ORDER BY n.pinned DESC, n.id DESC').all() });
+});
+
+router.post('/notices', (req, res) => {
+  const b = req.body;
+  const title = str(b.title, 200);
+  const category = str(b.category, 50) || 'General';
+  const content = str(b.content, 2000);
+  const target = ['all', 'centres', 'students', 'public'].includes(b.target) ? b.target : 'all';
+  const link = str(b.link, 200);
+  const pinned = b.pinned ? 1 : 0;
+  if (!title || !content) throw new HttpError(400, 'Title and content required');
+  const r = db.prepare('INSERT INTO notices(title,category,content,target,link,pinned,active,created_by,created_at) VALUES(?,?,?,?,?,?,1,?,?)')
+    .run(title, category, content, target, link || null, pinned, req.user.id, now());
+  audit(req, 'notice.create', 'notice', r.lastInsertRowid, 'ok', title);
+  res.status(201).json({ id: r.lastInsertRowid });
+});
+
+router.post('/notices/:id/toggle', (req, res) => {
+  const id = +req.params.id;
+  const n = db.prepare('SELECT active FROM notices WHERE id=?').get(id);
+  if (!n) throw new HttpError(404, 'Notice not found');
+  const newActive = n.active ? 0 : 1;
+  db.prepare('UPDATE notices SET active=? WHERE id=?').run(newActive, id);
+  audit(req, 'notice.toggle', 'notice', id, 'ok', `active=${newActive}`);
+  res.json({ ok: true, active: newActive });
+});
+
+router.delete('/notices/:id', (req, res) => {
+  const id = +req.params.id;
+  db.prepare('DELETE FROM notices WHERE id=?').run(id);
+  audit(req, 'notice.delete', 'notice', id);
+  res.json({ ok: true });
+});
+
+// Direct Centre Creation (Instant Onboarding)
+const { next: counter } = require('../lib');
+const { resolveSlug } = require('../tenant');
+
+router.post('/centres/direct-create', h(async (req, res) => {
+  const b = req.body;
+  const name = str(b.name, 150);
+  const owner_name = str(b.owner_name, 100);
+  const email = str(b.email, 150).toLowerCase();
+  const mobile = str(b.mobile, 15);
+  const state = str(b.state, 60);
+  const district = str(b.district, 60);
+  const address = str(b.address, 300) || `${district}, ${state}`;
+  const pin = str(b.pin, 10) || '000000';
+  const slug = str(b.slug, 30).toLowerCase();
+  const password = str(b.password, 64) || 'Centre@12345';
+  const initialCreditRupees = Math.max(0, +b.initial_credit_rupees || 0);
+
+  if (!name || !owner_name || !email || !slug) throw new HttpError(400, 'Name, owner name, email, and subdomain are required');
+  if (resolveSlug(slug)) throw new HttpError(409, 'Subdomain is already taken');
+  if (db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) throw new HttpError(409, 'Email is already registered');
+
+  const hashed = await argon2.hash(password);
+
+  const result = db.transaction(() => {
+    const codeNum = counter('centre:code');
+    const centreCode = `PESC${String(codeNum).padStart(5, '0')}`;
+
+    const u = db.prepare("INSERT INTO users(email,name,mobile,password_hash,role,state,status,created_at) VALUES(?,?,?,?,'centre_owner',?,'active',?)")
+      .run(email, owner_name, mobile, hashed, state, now());
+    const ownerUserId = u.lastInsertRowid;
+
+    const c = db.prepare("INSERT INTO centres(centre_code,name,slug,owner_user_id,state,district,address,pin,status,created_at) VALUES(?,?,?,?,?,?,?,?, 'active', ?)")
+      .run(centreCode, name, slug, ownerUserId, state, district, address, pin, now());
+    const centreId = c.lastInsertRowid;
+
+    db.prepare('UPDATE users SET centre_id=? WHERE id=?').run(centreId, ownerUserId);
+
+    // Assign all active courses by default
+    const allCourses = db.prepare('SELECT id FROM courses WHERE active=1').all();
+    for (const co of allCourses) {
+      db.prepare('INSERT OR IGNORE INTO centre_courses(centre_id, course_id) VALUES(?,?)').run(centreId, co.id);
+    }
+
+    // Initialize wallet
+    const balPaise = initialCreditRupees * 100;
+    db.prepare('INSERT INTO wallets(centre_id, balance_paise) VALUES(?,?)').run(centreId, balPaise);
+    if (balPaise > 0) {
+      const ref = `INIT-${Date.now()}-${rand(4)}`;
+      db.prepare(`INSERT INTO wallet_transactions(centre_id,kind,amount_paise,balance_after,reference,description,created_by,created_at)
+        VALUES(?, 'credit', ?, ?, ?, 'Initial Onboarding Wallet Credit', ?, ?)`)
+        .run(centreId, balPaise, balPaise, ref, req.user.id, now());
+    }
+
+    return { centreId, centreCode, slug, email, password };
+  })();
+
+  audit(req, 'centre.direct_create', 'centre', result.centreId, 'ok', `Created ${name} (${result.centreCode})`);
+  res.status(201).json(result);
+}));
+
+// Direct Student Enrolment by Admin
+router.post('/students/direct-enroll', h(async (req, res) => {
+  const b = req.body;
+  const centreId = +b.centre_id;
+  const courseId = +b.course_id;
+  const name = str(b.name, 100);
+  const father_name = str(b.father_name, 100);
+  const mobile = str(b.mobile, 15);
+  const email = str(b.email, 150).toLowerCase();
+  const dob = str(b.dob, 20);
+  const session = str(b.session, 30) || '2026-27';
+  const password = str(b.password, 64) || 'Student@123';
+
+  if (!centreId || !courseId || !name) throw new HttpError(400, 'Centre, course, and student name required');
+  const centre = db.prepare('SELECT centre_code FROM centres WHERE id=?').get(centreId);
+  if (!centre) throw new HttpError(404, 'Centre not found');
+
+  const hash = await argon2.hash(password);
+
+  const result = db.transaction(() => {
+    const sCode = `${centre.centre_code}-${new Date().getFullYear()}-${String(counter('student:' + centreId)).padStart(5, '0')}`;
+    const s = db.prepare(`INSERT INTO students(student_code,centre_id,name,father_name,mobile,email,dob,course_id,session,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?)`)
+      .run(sCode, centreId, name, father_name, mobile, email, dob, courseId, session, now());
+    const studentId = s.lastInsertRowid;
+
+    // Create student login user
+    let userEmail = email || `${sCode.toLowerCase()}@student.pescouncil.in`;
+    let u = db.prepare('SELECT id FROM users WHERE email=?').get(userEmail);
+    if (!u) {
+      const uIns = db.prepare("INSERT INTO users(email,name,role,password_hash,centre_id,status,created_at) VALUES(?,?, 'student', ?, ?, 'active', ?)")
+        .run(userEmail, name, hash, centreId, now());
+      db.prepare('UPDATE students SET user_id=? WHERE id=?').run(uIns.lastInsertRowid, studentId);
+    } else {
+      db.prepare('UPDATE students SET user_id=? WHERE id=?').run(u.id, studentId);
+    }
+
+    return { studentId, studentCode: sCode, email: userEmail, password };
+  })();
+
+  audit(req, 'student.direct_enroll', 'student', result.studentId, 'ok', `Enrolled ${name} (${result.studentCode})`);
+  res.status(201).json(result);
+}));
+
+// Direct Marksheet Generation by Admin
+router.post('/marksheets/direct-issue', (req, res) => {
+  const b = req.body;
+  const studentId = +b.student_id;
+  const s = db.prepare('SELECT s.*, co.name AS course_name, c.centre_code FROM students s JOIN courses co ON co.id=s.course_id JOIN centres c ON c.id=s.centre_id WHERE s.id=?').get(studentId);
+  if (!s) throw new HttpError(404, 'Student not found');
+
+  const rollNo = str(b.roll_no, 30) || s.student_code;
+  const session = str(b.exam_session, 30) || s.session || '2026';
+  const totalMax = +b.total_max || 400;
+  const totalObt = +b.total_obtained || 320;
+  const pct = Math.round((totalObt / totalMax) * 1000) / 10;
+  const grade = b.grade || (pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : 'C');
+  const result = b.result || 'PASS';
+  const subjects = b.subjects || JSON.stringify([
+    { code: 'TH01', name: 'Theory Paper 1', max: 100, obt: Math.round(totalObt * 0.25) },
+    { code: 'TH02', name: 'Theory Paper 2', max: 100, obt: Math.round(totalObt * 0.25) },
+    { code: 'PR01', name: 'Practical Assessment', max: 100, obt: Math.round(totalObt * 0.25) },
+    { code: 'PR02', name: 'Viva & Project Work', max: 100, obt: Math.round(totalObt * 0.25) }
+  ]);
+
+  const year = new Date().getFullYear();
+  const mNum = counter('marksheet:' + year);
+  const marksheetNo = `PESC/MRK/${year}/${String(mNum).padStart(6, '0')}`;
+  const token = rand(32);
+
+  const r = db.prepare(`INSERT INTO marksheets(marksheet_no,token,student_id,centre_id,course_id,exam_session,roll_no,subjects,total_max,total_obtained,percentage,grade,result,status,issue_date,decided_by,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'Approved',?,?,?)`)
+    .run(marksheetNo, token, s.id, s.centre_id, s.course_id, session, rollNo, typeof subjects === 'string' ? subjects : JSON.stringify(subjects), totalMax, totalObt, pct, grade, result, now(), req.user.id, now());
+
+  audit(req, 'marksheet.direct_issue', 'marksheet', r.lastInsertRowid, 'ok', marksheetNo);
+  res.status(201).json({ id: r.lastInsertRowid, marksheet_no: marksheetNo, token, percentage: pct, grade });
+});
+
+// Direct Certificate Generation by Admin
+router.post('/certificates/direct-issue', (req, res) => {
+  const studentId = +req.body.student_id;
+  const s = db.prepare('SELECT * FROM students WHERE id=?').get(studentId);
+  if (!s) throw new HttpError(404, 'Student not found');
+
+  const year = new Date().getFullYear();
+  const cNum = counter('cert:' + year);
+  const certNo = `PESC/${year}/${String(cNum).padStart(6, '0')}`;
+  const token = rand(32);
+
+  const r = db.prepare(`INSERT INTO certificates(cert_no,token,student_id,centre_id,course_id,status,issued_at,decided_by,created_at)
+    VALUES(?,?,?,?,?,'Valid',?,?,?)`)
+    .run(certNo, token, s.id, s.centre_id, s.course_id, now(), req.user.id, now());
+
+  audit(req, 'certificate.direct_issue', 'certificate', r.lastInsertRowid, 'ok', certNo);
+  res.status(201).json({ id: r.lastInsertRowid, cert_no: certNo, token });
+});
+
 module.exports = router;

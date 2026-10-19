@@ -122,11 +122,19 @@
             <div style="margin-top:16px; font-size:0.8rem; color:#64748b; text-align:center;">
               ✅ Cryptographically validated on ${new Date().toLocaleDateString('en-IN')} via Purvanchal Education &amp; Skill Council Official Central Ledger.
             </div>
+            <div style="margin-top:16px; text-align:center;">
+              <button class="btn sm alt" onclick="window.print()">🖨️ Print Official Verification Slip</button>
+            </div>
           </div>
         `;
       } else {
         $('#r').innerHTML = `
           <div class="verify-result-box" style="text-align:left;">
+            <div class="print-slip-header" style="display:none;">
+              <h2 style="margin:0; font-family:'Outfit', sans-serif;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h2>
+              <p style="margin:2px 0; font-size:10pt; color:#475569;">Central Autonomous Council for Vocational &amp; Technical Training · ISO 9001:2015 Certified</p>
+              <p style="margin:6px 0 0; font-weight:bold; font-size:11pt; text-decoration:underline;">OFFICIAL DIGITAL CREDENTIAL VERIFICATION SLIP</p>
+            </div>
             <div class="verify-seal-watermark">PESC</div>
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
               <div>
@@ -160,6 +168,9 @@
 
             <div style="margin-top:16px; font-size:0.8rem; color:#64748b; text-align:center;">
               ✅ Cryptographically validated on ${new Date().toLocaleDateString('en-IN')} via Purvanchal Education &amp; Skill Council Central Registry.
+            </div>
+            <div style="margin-top:16px; text-align:center;">
+              <button class="btn sm alt" onclick="window.print()">🖨️ Print Official Verification Slip</button>
             </div>
           </div>
         `;

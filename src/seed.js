@@ -135,5 +135,18 @@ const db = require('./db');
     console.log('Created sample certificate: PESC/2026/000001');
   }
 
+  // 10. Official Council Notices
+  const defaultNotices = [
+    ['Session 2026-27 Affiliation Window Open', 'Affiliation', 'All India computer centres, coaching academies, and vocational institutes can now apply for autonomous affiliation with 50% special subsidy.', 'all', '#apply', 1],
+    ['Mandatory Online QR Code Verification Activated', 'Examination', 'All certificates and statements of marks issued from 2026 onwards feature cryptographically secured QR codes verifiable across India.', 'all', '#verify', 1],
+    ['Annual Vocational Examination 2026 Guidelines', 'Academic', 'Centre directors must complete candidate marks entries within 14 days of exam completion to ensure fast-track marksheet dispatch.', 'centres', '#courses', 0]
+  ];
+  const insNotice = db.prepare('INSERT OR IGNORE INTO notices(title,category,content,target,link,pinned,active,created_at) VALUES(?,?,?,?,?,?,1,?)');
+  for (const n of defaultNotices) {
+    if (!db.prepare('SELECT 1 FROM notices WHERE title=?').get(n[0])) {
+      insNotice.run(n[0], n[1], n[2], n[3], n[4], n[5], Date.now());
+    }
+  }
+
   console.log('✅ PESC database seeded with complete council data!');
 })();

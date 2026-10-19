@@ -701,8 +701,32 @@ footer {
   color: #94a3b8;
 }
 
+/* Mobile Navigation Toggle */
+.nav-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 1.4rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  line-height: 1;
+}
+
 @media (max-width: 768px) {
   .nav { padding: 12px 16px; }
+  .nav-toggle { display: block; margin-left: auto; }
+  .nav-links {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: 12px;
+    gap: 8px;
+  }
+  .nav-links.open { display: flex; }
+  .nav-links a { text-align: center; }
   main { margin: 16px auto; padding: 0 12px; }
   .card { padding: 16px; }
   .hero { padding: 30px 10px; }
@@ -819,5 +843,71 @@ footer {
 }
 .download-item:hover {
   background: #f1f5f9;
+}
+
+/* Notice Board Card */
+.notice-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--navy);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.notice-card:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(10, 42, 94, 0.08);
+}
+.notice-card.pinned {
+  border-left-color: #d4af37;
+  background: #fffdf5;
+}
+
+/* Print Media Styles for Official Council Documents & Verification Slips */
+@media print {
+  body {
+    background: #fff !important;
+    color: #0f172a !important;
+    font-size: 12pt;
+  }
+  .nav, footer, .news-ticker, .hero, .tabs, .stat-banner, form, .chip-btn, .btn,
+  #portals, #packages, #downloads, #franchise, #apply, #status, #about, #centres,
+  #cf, #kf, #centreDirectForm, #studentDirectForm, #noticeForm, .nav-toggle {
+    display: none !important;
+  }
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .verify-result-box {
+    border: 3px double #0a2a5e !important;
+    padding: 30px !important;
+    background: #fff !important;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+  .print-slip-header {
+    display: block !important;
+    text-align: center;
+    border-bottom: 2px solid #0a2a5e;
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  .print-seal-box {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 35px;
+    padding-top: 15px;
+    border-top: 1px dashed #94a3b8;
+  }
 }
 

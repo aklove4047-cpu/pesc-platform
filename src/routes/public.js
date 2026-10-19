@@ -46,6 +46,13 @@ router.get('/courses', (req, res) => {
   res.json({ courses: db.prepare('SELECT id, code, name, duration_months, total_marks FROM courses WHERE active=1 ORDER BY name').all() });
 });
 
+router.get('/notices', (req, res) => {
+  const notices = db.prepare(`SELECT id, title, category, content, link, pinned, created_at
+    FROM notices WHERE active=1 AND target IN ('all', 'public')
+    ORDER BY pinned DESC, id DESC LIMIT 20`).all();
+  res.json({ notices });
+});
+
 // Mask holder name for privacy
 const mask = (n) => String(n).split(/\s+/).map((w) => w[0] + '*'.repeat(Math.max(w.length - 1, 1))).join(' ');
 

@@ -7,15 +7,34 @@ const showCertVerify = (d) => {
   }
   return `
     <div class="verify-result-box" style="margin-top:16px;">
+      <div class="print-slip-header" style="display:none;">
+        <h2 style="margin:0; font-family:'Outfit', sans-serif;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h2>
+        <p style="margin:2px 0; font-size:10pt; color:#475569;">Central Autonomous Council for Vocational &amp; Technical Training · ISO 9001:2015 Certified</p>
+        <p style="margin:6px 0 0; font-weight:bold; font-size:11pt; text-decoration:underline;">OFFICIAL DIGITAL CREDENTIAL VERIFICATION SLIP</p>
+      </div>
+      <div class="verify-seal-watermark">PESC</div>
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <span class="badge ${d.status}">${d.status} CERTIFICATE</span>
         <b style="font-family:monospace; color:var(--navy);">${esc(d.certificate_no)}</b>
       </div>
       <div style="margin-top:12px;">
-        <p style="font-size:1.1rem; color:var(--navy); margin-bottom:4px;"><b>Candidate:</b> ${esc(d.holder)}</p>
-        <p style="margin-bottom:4px;"><b>Course:</b> ${esc(d.course)}</p>
-        <p style="margin-bottom:4px;"><b>Centre:</b> ${esc(d.centre)}</p>
+        <p style="font-size:1.1rem; color:var(--navy); margin-bottom:4px;"><b>Candidate Name:</b> ${esc(d.holder)}</p>
+        <p style="margin-bottom:4px;"><b>Course Completed:</b> ${esc(d.course)}</p>
+        <p style="margin-bottom:4px;"><b>Affiliated Training Centre:</b> ${esc(d.centre)}</p>
         <p class="muted">Issued Date: <b>${esc(d.issued_on)}</b> · Authenticated via PESC Central Registry</p>
+      </div>
+      <div class="print-seal-box" style="display:none;">
+        <div>
+          <span style="font-size:8pt; color:#64748b;">Verification Ref: ${esc(d.certificate_no)}</span><br>
+          <span style="font-size:8pt; color:#64748b;">Validation Date: ${new Date().toLocaleDateString('en-IN')}</span>
+        </div>
+        <div style="text-align:right;">
+          <b style="font-size:9pt; text-transform:uppercase;">Controller of Examinations</b><br>
+          <span style="font-size:7pt; color:#64748b;">PESC Council Central Office</span>
+        </div>
+      </div>
+      <div style="margin-top:14px; text-align:right;">
+        <button type="button" class="btn sm alt" onclick="window.print()">🖨️ Print Official Verification Slip</button>
       </div>
     </div>
   `;
@@ -28,14 +47,20 @@ const showMrkVerify = (d) => {
   }
   return `
     <div class="verify-result-box" style="margin-top:16px;">
+      <div class="print-slip-header" style="display:none;">
+        <h2 style="margin:0; font-family:'Outfit', sans-serif;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h2>
+        <p style="margin:2px 0; font-size:10pt; color:#475569;">Central Autonomous Council for Vocational &amp; Technical Training · ISO 9001:2015 Certified</p>
+        <p style="margin:6px 0 0; font-weight:bold; font-size:11pt; text-decoration:underline;">OFFICIAL STATEMENT OF MARKS VERIFICATION SLIP</p>
+      </div>
+      <div class="verify-seal-watermark">PESC</div>
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <span class="badge ${d.status}">${d.status} MARKSHEET</span>
         <b style="font-family:monospace; color:var(--navy);">${esc(d.marksheet_no)}</b>
       </div>
       <div style="margin-top:12px;">
-        <p style="font-size:1.1rem; color:var(--navy); margin-bottom:4px;"><b>Candidate:</b> ${esc(d.holder)} (Roll: ${esc(d.roll_no || d.student_code)})</p>
+        <p style="font-size:1.1rem; color:var(--navy); margin-bottom:4px;"><b>Candidate Name:</b> ${esc(d.holder)} (Roll: ${esc(d.roll_no || d.student_code)})</p>
         <p style="margin-bottom:4px;"><b>Course:</b> ${esc(d.course)} · Session: <b>${esc(d.session)}</b></p>
-        <p style="margin-bottom:8px;"><b>Centre:</b> ${esc(d.centre)} (${esc(d.centre_code)})</p>
+        <p style="margin-bottom:8px;"><b>Affiliated Centre:</b> ${esc(d.centre)} (${esc(d.centre_code)})</p>
         <div style="display:flex; gap:14px; background:#f8fafc; padding:10px 14px; border-radius:8px; flex-wrap:wrap;">
           <div>Score: <b>${d.total_obtained}/${d.total_max}</b></div>
           <div>Percentage: <b>${d.percentage}%</b></div>
@@ -43,6 +68,19 @@ const showMrkVerify = (d) => {
           <div>Result: ${badge(d.result)}</div>
         </div>
         <p class="muted" style="margin-top:8px;">Issued On: <b>${esc(d.issued_on)}</b> · Authenticated via PESC Central Academic Ledger</p>
+      </div>
+      <div class="print-seal-box" style="display:none;">
+        <div>
+          <span style="font-size:8pt; color:#64748b;">Verification Ref: ${esc(d.marksheet_no)}</span><br>
+          <span style="font-size:8pt; color:#64748b;">Validation Date: ${new Date().toLocaleDateString('en-IN')}</span>
+        </div>
+        <div style="text-align:right;">
+          <b style="font-size:9pt; text-transform:uppercase;">Controller of Examinations</b><br>
+          <span style="font-size:7pt; color:#64748b;">PESC Council Central Office</span>
+        </div>
+      </div>
+      <div style="margin-top:14px; text-align:right;">
+        <button type="button" class="btn sm alt" onclick="window.print()">🖨️ Print Official Verification Slip</button>
       </div>
     </div>
   `;
@@ -232,4 +270,45 @@ guard(async () => {
       ], d.centres, 'No centres registered yet');
     }
   } catch (_) {}
+
+  // Official Council Notices & News Ticker
+  try {
+    const nData = await api('/api/public/notices');
+    const nList = nData.notices || [];
+    const tickerEl = $('#tickerContent');
+    if (tickerEl && nList.length) {
+      tickerEl.innerHTML = nList.map(n => `<span>• <b>${esc(n.category)}:</b> ${esc(n.title)}</span>`).join(' &nbsp; | &nbsp; ');
+    }
+    const nbEl = $('#noticeBoardList');
+    if (nbEl) {
+      if (!nList.length) {
+        nbEl.innerHTML = '<p class="muted">No official circulars at the moment.</p>';
+      } else {
+        nbEl.innerHTML = nList.map(n => `
+          <div class="notice-card ${n.pinned ? 'pinned' : ''}">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:6px;">
+              <span class="badge ${n.pinned ? 'Valid' : 'Pending'}">${n.pinned ? '📌 ' : ''}${esc(n.category)}</span>
+              <span class="muted" style="font-size:0.8rem;">${new Date(n.created_at).toLocaleDateString('en-IN')}</span>
+            </div>
+            <h4 style="color:var(--navy); font-size:1.05rem; margin-bottom:6px;">${esc(n.title)}</h4>
+            <p class="muted" style="font-size:0.88rem; line-height:1.5;">${esc(n.content)}</p>
+            ${n.link ? `<div style="margin-top:8px;"><a href="${esc(n.link)}" class="btn sm" style="text-decoration:none;">View Details / Action →</a></div>` : ''}
+          </div>
+        `).join('');
+      }
+    }
+  } catch (_) {}
 });
+
+// Mobile navigation toggle
+const navToggle = $('#navToggle');
+const navLinks = $('#navLinks');
+if (navToggle && navLinks) {
+  navToggle.onclick = () => {
+    navLinks.classList.toggle('open');
+  };
+  navLinks.addEventListener('click', (e) => {
+    if (e.target.tagName === 'A') navLinks.classList.remove('open');
+  });
+}
+

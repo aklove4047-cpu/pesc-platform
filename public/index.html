@@ -18,11 +18,13 @@
         <span>Purvanchal Education &amp; Skill Council</span>
       </div>
     </a>
-    <div class="nav-links">
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle Navigation">☰</button>
+    <div class="nav-links" id="navLinks">
       <a href="#about">About</a>
       <a href="#courses">Courses</a>
       <a href="#verify" style="color:#fde047; font-weight:700;">🔍 Verify Credentials</a>
       <a href="#packages">Affiliation Packages</a>
+      <a href="#notices">Notice Board</a>
       <a href="#portals">Portals</a>
       <a href="#downloads">Downloads</a>
       <a href="/login" style="font-weight:600;">Sign In</a>
@@ -33,7 +35,7 @@
   <!-- News & Announcements Ticker -->
   <div class="news-ticker">
     <div class="ticker-title">📢 Latest Updates</div>
-    <div style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    <div id="tickerContent" style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
       <span>• Session 2026-27 Affiliation window open with 50% concession on registration</span> &nbsp; | &nbsp;
       <span>• Mandatory Online QR Code Verification implemented on all certificates</span> &nbsp; | &nbsp;
       <span>• Autonomous Skill &amp; Vocational Certifications recognized across India</span>
@@ -277,6 +279,22 @@
           </ul>
           <a href="#apply" class="btn alt" style="text-align:center; margin-top:auto;">Apply for Master Franchise</a>
         </div>
+      </div>
+    </section>
+
+    <!-- Official Council Notice Board & Press Releases -->
+    <section class="card" id="notices">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+        <div>
+          <h2>Official Council Notice Board &amp; Circulars</h2>
+          <p class="muted">Statutory notifications, exam notifications, and affiliation press releases issued by Central Directorate</p>
+        </div>
+        <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
+          LIVE CIRCULARS
+        </span>
+      </div>
+      <div id="noticeBoardList">
+        <p class="muted">Loading official notifications…</p>
       </div>
     </section>
 
