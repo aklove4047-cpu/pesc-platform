@@ -112,6 +112,48 @@ router.post('/wallet/recharge', (req, res) => {
   res.status(201).json({ provider_ref: ref, amount_paise: rupees * 100, gateway: 'unconfigured' });
 });
 
+router.get('/profile', (req, res) => {
+  const c = cid(req);
+  const centre = db.prepare(`SELECT c.*, u.name AS owner_name, u.email AS owner_email, u.mobile AS owner_mobile
+    FROM centres c
+    LEFT JOIN users u ON u.centre_id=c.id AND u.role='centre_owner'
+    WHERE c.id=?`).get(c);
+  if (!centre) throw new HttpError(404, 'Centre not found');
+  const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.fee_paise
+    FROM courses co
+    JOIN centre_courses cc ON cc.course_id=co.id
+    WHERE cc.centre_id=? AND co.active=1`).all(c);
+  const wallet = db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(c) || { balance_paise: 0 };
+  const stats = {
+    students: db.prepare('SELECT COUNT(*) n FROM students WHERE centre_id=?').get(c).n,
+    marksheets: db.prepare("SELECT COUNT(*) n FROM marksheets WHERE centre_id=? AND status='Approved'").get(c).n,
+    certificates: db.prepare("SELECT COUNT(*) n FROM certificates WHERE centre_id=? AND status='Valid'").get(c).n,
+  };
+  res.json({ centre, courses, wallet, stats });
+});
+
+router.get('/notices', (req, res) => {
+  const notices = db.prepare(`SELECT id, title, category, content, link, pinned, created_at
+    FROM notices WHERE active=1 AND target IN ('all', 'centres')
+    ORDER BY pinned DESC, id DESC LIMIT 50`).all();
+  res.json({ notices });
+});
+
+router.get('/students/:id/quick-view', (req, res) => {
+  const s = db.prepare(`SELECT s.*, c.name AS centre_name, c.centre_code, c.district AS centre_district, c.state AS centre_state,
+    co.code AS course_code, co.name AS course_name, co.duration_months
+    FROM students s
+    JOIN centres c ON c.id=s.centre_id
+    JOIN courses co ON co.id=s.course_id
+    WHERE s.id=? AND s.centre_id=?`).get(+req.params.id, cid(req));
+  if (!s) throw new HttpError(404, 'Student not found');
+  const marksheets = db.prepare(`SELECT id, marksheet_no, roll_no, exam_session, total_max, total_obtained, percentage, grade, result, status
+    FROM marksheets WHERE student_id=? ORDER BY id DESC`).all(s.id);
+  const certificates = db.prepare(`SELECT id, cert_no, token, status, issued_at
+    FROM certificates WHERE student_id=? ORDER BY id DESC`).all(s.id);
+  res.json({ student: s, marksheets, certificates });
+});
+
 router.get('/tickets', (req, res) => res.json({ tickets: db.prepare('SELECT ticket_no,category,priority,subject,status,created_at FROM tickets WHERE centre_id=? ORDER BY id DESC LIMIT 50').all(cid(req)) }));
 router.post('/tickets', (req, res) => {
   const subject = str(req.body.subject, 150), body = str(req.body.body, 2000), category = str(req.body.category, 40) || 'general';

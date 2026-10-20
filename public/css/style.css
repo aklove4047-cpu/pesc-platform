@@ -1058,3 +1058,85 @@ footer {
   .footer-grid { grid-template-columns: 1fr; gap: 28px; }
   .card { padding: 22px 16px; }
 }
+
+/* Centre Affiliation Certificate Styling */
+.centre-cert-frame {
+  position: relative;
+  background: #ffffff;
+  border: 14px solid #071a33;
+  padding: 36px 44px;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  font-family: 'Times New Roman', Times, serif;
+  color: #1e293b;
+  overflow: hidden;
+}
+
+.centre-cert-inner-border {
+  border: 3px double #d4af37;
+  padding: 28px;
+  position: relative;
+}
+
+.cert-watermark-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14rem;
+  font-weight: 900;
+  color: rgba(212, 175, 55, 0.04);
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+  font-family: Arial, sans-serif;
+}
+
+/* Print Optimization */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .top-tricolor,
+  .top-bar,
+  .nav,
+  .tabs,
+  .news-ticker,
+  footer,
+  #toast,
+  .btn,
+  .btn-cta,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .printable-area,
+  .centre-cert-frame,
+  .admit-card-box,
+  .receipt-box {
+    box-shadow: none !important;
+    border: 2px solid #000 !important;
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
