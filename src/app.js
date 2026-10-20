@@ -39,6 +39,7 @@ app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use('/assets', express.static(PUB, { index: false }));
 const page = (f) => (req, res) => res.sendFile(path.join(PUB, f));
 app.get('/', (req, res) => res.sendFile(path.join(PUB, req.tenant ? 'centre-site.html' : 'index.html')));
+app.get('/c/:slug', (req, res) => res.sendFile(path.join(PUB, 'centre-site.html')));
 app.get('/login', async (req, res) => {
   const loginId = String(req.query.email || req.query.login_id || '').trim();
   const password = String(req.query.password || '').trim();

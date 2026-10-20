@@ -3,72 +3,856 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Affiliated Training Centre – PESC Council</title>
+  <title id="pageTitle">Authorized Computer Training Centre – PES Council</title>
   <link rel="stylesheet" href="/assets/css/style.css">
+  <style>
+    :root {
+      --centre-green-dark: #022c22;
+      --centre-green-primary: #064e3b;
+      --centre-green-emerald: #047857;
+      --centre-green-light: #ecfdf5;
+      --centre-green-border: #a7f3d0;
+    }
+
+    body {
+      background: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #1e293b;
+    }
+
+    /* Centre Navbar */
+    .c-nav {
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .c-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .c-brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      background: var(--centre-green-emerald);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      box-shadow: 0 4px 10px rgba(4, 120, 87, 0.25);
+    }
+    .c-brand-text h1 {
+      font-size: 1.25rem;
+      margin: 0;
+      color: #0f172a;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .c-brand-text span {
+      font-size: 0.8rem;
+      color: var(--centre-green-emerald);
+      font-weight: 600;
+      display: block;
+    }
+    .c-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .c-nav-links a {
+      color: #334155;
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .c-nav-links a:hover, .c-nav-links a.active {
+      color: var(--centre-green-emerald);
+    }
+    .c-btn-login {
+      background: #ffffff;
+      color: var(--centre-green-emerald) !important;
+      border: 1.5px solid var(--centre-green-emerald);
+      padding: 7px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .c-btn-login:hover {
+      background: var(--centre-green-light);
+    }
+    .c-btn-apply {
+      background: var(--centre-green-emerald);
+      color: #ffffff !important;
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(4, 120, 87, 0.2);
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .c-btn-apply:hover {
+      background: var(--centre-green-primary);
+      transform: translateY(-1px);
+    }
+
+    /* Centre Hero Section */
+    .c-hero {
+      position: relative;
+      background: linear-gradient(135deg, rgba(6, 78, 59, 0.94) 0%, rgba(2, 44, 34, 0.97) 100%),
+                  radial-gradient(circle at top right, rgba(16, 185, 129, 0.25), transparent 50%),
+                  #064e3b;
+      color: #ffffff;
+      padding: 64px 24px 48px;
+      overflow: hidden;
+    }
+    .c-hero-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 40px;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+    .c-hero-text h2 {
+      font-size: 3.2rem;
+      font-weight: 900;
+      line-height: 1.1;
+      margin: 0 0 16px;
+      letter-spacing: -0.5px;
+    }
+    .c-hero-text h2 span {
+      display: block;
+      color: #a7f3d0;
+    }
+    .c-hero-text p {
+      font-size: 1.15rem;
+      line-height: 1.6;
+      color: #d1fae5;
+      max-width: 540px;
+      margin: 0 0 28px;
+    }
+    .c-hero-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 36px;
+    }
+    .c-btn-hero-join {
+      background: #ffffff;
+      color: var(--centre-green-primary);
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 13px 28px;
+      border-radius: 8px;
+      text-decoration: none;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .c-btn-hero-join:hover {
+      background: #f0fdf4;
+      transform: translateY(-2px);
+    }
+    .c-btn-hero-verify {
+      background: transparent;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      border: 1.5px solid rgba(255, 255, 255, 0.6);
+      transition: all 0.2s;
+    }
+    .c-btn-hero-verify:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #ffffff;
+    }
+    .c-trust-strip {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      font-size: 0.88rem;
+      color: #ecfdf5;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .c-trust-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* Hero Graphic side */
+    .c-hero-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+    .c-hero-badge {
+      display: inline-block;
+      background: #fde047;
+      color: #713f12;
+      font-weight: 800;
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    /* Popular Courses Section */
+    .c-section {
+      max-width: 1200px;
+      margin: 56px auto;
+      padding: 0 24px;
+    }
+    .c-section-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .c-section-header h3 {
+      font-size: 2.2rem;
+      color: var(--centre-green-primary);
+      margin: 0 0 8px;
+      font-weight: 800;
+    }
+    .c-section-header p {
+      font-size: 1.05rem;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .c-course-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+    .c-course-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 22px 18px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: all 0.25s ease;
+    }
+    .c-course-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(4, 120, 87, 0.12);
+      border-color: var(--centre-green-border);
+    }
+    .c-course-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 12px;
+      background: var(--centre-green-light);
+      color: var(--centre-green-emerald);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin-bottom: 14px;
+      border: 1px solid var(--centre-green-border);
+    }
+    .c-course-card h4 {
+      font-size: 1.35rem;
+      margin: 0 0 6px;
+      color: #0f172a;
+      font-weight: 800;
+    }
+    .c-course-card span.sub {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 12px;
+      min-height: 38px;
+      display: block;
+    }
+    .c-course-duration {
+      background: var(--centre-green-emerald);
+      color: #ffffff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+    .c-course-fee {
+      font-size: 0.88rem;
+      color: #334155;
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px dashed #e2e8f0;
+      width: 100%;
+    }
+    .c-course-fee b {
+      color: var(--centre-green-emerald);
+      font-size: 1.05rem;
+    }
+
+    /* About Section */
+    .c-about-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 0.7fr;
+      gap: 32px;
+      margin-top: 40px;
+    }
+    .c-about-box {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 32px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+    .c-about-box h3 {
+      font-size: 1.6rem;
+      color: var(--centre-green-primary);
+      margin: 0 0 14px;
+      font-weight: 800;
+    }
+    .c-about-box p {
+      font-size: 0.98rem;
+      line-height: 1.7;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+    .c-feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 24px;
+    }
+    .c-feature-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 10px;
+    }
+    .c-feature-list li span.check {
+      color: var(--centre-green-emerald);
+      font-weight: 900;
+      font-size: 1.1rem;
+    }
+    .c-contact-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 0.9rem;
+      color: #334155;
+      line-height: 1.6;
+    }
+
+    /* Director and Map cards */
+    .c-side-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .c-director-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+    .c-director-photo {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      border: 4px solid var(--centre-green-emerald);
+      margin: 0 auto 14px;
+      object-fit: cover;
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+    }
+    .c-director-card h4 {
+      font-size: 1.2rem;
+      color: #0f172a;
+      margin: 0 0 4px;
+      font-weight: 800;
+    }
+    .c-director-card p {
+      font-size: 0.88rem;
+      color: #64748b;
+      margin: 0;
+    }
+    .c-map-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+    .c-map-preview {
+      height: 140px;
+      background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 12px;
+    }
+
+    /* Footer */
+    .c-footer {
+      background: var(--centre-green-dark);
+      color: #e2e8f0;
+      padding: 48px 24px 24px;
+      margin-top: 64px;
+    }
+    .c-footer-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 32px;
+      padding-bottom: 36px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .c-footer-col h4 {
+      font-size: 1.05rem;
+      color: #ffffff;
+      margin: 0 0 16px;
+      font-weight: 700;
+    }
+    .c-footer-col ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .c-footer-col ul li {
+      margin-bottom: 10px;
+    }
+    .c-footer-col ul li a {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    .c-footer-col ul li a:hover {
+      color: #a7f3d0;
+    }
+    .c-footer-bottom {
+      max-width: 1200px;
+      margin: 20px auto 0;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    @media (max-width: 860px) {
+      .c-hero-content { grid-template-columns: 1fr; }
+      .c-about-grid { grid-template-columns: 1fr; }
+      .c-hero-text h2 { font-size: 2.3rem; }
+      .c-nav-links { display: none; }
+    }
+  </style>
 </head>
 <body>
-  <nav class="nav">
-    <a href="/" class="brand">
-      <div class="brand-logo">P</div>
-      <div class="brand-text">
-        <b id="nm">PESC Training Centre</b>
-        <span>Purvanchal Education &amp; Skill Council Affiliated Centre</span>
+
+  <!-- Centre Navigation Header -->
+  <header class="c-nav">
+    <a href="/" class="c-brand">
+      <div class="c-brand-logo">🎓</div>
+      <div class="c-brand-text">
+        <h1 id="brandName">Loading Centre…</h1>
+        <span>Franchise Centre of PES Council</span>
       </div>
     </a>
-    <div class="nav-links">
-      <a href="/student">🎓 Student Panel</a>
-      <a href="/login" class="btn-cta" style="padding:6px 14px; font-size:0.82rem;">Centre Login</a>
-    </div>
-  </nav>
+    <nav class="c-nav-links">
+      <a href="/" class="active">Home</a>
+      <a href="#courses">Courses</a>
+      <a href="#about">About Centre</a>
+      <a href="#verify">Verify Certificate</a>
+      <a href="/login" class="c-btn-login">Student Login</a>
+      <button type="button" class="c-btn-apply" id="btnOpenApply">Apply Admission</button>
+    </nav>
+  </header>
 
   <main>
-    <section class="hero">
-      <div class="hero-pill">
-        OFFICIALLY RECOGNIZED TRAINING CENTRE · PURVANCHAL EDUCATION &amp; SKILL COUNCIL
-      </div>
-      <h1 id="h">Loading centre…</h1>
-      <p id="p">Authorized partner for skill and computer education certifications.</p>
-      <div class="hero-cta">
-        <a href="#verify" class="btn gold">🔍 Verify Certificate / Marksheet</a>
-        <a href="/student" class="btn alt">🎓 Student Portal</a>
-        <a href="/login" class="btn">Centre Staff Login</a>
+    <!-- Hero Banner (Matches Mockup) -->
+    <section class="c-hero">
+      <div class="c-hero-content">
+        <div class="c-hero-text">
+          <h2>
+            Admission Open
+            <span>2026-27</span>
+          </h2>
+          <p id="heroDesc">
+            Join our authorized training academy for professional computer courses. Build practical skills, get national council certified, and grow your career.
+          </p>
+          <div class="c-hero-actions">
+            <button type="button" class="c-btn-hero-join" id="btnHeroJoin">Join Now →</button>
+            <a href="#verify" class="c-btn-hero-verify">Verify Certificate</a>
+          </div>
+          <div class="c-trust-strip">
+            <div class="c-trust-item">
+              <span>✓</span>
+              <b>PES Council Affiliated</b>
+            </div>
+            <div class="c-trust-item">
+              <span>🛡️</span>
+              <span>Centre Code: <b id="trustCode">...</b></span>
+            </div>
+            <div class="c-trust-item">
+              <span>🌐</span>
+              <span id="trustDomain">...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="c-hero-card">
+          <span class="c-hero-badge">⚡ ONLINE ADMISSIONS OPEN</span>
+          <h3 style="margin:0 0 10px; font-size:1.4rem; color:#ffffff;">Enroll in High-Demand IT Skills</h3>
+          <p style="font-size:0.92rem; color:#d1fae5; line-height:1.6; margin:0 0 16px;">
+            Get trained on DCA, ADCA, Tally Prime with GST, and Typing with industry-recognized certifications valid across private &amp; public job applications.
+          </p>
+          <div style="background:rgba(0,0,0,0.25); border-radius:10px; padding:14px; font-size:0.88rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span>Enrolled Students:</span>
+              <b id="heroStudentCount" style="color:#fde047;">Loading…</b>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span>Verification System:</span>
+              <b style="color:#a7f3d0;">100% Online &amp; QR</b>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span>Current Batch:</span>
+              <b style="color:#ffffff;">Session 2026-27</b>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="card" id="verify">
-      <div style="text-align:center; margin-bottom:16px;">
-        <h2>Verify Student Credentials</h2>
-        <p class="muted">Check valid Certificates or Marksheets issued through this training centre</p>
+    <!-- Popular Courses Section -->
+    <section class="c-section" id="courses">
+      <div class="c-section-header">
+        <h3>Our Popular Courses</h3>
+        <p>Certified courses with affordable local fees for all students</p>
       </div>
-      <form id="vf" class="row" style="max-width:600px; margin:0 auto;">
-        <div style="flex:1;">
-          <label>Certificate No. / Marksheet No. / Roll No.</label>
-          <input name="query" placeholder="e.g. PESC/2026/000001 or PESC/MRK/2026/000001" required>
+
+      <div class="c-course-grid" id="courseGrid">
+        <div style="grid-column: 1/-1; text-align:center; padding:30px; color:#64748b;">
+          Loading courses…
         </div>
-        <div style="align-self:end;">
-          <button class="btn gold">Verify</button>
+      </div>
+    </section>
+
+    <!-- About Our Centre & Director Profile (2 Columns Matching Image) -->
+    <section class="c-section" id="about">
+      <div class="c-about-grid">
+        <div class="c-about-box">
+          <h3>About Our Centre</h3>
+          <p id="aboutStory">
+            Established as an authorized franchise centre of Purvanchal Education &amp; Skill Council (PESC), our institution is dedicated to delivering high-quality computer education, vocational training, and technical skill development to students in the region. We are committed to hands-on practical learning, experienced faculty guidance, and career-focused training with modern computer labs.
+          </p>
+
+          <ul class="c-feature-list">
+            <li><span class="check">✓</span> 30+ Computer Lab Systems with High-Speed Internet</li>
+            <li><span class="check">✓</span> Experienced &amp; Certified Technical Faculty</li>
+            <li><span class="check">✓</span> Placement Assistance &amp; National Council Certification</li>
+          </ul>
+
+          <div class="c-contact-card">
+            <h4 style="margin:0 0 8px; color:#064e3b; font-size:0.95rem;">Contact Details</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <div>📞 <b>Phone:</b> <span id="contactPhone">+91 ...</span></div>
+              <div>✉️ <b>Email:</b> <span id="contactEmail">...</span></div>
+              <div style="grid-column:span 2;">📍 <b>Address:</b> <span id="contactAddress">...</span></div>
+            </div>
+          </div>
         </div>
-      </form>
-      <div id="vr" style="max-width:600px; margin:0 auto;"></div>
+
+        <div class="c-side-cards">
+          <!-- Director Card -->
+          <div class="c-director-card">
+            <div class="c-director-photo" id="directorPhoto">👨‍🏫</div>
+            <h4 id="directorName">Director Name</h4>
+            <p id="directorTitle">Director, Centre</p>
+          </div>
+
+          <!-- Map / Location Card -->
+          <div class="c-map-card">
+            <div class="c-map-preview">
+              <div style="font-size:2rem; margin-bottom:4px;">📍</div>
+              <b id="mapCentreName" style="color:#064e3b; font-size:0.95rem;">Study Centre Location</b>
+              <span id="mapLocation" style="font-size:0.82rem; color:#64748b; margin-top:2px;">City, State</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Student Credential Verification Widget -->
+    <section class="c-section" id="verify">
+      <div style="background:#ffffff; border:2px solid var(--centre-green-border); border-radius:14px; padding:32px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+        <div style="text-align:center; margin-bottom:20px;">
+          <span class="c-hero-badge" style="background:#d1fae5; color:#065f46;">🛡️ SECURE VERIFICATION</span>
+          <h3 style="font-size:1.8rem; color:#064e3b; margin:6px 0;">Verify Centre Student Credentials</h3>
+          <p class="muted" style="margin:0;">Instant verification of Certificates and Marksheets issued by this study centre</p>
+        </div>
+
+        <form id="vf" class="row" style="max-width:640px; margin:0 auto;">
+          <div style="flex:1;">
+            <label>Certificate No. / Marksheet No. / Candidate Roll No.</label>
+            <input name="query" placeholder="e.g. PESC/2026/000001 or Roll No" required style="border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 14px;">
+          </div>
+          <div style="align-self:end;">
+            <button class="btn gold" style="height:44px; padding:0 24px; border-radius:8px; font-weight:700;">Verify Now</button>
+          </div>
+        </form>
+        <div id="vr" style="max-width:640px; margin:0 auto;"></div>
+      </div>
     </section>
   </main>
 
-  <footer>
-    <div style="text-align:center; font-size:0.85rem; color:#94a3b8;">
-      <p>© 2026 Purvanchal Education &amp; Skill Council (PESC). All rights reserved.</p>
+  <!-- Online Admission Inquiry Modal -->
+  <div id="admissionModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; display:none; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#ffffff; border-radius:14px; max-width:540px; width:100%; padding:28px; box-shadow:0 20px 40px rgba(0,0,0,0.3); position:relative;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; color:#064e3b; font-size:1.4rem;">📝 Student Admission Application</h3>
+        <button type="button" id="btnCloseModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+      <p class="muted" style="font-size:0.88rem; margin:0 0 18px;">Fill in your details below to apply for admission in session 2026-27:</p>
+      
+      <form id="inquiryForm">
+        <input type="hidden" name="centre_id" id="inqCentreId">
+        <div class="row">
+          <div><label>Full Name *</label><input name="name" required maxlength="100" placeholder="e.g. Rahul Verma"></div>
+          <div><label>Mobile Number *</label><input name="mobile" pattern="[6-9][0-9]{9}" required placeholder="e.g. 9876543210"></div>
+          <div style="grid-column:span 2;">
+            <label>Select Desired Course *</label>
+            <select name="course_id" id="inqCourseSelect" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
+              <option value="">Select a course…</option>
+            </select>
+          </div>
+          <div style="grid-column:span 2;">
+            <label>Message / Previous Qualification</label>
+            <textarea name="message" rows="2" placeholder="e.g. 10th/12th Passed, interested in morning batch"></textarea>
+          </div>
+        </div>
+        <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn alt" id="btnCancelModal">Cancel</button>
+          <button type="submit" class="c-btn-apply" style="padding:10px 24px;">Submit Application</button>
+        </div>
+      </form>
+      <div id="inqResult" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <!-- Footer Matching Mockup -->
+  <footer class="c-footer">
+    <div class="c-footer-grid">
+      <div class="c-footer-col">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+          <div style="width:36px; height:36px; border-radius:6px; background:#047857; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold;">🎓</div>
+          <b id="footerBrandName" style="color:#ffffff; font-size:1.1rem;">Centre Name</b>
+        </div>
+        <p style="font-size:0.85rem; color:#94a3b8; line-height:1.6; margin:0;">
+          Franchise Centre of Purvanchal Education &amp; Skill Council (PESC). Empowering students with cutting-edge vocational &amp; technical IT education.
+        </p>
+      </div>
+
+      <div class="c-footer-col">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="#courses">Courses</a></li>
+          <li><a href="#about">About Centre</a></li>
+          <li><a href="#verify">Verify Certificate</a></li>
+          <li><a href="/login">Student Login</a></li>
+        </ul>
+      </div>
+
+      <div class="c-footer-col">
+        <h4>Affiliation &amp; Registration</h4>
+        <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 8px;">
+          <b>Centre Code:</b> <span id="footerCode" style="font-family:monospace; color:#a7f3d0;">...</span>
+        </p>
+        <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 8px;">
+          <b>Affiliated To:</b> PES Council
+        </p>
+        <p style="font-size:0.88rem; color:#cbd5e1; margin:0;">
+          <b>Subdomain:</b> <span id="footerDomain" style="color:#a7f3d0;">...</span>
+        </p>
+      </div>
+
+      <div class="c-footer-col">
+        <h4>Connect With Us</h4>
+        <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 10px;">
+          Have questions? Reach out to our centre desk directly:
+        </p>
+        <p style="font-size:0.88rem; color:#a7f3d0; margin:0 0 6px;">
+          ✉️ <span id="footerEmail">info@centre.com</span>
+        </p>
+        <p style="font-size:0.88rem; color:#a7f3d0; margin:0;">
+          📞 <span id="footerPhone">+91 ...</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="c-footer-bottom">
+      <p id="copyrightText">© 2026 Centre Name. All Rights Reserved. | PES Council Affiliated | Centre Code: ...</p>
     </div>
   </footer>
 
   <script src="/assets/js/app.js"></script>
   <script>
+    let centreData = null;
+
+    // Load Centre Information dynamically
     guard(async () => {
-      const d = await api('/api/public/site');
-      document.title = `${d.name} – PESC Affiliated Training Centre`;
-      $('#nm').textContent = d.name;
-      $('#h').textContent = d.name;
-      $('#p').textContent = `${d.district}, ${d.state} · Official Centre Code: ${d.code}`;
+      // Determine if slug is provided via URL path /c/:slug or query ?slug=
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      let querySlug = new URLSearchParams(window.location.search).get('slug') || new URLSearchParams(window.location.search).get('centre');
+      if (pathParts[0] === 'c' && pathParts[1]) querySlug = pathParts[1];
+
+      const apiUrl = querySlug ? `/api/public/site?slug=${encodeURIComponent(querySlug)}` : '/api/public/site';
+      const d = await api(apiUrl);
+      centreData = d;
+      const c = d.centre;
+      const o = d.owner;
+
+      // Update Page Title and Brand
+      document.title = `${c.name} – Franchise Centre of PES Council`;
+      $('#brandName').textContent = c.name;
+      $('#footerBrandName').textContent = c.name;
+      $('#trustCode').textContent = c.code;
+      $('#footerCode').textContent = c.code;
+      const domainStr = `${c.slug}.pescouncil.in`;
+      $('#trustDomain').textContent = domainStr;
+      $('#footerDomain').textContent = domainStr;
+      $('#inqCentreId').value = c.id;
+
+      // Hero
+      $('#heroDesc').textContent = `Join ${c.name} for professional computer courses. Build practical skills, get national council certified, and grow your career in ${c.district}.`;
+      $('#heroStudentCount').textContent = `${d.stats.students}+ Students`;
+
+      // About
+      $('#aboutStory').textContent = `Established in ${d.stats.established_year}, ${c.name} is an authorized franchise centre of Purvanchal Education & Skill Council (PESC), dedicated to providing quality computer education and skill training to students in ${c.district}, ${c.state}. We are committed to practical learning, experienced faculty, and career-focused training with modern labs and updated curriculum.`;
+      $('#contactPhone').textContent = o.mobile;
+      $('#contactEmail').textContent = o.email;
+      $('#contactAddress').textContent = c.address;
+      $('#footerPhone').textContent = o.mobile;
+      $('#footerEmail').textContent = o.email;
+
+      // Director & Map
+      $('#directorName').textContent = o.name;
+      $('#directorTitle').textContent = `Director, ${c.name}`;
+      $('#mapCentreName').textContent = c.name;
+      $('#mapLocation').textContent = `${c.district}, ${c.state}`;
+
+      // Copyright
+      $('#copyrightText').textContent = `© 2026 ${c.name}. All Rights Reserved. | PES Council Affiliated | Centre Code: ${c.code}`;
+
+      // Populate Courses Grid matching Mockup icons and styles
+      const iconMap = {
+        'DCA': '📄',
+        'ADCA': '💻',
+        'Tally': '🧮',
+        'Typing': '⌨️',
+        'DTP': '🎨',
+        'CCC': '🖥️',
+        'PGDCA': '🎓',
+      };
+
+      const grid = $('#courseGrid');
+      const select = $('#inqCourseSelect');
+      if (d.courses && d.courses.length > 0) {
+        grid.innerHTML = d.courses.map(co => {
+          const icon = iconMap[co.code] || '💻';
+          return `
+            <div class="c-course-card">
+              <div class="c-course-icon">${icon}</div>
+              <h4>${esc(co.code)}</h4>
+              <span class="sub">${esc(co.name)}</span>
+              <div class="c-course-duration">Duration: ${co.duration_months} Months</div>
+              <div class="c-course-fee">
+                Local Fees: <b>${inr(co.local_fee_rupees * 100)}</b>
+              </div>
+              <button class="c-btn-apply" style="margin-top:12px; width:100%; font-size:0.82rem; padding:6px 12px;" onclick="openApplyWithCourse(${co.id})">Enroll Now</button>
+            </div>
+          `;
+        }).join('');
+
+        select.innerHTML = `<option value="">Select a course…</option>` +
+          d.courses.map(co => `<option value="${co.id}">${esc(co.code)} - ${esc(co.name)} (${co.duration_months} Months)</option>`).join('');
+      } else {
+        grid.innerHTML = '<p class="muted" style="grid-column:1/-1; text-align:center;">No courses active currently.</p>';
+      }
     });
 
+    // Modal Handlers
+    const modal = $('#admissionModal');
+    const openModal = () => { modal.style.display = 'flex'; };
+    const closeModal = () => { modal.style.display = 'none'; $('#inqResult').innerHTML = ''; };
+
+    $('#btnOpenApply').onclick = openModal;
+    $('#btnHeroJoin').onclick = openModal;
+    $('#btnCloseModal').onclick = closeModal;
+    $('#btnCancelModal').onclick = closeModal;
+
+    window.openApplyWithCourse = (courseId) => {
+      openModal();
+      if ($('#inqCourseSelect')) $('#inqCourseSelect').value = courseId;
+    };
+
+    // Admission Form Submit
+    $('#inquiryForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const body = form(e.target);
+        const res = await api('/api/public/admission-inquiry', { method: 'POST', body });
+        $('#inqResult').innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:12px; border-radius:8px; font-weight:600; text-align:center;">✓ ${esc(res.message)}</div>`;
+        setTimeout(() => { closeModal(); e.target.reset(); }, 2500);
+      });
+    };
+
+    // Verification Form Submit
     $('#vf').onsubmit = (e) => {
       e.preventDefault();
       guard(async () => {

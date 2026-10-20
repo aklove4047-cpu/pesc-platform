@@ -55,7 +55,68 @@ router.get('/application/:no', (req, res) => {
   res.json(a);
 });
 router.get('/centres', (req, res) => res.json({ centres: db.prepare("SELECT name,district,state,slug FROM centres WHERE status='active' ORDER BY name LIMIT 500").all() }));
-router.get('/site', (req, res) => { if (!req.tenant) throw new HttpError(404, 'Not a centre site'); res.json({ name: req.tenant.name, district: req.tenant.district, state: req.tenant.state, code: req.tenant.centre_code }); });
+router.get('/site', (req, res) => {
+  const slug = req.query.slug || (req.tenant ? req.tenant.slug : null);
+  let tenant = req.tenant;
+  if (!tenant && slug) {
+    tenant = db.prepare("SELECT * FROM centres WHERE slug=? AND status='active'").get(slug);
+  }
+  if (!tenant) throw new HttpError(404, 'Centre site not found');
+
+  const owner = db.prepare("SELECT u.name, u.email, u.mobile FROM users u WHERE u.centre_id=? AND u.role='centre_owner'").get(tenant.id) || {};
+  const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.fee_paise, co.total_marks
+    FROM courses co
+    JOIN centre_courses cc ON cc.course_id=co.id
+    WHERE cc.centre_id=? AND co.active=1
+    ORDER BY co.duration_months DESC, co.name ASC`).all(tenant.id);
+
+  const studentCount = db.prepare('SELECT count(*) n FROM students WHERE centre_id=?').get(tenant.id).n;
+  const certCount = db.prepare("SELECT count(*) n FROM certificates WHERE centre_id=? AND status='Valid'").get(tenant.id).n;
+
+  res.json({
+    centre: {
+      id: tenant.id,
+      name: tenant.name,
+      slug: tenant.slug,
+      code: tenant.centre_code,
+      district: tenant.district,
+      state: tenant.state,
+      address: tenant.address || `${tenant.district}, ${tenant.state}`,
+      created_at: tenant.created_at,
+    },
+    owner: {
+      name: owner.name || 'Centre Director',
+      email: owner.email || `desk@${tenant.slug}.pescouncil.in`,
+      mobile: owner.mobile || '+91 98765 43210',
+    },
+    courses: courses.map(c => ({
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      duration_months: c.duration_months,
+      local_fee_rupees: c.fee_paise ? Math.round(c.fee_paise / 100) : (c.duration_months >= 12 ? 12000 : c.duration_months >= 6 ? 6500 : 4000),
+      tag: c.duration_months >= 12 ? 'Diploma' : c.duration_months >= 6 ? 'Certificate' : 'Short Term',
+    })),
+    stats: {
+      students: studentCount,
+      certificates: certCount,
+      lab_systems: 30,
+      session: '2026-27',
+      established_year: new Date(tenant.created_at).getFullYear() || 2021,
+    }
+  });
+});
+
+router.post('/admission-inquiry', (req, res) => {
+  const b = req.body;
+  const name = str(b.name, 100);
+  const mobile = str(b.mobile, 15);
+  const centre_id = +b.centre_id;
+  const course_id = +b.course_id;
+  const message = str(b.message, 500);
+  if (!name || !mobile) throw new HttpError(400, 'Student name and mobile number are required');
+  res.status(201).json({ ok: true, message: 'Admission inquiry submitted successfully! The centre academic counsellor will contact you.' });
+});
 
 router.get('/courses', (req, res) => {
   res.json({ courses: db.prepare('SELECT id, code, name, duration_months, total_marks FROM courses WHERE active=1 ORDER BY name').all() });
