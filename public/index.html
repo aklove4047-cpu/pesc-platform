@@ -39,12 +39,12 @@
     </a>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle Navigation">☰</button>
     <div class="nav-links" id="navLinks">
+      <a href="#centres-showcase" style="font-weight:700; color:#047857; background:#ecfdf5; padding:6px 12px; border-radius:6px; border:1px solid #a7f3d0;">🌐 Affiliated Centres</a>
       <a href="#about">About</a>
       <a href="#courses">Courses</a>
       <a href="#verify" class="nav-gold">🔍 Verify Credentials</a>
       <a href="#portals">Portals</a>
       <a href="#packages">Affiliation Plans</a>
-      <a href="#centres">Centres Directory</a>
       <a href="#faqs">FAQs</a>
       <a href="#notices">Notices</a>
       <a href="/login" style="font-weight:700;">Sign In</a>
@@ -74,6 +74,7 @@
         Empowering over <b>500+ affiliated computer academies</b> and training institutes nationwide. Providing automated franchise subdomains, tamper-proof QR code marksheets, verifiable skill certificates, and digital student identity credentials.
       </p>
       <div class="hero-cta">
+        <a href="#centres-showcase" class="btn" style="background:#047857; color:#fff; font-size:1.05rem; padding:14px 28px; box-shadow:0 4px 16px rgba(4,120,87,0.3);">🌐 Affiliated Centres Network</a>
         <a href="#verify" class="btn gold" style="font-size:1.05rem; padding:14px 28px;">🔍 Instant Student Verification</a>
         <a href="#portals" class="btn alt" style="font-size:1.05rem; padding:14px 26px;">🚀 Council Portals Gateway</a>
         <a href="#apply" class="btn" style="font-size:1.05rem; padding:14px 26px;">🏢 Start Affiliation Application</a>
@@ -97,6 +98,27 @@
           <b>100%</b>
           <span>Online &amp; QR Verifiable</span>
         </div>
+      </div>
+    </section>
+
+    <!-- Affiliated Study Centres Network Showcase (Prominently Right in Front) -->
+    <section class="card" id="centres-showcase" style="border: 2px solid #047857; box-shadow: 0 10px 30px rgba(4, 120, 87, 0.12); background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 130px); margin-bottom: 30px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+        <div>
+          <span class="hero-pill" style="color:#064e3b; border-color:#86efac; background:#ecfdf5;">
+            🌐 OFFICIAL AFFILIATED CENTRES NETWORK
+          </span>
+          <h2 style="font-size:2rem; margin:10px 0 6px; color:#064e3b;">Affiliated Computer &amp; Skill Centres</h2>
+          <p class="muted">Click any authorized centre below to open its dedicated website, enroll in courses, or access student &amp; admin login options.</p>
+        </div>
+        <div style="min-width:280px; flex:1; max-width:420px;">
+          <input type="text" id="centreShowcaseSearch" placeholder="🔍 Search centre by name, district, or city..." style="width:100%; border:2px solid #a7f3d0; border-radius:8px; padding:12px 14px; font-size:0.95rem; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+        </div>
+      </div>
+
+      <!-- Live Interactive Centres Grid -->
+      <div id="centresShowcaseGrid" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:22px;">
+        <p class="muted">Loading authorized centres…</p>
       </div>
     </section>
 

@@ -31,8 +31,8 @@
         <div style="width:56px; height:56px; margin:0 auto 12px; background:var(--navy); color:#fff; border-radius:12px; display:grid; place-items:center; font-size:1.6rem; font-weight:800; border:2px solid var(--gold);">
           P
         </div>
-        <h2 style="color:var(--navy); margin-bottom:6px;">Sign In to Portal</h2>
-        <p class="muted" style="font-size:0.88rem;">Super Admin, Coordinator, Centre & Student Login</p>
+        <h2 id="loginTitle" style="color:var(--navy); margin-bottom:6px;">Sign In to Portal</h2>
+        <p id="loginSub" class="muted" style="font-size:0.88rem;">Super Admin, Coordinator, Centre & Student Login</p>
       </div>
 
       <div id="errMsg" style="display:none; background:#fee2e2; color:#991b1b; padding:12px 14px; border-radius:8px; border:1px solid #f87171; font-size:0.88rem; margin-bottom:16px;"></div>
@@ -65,6 +65,25 @@
     const pwInput = document.getElementById('password');
     const subBtn = document.getElementById('subBtn');
     const pwToggle = document.getElementById('pwToggle');
+
+    // Role-specific customized branding
+    try {
+      const qParams = new URLSearchParams(window.location.search);
+      const roleParam = qParams.get('role');
+      if (roleParam === 'student') {
+        const lt = document.getElementById('loginTitle');
+        const ls = document.getElementById('loginSub');
+        if (lt) lt.textContent = '🎓 Candidate / Student Login';
+        if (ls) ls.textContent = 'Access your syllabus, admit cards, marksheets & certificates';
+        if (emailInput) emailInput.placeholder = 'Enter Roll Number or Student Email';
+      } else if (roleParam === 'centre') {
+        const lt = document.getElementById('loginTitle');
+        const ls = document.getElementById('loginSub');
+        if (lt) lt.textContent = '🏢 Franchise Centre Admin Login';
+        if (ls) ls.textContent = 'Authorized Institute Director & Staff Management Portal';
+        if (emailInput) emailInput.placeholder = 'Enter Centre Email or Director Mobile';
+      }
+    } catch (_) {}
 
     // Clean any query string or hash immediately
     if (window.location.search || window.location.hash) {

@@ -199,8 +199,54 @@ CREATE TABLE IF NOT EXISTS admission_inquiries(
   status TEXT NOT NULL DEFAULT 'New' CHECK(status IN ('New', 'Contacted', 'Enrolled', 'Cancelled')),
   created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS ix_inq_centre ON admission_inquiries(centre_id, status);
+CREATE TABLE IF NOT EXISTS student_attendance(
+  id INTEGER PRIMARY KEY,
+  centre_id INTEGER NOT NULL REFERENCES centres(id),
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  att_date TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'Present' CHECK(status IN ('Present','Absent','Leave')),
+  created_at INTEGER NOT NULL,
+  UNIQUE(centre_id, student_id, att_date));
+CREATE INDEX IF NOT EXISTS ix_att_centre ON student_attendance(centre_id, att_date);
+
+CREATE TABLE IF NOT EXISTS centre_study_materials(
+  id INTEGER PRIMARY KEY,
+  centre_id INTEGER NOT NULL REFERENCES centres(id),
+  course_id INTEGER REFERENCES courses(id),
+  title TEXT NOT NULL,
+  material_type TEXT NOT NULL DEFAULT 'pdf',
+  file_url TEXT NOT NULL,
+  created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_mat_centre ON centre_study_materials(centre_id);
+
+CREATE TABLE IF NOT EXISTS centre_events(
+  id INTEGER PRIMARY KEY,
+  centre_id INTEGER NOT NULL REFERENCES centres(id),
+  title TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'Notice',
+  event_date TEXT,
+  content TEXT,
+  created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_cev_centre ON centre_events(centre_id);
+
+CREATE TABLE IF NOT EXISTS centre_assignments(
+  id INTEGER PRIMARY KEY,
+  centre_id INTEGER NOT NULL REFERENCES centres(id),
+  course_id INTEGER REFERENCES courses(id),
+  title TEXT NOT NULL,
+  max_marks INTEGER NOT NULL DEFAULT 50,
+  due_date TEXT,
+  instructions TEXT,
+  created_at INTEGER NOT NULL);
 `);
 
 try { rawDb.exec("ALTER TABLE students ADD COLUMN initial_password TEXT DEFAULT 'Student@123';"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN fee_total INTEGER DEFAULT 12000;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN fee_paid INTEGER DEFAULT 8000;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN photo_url TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centre_courses ADD COLUMN selling_price_paise INTEGER DEFAULT 0;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN seal_url TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN signature_url TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN logo_url TEXT;"); } catch (_) {}
 
 module.exports = db;

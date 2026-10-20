@@ -82,20 +82,151 @@
     .c-nav-links a:hover, .c-nav-links a.active {
       color: var(--centre-green-emerald);
     }
-    .c-btn-login {
-      background: #ffffff;
-      color: var(--centre-green-emerald) !important;
-      border: 1.5px solid var(--centre-green-emerald);
-      padding: 7px 18px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.88rem;
+    /* Top Utility Bar */
+    .c-top-strip {
+      background: var(--centre-green-dark);
+      color: #d1fae5;
+      font-size: 0.8rem;
+      padding: 6px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .c-top-strip-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .c-top-strip-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.82rem;
+    }
+    .c-badge-affil {
+      background: var(--centre-green-emerald);
+      color: #ffffff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.74rem;
+      letter-spacing: 0.2px;
+    }
+    .c-top-strip-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .c-strip-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
       text-decoration: none;
       transition: all 0.2s;
     }
-    .c-btn-login:hover {
-      background: var(--centre-green-light);
+    .c-strip-btn.student-btn {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
     }
+    .c-strip-btn.student-btn:hover {
+      background: #ffffff;
+      color: var(--centre-green-dark);
+    }
+    .c-strip-btn.admin-btn {
+      background: #fde047;
+      color: #022c22;
+      border: 1px solid #facc15;
+    }
+    .c-strip-btn.admin-btn:hover {
+      background: #fef08a;
+      transform: translateY(-1px);
+    }
+
+    /* Compact Navbar Login Options */
+    .c-nav-logins {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 3px 6px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .c-mini-login-btn {
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    .c-mini-login-btn.student {
+      background: #ffffff;
+      color: #047857 !important;
+      border: 1.5px solid #a7f3d0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .c-mini-login-btn.student:hover {
+      background: #ecfdf5;
+      color: #064e3b !important;
+    }
+    .c-mini-login-btn.admin {
+      background: #064e3b;
+      color: #ffffff !important;
+      border: 1.5px solid #064e3b;
+    }
+    .c-mini-login-btn.admin:hover {
+      background: #022c22;
+      border-color: #022c22;
+    }
+
+    /* Mobile Quick Logins Bar */
+    .c-mobile-logins {
+      display: none;
+      background: #f8fafc;
+      padding: 8px 16px;
+      border-bottom: 1px solid #e2e8f0;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    /* Hero Quick Logins Pill */
+    .c-hero-logins-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 30px;
+      padding: 6px 16px;
+      font-size: 0.84rem;
+    }
+    .c-hero-logins-pill a {
+      color: #fef08a;
+      text-decoration: none;
+      font-weight: 700;
+      transition: color 0.2s;
+    }
+    .c-hero-logins-pill a:hover {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+    .c-hero-pill-sep {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.8rem;
+    }
+
     .c-btn-apply {
       background: var(--centre-green-emerald);
       color: #ffffff !important;
@@ -108,11 +239,13 @@
       transition: all 0.2s;
       cursor: pointer;
       border: none;
+      white-space: nowrap;
     }
     .c-btn-apply:hover {
       background: var(--centre-green-primary);
       transform: translateY(-1px);
     }
+
 
     /* Centre Hero Section */
     .c-hero {
@@ -493,6 +626,25 @@
 </head>
 <body>
 
+  <!-- Top Utility Strip with Direct Logins -->
+  <div class="c-top-strip">
+    <div class="c-top-strip-inner">
+      <div class="c-top-strip-left">
+        <span class="c-badge-affil">✓ Authorized Council Centre</span>
+        <span>Centre Code: <b id="stripCentreCode" style="color:#ffffff; font-family:monospace;">...</b> · Purvanchal Education &amp; Skill Council</span>
+      </div>
+      <div class="c-top-strip-right">
+        <span style="font-size:0.75rem; color:#a7f3d0; margin-right:4px;">Direct Portals:</span>
+        <a href="/login?role=student" class="c-strip-btn student-btn" title="Candidate Student Dashboard">
+          🎓 <span>Student Login</span>
+        </a>
+        <a href="/login?role=centre" class="c-strip-btn admin-btn" title="Centre Director & Staff Portal">
+          🏢 <span>Centre Admin Login</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
   <!-- Centre Navigation Header -->
   <header class="c-nav">
     <a href="/" class="c-brand">
@@ -505,12 +657,29 @@
     <nav class="c-nav-links">
       <a href="/" class="active">Home</a>
       <a href="#courses">Courses</a>
-      <a href="#about">About Centre</a>
+      <a href="#about">About</a>
       <a href="#verify">Verify Certificate</a>
-      <a href="/login" class="c-btn-login">Student Login</a>
+      
+      <!-- Chhote se compact login options -->
+      <div class="c-nav-logins">
+        <a href="/login?role=student" class="c-mini-login-btn student" title="Candidate Student Portal">
+          🎓 <span>Student Login</span>
+        </a>
+        <a href="/login?role=centre" class="c-mini-login-btn admin" title="Centre Director / Admin Portal">
+          🏢 <span>Centre Admin</span>
+        </a>
+      </div>
+
       <button type="button" class="c-btn-apply" id="btnOpenApply">Apply Admission</button>
     </nav>
   </header>
+
+  <!-- Mobile Quick Action Strip for small screens -->
+  <div class="c-mobile-logins">
+    <a href="/login?role=student" class="c-mini-login-btn student">🎓 Student Login</a>
+    <a href="/login?role=centre" class="c-mini-login-btn admin">🏢 Centre Admin</a>
+    <button type="button" class="c-btn-apply" style="padding:6px 12px; font-size:0.8rem;" onclick="document.getElementById('btnOpenApply').click()">Apply</button>
+  </div>
 
   <main>
     <!-- Hero Banner (Matches Mockup) -->
@@ -527,6 +696,12 @@
           <div class="c-hero-actions">
             <button type="button" class="c-btn-hero-join" id="btnHeroJoin">Join Now →</button>
             <a href="#verify" class="c-btn-hero-verify">Verify Certificate</a>
+            <div class="c-hero-logins-pill">
+              <span style="color:#a7f3d0; font-size:0.78rem;">Portals:</span>
+              <a href="/login?role=student">🎓 Student Login</a>
+              <span class="c-hero-pill-sep">|</span>
+              <a href="/login?role=centre">🏢 Centre Admin</a>
+            </div>
           </div>
           <div class="c-trust-strip">
             <div class="c-trust-item">
@@ -698,13 +873,14 @@
       </div>
 
       <div class="c-footer-col">
-        <h4>Quick Links</h4>
+        <h4>Portals &amp; Links</h4>
         <ul>
           <li><a href="/">Home</a></li>
           <li><a href="#courses">Courses</a></li>
           <li><a href="#about">About Centre</a></li>
           <li><a href="#verify">Verify Certificate</a></li>
-          <li><a href="/login">Student Login</a></li>
+          <li><a href="/login?role=student" style="color:#fde047; font-weight:700;">🎓 Student Login Portal</a></li>
+          <li><a href="/login?role=centre" style="color:#a7f3d0; font-weight:700;">🏢 Centre Admin Login</a></li>
         </ul>
       </div>
 
@@ -762,6 +938,7 @@
       $('#brandName').textContent = c.name;
       $('#footerBrandName').textContent = c.name;
       $('#trustCode').textContent = c.code;
+      if ($('#stripCentreCode')) $('#stripCentreCode').textContent = c.code;
       $('#footerCode').textContent = c.code;
       const domainStr = `${c.slug}.pescouncil.in`;
       $('#trustDomain').textContent = domainStr;

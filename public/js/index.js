@@ -200,15 +200,76 @@ function renderCourses(list) {
   `).join('');
 }
 
-// Render Centres with Search Filtering
+// Render Premium Showcase of Affiliated Centres
+function renderCentresShowcase(list) {
+  const container = $('#centresShowcaseGrid');
+  if (!container) return;
+  if (!list || !list.length) {
+    container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:36px; color:#64748b; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1;">No affiliated centres match your search criteria.</div>`;
+    return;
+  }
+  container.innerHTML = list.map(c => {
+    const directUrl = `/c/${encodeURIComponent(c.slug)}`;
+    const subdomain = `${c.slug}.pescouncil.in`;
+    return `
+      <div class="course-card" style="border-top: 5px solid #047857; display:flex; flex-direction:column; padding:22px; background:#fff; border-radius:14px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transition:transform 0.2s, box-shadow 0.2s;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+          <div style="width:46px; height:46px; border-radius:10px; background:#ecfdf5; border:1.5px solid #a7f3d0; color:#047857; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            🏛️
+          </div>
+          <div style="text-align:right;">
+            <span style="background:#064e3b; color:#fff; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; font-family:monospace;">${esc(c.centre_code || 'PESC-C')}</span>
+            <div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:3px;">✓ PESC Authorized</div>
+          </div>
+        </div>
+
+        <h3 style="font-size:1.2rem; color:#0f172a; margin:0 0 6px; font-weight:800; line-height:1.35;">
+          ${esc(c.name)}
+        </h3>
+
+        <div style="font-size:0.86rem; color:#475569; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+          <span>📍</span> <b>${esc(c.district)}, ${esc(c.state)}</b>
+        </div>
+
+        <div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:8px 12px; margin-bottom:14px; font-size:0.82rem; display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#64748b;">Subdomain:</span>
+          <b style="color:#047857; font-family:monospace;">${esc(subdomain)}</b>
+        </div>
+
+        <div style="display:flex; gap:6px; margin-bottom:18px; font-size:0.78rem; flex-wrap:wrap;">
+          <span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:4px; font-weight:600;">🎓 ${c.student_count || 10} Students Enrolled</span>
+          <span style="background:#fef3c7; color:#92400e; padding:3px 8px; border-radius:4px; font-weight:600;">⚡ Session 2026-27</span>
+        </div>
+
+        <!-- Big Prominent Button to Open Centre Website -->
+        <a href="${directUrl}" target="_blank" class="btn" style="background:#047857; color:#fff; text-align:center; padding:12px 16px; border-radius:8px; font-weight:700; text-decoration:none; margin-bottom:10px; box-shadow:0 4px 12px rgba(4,120,87,0.25); display:block;">
+          🌐 Open Centre Website →
+        </a>
+
+        <!-- Compact Dual Login Links on the card itself -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto;">
+          <a href="/login?role=student" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;" title="Candidate Student Dashboard">
+            🎓 Student Login
+          </a>
+          <a href="/login?role=centre" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;" title="Centre Admin Portal">
+            🏢 Centre Login
+          </a>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Render Centres in lower directory table
 function renderCentres(list) {
+  renderCentresShowcase(list);
   const cl = $('#cl');
   if (!cl) return;
   cl.innerHTML = table([
     ['Accredited Centre Name', (r) => `<b>${esc(r.name)}</b>`],
-    ['District', (r) => esc(r.district)],
-    ['State', (r) => esc(r.state)],
-    ['Official Subdomain Portal', (r) => `<a href="/portal" class="muted" style="text-decoration:underline; font-weight:600; color:var(--navy);">${esc(r.slug)}.pescouncil.in</a>`],
+    ['Centre Code', (r) => `<span style="font-family:monospace; font-weight:700;">${esc(r.centre_code || '-')}</span>`],
+    ['District & State', (r) => `${esc(r.district)}, ${esc(r.state)}`],
+    ['Subdomain & Website', (r) => `<a href="/c/${encodeURIComponent(r.slug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; font-weight:600; padding:4px 10px;">🌐 Open ${esc(r.slug)}.pescouncil.in →</a>`],
   ], list, 'No affiliated centres match your search criteria');
 }
 
@@ -295,18 +356,34 @@ if (pillContainer) {
   });
 }
 
-// Centre Search Filtering
+// Centre Search Filtering for both top showcase & bottom table
+function handleCentreSearch(query) {
+  const q = (query || '').toLowerCase().trim();
+  const filtered = allCentres.filter(c => {
+    return (c.name || '').toLowerCase().includes(q) ||
+      (c.centre_code || '').toLowerCase().includes(q) ||
+      (c.district || '').toLowerCase().includes(q) ||
+      (c.state || '').toLowerCase().includes(q) ||
+      (c.slug || '').toLowerCase().includes(q);
+  });
+  renderCentres(filtered);
+}
+
+const centreShowcaseSearch = $('#centreShowcaseSearch');
+if (centreShowcaseSearch) {
+  centreShowcaseSearch.oninput = (e) => {
+    handleCentreSearch(e.target.value);
+    const cs = $('#centreSearchInput');
+    if (cs) cs.value = e.target.value;
+  };
+}
+
 const centreSearch = $('#centreSearchInput');
 if (centreSearch) {
   centreSearch.oninput = (e) => {
-    const q = e.target.value.toLowerCase().trim();
-    const filtered = allCentres.filter(c => {
-      return (c.name || '').toLowerCase().includes(q) ||
-        (c.district || '').toLowerCase().includes(q) ||
-        (c.state || '').toLowerCase().includes(q) ||
-        (c.slug || '').toLowerCase().includes(q);
-    });
-    renderCentres(filtered);
+    handleCentreSearch(e.target.value);
+    const css = $('#centreShowcaseSearch');
+    if (css) css.value = e.target.value;
   };
 }
 

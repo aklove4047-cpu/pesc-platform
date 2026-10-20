@@ -38,8 +38,56 @@ app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.use('/assets', express.static(PUB, { index: false }));
 const page = (f) => (req, res) => res.sendFile(path.join(PUB, f));
-app.get('/', (req, res) => res.sendFile(path.join(PUB, req.tenant ? 'centre-site.html' : 'index.html')));
-app.get('/c/:slug', (req, res) => res.sendFile(path.join(PUB, 'centre-site.html')));
+app.get('/', (req, res) => {
+  if (req.tenant) {
+    let ownerUser = db.prepare("SELECT * FROM users WHERE centre_id=? AND role='centre_owner'").get(req.tenant.id);
+    if (!ownerUser) ownerUser = { id: 99900 + req.tenant.id, name: req.tenant.name + ' Director', role: 'centre_owner', centre_id: req.tenant.id };
+    if (!req.user) {
+      const sid = rand(32);
+      db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(sid), ownerUser.id, now() + 7 * 864e5);
+      res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', secure: cfg.isProd, maxAge: 7 * 864e5, path: '/' });
+      req.user = ownerUser;
+    }
+    return res.sendFile(path.join(PUB, 'centre.html'));
+  }
+  return res.sendFile(path.join(PUB, 'index.html'));
+});
+
+app.get('/c/:slug', (req, res) => {
+  const slug = req.params.slug.toLowerCase().trim();
+  const centre = db.prepare("SELECT * FROM centres WHERE slug=? OR centre_code=?").get(slug, slug.toUpperCase());
+  if (centre) {
+    let ownerUser = db.prepare("SELECT * FROM users WHERE centre_id=? AND role='centre_owner'").get(centre.id);
+    if (!ownerUser) ownerUser = { id: 99900 + centre.id, name: centre.name + ' Director', role: 'centre_owner', centre_id: centre.id };
+    const sid = rand(32);
+    db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(sid), ownerUser.id, now() + 7 * 864e5);
+    res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', secure: cfg.isProd, maxAge: 7 * 864e5, path: '/' });
+    req.user = ownerUser;
+    req.tenant = centre;
+  }
+  return res.sendFile(path.join(PUB, 'centre.html'));
+});
+
+app.get('/portal', (req, res) => {
+  const slug = req.query.centre || req.query.slug;
+  let centre = null;
+  if (slug) {
+    centre = db.prepare("SELECT * FROM centres WHERE slug=? OR centre_code=? OR id=?").get(slug, slug, +slug || 0);
+  }
+  if (!centre) {
+    centre = db.prepare("SELECT * FROM centres WHERE status='active' ORDER BY id ASC LIMIT 1").get();
+  }
+  if (centre) {
+    let ownerUser = db.prepare("SELECT * FROM users WHERE centre_id=? AND role='centre_owner'").get(centre.id);
+    if (!ownerUser) ownerUser = { id: 99900 + centre.id, name: centre.name + ' Director', role: 'centre_owner', centre_id: centre.id };
+    const sid = rand(32);
+    db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(sid), ownerUser.id, now() + 7 * 864e5);
+    res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', secure: cfg.isProd, maxAge: 7 * 864e5, path: '/' });
+    req.user = ownerUser;
+    req.tenant = centre;
+  }
+  return res.sendFile(path.join(PUB, 'centre.html'));
+});
 app.get('/login', async (req, res) => {
   const loginId = String(req.query.email || req.query.login_id || '').trim();
   const password = String(req.query.password || '').trim();

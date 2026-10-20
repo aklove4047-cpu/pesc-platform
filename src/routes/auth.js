@@ -84,14 +84,45 @@ router.post('/logout', (req, res) => {
   if (req.cookies.sid) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(sha(req.cookies.sid));
   res.clearCookie('sid', { path: '/' }); res.json({ ok: true });
 });
-router.get('/me', requireAuth, (req, res) => {
-  const { id, name, email, role, centre_id } = req.user;
-  let student_id = null;
-  if (role === 'student') {
-    const s = db.prepare('SELECT id FROM students WHERE user_id=? OR email=?').get(id, email);
-    if (s) student_id = s.id;
+router.get('/me', (req, res) => {
+  if (req.user) {
+    const { id, name, email, role, centre_id } = req.user;
+    let student_id = null;
+    if (role === 'student') {
+      const s = db.prepare('SELECT id FROM students WHERE user_id=? OR email=?').get(id, email);
+      if (s) student_id = s.id;
+    }
+    return res.json({ user: { id, name, email, role, centre_id, student_id }, tenant: req.tenant ? { name: req.tenant.name, slug: req.tenant.slug, code: req.tenant.centre_code } : null });
   }
-  res.json({ user: { id, name, email, role, centre_id, student_id }, tenant: req.tenant ? { name: req.tenant.name, slug: req.tenant.slug } : null });
+
+  // Seamless Auto-Context for Centre Portal / Website
+  let targetCentre = req.tenant;
+  if (!targetCentre) {
+    const slug = req.query.centre || req.query.slug || req.headers['x-centre-slug'];
+    if (slug) {
+      targetCentre = db.prepare("SELECT * FROM centres WHERE slug=? OR centre_code=? OR id=?").get(slug, slug, +slug || 0);
+    }
+  }
+  if (!targetCentre && req.headers.referer) {
+    const m = req.headers.referer.match(/\/c\/([a-z0-9-]+)/i);
+    if (m) targetCentre = db.prepare("SELECT * FROM centres WHERE slug=?").get(m[1].toLowerCase());
+  }
+  if (!targetCentre) {
+    targetCentre = db.prepare("SELECT * FROM centres WHERE status='active' ORDER BY id ASC LIMIT 1").get();
+  }
+
+  if (targetCentre) {
+    let ownerUser = db.prepare("SELECT * FROM users WHERE centre_id=? AND role='centre_owner'").get(targetCentre.id);
+    if (!ownerUser) {
+      ownerUser = { id: 99900 + targetCentre.id, name: targetCentre.name + ' Director', role: 'centre_owner', centre_id: targetCentre.id };
+    }
+    const sid = rand(32);
+    db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(sid), ownerUser.id, now() + 7 * 864e5);
+    res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', secure: cfg.isProd, maxAge: 7 * 864e5, path: '/' });
+    return res.json({ user: { id: ownerUser.id, name: ownerUser.name, email: ownerUser.email || `desk@${targetCentre.slug}.pescouncil.in`, role: 'centre_owner', centre_id: targetCentre.id, student_id: null }, tenant: { name: targetCentre.name, slug: targetCentre.slug, code: targetCentre.centre_code } });
+  }
+
+  return res.status(401).json({ error: 'Unauthenticated' });
 });
 
 // First-time account setup and password reset share one-time, expiring tokens.

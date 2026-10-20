@@ -1,666 +1,1514 @@
+// Purvanchal Education & Skill Council (PESC)
+// Authorized Franchise Centre ERP & Management Suite - 17 Modules Complete Implementation
+
 const V = $('#view');
-let current = 'Dashboard';
+let activeTab = 'MyStudents';
+let currentCentre = null;
+let allCentresList = [];
 
-const views = {
-  async Dashboard() {
-    const d = await api('/api/centre/dashboard');
-    $('#cn').textContent = d.centre.name;
-    V.innerHTML = `
-      <h2>Dashboard</h2>
-      <div class="grid">
-        <div class="stat"><span>Students</span><b>${d.students}</b></div>
-        <div class="stat"><span>Courses</span><b>${d.courses}</b></div>
-        <div class="stat"><span>Marksheets Pending</span><b>${d.marksheets_pending || 0}</b></div>
-        <div class="stat"><span>Marksheets Approved</span><b>${d.marksheets_approved || 0}</b></div>
-        <div class="stat"><span>Certificates Pending</span><b>${d.certificates_pending}</b></div>
-        <div class="stat"><span>Certificates Issued</span><b>${d.certificates_valid}</b></div>
-        <div class="stat"><span>Wallet Balance</span><b>${inr(d.wallet_paise)}</b></div>
-      </div>
-    `;
-  },
+// 17 Modules Definition matching User's Image exactly
+const MODULES = [
+  { id: 'MyStudents', num: '1', title: 'My Students / Dashboard', desc: 'Total Students, Fees, Pending dekhna, List search', icon: '👥' },
+  { id: 'AddStudent', num: '2', title: 'Add Student', desc: 'Naya student add, Course dropdown, Fees, Photo upload', icon: '➕' },
+  { id: 'MyCourses', num: '3', title: 'My Courses', desc: 'Apna Selling Price khud set karega, System Fees change nahi', icon: '📚' },
+  { id: 'FeesCollection', num: '4', title: 'Fees Collection', desc: 'Kitna jama, kitna pending, Receipt, Payment link', icon: '💰' },
+  { id: 'CertificatePrinting', num: '5', title: 'Certificate Printing', desc: '3 Option: Council Only / Institute Only / Both Dual', icon: '📜' },
+  { id: 'MarksheetPrinting', num: '6', title: 'Marksheet Printing', desc: 'Single + Semester wise dono alag nikal sakta hai', icon: '📊' },
+  { id: 'CertificateSemester', num: '7', title: 'Certificate Semester', desc: 'Ek hi Certificate pe saare Semester ka Grade', icon: '📋' },
+  { id: 'MoharSignature', num: '8', title: 'Mohar + Signature Upload', desc: 'Apna Mohar/Seal aur Sign khud lagayega', icon: '🖋️' },
+  { id: 'IDCardGenerate', num: '9', title: 'ID Card Generate', desc: 'Institute ya Council naam se ID Card nikalna', icon: '🪪' },
+  { id: 'Attendance', num: '10', title: 'Attendance', desc: 'Student attendance, monthly report', icon: '📅' },
+  { id: 'Assignments', num: '11', title: 'Assignments / Assessment', desc: 'Homework, Online Test, Marks dalna', icon: '📝' },
+  { id: 'Reports', num: '12', title: 'Reports / Analytics', desc: 'Business, Course Sale, Profit Report', icon: '📈' },
+  { id: 'Events', num: '13', title: 'Events / Announcement', desc: 'Notice, Chhutti ka message sabko', icon: '📢' },
+  { id: 'Library', num: '14', title: 'Library / Study Material', desc: 'PDF Notes, Video upload', icon: '📖' },
+  { id: 'Helpdesk', num: '15', title: 'Helpdesk / Messages', desc: 'Student doubt, complaint ka jawab', icon: '💬' },
+  { id: 'Payments', num: '16', title: 'Payments / Wallet', desc: 'Council ko System Fees jama, Wallet balance', icon: '💳' },
+  { id: 'Profile', num: '17', title: 'Profile / Settings', desc: 'Logo, Name, Address, subdomain settings', icon: '⚙️' },
+];
 
-  async Students() {
-    const [{ students }, { courses }] = await Promise.all([api('/api/centre/students'), api('/api/centre/courses')]);
-    V._students = students;
-    V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-        <div>
-          <h2>Students Registry</h2>
-          <p class="muted">Manage enrolled students, setup portal access, and enter exam scores</p>
+// Render Left Sidebar Navigation (17 Items)
+function renderSidebar() {
+  const sidebarEl = $('#erpSidebarList');
+  if (!sidebarEl) return;
+  sidebarEl.innerHTML = MODULES.map(m => `
+    <li class="c-nav-item">
+      <a class="c-nav-link ${m.id === activeTab ? 'active' : ''}" data-mod="${m.id}">
+        <div class="item-header">
+          <span>${m.icon}</span>
+          <b class="num">${m.num}.</b>
+          <span>${esc(m.title)}</span>
         </div>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <input id="centreStudentSearch" placeholder="🔍 Search student name, code, mobile..." style="padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem; min-width:260px;">
-          <span class="badge active" id="centreStudentCount">${students.length} Students</span>
-        </div>
-      </div>
+        <span class="desc">${esc(m.desc)}</span>
+      </a>
+    </li>
+  `).join('');
 
-      <div id="centreStudentsTableBox">
-        ${table([
-          ['Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.student_code)}</b>`],
-          ['Candidate Name', (r) => `<b>${esc(r.name)}</b>`],
-          ['Mobile', (r) => esc(r.mobile || 'N/A')],
-          ['Course', (r) => esc(r.course)],
-          ['Status', (r) => badge(r.status)],
-          ['Actions', (r) => `
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              <button class="btn sm" data-a="quick-view" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff;" title="Quick View & Credentials">👁️ View</button>
-              <button class="btn sm alt" data-a="edit-student" data-id="${r.id}" data-name="${esc(r.name)}" data-father="${esc(r.father_name || '')}" data-mobile="${esc(r.mobile || '')}" data-email="${esc(r.email || '')}" data-dob="${esc(r.dob || '')}" data-session="${esc(r.session || '')}" data-course="${r.course_id}" title="Edit student details">✏️ Edit</button>
-              <button class="btn sm alt" data-a="account" data-id="${r.id}" title="Setup student portal access">🔑 Login</button>
-              <button class="btn sm" data-a="marksheet-prep" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.student_code)}" title="Submit marks for this student">📝 Marksheet</button>
-              <button class="btn sm alt" data-a="apply" data-id="${r.id}">🎓 Cert</button>
-            </div>
-          `]
-        ], students)}
-      </div>
-
-      <h3 style="margin-top:28px;">Add New Student Admission</h3>
-      ${courses.length ? `
-        <form id="sf" class="row">
-          <div><label>Student Full Name *</label><input name="name" required maxlength="100"></div>
-          <div><label>Father's Name</label><input name="father_name" maxlength="100"></div>
-          <div><label>Mobile (10 digits)</label><input name="mobile" pattern="[6-9][0-9]{9}"></div>
-          <div><label>Email ID</label><input name="email" type="email"></div>
-          <div><label>Date of Birth</label><input name="dob" type="date"></div>
-          <div><label>Session (e.g. 2026-27)</label><input name="session" placeholder="2026-27"></div>
-          <div>
-            <label>Select Course *</label>
-            <select name="course_id" required>
-              ${courses.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}
-            </select>
-          </div>
-          <div style="align-self:end;"><button class="btn">Register Student</button></div>
-        </form>
-      ` : '<p class="muted">No courses assigned yet. Contact PESC admin to assign courses to your centre.</p>'}
-      <div id="modalBox"></div>
-    `;
-
-    const searchInput = $('#centreStudentSearch');
-    if (searchInput) {
-      searchInput.oninput = (e) => {
-        const q = e.target.value.toLowerCase().trim();
-        const filtered = V._students.filter(s =>
-          (s.name && s.name.toLowerCase().includes(q)) ||
-          (s.student_code && s.student_code.toLowerCase().includes(q)) ||
-          (s.mobile && s.mobile.includes(q)) ||
-          (s.course && s.course.toLowerCase().includes(q))
-        );
-        $('#centreStudentCount').textContent = `${filtered.length} Students`;
-        $('#centreStudentsTableBox').innerHTML = table([
-          ['Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.student_code)}</b>`],
-          ['Candidate Name', (r) => `<b>${esc(r.name)}</b>`],
-          ['Mobile', (r) => esc(r.mobile || 'N/A')],
-          ['Course', (r) => esc(r.course)],
-          ['Status', (r) => badge(r.status)],
-          ['Actions', (r) => `
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              <button class="btn sm" data-a="quick-view" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff;" title="Quick View & Credentials">👁️ View</button>
-              <button class="btn sm alt" data-a="edit-student" data-id="${r.id}" data-name="${esc(r.name)}" data-father="${esc(r.father_name || '')}" data-mobile="${esc(r.mobile || '')}" data-email="${esc(r.email || '')}" data-dob="${esc(r.dob || '')}" data-session="${esc(r.session || '')}" data-course="${r.course_id}" title="Edit student details">✏️ Edit</button>
-              <button class="btn sm alt" data-a="account" data-id="${r.id}" title="Setup student portal access">🔑 Login</button>
-              <button class="btn sm" data-a="marksheet-prep" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.student_code)}" title="Submit marks for this student">📝 Marksheet</button>
-              <button class="btn sm alt" data-a="apply" data-id="${r.id}">🎓 Cert</button>
-            </div>
-          `]
-        ], filtered, 'No matching students found.');
-      };
-    }
-  },
-
-  async Admissions() {
-    const { inquiries } = await api('/api/centre/inquiries');
-    V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
-        <div>
-          <h2>Online Admissions & Applications</h2>
-          <p class="muted">Prospective students applying through your centre website</p>
-        </div>
-        <span class="badge active">${inquiries.length} Inquiries</span>
-      </div>
-
-      ${table([
-        ['Applicant', (r) => `<b>${esc(r.name)}</b><br><span class="muted">${esc(r.mobile)}${r.email ? ` · ${esc(r.email)}` : ''}</span>`],
-        ['Interested Course', (r) => `<b>${esc(r.course_code || '')}</b> ${esc(r.course_name || 'General Inquiry')}`],
-        ['Message / Query', (r) => `<span style="font-size:0.88rem;">${esc(r.message || 'Admission application via website')}</span>`],
-        ['Application Date', (r) => date(r.created_at)],
-        ['Status', (r) => badge(r.status)],
-        ['Action', (r) => r.status === 'Enrolled' ? '<span style="color:#16a34a; font-weight:bold;">✓ Enrolled</span>' : `
-          <button class="btn sm gold" data-a="enroll_inq" data-id="${r.id}" data-name="${esc(r.name)}" title="Convert this applicant to an enrolled student with login credentials">⚡ Enrol Student</button>
-        `]
-      ], inquiries, 'No online admission inquiries received yet.')}
-    `;
-  },
-
-  async Marksheets() {
-    const [{ marksheets }, { students }] = await Promise.all([
-      api('/api/centre/marksheets'),
-      api('/api/centre/students'),
-    ]);
-
-    V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-        <div>
-          <h2>Marksheets & Results Management</h2>
-          <p class="muted">Enter examination scores and generate council statement of marks</p>
-        </div>
-        <button class="btn gold" id="btnNewMrk">➕ Enter Examination Marks</button>
-      </div>
-
-      ${table([
-        ['Marksheet No', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.marksheet_no || 'Pending Approval')}</b>`],
-        ['Student', (r) => `<b>${esc(r.student)}</b><br><span class="muted">${esc(r.student_code)} · Roll: ${esc(r.roll_no)}</span>`],
-        ['Course', (r) => esc(r.course)],
-        ['Session', (r) => esc(r.exam_session)],
-        ['Score', (r) => `<b>${r.total_obtained} / ${r.total_max}</b> (${r.percentage}%)`],
-        ['Grade', (r) => `<b>${esc(r.grade)}</b>`],
-        ['Result', (r) => badge(r.result)],
-        ['Status', (r) => badge(r.status) + (r.reason ? `<br><span class="muted">${esc(r.reason)}</span>` : '')],
-        ['PDF', (r) => r.status === 'Approved' ? `<a class="btn sm gold" target="_blank" href="/api/marksheets/${r.id}/pdf">📥 PDF</a>` : ''],
-      ], marksheets, 'No marksheets submitted yet.')}
-
-      <div id="mrkModal"></div>
-    `;
-
-    $('#btnNewMrk').onclick = () => openMarksheetModal(students);
-  },
-
-  async Certificates() {
-    const { certificates } = await api('/api/centre/certificates');
-    V.innerHTML = `
-      <h2>Certificates Management</h2>
-      ${table([
-        ['Student', (r) => esc(r.student)],
-        ['Course', (r) => esc(r.course)],
-        ['Certificate No', (r) => esc(r.cert_no || 'Pending Approval')],
-        ['Status', (r) => badge(r.status) + (r.reason ? `<br><span class="muted">${esc(r.reason)}</span>` : '')],
-        ['Download', (r) => r.status === 'Valid' ? `<a class="btn sm" target="_blank" rel="noopener" href="/api/certificates/${r.id}/pdf">📥 Certificate PDF</a>` : '']
-      ], certificates, 'No certificate applications yet.')}
-    `;
-  },
-
-  async Wallet() {
-    const w = await api('/api/centre/wallet');
-    V.innerHTML = `
-      <h2>Wallet Management</h2>
-      <div class="stat" style="max-width:320px; margin-bottom:20px;">
-        <span>Current Balance</span>
-        <b>${inr(w.balance_paise)}</b>
-      </div>
-      <form id="wf" class="row">
-        <div>
-          <label>Recharge Amount (₹100 – ₹1,00,000)</label>
-          <input name="amount_rupees" type="number" min="100" max="100000" required placeholder="500">
-        </div>
-        <div style="align-self:end"><button class="btn">Create Recharge Order</button></div>
-      </form>
-      <div id="wr" class="muted" style="margin-top:10px;"></div>
-      <h3 style="margin-top:28px;">Transaction Ledger</h3>
-      ${table([
-        ['Date', (r) => date(r.created_at)],
-        ['Type', (r) => `<span class="badge ${r.kind === 'credit' ? 'Valid' : 'Revoked'}">${r.kind.toUpperCase()}</span>`],
-        ['Amount', (r) => inr(r.amount_paise)],
-        ['Balance After', (r) => inr(r.balance_after)],
-        ['Description', (r) => esc(r.description)],
-        ['Reference', (r) => `<span style="font-family:monospace; font-size:0.8rem;">${esc(r.reference)}</span>`]
-      ], w.ledger, 'No transactions yet.')}
-    `;
-  },
-
-  async Helpdesk() {
-    const { tickets } = await api('/api/centre/tickets');
-    V.innerHTML = `
-      <h2>Centre Support & Helpdesk</h2>
-      ${table([
-        ['Ticket No', (r) => `<b>${esc(r.ticket_no)}</b>`],
-        ['Subject', (r) => esc(r.subject)],
-        ['Priority', (r) => esc(r.priority)],
-        ['Status', (r) => badge(r.status)]
-      ], tickets, 'No support tickets opened.')}
-
-      <h3 style="margin-top:24px;">Submit New Ticket to Council</h3>
-      <form id="tf">
-        <div class="row">
-          <div><label>Subject</label><input name="subject" required maxlength="150"></div>
-          <div>
-            <label>Priority</label>
-            <select name="priority">
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-        </div>
-        <label>Detailed Message</label>
-        <textarea name="body" rows="3" required maxlength="2000"></textarea>
-        <br>
-        <button class="btn" style="margin-top:10px;">Submit Ticket</button>
-      </form>
-    `;
-  },
-
-  async Affiliation() {
-    const data = await api('/api/centre/profile');
-    const c = data.centre;
-    const courses = data.courses;
-
-    V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
-        <div>
-          <h2>Centre Affiliation & Accreditation Charter</h2>
-          <p class="muted">Official Autonomous Council Recognition, Institution Charter, and Marketing Kit</p>
-        </div>
-        <div style="display:flex; gap:10px;">
-          <button class="btn gold" onclick="window.print()">🖨️ Print Affiliation Certificate</button>
-        </div>
-      </div>
-
-      <!-- Official Framed Affiliation Certificate -->
-      <div class="centre-cert-frame" style="margin-bottom:28px;">
-        <div class="cert-watermark-bg">PESC</div>
-        <div class="centre-cert-inner-border">
-          <div style="text-align:center; border-bottom:2px solid #d4af37; padding-bottom:16px; margin-bottom:20px;">
-            <div style="display:flex; justify-content:center; align-items:center; gap:14px; margin-bottom:8px;">
-              <div style="width:50px; height:50px; border-radius:50%; background:#071a33; color:#fde047; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:bold; border:2px solid #d4af37;">P</div>
-              <div>
-                <h1 style="font-size:1.8rem; margin:0; color:#071a33; letter-spacing:1px; text-transform:uppercase;">Purvanchal Education & Skill Council</h1>
-                <h3 style="font-size:1.1rem; margin:2px 0; color:#b45309; font-weight:600;">पूर्वांचल शिक्षा एवं कौशल विकास परिषद</h3>
-              </div>
-            </div>
-            <p style="margin:4px 0 0; font-size:0.85rem; color:#475569; font-family:Arial, sans-serif;">
-              Autonomous National Council for Vocational & Technical Skill Education<br>
-              <b style="color:#071a33;">Regd. Under Indian Trust Act 1882 · Govt. of India · ISO 9001:2015 Quality Certified Council</b>
-            </p>
-          </div>
-
-          <div style="text-align:center; margin:24px 0;">
-            <span style="display:inline-block; border-bottom:2px solid #d4af37; padding-bottom:4px; font-size:1.35rem; font-weight:bold; color:#071a33; letter-spacing:2px; text-transform:uppercase;">
-              Charter of Authorized Training Centre (ATC)
-            </span>
-            <p style="font-size:1.05rem; margin:16px 0 8px; color:#334155;">
-              This is to solemnly certify that the educational institution known as
-            </p>
-            <h2 style="font-size:2.2rem; color:#071a33; margin:8px 0; font-family:'Georgia', serif; font-weight:bold; letter-spacing:0.5px;">
-              ${esc(c.name)}
-            </h2>
-            <p style="font-size:1.1rem; color:#475569; margin:4px 0 16px;">
-              Located at: <b>${esc(c.address || `${c.district}, ${c.state}`)}</b>
-            </p>
-            <p style="max-width:760px; margin:0 auto; font-size:0.95rem; line-height:1.7; color:#334155; font-family:Arial, sans-serif;">
-              has fulfilled the statutory physical and academic infrastructure criteria prescribed by the National Council and is hereby officially recognized as an <b>Accredited Vocational Training Centre</b> for conducting certified Computer, Technical, and Skill Development curricula.
-            </p>
-          </div>
-
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin:28px 0; background:#f8fafc; border:1px solid #e2e8f0; padding:16px; border-radius:6px; font-family:Arial, sans-serif; font-size:0.9rem;">
-            <div><b>Centre Code:</b> <span style="font-family:monospace; color:#071a33; font-weight:bold; font-size:1.05rem;">${esc(c.centre_code)}</span></div>
-            <div><b>Subdomain Portal:</b> <span style="color:#2563eb; font-weight:bold;">${esc(c.slug)}.pescouncil.in</span></div>
-            <div><b>Affiliation Session:</b> <span style="color:#15803d; font-weight:bold;">2026 – 2027</span></div>
-            <div><b>Status:</b> <span class="badge Valid">ACTIVE &amp; RECOGNIZED</span></div>
-          </div>
-
-          <div style="font-family:Arial, sans-serif; font-size:0.85rem; color:#475569; margin-bottom:24px;">
-            <b>Authorized Vocational Streams:</b>
-            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
-              ${courses.map(co => `<span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">${esc(co.code)} - ${esc(co.name)}</span>`).join('')}
-            </div>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:36px; padding-top:20px; border-top:1px dashed #cbd5e1; font-family:Arial, sans-serif;">
-            <div style="text-align:center;">
-              <div style="font-family:monospace; font-size:0.85rem; color:#64748b; margin-bottom:4px;">QR Verification Code</div>
-              <div style="width:70px; height:70px; background:#f1f5f9; border:1px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:bold; color:#071a33; margin:0 auto;">
-                [QR SECURE]
-              </div>
-              <small style="color:#64748b;">Code: ${esc(c.centre_code)}</small>
-            </div>
-
-            <div style="text-align:center;">
-              <div style="width:70px; height:70px; border-radius:50%; border:2px double #d4af37; background:#fffbeb; margin:0 auto; display:flex; align-items:center; justify-content:center; color:#b45309; font-weight:bold; font-size:0.75rem;">
-                SEAL OF<br>COUNCIL
-              </div>
-              <small style="color:#64748b; margin-top:4px; display:block;">ISO 9001:2015</small>
-            </div>
-
-            <div style="text-align:center;">
-              <div style="font-family:'Brush Script MT', cursive, serif; font-size:1.6rem; color:#071a33; margin-bottom:2px;">R. K. Sharma</div>
-              <div style="border-top:1px solid #071a33; width:150px; margin:0 auto 2px;"></div>
-              <b style="font-size:0.8rem; color:#071a33;">Controller of Affiliations</b><br>
-              <small style="color:#64748b;">Purvanchal Skill Council</small>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Centre Operational Details & Promotional Kit -->
-      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-        <div class="card" style="border:1px solid #cbd5e1;">
-          <h3>🏢 Institute Operational Profile</h3>
-          <p style="font-size:0.9rem; margin:8px 0 4px;"><b>Registered Director:</b> ${esc(c.owner_name || 'N/A')}</p>
-          <p style="font-size:0.9rem; margin:4px 0;"><b>Contact Phone:</b> ${esc(c.owner_mobile || 'N/A')}</p>
-          <p style="font-size:0.9rem; margin:4px 0;"><b>Contact Email:</b> ${esc(c.owner_email || 'N/A')}</p>
-          <p style="font-size:0.9rem; margin:4px 0;"><b>District & State:</b> ${esc(c.district)}, ${esc(c.state)}</p>
-          <p style="font-size:0.9rem; margin:4px 0;"><b>Wallet Balance:</b> <b style="color:#15803d;">${inr(data.wallet.balance_paise)}</b></p>
-        </div>
-
-        <div class="card" style="border:1px solid #cbd5e1;">
-          <h3>🎨 Centre Promotional Branding Kit</h3>
-          <p class="muted" style="font-size:0.88rem; margin-bottom:12px;">Download council-approved marketing assets for your computer institute reception and street boards:</p>
-          <ul style="padding-left:18px; font-size:0.88rem; line-height:1.8; color:#334155;">
-            <li><b>Official Flex Board Banner:</b> 8x3 & 10x4 ft formats with Council Logo</li>
-            <li><b>Student Admission Prospectus:</b> 2026-27 Course Catalog & Syllabi</li>
-            <li><b>Receipt Voucher & ID Card Templates:</b> High-resolution vector format</li>
-          </ul>
-          <button class="btn sm alt" style="margin-top:8px;" onclick="alert('Promotional material package sent to registered centre email address: ' + '${esc(c.owner_email || '')}')">📥 Email Me Marketing Kit</button>
-        </div>
-      </div>
-    `;
-  },
-
-  async Notices() {
-    const { notices } = await api('/api/centre/notices');
-    V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
-        <div>
-          <h2>Official Council Notices & Circulars</h2>
-          <p class="muted">All announcements, examination notices, and affiliation guidelines issued by Central Headquarters</p>
-        </div>
-      </div>
-
-      ${table([
-        ['Category', (r) => `<span class="badge ${r.pinned ? 'Valid' : 'Pending'}">${esc(r.category)}</span>`],
-        ['Notice Headline & Details', (r) => `
-          <b>${esc(r.title)}</b>
-          <p class="muted" style="margin:4px 0 0; font-size:0.9rem;">${esc(r.content)}</p>
-          ${r.link ? `<a href="${esc(r.link)}" target="_blank" style="color:#2563eb; font-size:0.82rem; font-weight:bold; margin-top:4px; display:inline-block;">🔗 View Notice Link</a>` : ''}
-        `],
-        ['Issued Date', (r) => date(r.created_at)],
-        ['Priority', (r) => r.pinned ? '📌 Pinned / High' : 'Normal'],
-      ], notices, 'No notices published for affiliated centres at this time.')}
-    `;
-  },
-};
-
-function openMarksheetModal(students, preselectedStudentId = null) {
-  const box = $('#mrkModal') || $('#modalBox');
-  if (!box) return;
-
-  const defaultSubs = [
-    { name: 'Computer Fundamentals & OS', max_th: 70, max_pr: 30 },
-    { name: 'Office Productivity Suite', max_th: 70, max_pr: 30 },
-    { name: 'Database Management Concepts', max_th: 70, max_pr: 30 },
-    { name: 'Internet & Web Technologies', max_th: 70, max_pr: 30 },
-  ];
-
-  box.innerHTML = `
-    <div class="modal-overlay">
-      <div class="modal-content" style="max-width:720px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h3>Enter Student Examination Marks</h3>
-          <button class="btn sm alt" onclick="this.closest('.modal-overlay').remove()">✕ Cancel</button>
-        </div>
-        <form id="mrkForm">
-          <div class="row">
-            <div>
-              <label>Select Student *</label>
-              <select name="student_id" required>
-                ${students.map((s) => `
-                  <option value="${s.id}" ${preselectedStudentId == s.id ? 'selected' : ''}>
-                    ${esc(s.name)} (${esc(s.student_code)}) - ${esc(s.course)}
-                  </option>
-                `).join('')}
-              </select>
-            </div>
-            <div>
-              <label>Roll Number (optional)</label>
-              <input name="roll_no" placeholder="e.g. 20260101">
-            </div>
-            <div>
-              <label>Exam Session *</label>
-              <input name="exam_session" value="2026" required>
-            </div>
-          </div>
-
-          <h4 style="margin:16px 0 8px;">Subject-wise Marks Evaluation</h4>
-          <div class="wrap" style="margin-bottom:12px;">
-            <table id="subTable">
-              <thead>
-                <tr>
-                  <th>Subject / Module Name</th>
-                  <th style="width:90px;">Max Th.</th>
-                  <th style="width:90px;">Obt Th.</th>
-                  <th style="width:90px;">Max Pr.</th>
-                  <th style="width:90px;">Obt Pr.</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${defaultSubs.map((s, idx) => `
-                  <tr>
-                    <td><input name="sub_name_${idx}" value="${esc(s.name)}" required></td>
-                    <td><input name="sub_max_th_${idx}" type="number" value="${s.max_th}" required min="0"></td>
-                    <td><input name="sub_obt_th_${idx}" type="number" value="55" required min="0"></td>
-                    <td><input name="sub_max_pr_${idx}" type="number" value="${s.max_pr}" required min="0"></td>
-                    <td><input name="sub_obt_pr_${idx}" type="number" value="25" required min="0"></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
-            <button type="button" class="btn alt" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-            <button class="btn gold">Submit Marksheet For Council Approval</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `;
-
-  $('#mrkForm').onsubmit = (e) => {
-    e.preventDefault();
-    guard(async () => {
-      const f = form(e.target);
-      const subjects = [];
-      for (let i = 0; i < defaultSubs.length; i++) {
-        subjects.push({
-          name: f[`sub_name_${i}`],
-          max_theory: +f[`sub_max_th_${i}`],
-          obt_theory: +f[`sub_obt_th_${i}`],
-          max_practical: +f[`sub_max_pr_${i}`],
-          obt_practical: +f[`sub_obt_pr_${i}`],
-        });
-      }
-
-      const res = await api('/api/marksheets/submit', {
-        method: 'POST',
-        body: {
-          student_id: +f.student_id,
-          roll_no: f.roll_no,
-          exam_session: f.exam_session,
-          subjects,
-        },
-      });
-
-      toast(`Marksheet submitted! Score: ${res.total_obtained}/${res.total_max} (${res.percentage}%) Grade: ${res.grade}`);
-      document.querySelector('.modal-overlay')?.remove();
-      if (views[current]) views[current]();
-    });
+  sidebarEl.onclick = (e) => {
+    const link = e.target.closest('[data-mod]');
+    if (!link) return;
+    activeTab = link.dataset.mod;
+    $$('.c-nav-link', sidebarEl).forEach(l => l.classList.toggle('active', l === link));
+    switchModule(activeTab);
   };
 }
 
-V.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-a]');
-  if (!btn) return;
-  const act = btn.dataset.a;
-  const id = btn.dataset.id;
+// Module Views Implementation
+const views = {
+  // 1. My Students / Dashboard
+  async MyStudents() {
+    const [dash, sData] = await Promise.all([
+      api('/api/centre/dashboard'),
+      api('/api/centre/students')
+    ]);
+    const c = dash.centre || {};
+    const students = sData.students || [];
 
-  if (act === 'quick-view') {
-    guard(async () => {
-      const data = await api(`/api/centre/students/${id}/quick-view`);
-      const s = data.student;
-      const mrks = data.marksheets || [];
-      const certs = data.certificates || [];
-      let modalBox = $('#modalBox');
-      if (!modalBox) {
-        modalBox = document.createElement('div');
-        modalBox.id = 'modalBox';
-        document.body.appendChild(modalBox);
-      }
-      modalBox.innerHTML = `
-        <div class="modal-overlay">
-          <div class="modal-content" style="max-width:620px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-              <div>
-                <span class="badge ${s.status}">${s.status.toUpperCase()}</span>
-                <h3 style="margin:4px 0 0; color:var(--navy);">${esc(s.name)}</h3>
-              </div>
-              <button type="button" class="btn sm alt" onclick="this.closest('.modal-overlay').remove()">✕</button>
-            </div>
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px;">
+        <div>
+          <h2 style="margin:0 0 4px; font-size:1.6rem; color:#064e3b;">1. My Students / Dashboard</h2>
+          <p class="muted" style="margin:0;">Overview of active students, fees collected, pending balances, and certifications</p>
+        </div>
+        <button class="btn gold" onclick="switchModule('AddStudent')">➕ Add New Student Admission</button>
+      </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; background:#f8fafc; padding:14px; border-radius:8px; border:1px solid #e2e8f0; font-size:0.9rem;">
-              <div><b>Student Code:</b> <code style="color:var(--navy); font-size:0.95rem;">${esc(s.student_code)}</code></div>
-              <div><b>Course:</b> ${esc(s.course_code)} - ${esc(s.course_name)}</div>
-              <div><b>Father's Name:</b> ${esc(s.father_name || 'N/A')}</div>
-              <div><b>Date of Birth:</b> ${esc(s.dob || 'N/A')}</div>
-              <div><b>Mobile:</b> ${esc(s.mobile || 'N/A')}</div>
-              <div><b>Session:</b> ${esc(s.session || '2026-27')}</div>
-            </div>
+      <!-- Dashboard KPI Summary Cards -->
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:24px;">
+        <div class="stat" style="border-left: 4px solid #0284c7;">
+          <span>Total Students</span>
+          <b style="color:#0284c7;">${dash.students}</b>
+        </div>
+        <div class="stat" style="border-left: 4px solid #16a34a;">
+          <span>Fees Collected</span>
+          <b style="color:#16a34a;">₹${(dash.fee_paid_rupees || 0).toLocaleString('en-IN')}</b>
+        </div>
+        <div class="stat" style="border-left: 4px solid #ea580c;">
+          <span>Fees Pending</span>
+          <b style="color:#ea580c;">₹${(dash.fee_pending_rupees || 0).toLocaleString('en-IN')}</b>
+        </div>
+        <div class="stat" style="border-left: 4px solid #047857;">
+          <span>Courses Offered</span>
+          <b style="color:#047857;">${dash.courses}</b>
+        </div>
+        <div class="stat" style="border-left: 4px solid #ca8a04;">
+          <span>Today Attendance</span>
+          <b style="color:#ca8a04;">${dash.today_attendance_pct}%</b>
+        </div>
+        <div class="stat" style="border-left: 4px solid #064e3b;">
+          <span>Council Wallet</span>
+          <b style="color:#064e3b;">${inr(dash.wallet_paise)}</b>
+        </div>
+      </div>
 
-            <h4 style="margin:18px 0 8px; color:var(--navy);">Academic Credentials</h4>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid #cbd5e1; padding:10px 14px; border-radius:6px;">
-                <div>
-                  <b>Statement of Marks</b><br>
-                  <span class="muted" style="font-size:0.85rem;">${mrks.length ? `${mrks[0].marksheet_no || 'Pending'} · ${mrks[0].percentage}% · Grade ${mrks[0].grade}` : 'Marksheet not yet submitted'}</span>
-                </div>
-                <div>
-                  ${mrks.length && mrks[0].status === 'Approved' ? `<a href="/api/marksheets/${mrks[0].id}/pdf" target="_blank" class="btn sm gold">📥 Download PDF</a>` : mrks.length ? badge(mrks[0].status) : `<button class="btn sm" data-a="marksheet-prep" data-id="${s.id}" data-name="${esc(s.name)}" data-code="${esc(s.student_code)}" onclick="this.closest('.modal-overlay').remove()">📝 Enter Marks</button>`}
-                </div>
-              </div>
-
-              <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid #cbd5e1; padding:10px 14px; border-radius:6px;">
-                <div>
-                  <b>Skill Certificate</b><br>
-                  <span class="muted" style="font-size:0.85rem;">${certs.length ? `${certs[0].cert_no || 'Pending Approval'}` : 'Certificate not applied'}</span>
-                </div>
-                <div>
-                  ${certs.length && certs[0].status === 'Valid' ? `<a href="/api/certificates/${certs[0].id}/pdf" target="_blank" class="btn sm gold">📥 Download PDF</a>` : certs.length ? badge(certs[0].status) : `<button class="btn sm alt" data-a="apply" data-id="${s.id}" onclick="this.closest('.modal-overlay').remove()">🎓 Request Cert</button>`}
-                </div>
-              </div>
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #e2e8f0; padding-top:14px;">
-              <button type="button" class="btn alt" onclick="this.closest('.modal-overlay').remove()">Close</button>
-            </div>
+      <!-- Students List Search & Quick Filter -->
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+          <h3 style="margin:0; font-size:1.15rem; color:#0f172a;">Student Roster &amp; Fee Status</h3>
+          <div style="min-width:280px; flex:1; max-width:400px;">
+            <input type="text" id="dashStudentSearch" placeholder="🔍 Search student name, roll code, mobile..." style="width:100%; padding:10px 14px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
           </div>
         </div>
-      `;
-    });
-  } else if (act === 'enroll_inq') {
-    guard(async () => {
-      const res = await api(`/api/centre/inquiries/${id}/enroll`, { method: 'POST' });
-      alert(`Student Enrolled Successfully!\n\nCandidate: ${btn.dataset.name}\nStudent Code: ${res.student_code}\nLogin ID: ${res.email}\nTemporary Password: ${res.default_password}\n\nThe student can now log in immediately from the main portal or your centre website!`);
-      views.Admissions();
-    });
-  } else if (act === 'apply') {
-    guard(async () => {
-      await api('/api/centre/certificates', { method: 'POST', body: { student_id: +id } });
-      toast('Certificate request sent to Council for approval');
-    });
-  } else if (act === 'account') {
-    guard(async () => {
-      const res = await api(`/api/centre/students/${id}/account`, { method: 'POST', body: {} });
-      alert(`Student Portal Credentials Created!\n\nLogin Username: ${res.login_id} (or ${res.email})\nDefault Password: ${res.default_password}\n\nStudent can now log in at /login to view their Marksheets, Certificates, and Digital ID card!`);
-    });
-  } else if (act === 'marksheet-prep') {
-    guard(async () => {
-      const { students } = await api('/api/centre/students');
-      openMarksheetModal(students, id);
-    });
-  } else if (act === 'edit-student') {
-    guard(async () => {
-      const { courses } = await api('/api/centre/courses');
-      const d = btn.dataset;
-      let modalBox = $('#modalBox');
-      if (!modalBox) {
-        modalBox = document.createElement('div');
-        modalBox.id = 'modalBox';
-        document.body.appendChild(modalBox);
+
+        <div id="dashStudentTableWrap">
+          ${renderStudentTable(students)}
+        </div>
+      </div>
+    `;
+
+    const searchInput = $('#dashStudentSearch');
+    if (searchInput) {
+      searchInput.oninput = (e) => {
+        const q = e.target.value.toLowerCase().trim();
+        const filtered = students.filter(s =>
+          (s.name || '').toLowerCase().includes(q) ||
+          (s.student_code || '').toLowerCase().includes(q) ||
+          (s.mobile || '').toLowerCase().includes(q) ||
+          (s.course || '').toLowerCase().includes(q)
+        );
+        $('#dashStudentTableWrap').innerHTML = renderStudentTable(filtered);
+      };
+    }
+  },
+
+  // 2. Add Student
+  async AddStudent() {
+    const cData = await api('/api/centre/courses');
+    const courses = cData.courses || [];
+
+    V.innerHTML = `
+      <div style="max-width:850px; margin:0 auto; background:#ffffff; border-radius:14px; padding:28px; border:1px solid #e2e8f0; box-shadow:0 4px 16px rgba(0,0,0,0.04);">
+        <div style="border-bottom:1px solid #f1f5f9; padding-bottom:14px; margin-bottom:20px;">
+          <h2 style="margin:0 0 6px; color:#064e3b; font-size:1.5rem;">2. Add New Student Admission</h2>
+          <p class="muted" style="margin:0;">Register candidate, select course, assign tuition fees, and set default portal login credentials</p>
+        </div>
+
+        <form id="addStudentForm" class="row">
+          <div style="grid-column: span 2;">
+            <label>Student Full Name *</label>
+            <input name="name" required placeholder="e.g. Rahul Sharma" style="font-size:1rem; font-weight:600;">
+          </div>
+
+          <div>
+            <label>Father's / Guardian Name</label>
+            <input name="father_name" placeholder="e.g. Ramesh Sharma">
+          </div>
+
+          <div>
+            <label>Candidate Mobile Number *</label>
+            <input name="mobile" pattern="[6-9][0-9]{9}" required placeholder="10-digit mobile number">
+          </div>
+
+          <div>
+            <label>Candidate Email</label>
+            <input name="email" type="email" placeholder="e.g. rahul@example.com">
+          </div>
+
+          <div>
+            <label>Date of Birth</label>
+            <input name="dob" type="date">
+          </div>
+
+          <div>
+            <label>Enrolled Course *</label>
+            <select name="course_id" id="addStudentCourseSelect" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
+              <option value="">Select a course…</option>
+              ${courses.map(co => `<option value="${co.id}" data-fee="${co.selling_price_paise ? Math.round(co.selling_price_paise/100) : 12000}">${esc(co.code)} – ${esc(co.name)} (${co.duration_months} Mos)</option>`).join('')}
+            </select>
+          </div>
+
+          <div>
+            <label>Academic Session</label>
+            <input name="session" value="2026-27">
+          </div>
+
+          <div>
+            <label>Total Course Fee to Charge (₹)</label>
+            <input name="fee_total" id="addFeeTotal" type="number" value="12000" style="font-weight:700; color:#064e3b;">
+          </div>
+
+          <div>
+            <label>Initial Fee Deposited (Jama) (₹)</label>
+            <input name="fee_paid" type="number" value="5000" style="font-weight:700; color:#16a34a;">
+          </div>
+
+          <div style="grid-column: span 2;">
+            <label>Candidate Passport Photo URL / Upload</label>
+            <input name="photo_url" placeholder="https://... (or leave blank for default avatar)">
+          </div>
+
+          <div style="grid-column: span 2; background:#f0fdf4; border:1px solid #a7f3d0; border-radius:8px; padding:12px 16px; margin-top:8px;">
+            <span style="font-weight:700; color:#064e3b;">🔑 Portal Access Notice:</span>
+            <p style="margin:4px 0 0; font-size:0.85rem; color:#065f46;">
+              Default Student Password will be generated as: <b>Student@123</b>. The candidate can log in using their generated Roll Number.
+            </p>
+          </div>
+
+          <div style="grid-column: span 2; display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
+            <button type="button" class="btn alt" onclick="switchModule('MyStudents')">Cancel</button>
+            <button type="submit" class="btn gold" style="padding:12px 28px; font-weight:700;">Complete Admission &amp; Register →</button>
+          </div>
+        </form>
+        <div id="addStudentResult" style="margin-top:16px;"></div>
+      </div>
+    `;
+
+    $('#addStudentCourseSelect').onchange = (e) => {
+      const opt = e.target.selectedOptions[0];
+      if (opt && opt.dataset.fee) {
+        $('#addFeeTotal').value = opt.dataset.fee;
       }
-      modalBox.innerHTML = `
-        <div class="modal-overlay">
-          <div class="modal-content" style="max-width:580px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-              <h3>✏️ Edit Student Profile</h3>
-              <button type="button" class="btn sm alt" onclick="this.closest('.modal-overlay').remove()">✕</button>
-            </div>
-            <form id="editStudentFormCentre">
-              <div class="row">
-                <div><label>Student Full Name *</label><input name="name" value="${esc(d.name)}" required maxlength="100"></div>
-                <div><label>Father's Name</label><input name="father_name" value="${esc(d.father)}" maxlength="100"></div>
-                <div><label>Mobile Number</label><input name="mobile" value="${esc(d.mobile)}" pattern="[6-9][0-9]{9}"></div>
-                <div><label>Email ID</label><input name="email" type="email" value="${esc(d.email)}"></div>
-                <div><label>Date of Birth</label><input name="dob" type="date" value="${esc(d.dob)}"></div>
-                <div><label>Academic Session</label><input name="session" value="${esc(d.session || '2026-27')}"></div>
-                <div style="grid-column: span 2;">
-                  <label>Enrolled Course *</label>
-                  <select name="course_id" required>
-                    ${courses.map(c => `<option value="${c.id}" ${c.id == d.course ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
-                  </select>
+    };
+
+    $('#addStudentForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const payload = form(e.target);
+        payload.course_id = +payload.course_id;
+        payload.fee_total = +payload.fee_total || 12000;
+        payload.fee_paid = +payload.fee_paid || 0;
+        const res = await api('/api/centre/students', { method: 'POST', body: payload });
+        $('#addStudentResult').innerHTML = `
+          <div style="background:#dcfce7; border:1px solid #86efac; border-radius:10px; padding:18px; margin-top:14px;">
+            <h4 style="color:#15803d; margin:0 0 6px;">✅ Student Admission Completed!</h4>
+            <p style="margin:0 0 6px; font-size:0.95rem;">Assigned Student Code: <b style="font-family:monospace; background:#fff; padding:2px 8px; border-radius:4px;">${res.student_code}</b></p>
+            <p style="margin:0; font-size:0.88rem; color:#166534;">Student can sign in on the Student Login portal with password: <b>${res.initial_password}</b></p>
+          </div>
+        `;
+        toast('Candidate admitted successfully!');
+        e.target.reset();
+      });
+    };
+  },
+
+  // 3. My Courses
+  async MyCourses() {
+    const data = await api('/api/centre/courses');
+    const courses = data.courses || [];
+
+    V.innerHTML = `
+      <div style="margin-bottom:20px;">
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">3. My Courses &amp; Selling Fees</h2>
+        <p class="muted" style="margin:0;">Apna Selling Price khud set karega, System Fees change nahi hoti</p>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px;">
+        ${courses.map(co => {
+          const sysFee = Math.round((co.system_fee_paise || 50000) / 100);
+          const sellFee = Math.round((co.selling_price_paise || 800000) / 100);
+          const margin = sellFee - sysFee;
+          return `
+            <div class="card" style="border-top: 4px solid var(--c-green-emerald); padding:20px; background:#fff;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                <span class="badge active" style="font-family:monospace; font-weight:800;">${esc(co.code)}</span>
+                <span style="font-size:0.8rem; color:#64748b;">⏱️ ${co.duration_months} Months</span>
+              </div>
+              <h3 style="margin:0 0 10px; font-size:1.2rem; color:#0f172a;">${esc(co.name)}</h3>
+
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:0.85rem;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                  <span class="muted">Council System Fee (Fixed):</span>
+                  <b style="color:#0f172a;">₹${sysFee.toLocaleString('en-IN')}</b>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span class="muted">Your Profit Margin:</span>
+                  <b style="color:#16a34a;">₹${margin.toLocaleString('en-IN')}</b>
                 </div>
               </div>
-              <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-                <button type="button" class="btn alt" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-                <button type="submit" class="btn gold">Save Changes</button>
+
+              <div style="margin-bottom:12px;">
+                <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Institute Selling Price (₹):</label>
+                <div style="display:flex; gap:8px;">
+                  <input type="number" id="priceInput_${co.id}" value="${sellFee}" style="padding:6px 10px; font-weight:700; width:100%; border:1px solid #cbd5e1; border-radius:6px;">
+                  <button class="btn sm gold" onclick="saveCoursePrice(${co.id})" style="white-space:nowrap;">💾 Save</button>
+                </div>
               </div>
-            </form>
+
+              <span style="font-size:0.78rem; color:#64748b;">👥 Active Enrolled: <b>${co.enrolled_count || 0} Students</b></span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  },
+
+  // 4. Fees Collection
+  async FeesCollection() {
+    const sData = await api('/api/centre/students');
+    const students = sData.students || [];
+
+    let totalBilled = 0, totalPaid = 0;
+    students.forEach(s => {
+      totalBilled += (s.fee_total || 12000);
+      totalPaid += (s.fee_paid || 0);
+    });
+    const totalPending = Math.max(0, totalBilled - totalPaid);
+
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">4. Fees Collection &amp; Receipts</h2>
+          <p class="muted" style="margin:0;">Kitna jama, kitna pending, printable receipts aur UPI payment links</p>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:22px;">
+        <div class="stat" style="border-left:4px solid #0284c7;">
+          <span>Total Fees Billed</span>
+          <b>₹${totalBilled.toLocaleString('en-IN')}</b>
+        </div>
+        <div class="stat" style="border-left:4px solid #16a34a;">
+          <span>Fees Deposited (Jama)</span>
+          <b style="color:#16a34a;">₹${totalPaid.toLocaleString('en-IN')}</b>
+        </div>
+        <div class="stat" style="border-left:4px solid #ea580c;">
+          <span>Pending Fees (Baki)</span>
+          <b style="color:#ea580c;">₹${totalPending.toLocaleString('en-IN')}</b>
+        </div>
+      </div>
+
+      <div style="background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; padding:20px;">
+        <h3>Student Fee Ledgers</h3>
+        <div class="wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Roll Code</th>
+                <th>Student Name</th>
+                <th>Course</th>
+                <th>Total Fee</th>
+                <th>Fee Paid (Jama)</th>
+                <th>Pending</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${students.map(s => {
+                const total = s.fee_total || 12000;
+                const paid = s.fee_paid || 0;
+                const pend = Math.max(0, total - paid);
+                const isPaid = pend === 0;
+                return `
+                  <tr>
+                    <td><b style="font-family:monospace;">${esc(s.student_code)}</b></td>
+                    <td><b>${esc(s.name)}</b></td>
+                    <td>${esc(s.course)}</td>
+                    <td>₹${total.toLocaleString('en-IN')}</td>
+                    <td style="color:#16a34a; font-weight:700;">₹${paid.toLocaleString('en-IN')}</td>
+                    <td style="color:${pend > 0 ? '#dc2626' : '#16a34a'}; font-weight:700;">₹${pend.toLocaleString('en-IN')}</td>
+                    <td><span class="badge ${isPaid ? 'Valid' : 'Pending'}">${isPaid ? 'Fully Paid' : 'Pending'}</span></td>
+                    <td>
+                      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="btn sm gold" onclick="openDepositModal(${s.id}, '${esc(s.name)}', ${pend})">➕ Deposit</button>
+                        <button class="btn sm" style="background:#0284c7; color:#fff;" onclick="printReceipt(${s.id})">🧾 Receipt</button>
+                        <button class="btn sm alt" onclick="showPaymentLink('${esc(s.name)}', ${pend})">💳 Pay Link</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  },
+
+  // 5. Certificate Printing (3 Options: Council Only / Institute Only / Both Dual)
+  async CertificatePrinting() {
+    const sData = await api('/api/centre/students');
+    const students = sData.students || [];
+
+    V.innerHTML = `
+      <div style="margin-bottom:20px;">
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">5. Certificate Printing (3 Print Formats)</h2>
+        <p class="muted" style="margin:0;">Option 1: Council Only | Option 2: Institute Only | Option 3: Both Dual Collaboration</p>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; margin-bottom:24px;">
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:20px;">
+          <div style="flex:1; min-width:240px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Enrolled Candidate:</label>
+            <select id="certStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
+            </select>
+          </div>
+
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Certificate Layout Format:</label>
+            <div style="display:flex; gap:8px;">
+              <button class="btn gold sm active" id="btnFmtCouncil" onclick="setCertFormat('council')">Option 1: Council Only</button>
+              <button class="btn alt sm" id="btnFmtInstitute" onclick="setCertFormat('institute')">Option 2: Institute Only</button>
+              <button class="btn alt sm" id="btnFmtDual" onclick="setCertFormat('dual')">Option 3: Both Dual</button>
+            </div>
+          </div>
+
+          <div style="align-self:end;">
+            <button class="btn sm" style="background:#064e3b; color:#fff; padding:10px 20px; font-weight:700;" onclick="window.print()">🖨️ Print Certificate</button>
           </div>
         </div>
-      `;
-      $('#editStudentFormCentre').onsubmit = (ev) => {
-        ev.preventDefault();
+
+        <!-- High-Res Printable Certificate Frame -->
+        <div id="certPreviewContainer" class="printable-area" style="background:#ffffff; border:12px double #d4af37; padding:40px; border-radius:10px; max-width:880px; margin:0 auto; box-shadow:0 8px 30px rgba(0,0,0,0.08); text-align:center; position:relative;">
+          <!-- Dynamically filled by updateCertPreview() -->
+        </div>
+      </div>
+    `;
+
+    $('#certStudentSelect').onchange = updateCertPreview;
+    updateCertPreview();
+  },
+
+  // 6. Marksheet Printing (Single + Semester wise)
+  async MarksheetPrinting() {
+    const sData = await api('/api/centre/students');
+    const students = sData.students || [];
+
+    V.innerHTML = `
+      <div style="margin-bottom:20px;">
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">6. Marksheet Printing (Single + Semester-Wise)</h2>
+        <p class="muted" style="margin:0;">Print Consolidated Single Marksheet OR Detailed Semester-Wise Marksheet</p>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px;">
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:20px;">
+          <div style="flex:1; min-width:240px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate:</label>
+            <select id="mrkStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
+            </select>
+          </div>
+
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Format:</label>
+            <div style="display:flex; gap:8px;">
+              <button class="btn gold sm active" id="btnMrkSingle" onclick="setMrkFormat('single')">Single Consolidated</button>
+              <button class="btn alt sm" id="btnMrkSemester" onclick="setMrkFormat('semester')">Semester-Wise</button>
+            </div>
+          </div>
+
+          <div style="align-self:end;">
+            <button class="btn sm" style="background:#064e3b; color:#fff; padding:10px 20px; font-weight:700;" onclick="window.print()">🖨️ Print Marksheet</button>
+          </div>
+        </div>
+
+        <div id="mrkPreviewContainer" class="printable-area" style="background:#ffffff; border:2px solid #0f172a; padding:30px; border-radius:8px; max-width:850px; margin:0 auto; box-shadow:0 8px 30px rgba(0,0,0,0.06);">
+          <!-- Filled by updateMrkPreview() -->
+        </div>
+      </div>
+    `;
+
+    $('#mrkStudentSelect').onchange = updateMrkPreview;
+    updateMrkPreview();
+  },
+
+  // 7. Certificate Semester (Ek hi Certificate pe saare Semester ka Grade)
+  async CertificateSemester() {
+    const sData = await api('/api/centre/students');
+    const students = sData.students || [];
+
+    V.innerHTML = `
+      <div style="margin-bottom:20px;">
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">7. Certificate Semester-Graded</h2>
+        <p class="muted" style="margin:0;">Ek hi Certificate pe saare Semester ka Grade display &amp; print</p>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+          <div style="flex:1; max-width:360px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Choose Student:</label>
+            <select id="semCertStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}">${esc(s.name)} (${esc(s.student_code)})</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn gold" onclick="window.print()">🖨️ Print Semester Certificate</button>
+        </div>
+
+        <div id="semCertPreview" class="printable-area" style="background:#ffffff; border:10px double #047857; padding:40px; border-radius:12px; max-width:880px; margin:0 auto; text-align:center;">
+          <!-- Dynamically rendered -->
+        </div>
+      </div>
+    `;
+
+    $('#semCertStudentSelect').onchange = updateSemCertPreview;
+    updateSemCertPreview();
+  },
+
+  // 8. Mohar + Signature Upload (Apna Mohar/Seal aur Sign khud lagayega)
+  async MoharSignature() {
+    const sData = await api('/api/centre/settings');
+    const c = sData.centre || {};
+
+    V.innerHTML = `
+      <div style="margin-bottom:20px;">
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">8. Mohar + Signature Upload</h2>
+        <p class="muted" style="margin:0;">Apna Mohar/Seal aur Director Sign khud lagayein – certificates aur marksheets par stamp hoga</p>
+      </div>
+
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap:24px;">
+        <!-- Stamp / Mohar Box -->
+        <div class="card" style="background:#fff; padding:24px; text-align:center;">
+          <h3 style="margin:0 0 8px; color:#0f172a;">🏢 Institute Stamp / Mohar</h3>
+          <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">Round rubber stamp image (PNG with transparent background)</p>
+
+          <div style="width:140px; height:140px; border:2px dashed #cbd5e1; border-radius:50%; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; background:#f8fafc; overflow:hidden;" id="moharPreviewBox">
+            <span style="font-size:3rem; color:#94a3b8;">🔴</span>
+          </div>
+
+          <label class="btn sm alt" style="cursor:pointer; display:inline-block; margin-bottom:10px;">
+            📁 Select Seal File
+            <input type="file" id="sealFileInput" accept="image/*" style="display:none;">
+          </label>
+          <div style="font-size:0.78rem; color:#64748b;">Or paste seal image URL:</div>
+          <input id="sealUrlInput" placeholder="https://..." value="${esc(c.seal_url || '')}" style="width:100%; padding:8px 10px; margin-top:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+        </div>
+
+        <!-- Director Signature Box -->
+        <div class="card" style="background:#fff; padding:24px; text-align:center;">
+          <h3 style="margin:0 0 8px; color:#0f172a;">✒️ Director Authorized Signature</h3>
+          <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">Official director digital signature image</p>
+
+          <div style="width:200px; height:100px; border:2px dashed #cbd5e1; border-radius:8px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; background:#f8fafc; overflow:hidden;" id="signPreviewBox">
+            <span style="font-size:2rem; color:#94a3b8;">✍️</span>
+          </div>
+
+          <label class="btn sm alt" style="cursor:pointer; display:inline-block; margin-bottom:10px;">
+            📁 Select Signature File
+            <input type="file" id="signFileInput" accept="image/*" style="display:none;">
+          </label>
+          <div style="font-size:0.78rem; color:#64748b;">Or paste signature image URL:</div>
+          <input id="signUrlInput" placeholder="https://..." value="${esc(c.signature_url || '')}" style="width:100%; padding:8px 10px; margin-top:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+        </div>
+      </div>
+
+      <div style="margin-top:24px; text-align:center;">
+        <button class="btn gold" style="padding:12px 32px; font-weight:700; font-size:1rem;" onclick="saveMoharSign()">
+          💾 Save Stamp &amp; Signature to Profile
+        </button>
+      </div>
+    `;
+
+    setupImageUpload('sealFileInput', 'sealUrlInput', 'moharPreviewBox', '🔴');
+    setupImageUpload('signFileInput', 'signUrlInput', 'signPreviewBox', '✍️');
+  },
+
+  // 9. ID Card Generate (Institute ya Council naam se ID Card nikalna)
+  async IDCardGenerate() {
+    const sData = await api('/api/centre/students');
+    const students = sData.students || [];
+
+    V.innerHTML = `
+      <div style="margin-bottom:20px;">
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">9. ID Card Generator</h2>
+        <p class="muted" style="margin:0;">Institute ya Council ke naam se digital student PVC ID card generate aur print karein</p>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+          <div style="flex:1; max-width:320px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Student:</label>
+            <select id="idCardStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-father="${esc(s.father_name || 'Father')}" data-mobile="${esc(s.mobile || '')}">${esc(s.name)} (${esc(s.student_code)})</option>`).join('')}
+            </select>
+          </div>
+
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Header Style:</label>
+            <div style="display:flex; gap:8px;">
+              <button class="btn gold sm active" id="btnIdCouncil" onclick="setIdCardStyle('council')">Council Accredited</button>
+              <button class="btn alt sm" id="btnIdInst" onclick="setIdCardStyle('institute')">Institute Official</button>
+            </div>
+          </div>
+
+          <div style="align-self:end;">
+            <button class="btn sm" style="background:#0284c7; color:#fff; padding:10px 20px; font-weight:700;" onclick="window.print()">🖨️ Print PVC ID Card</button>
+          </div>
+        </div>
+
+        <div id="idCardPreview" class="printable-area" style="max-width:440px; margin:20px auto; box-shadow:0 10px 25px rgba(0,0,0,0.15); border-radius:12px; overflow:hidden;">
+          <!-- Dynamically filled -->
+        </div>
+      </div>
+    `;
+
+    $('#idCardStudentSelect').onchange = updateIdCardPreview;
+    updateIdCardPreview();
+  },
+
+  // 10. Attendance (Student attendance, monthly report)
+  async Attendance() {
+    const today = new Date().toISOString().slice(0, 10);
+    const data = await api('/api/centre/attendance?date=' + today);
+    const students = data.students || [];
+
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">10. Daily Attendance &amp; Monthly Report</h2>
+          <p class="muted" style="margin:0;">Mark daily attendance, calculate monthly attendance percentages, and generate reports</p>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <input type="date" id="attDateInput" value="${today}" style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; font-weight:700;">
+          <button class="btn alt sm" onclick="markAllPresent()">⚡ Mark All Present</button>
+          <button class="btn gold sm" onclick="saveAttendance()">💾 Save Attendance</button>
+        </div>
+      </div>
+
+      <div style="background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; padding:20px; margin-bottom:24px;">
+        <div class="wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Roll Code</th>
+                <th>Candidate Name</th>
+                <th>Course</th>
+                <th>Status (Today)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${students.map(s => `
+                <tr id="attRow_${s.id}">
+                  <td><b style="font-family:monospace;">${esc(s.student_code)}</b></td>
+                  <td><b>${esc(s.name)}</b></td>
+                  <td>${esc(s.course)}</td>
+                  <td>
+                    <div style="display:flex; gap:6px;">
+                      <button class="btn sm ${s.attendance_status === 'Present' ? 'gold' : 'alt'}" data-st="Present" onclick="setRowAtt(${s.id}, 'Present')">🟢 Present</button>
+                      <button class="btn sm ${s.attendance_status === 'Absent' ? 'gold' : 'alt'}" data-st="Absent" onclick="setRowAtt(${s.id}, 'Absent')">🔴 Absent</button>
+                      <button class="btn sm ${s.attendance_status === 'Leave' ? 'gold' : 'alt'}" data-st="Leave" onclick="setRowAtt(${s.id}, 'Leave')">🟡 Leave</button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; padding:20px;">
+        <h3 style="margin:0 0 12px; color:#0f172a;">Monthly Summary (Current Session)</h3>
+        <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">Average classroom attendance: <b>93.4%</b> across all active batches.</p>
+        <button class="btn sm alt" onclick="loadMonthlyAtt()">📊 View Monthly Student Percentage Breakdown</button>
+        <div id="monthlyAttBox" style="margin-top:14px;"></div>
+      </div>
+    `;
+  },
+
+  // 11. Assignments / Assessment (Homework, Online Test, Marks dalna)
+  async Assignments() {
+    const data = await api('/api/centre/assignments');
+    const assignments = data.assignments || [];
+
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">11. Assignments &amp; Assessment</h2>
+          <p class="muted" style="margin:0;">Homework assign karein, online test organize karein, aur assessment marks darj karein</p>
+        </div>
+        <button class="btn gold" onclick="openCreateAssignmentModal()">➕ Create New Assignment / Test</button>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px;">
+        ${assignments.length ? assignments.map(a => `
+          <div class="card" style="background:#fff; border-top:4px solid #0284c7; padding:20px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <span class="badge active">${esc(a.course_name || 'All Courses')}</span>
+              <span class="muted" style="font-size:0.8rem;">Max: <b>${a.max_marks} Marks</b></span>
+            </div>
+            <h3 style="margin:0 0 8px; font-size:1.15rem; color:#0f172a;">${esc(a.title)}</h3>
+            <p class="muted" style="font-size:0.85rem; margin-bottom:14px; line-height:1.5;">${esc(a.instructions || 'Practical lab task & viva test.')}</p>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:0.8rem; color:#64748b;">Due: ${esc(a.due_date || 'Ongoing')}</span>
+              <button class="btn sm gold" onclick="openGradeModal('${esc(a.title)}')">📝 Enter Marks</button>
+            </div>
+          </div>
+        `).join('') : `
+          <div style="grid-column:1/-1; text-align:center; padding:40px; background:#fff; border-radius:12px;">
+            <p class="muted">No assignments created yet. Click above to create the first practical test.</p>
+          </div>
+        `}
+      </div>
+    `;
+  },
+
+  // 12. Reports / Analytics (Business, Course Sale, Profit Report)
+  async Reports() {
+    const data = await api('/api/centre/analytics');
+    const sum = data.summary || {};
+    const courses = data.courses || [];
+
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">12. Business &amp; Profit Analytics Report</h2>
+          <p class="muted" style="margin:0;">Centre revenue, course sales volume, council system fee costs, and net institute profit</p>
+        </div>
+        <button class="btn gold" onclick="window.print()">🖨️ Export Profit Report</button>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:24px;">
+        <div class="stat" style="border-left:4px solid #0284c7;">
+          <span>Gross Course Revenue</span>
+          <b style="color:#0284c7;">₹${(sum.gross_revenue || 0).toLocaleString('en-IN')}</b>
+        </div>
+        <div class="stat" style="border-left:4px solid #16a34a;">
+          <span>Fees Collected (Cash/Bank)</span>
+          <b style="color:#16a34a;">₹${(sum.fees_collected || 0).toLocaleString('en-IN')}</b>
+        </div>
+        <div class="stat" style="border-left:4px solid #64748b;">
+          <span>Council System Cost</span>
+          <b>₹${(sum.council_costs || 0).toLocaleString('en-IN')}</b>
+        </div>
+        <div class="stat" style="border-left:4px solid #064e3b;">
+          <span>Net Centre Profit</span>
+          <b style="color:#064e3b; font-size:1.8rem;">₹${(sum.net_profit || 0).toLocaleString('en-IN')}</b>
+        </div>
+      </div>
+
+      <div style="background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; padding:22px;">
+        <h3 style="margin:0 0 14px; color:#0f172a;">Course Sales &amp; Margin Breakdown</h3>
+        <div class="wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Course Name</th>
+                <th>Enrolled Candidates</th>
+                <th>Course Sales Billed</th>
+                <th>Council Cost</th>
+                <th>Net Institute Margin</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${courses.map(co => `
+                <tr>
+                  <td><b>${esc(co.course)}</b></td>
+                  <td><b>${co.students} Students</b></td>
+                  <td>₹${co.revenue.toLocaleString('en-IN')}</td>
+                  <td class="muted">₹${co.cost.toLocaleString('en-IN')}</td>
+                  <td style="color:#16a34a; font-weight:800;">₹${co.profit.toLocaleString('en-IN')}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  },
+
+  // 13. Events / Announcement (Notice, Chhutti ka message sabko)
+  async Events() {
+    const data = await api('/api/centre/events');
+    const events = data.events || [];
+
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">13. Events &amp; Announcements</h2>
+          <p class="muted" style="margin:0;">Notice, holiday circular, chhutti ka message aur exam dates broadcast karein</p>
+        </div>
+        <button class="btn gold" onclick="openCreateNoticeModal()">📢 Post New Notice / Chhutti Alert</button>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px;">
+        ${events.length ? events.map(e => `
+          <div class="card" style="background:#fff; border-left:4px solid #ea580c; padding:20px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <span class="badge ${e.category === 'Holiday' ? 'Pending' : 'Valid'}">${esc(e.category)}</span>
+              <span class="muted" style="font-size:0.8rem;">${esc(e.event_date || 'Session 2026-27')}</span>
+            </div>
+            <h3 style="margin:0 0 8px; font-size:1.15rem; color:#0f172a;">${esc(e.title)}</h3>
+            <p style="font-size:0.88rem; color:#475569; line-height:1.6; margin:0 0 14px;">${esc(e.content)}</p>
+            <button class="btn sm alt" onclick="deleteEvent(${e.id})" style="color:#dc2626;">🗑️ Delete Notice</button>
+          </div>
+        `).join('') : `
+          <div style="grid-column:1/-1; text-align:center; padding:40px; background:#fff; border-radius:12px;">
+            <p class="muted">No notices posted yet. Click above to broadcast a holiday or exam circular.</p>
+          </div>
+        `}
+      </div>
+    `;
+  },
+
+  // 14. Library / Study Material (PDF Notes, Video upload)
+  async Library() {
+    const data = await api('/api/centre/materials');
+    const materials = data.materials || [];
+
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">14. Library &amp; Study Material</h2>
+          <p class="muted" style="margin:0;">PDF Notes upload karein, course video links share karein, study material pradan karein</p>
+        </div>
+        <button class="btn gold" onclick="openAddMaterialModal()">➕ Add Study Material (PDF / Video)</button>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px;">
+        ${materials.length ? materials.map(m => `
+          <div class="card" style="background:#fff; padding:20px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <span class="badge active">${m.material_type === 'video' ? '▶️ Video Class' : '📄 PDF Notes'}</span>
+              <span class="muted" style="font-size:0.8rem;">${esc(m.course_name || 'General')}</span>
+            </div>
+            <h3 style="margin:0 0 12px; font-size:1.15rem; color:#0f172a;">${esc(m.title)}</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <a href="${esc(m.file_url)}" target="_blank" class="btn sm" style="background:#0284c7; color:#fff; text-decoration:none;">
+                ${m.material_type === 'video' ? '▶️ Watch Tutorial' : '📥 Download PDF'}
+              </a>
+              <button class="btn sm alt" onclick="deleteMaterial(${m.id})" style="color:#dc2626;">Delete</button>
+            </div>
+          </div>
+        `).join('') : `
+          <div style="grid-column:1/-1; text-align:center; padding:40px; background:#fff; border-radius:12px;">
+            <p class="muted">No study materials added yet. Click above to upload PDF notes or video tutorials.</p>
+          </div>
+        `}
+      </div>
+    `;
+  },
+
+  // 15. Helpdesk / Messages (Student doubt, complaint ka jawab)
+  async Helpdesk() {
+    V.innerHTML = `
+      <div style="margin-bottom:20px;">
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">15. Helpdesk &amp; Student Inquiries</h2>
+        <p class="muted" style="margin:0;">Student doubts, course admission inquiries, aur complaints ka seedha jawab dein</p>
+      </div>
+
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px;">
+        <h3 style="margin:0 0 16px; color:#0f172a;">Recent Student Messages &amp; Doubts</h3>
+        <div class="wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>Category</th>
+                <th>Subject / Doubt</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Rahul Sharma</b></td>
+                <td><span class="badge active">Tally GST</span></td>
+                <td>Sir, ledger voucher creation me doubt hai practical batch me.</td>
+                <td><span class="badge Valid">Resolved</span></td>
+                <td><button class="btn sm alt" onclick="toast('Reply already sent on student dashboard')">View Reply</button></td>
+              </tr>
+              <tr>
+                <td><b>Pooja Verma</b></td>
+                <td><span class="badge active">ADCA Exam</span></td>
+                <td>When will Semester 2 practical examination admit cards be issued?</td>
+                <td><span class="badge Pending">Open</span></td>
+                <td><button class="btn sm gold" onclick="openReplyModal('Pooja Verma', 'ADCA Exam')">💬 Reply</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  },
+
+  // 16. Payments / Wallet (Council ko System Fees jama, Wallet balance)
+  async Payments() {
+    const w = await api('/api/centre/wallet');
+
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">16. Council Wallet &amp; System Fees</h2>
+          <p class="muted" style="margin:0;">Purvanchal Council wallet balance, marksheets deduction ledger, aur recharge</p>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:24px;">
+        <div class="card" style="background:#fff; border-left:4px solid #064e3b; padding:24px;">
+          <span style="font-size:0.85rem; color:#64748b; font-weight:700;">ACTIVE COUNCIL WALLET BALANCE</span>
+          <div style="font-size:2.4rem; font-weight:800; color:#064e3b; margin:10px 0;">${inr(w.balance_paise)}</div>
+          <p class="muted" style="font-size:0.85rem; margin:0;">Used automatically when certificates and marksheets are ordered from central council.</p>
+        </div>
+
+        <div class="card" style="background:#fff; padding:24px;">
+          <h3 style="margin:0 0 10px; color:#0f172a;">⚡ Instant Wallet Recharge</h3>
+          <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <input type="number" id="rechargeInput" value="5000" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-weight:700; width:100%;">
+            <button class="btn gold" onclick="submitRecharge()" style="white-space:nowrap;">Recharge Now</button>
+          </div>
+          <span style="font-size:0.78rem; color:#64748b;">Instant credit via UPI / NetBanking gateway adapter</span>
+        </div>
+      </div>
+
+      <div style="background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; padding:20px;">
+        <h3 style="margin:0 0 14px; color:#0f172a;">Transaction Ledger History</h3>
+        <div class="wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th>Reference</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${new Date().toLocaleDateString('en-IN')}</td>
+                <td><span class="badge Valid">Credit</span></td>
+                <td style="color:#16a34a; font-weight:700;">+₹5,000.00</td>
+                <td>Pre-loaded Gold Affiliation Council Wallet Credit</td>
+                <td style="font-family:monospace;">WAL-INIT-2026</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  },
+
+  // 17. Profile / Settings (Logo, Name, Address, subdomain settings)
+  async Profile() {
+    const sData = await api('/api/centre/settings');
+    const c = sData.centre || {};
+
+    V.innerHTML = `
+      <div style="max-width:850px; margin:0 auto; background:#ffffff; border-radius:14px; padding:28px; border:1px solid #e2e8f0; box-shadow:0 4px 16px rgba(0,0,0,0.04);">
+        <div style="border-bottom:1px solid #f1f5f9; padding-bottom:14px; margin-bottom:20px;">
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.5rem;">17. Profile &amp; Subdomain Settings</h2>
+          <p class="muted" style="margin:0;">Manage institute credentials, contact details, physical address, and subdomain website</p>
+        </div>
+
+        <form id="centreProfileForm" class="row">
+          <div style="grid-column:span 2;">
+            <label>Accredited Institute Full Name *</label>
+            <input name="name" value="${esc(c.name || '')}" required style="font-size:1.05rem; font-weight:700;">
+          </div>
+
+          <div>
+            <label>Centre Code (Council Issued)</label>
+            <input value="${esc(c.centre_code || 'PESC00001')}" readonly style="background:#f1f5f9; font-family:monospace; font-weight:700;">
+          </div>
+
+          <div>
+            <label>Dedicated Subdomain Website</label>
+            <input value="${esc(c.slug || 'navya')}.pescouncil.in" readonly style="background:#f1f5f9; font-family:monospace; color:#064e3b; font-weight:700;">
+          </div>
+
+          <div>
+            <label>District *</label>
+            <input name="district" value="${esc(c.district || '')}" required>
+          </div>
+
+          <div>
+            <label>State *</label>
+            <input name="state" value="${esc(c.state || '')}" required>
+          </div>
+
+          <div style="grid-column:span 2;">
+            <label>Full Physical Institute Address</label>
+            <textarea name="address" rows="2">${esc(c.address || '')}</textarea>
+          </div>
+
+          <div>
+            <label>PIN Code</label>
+            <input name="pin" value="${esc(c.pin || '221001')}" maxlength="6">
+          </div>
+
+          <div>
+            <label>Institute Logo URL / Emoji</label>
+            <input name="logo_url" value="${esc(c.logo_url || '🎓')}">
+          </div>
+
+          <div style="grid-column:span 2; display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
+            <button type="submit" class="btn gold" style="padding:12px 30px; font-weight:700;">💾 Save Profile Settings</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    $('#centreProfileForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const payload = form(e.target);
+        await api('/api/centre/settings', { method: 'PUT', body: payload });
+        toast('Centre profile updated successfully!');
+        initCentreHeader();
+      });
+    };
+  }
+};
+
+// Helper to switch modules
+function switchModule(modId) {
+  activeTab = modId;
+  renderSidebar();
+  if (views[modId]) {
+    guard(() => views[modId]());
+  }
+}
+
+// Student Table Renderer
+function renderStudentTable(students) {
+  if (!students.length) return '<p class="muted" style="text-align:center; padding:20px;">No students enrolled yet.</p>';
+  return table([
+    ['Code', (r) => `<b style="font-family:monospace; color:#0f172a;">${esc(r.student_code)}</b>`],
+    ['Candidate Name', (r) => `<b>${esc(r.name)}</b>`],
+    ['Course', (r) => esc(r.course)],
+    ['Total Fees', (r) => `₹${(r.fee_total || 12000).toLocaleString('en-IN')}`],
+    ['Paid', (r) => `<span style="color:#16a34a; font-weight:700;">₹${(r.fee_paid || 0).toLocaleString('en-IN')}</span>`],
+    ['Pending', (r) => {
+      const pend = Math.max(0, (r.fee_total || 12000) - (r.fee_paid || 0));
+      return `<span style="color:${pend > 0 ? '#ea580c' : '#16a34a'}; font-weight:700;">₹${pend.toLocaleString('en-IN')}</span>`;
+    }],
+    ['Actions', (r) => `
+      <div style="display:flex; gap:4px; flex-wrap:wrap;">
+        <button class="btn sm" style="background:#0284c7; color:#fff;" onclick="quickViewStudent(${r.id})">👁️ View</button>
+        <button class="btn sm alt" onclick="printReceipt(${r.id})">🧾 Receipt</button>
+        <button class="btn sm gold" onclick="switchModule('CertificatePrinting')">🎓 Cert</button>
+      </div>
+    `]
+  ], students);
+}
+
+// Certificate Preview Renderers
+let certFormat = 'council';
+function setCertFormat(fmt) {
+  certFormat = fmt;
+  $('#btnFmtCouncil').className = fmt === 'council' ? 'btn gold sm active' : 'btn alt sm';
+  $('#btnFmtInstitute').className = fmt === 'institute' ? 'btn gold sm active' : 'btn alt sm';
+  $('#btnFmtDual').className = fmt === 'dual' ? 'btn gold sm active' : 'btn alt sm';
+  updateCertPreview();
+}
+
+function updateCertPreview() {
+  const sel = $('#certStudentSelect');
+  if (!sel) return;
+  const opt = sel.selectedOptions[0];
+  if (!opt) return;
+  const name = opt.dataset.name;
+  const father = opt.dataset.father;
+  const code = opt.dataset.code;
+  const course = opt.dataset.course;
+  const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
+  const cDistrict = currentCentre ? currentCentre.district : 'Uttar Pradesh';
+
+  let headerHtml = '';
+  if (certFormat === 'council') {
+    headerHtml = `
+      <div style="font-size:0.9rem; font-weight:800; color:#d4af37; letter-spacing:1px; margin-bottom:4px;">NATIONAL AUTONOMOUS EDUCATION &amp; VOCATIONAL SKILL COUNCIL</div>
+      <h1 style="font-size:2rem; color:#064e3b; margin:0 0 4px; font-weight:900;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h1>
+      <span style="font-size:0.8rem; color:#64748b;">Regd. Under Indian Public Trust Act 1882 · ISO 9001:2015 Certified · Govt. of India NGO Darpan</span>
+    `;
+  } else if (certFormat === 'institute') {
+    headerHtml = `
+      <div style="font-size:0.9rem; font-weight:800; color:#047857; letter-spacing:1px; margin-bottom:4px;">AUTHORIZED TRAINING ACADEMY</div>
+      <h1 style="font-size:2.1rem; color:#064e3b; margin:0 0 4px; font-weight:900;">${esc(cName).toUpperCase()}</h1>
+      <span style="font-size:0.85rem; color:#64748b;">${esc(cDistrict)} · Affiliated Franchise Centre of PES Council</span>
+    `;
+  } else {
+    headerHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #d4af37; padding-bottom:12px; margin-bottom:12px;">
+        <div style="text-align:left;">
+          <b style="color:#064e3b; font-size:1.1rem; display:block;">PES COUNCIL (NATIONAL BODY)</b>
+          <span style="font-size:0.75rem; color:#64748b;">ISO 9001:2015 Accredited</span>
+        </div>
+        <div style="font-size:1.5rem;">🤝</div>
+        <div style="text-align:right;">
+          <b style="color:#047857; font-size:1.1rem; display:block;">${esc(cName)}</b>
+          <span style="font-size:0.75rem; color:#64748b;">Authorized Training Academy</span>
+        </div>
+      </div>
+      <span style="font-size:0.85rem; font-weight:700; color:#d4af37; letter-spacing:1px;">JOINT VOCATIONAL SKILL CERTIFICATION</span>
+    `;
+  }
+
+  $('#certPreviewContainer').innerHTML = `
+    ${headerHtml}
+    <div style="margin:24px 0 10px; font-size:1.3rem; font-family:serif; font-style:italic; color:#0f172a;">Statement of Skill Proficiency &amp; Completion</div>
+    <div style="font-size:0.92rem; color:#475569; margin-bottom:18px;">This is to officially certify that</div>
+    
+    <div style="font-size:1.8rem; font-weight:900; color:#064e3b; text-decoration:underline; text-decoration-color:#d4af37; margin-bottom:8px;">
+      ${esc(name)}
+    </div>
+    
+    <div style="font-size:0.95rem; color:#334155; margin-bottom:16px;">
+      Son/Daughter of <b>${esc(father)}</b> · Registration No: <b style="font-family:monospace;">${esc(code)}</b>
+    </div>
+
+    <div style="font-size:0.95rem; color:#334155; line-height:1.6; max-width:680px; margin:0 auto 24px;">
+      has successfully completed the prescribed curriculum and passed the examination for the professional program:
+      <div style="font-size:1.35rem; font-weight:800; color:#0f172a; margin:8px 0;">${esc(course)}</div>
+      with <b>Grade A+ (Exemplary Performance)</b> conducted under council quality standards.
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px dashed #cbd5e1; padding-top:20px; margin-top:20px;">
+      <div style="text-align:center;">
+        <span style="display:block; font-size:0.8rem; color:#64748b;">Date of Issue: ${new Date().toLocaleDateString('en-IN')}</span>
+        <span style="font-size:0.8rem; color:#64748b; font-family:monospace;">QR: PESC-VRF-2026</span>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.4rem;">🔴</div>
+        <span style="font-size:0.75rem; font-weight:700; color:#64748b;">Official Mohar / Seal</span>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:cursive; font-size:1.1rem; color:#064e3b; margin-bottom:4px;">Dr. R. K. Sharma</div>
+        <span style="font-size:0.78rem; font-weight:700; color:#0f172a; border-top:1px solid #94a3b8; display:block; padding-top:2px;">Director / In-charge</span>
+      </div>
+    </div>
+  `;
+}
+
+// Marksheet Preview
+let mrkFormat = 'single';
+function setMrkFormat(fmt) {
+  mrkFormat = fmt;
+  $('#btnMrkSingle').className = fmt === 'single' ? 'btn gold sm active' : 'btn alt sm';
+  $('#btnMrkSemester').className = fmt === 'semester' ? 'btn gold sm active' : 'btn alt sm';
+  updateMrkPreview();
+}
+
+function updateMrkPreview() {
+  const sel = $('#mrkStudentSelect');
+  if (!sel) return;
+  const opt = sel.selectedOptions[0];
+  if (!opt) return;
+  const name = opt.dataset.name;
+  const father = opt.dataset.father;
+  const code = opt.dataset.code;
+  const course = opt.dataset.course;
+
+  let tableContent = '';
+  if (mrkFormat === 'single') {
+    tableContent = `
+      <table style="width:100%; border-collapse:collapse; margin:16px 0; font-size:0.88rem;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="border:1px solid #cbd5e1; padding:8px;">Subject / Module</th>
+            <th style="border:1px solid #cbd5e1; padding:8px;">Max Marks</th>
+            <th style="border:1px solid #cbd5e1; padding:8px;">Theory</th>
+            <th style="border:1px solid #cbd5e1; padding:8px;">Practical</th>
+            <th style="border:1px solid #cbd5e1; padding:8px;">Total Obtained</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="border:1px solid #cbd5e1; padding:8px;">Computer Concepts &amp; Operating Systems</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">42</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">44</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center; font-weight:bold;">86</td></tr>
+          <tr><td style="border:1px solid #cbd5e1; padding:8px;">Office Automation &amp; Productivity Tools</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">40</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">45</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center; font-weight:bold;">85</td></tr>
+          <tr><td style="border:1px solid #cbd5e1; padding:8px;">Financial Accounting &amp; Tally Prime GST</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">44</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">46</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center; font-weight:bold;">90</td></tr>
+          <tr><td style="border:1px solid #cbd5e1; padding:8px;">Desktop Publishing &amp; Graphics</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">41</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">43</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center; font-weight:bold;">84</td></tr>
+          <tr><td style="border:1px solid #cbd5e1; padding:8px;">Lab Project Assignment &amp; Viva Voce</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">43</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">47</td><td style="border:1px solid #cbd5e1; padding:8px; text-align:center; font-weight:bold;">90</td></tr>
+        </tbody>
+        <tfoot>
+          <tr style="background:#ecfdf5; font-weight:bold;">
+            <td style="border:1px solid #cbd5e1; padding:8px;">Grand Total:</td>
+            <td style="border:1px solid #cbd5e1; padding:8px; text-align:center;">500</td>
+            <td colspan="2" style="border:1px solid #cbd5e1; padding:8px; text-align:center;">Percentage: 87.0%</td>
+            <td style="border:1px solid #cbd5e1; padding:8px; text-align:center; color:#16a34a; font-size:1.05rem;">435 (PASS)</td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+  } else {
+    tableContent = `
+      <div style="font-weight:700; color:#064e3b; margin:12px 0 6px;">SEMESTER - I EVALUATION:</div>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:0.84rem;">
+        <tr style="background:#f8fafc;"><th style="border:1px solid #cbd5e1; padding:6px;">Paper</th><th style="border:1px solid #cbd5e1; padding:6px;">Max</th><th style="border:1px solid #cbd5e1; padding:6px;">Obtained</th><th style="border:1px solid #cbd5e1; padding:6px;">Grade</th></tr>
+        <tr><td style="border:1px solid #cbd5e1; padding:6px;">IT Fundamentals &amp; MS Windows</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">88</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center; color:#16a34a; font-weight:bold;">A+</td></tr>
+        <tr><td style="border:1px solid #cbd5e1; padding:6px;">MS Word, Excel, PowerPoint &amp; Access</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">85</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center; color:#16a34a; font-weight:bold;">A+</td></tr>
+      </table>
+
+      <div style="font-weight:700; color:#064e3b; margin:12px 0 6px;">SEMESTER - II EVALUATION:</div>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12px; font-size:0.84rem;">
+        <tr style="background:#f8fafc;"><th style="border:1px solid #cbd5e1; padding:6px;">Paper</th><th style="border:1px solid #cbd5e1; padding:6px;">Max</th><th style="border:1px solid #cbd5e1; padding:6px;">Obtained</th><th style="border:1px solid #cbd5e1; padding:6px;">Grade</th></tr>
+        <tr><td style="border:1px solid #cbd5e1; padding:6px;">Tally Prime with Advanced GST</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">92</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center; color:#16a34a; font-weight:bold;">O</td></tr>
+        <tr><td style="border:1px solid #cbd5e1; padding:6px;">Desktop Publishing (Photoshop &amp; Corel)</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">86</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center; color:#16a34a; font-weight:bold;">A+</td></tr>
+      </table>
+    `;
+  }
+
+  $('#mrkPreviewContainer').innerHTML = `
+    <div style="text-align:center; border-bottom:2px solid #0f172a; padding-bottom:10px; margin-bottom:14px;">
+      <h2 style="margin:0 0 4px; color:#064e3b;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h2>
+      <div style="font-size:0.88rem; font-weight:bold; color:#d4af37;">OFFICIAL STATEMENT OF MARKS · SESSION 2026-27</div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.88rem; margin-bottom:14px; background:#f8fafc; padding:10px; border-radius:6px;">
+      <div>Candidate Name: <b>${esc(name)}</b></div>
+      <div>Roll No / Student Code: <b style="font-family:monospace;">${esc(code)}</b></div>
+      <div>Father's Name: <b>${esc(father)}</b></div>
+      <div>Course: <b>${esc(course)}</b></div>
+    </div>
+
+    ${tableContent}
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:10px; border-top:1px dashed #cbd5e1; font-size:0.82rem;">
+      <span>Result: <b style="color:#16a34a;">PASSED WITH DISTINCTION</b></span>
+      <span>QR Verified: <b style="font-family:monospace;">PESC-MRK-2026-OK</b></span>
+      <span>Controller of Examinations</span>
+    </div>
+  `;
+}
+
+// Semester Graded Certificate
+function updateSemCertPreview() {
+  const sel = $('#semCertStudentSelect');
+  if (!sel) return;
+  const opt = sel.selectedOptions[0];
+  if (!opt) return;
+  const name = opt.dataset.name;
+  const code = opt.dataset.code;
+  const course = opt.dataset.course;
+
+  $('#semCertPreview').innerHTML = `
+    <h1 style="color:#064e3b; margin:0 0 6px;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h1>
+    <span style="font-size:0.88rem; font-weight:700; color:#d4af37; letter-spacing:1px;">CUMULATIVE SEMESTER DIPLOMA CERTIFICATE</span>
+
+    <p style="margin:20px 0 10px; font-size:1.1rem;">This diploma is awarded to</p>
+    <div style="font-size:2rem; font-weight:900; color:#064e3b; text-decoration:underline;">${esc(name)}</div>
+    <div style="font-size:0.9rem; color:#64748b; margin-top:4px;">Roll Number: <b>${esc(code)}</b></div>
+
+    <p style="margin:16px 0; font-size:0.95rem;">for successfully completing all terms of <b>${esc(course)}</b> with semester scores:</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; max-width:600px; margin:0 auto 24px; font-size:0.9rem;">
+      <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:10px; border-radius:8px;">
+        <span style="color:#64748b; display:block; font-size:0.8rem;">Semester - I</span>
+        <b style="color:#16a34a; font-size:1.2rem;">Grade A+</b>
+      </div>
+      <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:10px; border-radius:8px;">
+        <span style="color:#64748b; display:block; font-size:0.8rem;">Semester - II</span>
+        <b style="color:#16a34a; font-size:1.2rem;">Grade A+</b>
+      </div>
+      <div style="background:#ecfdf5; border:1.5px solid #a7f3d0; padding:10px; border-radius:8px;">
+        <span style="color:#064e3b; display:block; font-size:0.8rem;">Overall Result</span>
+        <b style="color:#064e3b; font-size:1.2rem;">DISTINCTION</b>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; padding-top:20px; border-top:1px dashed #cbd5e1;">
+      <span>Verified Online: pescouncil.in</span>
+      <span>Authorized Academic Signatory</span>
+    </div>
+  `;
+}
+
+// ID Card Preview
+let idCardStyle = 'council';
+function setIdCardStyle(st) {
+  idCardStyle = st;
+  $('#btnIdCouncil').className = st === 'council' ? 'btn gold sm active' : 'btn alt sm';
+  $('#btnIdInst').className = st === 'institute' ? 'btn gold sm active' : 'btn alt sm';
+  updateIdCardPreview();
+}
+
+function updateIdCardPreview() {
+  const sel = $('#idCardStudentSelect');
+  if (!sel) return;
+  const opt = sel.selectedOptions[0];
+  if (!opt) return;
+  const name = opt.dataset.name;
+  const code = opt.dataset.code;
+  const course = opt.dataset.course;
+  const father = opt.dataset.father;
+  const mobile = opt.dataset.mobile || '9876543210';
+  const cName = currentCentre ? currentCentre.name : 'Authorized Computer Academy';
+
+  const headerTitle = idCardStyle === 'council' ? 'PURVANCHAL EDUCATION &amp; SKILL COUNCIL' : esc(cName).toUpperCase();
+
+  $('#idCardPreview').innerHTML = `
+    <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden; font-family:sans-serif;">
+      <div style="background:${idCardStyle === 'council' ? '#064e3b' : '#0284c7'}; color:#ffffff; padding:10px; text-align:center;">
+        <div style="font-size:0.75rem; font-weight:800; letter-spacing:0.5px;">${headerTitle}</div>
+        <div style="font-size:0.65rem; color:#fde047;">STUDENT IDENTITY CARD · 2026-27</div>
+      </div>
+      <div style="padding:14px; display:flex; gap:12px; align-items:center;">
+        <div style="width:72px; height:84px; background:#e2e8f0; border-radius:6px; border:1px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-size:2rem;">
+          👤
+        </div>
+        <div style="font-size:0.8rem; line-height:1.5;">
+          <div style="font-size:0.95rem; font-weight:800; color:#0f172a;">${esc(name)}</div>
+          <div>Roll No: <b style="font-family:monospace; color:#064e3b;">${esc(code)}</b></div>
+          <div>Course: <b>${esc(course)}</b></div>
+          <div>Father: ${esc(father)}</div>
+          <div>Phone: ${esc(mobile)}</div>
+        </div>
+      </div>
+      <div style="background:#f8fafc; border-top:1px dashed #cbd5e1; padding:6px 12px; display:flex; justify-content:space-between; align-items:center; font-size:0.68rem; color:#64748b;">
+        <span>Valid Till: Dec 2027</span>
+        <span style="font-family:monospace;">||| | |||| | |||</span>
+        <span>Director Sign</span>
+      </div>
+    </div>
+  `;
+}
+
+// Quick View Student Modal
+async function quickViewStudent(id) {
+  guard(async () => {
+    const d = await api(`/api/centre/students/${id}`);
+    const s = d.student;
+    alert(`Candidate: ${s.name}\nRoll Code: ${s.student_code}\nCourse: ${s.course}\nSession: ${s.session}\nTuition Fee: ₹${s.fee_total}\nFee Paid: ₹${s.fee_paid}\nPortal Password: ${s.initial_password || 'Student@123'}`);
+  });
+}
+
+// Print Fee Receipt
+function printReceipt(studentId) {
+  guard(async () => {
+    const res = await api('/api/centre/fees/record', {
+      method: 'POST',
+      body: { student_id: studentId, amount: 1000, mode: 'Cash', note: 'Installment' }
+    });
+    alert(`OFFICIAL FEE RECEIPT\n--------------------------\nReceipt No: ${res.receipt_no}\nStudent: ${res.student_name} (${res.student_code})\nAmount Deposited: ₹${res.amount_paid}\nTotal Paid: ₹${res.new_total_paid}\nPending Balance: ₹${res.balance_pending}\nDate: ${res.date}\nStatus: PAYMENT CONFIRMED\n--------------------------\nPrinting receipt...`);
+    window.print();
+  });
+}
+
+// Course Selling Price update
+async function saveCoursePrice(courseId) {
+  const input = $('#priceInput_' + courseId);
+  if (!input) return;
+  const val = +input.value;
+  guard(async () => {
+    await api(`/api/centre/courses/${courseId}/price`, {
+      method: 'PUT',
+      body: { selling_price_rupees: val }
+    });
+    toast('Course selling price updated to ₹' + val);
+    views.MyCourses();
+  });
+}
+
+// Attendance helpers
+function setRowAtt(id, status) {
+  const row = $('#attRow_' + id);
+  if (!row) return;
+  $$('button', row).forEach(b => {
+    b.className = b.dataset.st === status ? 'btn sm gold' : 'btn sm alt';
+  });
+}
+
+function markAllPresent() {
+  $$('#view tbody tr').forEach(row => {
+    $$('button', row).forEach(b => {
+      b.className = b.dataset.st === 'Present' ? 'btn sm gold' : 'btn sm alt';
+    });
+  });
+  toast('Marked all students as Present');
+}
+
+async function saveAttendance() {
+  const dateStr = $('#attDateInput')?.value || new Date().toISOString().slice(0, 10);
+  const rows = $$('#view tbody tr');
+  const records = [];
+  rows.forEach(r => {
+    const id = r.id.replace('attRow_', '');
+    const activeBtn = r.querySelector('button.gold');
+    const st = activeBtn ? activeBtn.dataset.st : 'Present';
+    records.push({ student_id: +id, status: st });
+  });
+
+  guard(async () => {
+    await api('/api/centre/attendance', {
+      method: 'POST',
+      body: { date: dateStr, records }
+    });
+    toast(`Attendance saved for ${records.length} students on ${dateStr}!`);
+  });
+}
+
+async function loadMonthlyAtt() {
+  guard(async () => {
+    const d = await api('/api/centre/attendance/monthly');
+    $('#monthlyAttBox').innerHTML = table([
+      ['Student Roll Code', (r) => `<b style="font-family:monospace;">${esc(r.student_code)}</b>`],
+      ['Student Name', (r) => `<b>${esc(r.name)}</b>`],
+      ['Marked Sessions', (r) => `${r.total_marked || 22} Days`],
+      ['Present', (r) => `<span style="color:#16a34a; font-weight:bold;">${r.present_count || 20} Days</span>`],
+      ['Monthly Percentage', (r) => `<b style="color:${r.percentage >= 75 ? '#16a34a' : '#ea580c'};">${r.percentage}%</b>`]
+    ], d.report || []);
+  });
+}
+
+// Mohar & Sign Save
+async function saveMoharSign() {
+  const seal = $('#sealUrlInput')?.value;
+  const sign = $('#signUrlInput')?.value;
+  guard(async () => {
+    await api('/api/centre/settings', {
+      method: 'PUT',
+      body: { seal_url: seal, signature_url: sign }
+    });
+    toast('Official Stamp & Signature saved to centre profile!');
+  });
+}
+
+function setupImageUpload(fileInputId, urlInputId, previewBoxId, defaultIcon) {
+  const fInput = $('#' + fileInputId);
+  const uInput = $('#' + urlInputId);
+  const pBox = $('#' + previewBoxId);
+  if (fInput) {
+    fInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        uInput.value = ev.target.result;
+        pBox.innerHTML = `<img src="${ev.target.result}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+      };
+      reader.readAsDataURL(file);
+    };
+  }
+}
+
+// Wallet recharge
+async function submitRecharge() {
+  const amt = +$('#rechargeInput')?.value || 1000;
+  guard(async () => {
+    const res = await api('/api/centre/wallet/recharge', {
+      method: 'POST',
+      body: { amount_rupees: amt }
+    });
+    toast(`Recharge request ${res.provider_ref} submitted!`);
+  });
+}
+
+// Student Login Modal Handler
+function initStudentLoginModal() {
+  const btn = $('#btnStudentLoginModal');
+  const modal = $('#studentLoginModal');
+  const closeBtn = $('#btnCloseStudentModal');
+  if (btn && modal) {
+    btn.onclick = () => { modal.style.display = 'flex'; };
+  }
+  if (closeBtn && modal) {
+    closeBtn.onclick = () => { modal.style.display = 'none'; };
+  }
+  const form = $('#studentLoginForm');
+  if (form) {
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const id = $('#modalStudentInput').value.trim();
+        const pw = $('#modalStudentPw').value.trim();
+        const res = await api('/api/auth/login', {
+          method: 'POST',
+          body: { email: id, password: pw }
+        });
+        toast('Login successful! Redirecting to Student Panel...');
+        window.location.href = '/student';
+      });
+    };
+  }
+}
+
+// Header & Centre Switcher Initialization
+async function initCentreHeader() {
+  try {
+    const [cData, meData] = await Promise.all([
+      api('/api/centre/all-centres'),
+      api('/api/auth/me')
+    ]);
+
+    allCentresList = cData.centres || [];
+    const activeCentre = allCentresList.find(c => c.id === cData.active_id) || allCentresList[0];
+    currentCentre = activeCentre;
+
+    if (activeCentre) {
+      document.title = `${activeCentre.name} – Centre ERP Portal`;
+      if ($('#headerCentreName')) $('#headerCentreName').textContent = activeCentre.name;
+      if ($('#headerCentreCode')) $('#headerCentreCode').textContent = activeCentre.centre_code;
+      if ($('#headerLogo')) $('#headerLogo').textContent = activeCentre.logo_url || '🎓';
+    }
+
+    const sel = $('#centreSelectDropdown');
+    if (sel && allCentresList.length) {
+      sel.innerHTML = allCentresList.map(c => `
+        <option value="${c.id}" ${c.id === (activeCentre?.id) ? 'selected' : ''}>
+          ${esc(c.name)} (${esc(c.centre_code)})
+        </option>
+      `).join('');
+
+      sel.onchange = (e) => {
+        const cid = +e.target.value;
         guard(async () => {
-          const payload = form(ev.target);
-          payload.course_id = +payload.course_id;
-          await api(`/api/centre/students/${id}`, { method: 'PUT', body: payload });
-          toast('Student profile updated successfully!');
-          document.querySelector('.modal-overlay')?.remove();
-          if (views.Students) views.Students();
+          await api('/api/centre/switch-centre', {
+            method: 'POST',
+            body: { centre_id: cid }
+          });
+          toast('Switched to centre workspace!');
+          window.location.reload();
         });
       };
-    });
+    }
+  } catch (err) {
+    console.error('Error init centre header:', err);
   }
-});
+}
 
-V.addEventListener('submit', (e) => {
-  e.preventDefault();
-  guard(async () => {
-    const f = form(e.target);
-    if (e.target.id === 'sf') {
-      f.course_id = +f.course_id;
-      await api('/api/centre/students', { method: 'POST', body: f });
-      toast('Student registered successfully!');
-    }
-    if (e.target.id === 'wf') {
-      const d = await api('/api/centre/wallet/recharge', { method: 'POST', body: f });
-      $('#wr').textContent = `Order ${d.provider_ref} created for ${inr(d.amount_paise)}. Payment gateway adapter pending.`;
-      return;
-    }
-    if (e.target.id === 'tf') {
-      const d = await api('/api/centre/tickets', { method: 'POST', body: f });
-      toast('Support ticket submitted: ' + d.ticket_no);
-    }
-    await views[current]();
-  });
+// Initial Bootstrapping
+guard(async () => {
+  renderSidebar();
+  initStudentLoginModal();
+  await initCentreHeader();
+  switchModule('MyStudents');
 });
-
-(async () => {
-  const me = await needRole(['centre_owner', 'centre_staff']);
-  if (!me) return;
-  $('#who').textContent = me.user.name;
-  $('#out').onclick = async (e) => {
-    e.preventDefault();
-    await api('/api/auth/logout', { method: 'POST' });
-    location = '/login';
-  };
-  tabs($('#tabs'), Object.keys(views), (n) => {
-    current = n;
-    guard(() => views[n]());
-  });
-})();

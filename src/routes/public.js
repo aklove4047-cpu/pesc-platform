@@ -54,7 +54,14 @@ router.get('/application/:no', (req, res) => {
   if (!a) throw new HttpError(404, 'Application not found');
   res.json(a);
 });
-router.get('/centres', (req, res) => res.json({ centres: db.prepare("SELECT name,district,state,slug FROM centres WHERE status='active' ORDER BY name LIMIT 500").all() }));
+router.get('/centres', (req, res) => {
+  const centres = db.prepare(`SELECT c.id, c.name, c.centre_code, c.district, c.state, c.slug,
+    (SELECT COUNT(*) FROM students WHERE centre_id=c.id) AS student_count
+    FROM centres c
+    WHERE c.status='active'
+    ORDER BY c.id ASC LIMIT 500`).all();
+  res.json({ centres });
+});
 router.get('/site', (req, res) => {
   const slug = req.query.slug || (req.tenant ? req.tenant.slug : null);
   let tenant = req.tenant;
