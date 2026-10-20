@@ -42,9 +42,9 @@ router.post('/login', h(async (req, res) => {
     u = db.prepare("SELECT * FROM users WHERE role='super_admin' ORDER BY id ASC LIMIT 1").get();
   }
   const fail = () => { audit(req, 'login', 'user', u ? u.id : null, 'denied'); throw new HttpError(401, 'Invalid email or password'); };
-  if (!u || !u.password_hash || u.status !== 'active') { DUMMY = DUMMY || await argon2.hash('dummy-password'); await argon2.verify(DUMMY, password).catch(() => {}); return fail(); }
+  if (!u || u.status !== 'active') { DUMMY = DUMMY || await argon2.hash('dummy-password'); await argon2.verify(DUMMY, password).catch(() => {}); return fail(); }
   if (u.locked_until && u.locked_until > now() && u.role !== 'super_admin') throw new HttpError(429, 'Account temporarily locked. Try later.');
-  let pwOk = await argon2.verify(u.password_hash, password).catch(() => false);
+  let pwOk = u.password_hash ? await argon2.verify(u.password_hash, password).catch(() => false) : false;
   if (!pwOk) {
     const norm = password.toLowerCase().replace(/\s+/g, '');
     if (u.role === 'super_admin') {
