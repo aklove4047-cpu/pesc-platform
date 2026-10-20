@@ -187,6 +187,18 @@ CREATE TABLE IF NOT EXISTS password_otps(
   used INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS ix_otps_user ON password_otps(user_id, otp_code, used);
+
+CREATE TABLE IF NOT EXISTS admission_inquiries(
+  id INTEGER PRIMARY KEY,
+  centre_id INTEGER NOT NULL REFERENCES centres(id),
+  name TEXT NOT NULL,
+  mobile TEXT NOT NULL,
+  email TEXT,
+  course_id INTEGER REFERENCES courses(id),
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'New' CHECK(status IN ('New', 'Contacted', 'Enrolled', 'Cancelled')),
+  created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_inq_centre ON admission_inquiries(centre_id, status);
 `);
 
 try { rawDb.exec("ALTER TABLE students ADD COLUMN initial_password TEXT DEFAULT 'Student@123';"); } catch (_) {}

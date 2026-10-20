@@ -105,6 +105,30 @@ const views = {
     }
   },
 
+  async Admissions() {
+    const { inquiries } = await api('/api/centre/inquiries');
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+        <div>
+          <h2>Online Admissions & Applications</h2>
+          <p class="muted">Prospective students applying through your centre website</p>
+        </div>
+        <span class="badge active">${inquiries.length} Inquiries</span>
+      </div>
+
+      ${table([
+        ['Applicant', (r) => `<b>${esc(r.name)}</b><br><span class="muted">${esc(r.mobile)}${r.email ? ` · ${esc(r.email)}` : ''}</span>`],
+        ['Interested Course', (r) => `<b>${esc(r.course_code || '')}</b> ${esc(r.course_name || 'General Inquiry')}`],
+        ['Message / Query', (r) => `<span style="font-size:0.88rem;">${esc(r.message || 'Admission application via website')}</span>`],
+        ['Application Date', (r) => date(r.created_at)],
+        ['Status', (r) => badge(r.status)],
+        ['Action', (r) => r.status === 'Enrolled' ? '<span style="color:#16a34a; font-weight:bold;">✓ Enrolled</span>' : `
+          <button class="btn sm gold" data-a="enroll_inq" data-id="${r.id}" data-name="${esc(r.name)}" title="Convert this applicant to an enrolled student with login credentials">⚡ Enrol Student</button>
+        `]
+      ], inquiries, 'No online admission inquiries received yet.')}
+    `;
+  },
+
   async Marksheets() {
     const [{ marksheets }, { students }] = await Promise.all([
       api('/api/centre/marksheets'),
@@ -527,6 +551,12 @@ V.addEventListener('click', (e) => {
           </div>
         </div>
       `;
+    });
+  } else if (act === 'enroll_inq') {
+    guard(async () => {
+      const res = await api(`/api/centre/inquiries/${id}/enroll`, { method: 'POST' });
+      alert(`Student Enrolled Successfully!\n\nCandidate: ${btn.dataset.name}\nStudent Code: ${res.student_code}\nLogin ID: ${res.email}\nTemporary Password: ${res.default_password}\n\nThe student can now log in immediately from the main portal or your centre website!`);
+      views.Admissions();
     });
   } else if (act === 'apply') {
     guard(async () => {

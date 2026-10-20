@@ -154,14 +154,47 @@ router.get('/students/:id/quick-view', (req, res) => {
   res.json({ student: s, marksheets, certificates });
 });
 
-router.get('/tickets', (req, res) => res.json({ tickets: db.prepare('SELECT ticket_no,category,priority,subject,status,created_at FROM tickets WHERE centre_id=? ORDER BY id DESC LIMIT 50').all(cid(req)) }));
-router.post('/tickets', (req, res) => {
-  const subject = str(req.body.subject, 150), body = str(req.body.body, 2000), category = str(req.body.category, 40) || 'general';
-  const priority = ['low', 'normal', 'high'].includes(req.body.priority) ? req.body.priority : 'normal';
-  if (!subject || !body) throw new HttpError(400, 'Subject and message required');
-  const no = `TKT-${String(counter('ticket')).padStart(6, '0')}`;
-  db.transaction(() => { const r = db.prepare('INSERT INTO tickets(ticket_no,centre_id,user_id,category,priority,subject,created_at) VALUES(?,?,?,?,?,?,?)').run(no, cid(req), req.user.id, category, priority, subject, now());
-    db.prepare('INSERT INTO ticket_messages(ticket_id,user_id,body,at) VALUES(?,?,?,?)').run(r.lastInsertRowid, req.user.id, body, now()); })();
-  res.status(201).json({ ticket_no: no });
+router.get('/inquiries', (req, res) => {
+  const rows = db.prepare(`SELECT i.*, co.name AS course_name, co.code AS course_code
+    FROM admission_inquiries i
+    LEFT JOIN courses co ON co.id=i.course_id
+    WHERE i.centre_id=? ORDER BY i.id DESC LIMIT 100`).all(cid(req));
+  res.json({ inquiries: rows });
 });
+
+router.post('/inquiries/:id/enroll', h(async (req, res) => {
+  const inq = db.prepare('SELECT * FROM admission_inquiries WHERE id=? AND centre_id=?').get(+req.params.id, cid(req));
+  if (!inq) throw new HttpError(404, 'Inquiry not found');
+  if (inq.status === 'Enrolled') throw new HttpError(400, 'Student is already enrolled');
+
+  const courseId = inq.course_id || (db.prepare('SELECT course_id FROM centre_courses WHERE centre_id=? LIMIT 1').get(cid(req)) || {}).course_id;
+  if (!courseId) throw new HttpError(400, 'Please assign a course to this centre first');
+
+  const code = nextStudentCode(cid(req));
+  const defaultPw = 'Student@123';
+  const hash = await argon2.hash(defaultPw);
+  const email = (inq.email || `${code.toLowerCase()}@student.pescouncil.in`).toLowerCase();
+
+  const studentId = db.transaction(() => {
+    let u = db.prepare('SELECT id FROM users WHERE LOWER(email)=LOWER(?)').get(email);
+    let userId;
+    if (!u) {
+      const ur = db.prepare("INSERT INTO users(email,name,role,password_hash,centre_id,status,created_at) VALUES(?,?,'student',?,?,'active',?)")
+        .run(email, inq.name, hash, cid(req), now());
+      userId = ur.lastInsertRowid;
+    } else {
+      userId = u.id;
+    }
+
+    const sr = db.prepare('INSERT INTO students(student_code,centre_id,user_id,name,mobile,email,course_id,session,created_at,initial_password) VALUES(?,?,?,?,?,?,?,?,?,?)')
+      .run(code, cid(req), userId, inq.name, inq.mobile, email, courseId, '2026-27', now(), defaultPw);
+
+    db.prepare("UPDATE admission_inquiries SET status='Enrolled' WHERE id=?").run(inq.id);
+    return sr.lastInsertRowid;
+  })();
+
+  audit(req, 'inquiry.enrolled', 'student', studentId);
+  res.status(201).json({ ok: true, student_id: studentId, student_code: code, default_password: defaultPw, email });
+}));
+
 module.exports = router;

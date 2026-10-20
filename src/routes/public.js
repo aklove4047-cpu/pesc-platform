@@ -111,11 +111,17 @@ router.post('/admission-inquiry', (req, res) => {
   const b = req.body;
   const name = str(b.name, 100);
   const mobile = str(b.mobile, 15);
+  const email = str(b.email, 150) || null;
   const centre_id = +b.centre_id;
-  const course_id = +b.course_id;
-  const message = str(b.message, 500);
+  const course_id = b.course_id ? +b.course_id : null;
+  const message = str(b.message, 500) || null;
   if (!name || !mobile) throw new HttpError(400, 'Student name and mobile number are required');
-  res.status(201).json({ ok: true, message: 'Admission inquiry submitted successfully! The centre academic counsellor will contact you.' });
+  if (!centre_id) throw new HttpError(400, 'Centre ID is required');
+
+  db.prepare('INSERT INTO admission_inquiries(centre_id, name, mobile, email, course_id, message, created_at) VALUES(?,?,?,?,?,?,?)')
+    .run(centre_id, name, mobile, email, course_id, message, now());
+
+  res.status(201).json({ ok: true, message: 'Your admission inquiry has been submitted! The centre counsellor will contact you shortly.' });
 });
 
 router.get('/courses', (req, res) => {
