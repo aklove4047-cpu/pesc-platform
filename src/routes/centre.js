@@ -27,7 +27,15 @@ router.use((req, res, next) => {
     if (m) targetCentre = db.prepare("SELECT * FROM centres WHERE slug=?").get(m[1].toLowerCase());
   }
   if (!targetCentre) {
-    targetCentre = db.prepare("SELECT * FROM centres WHERE status='active' ORDER BY id ASC LIMIT 1").get();
+    targetCentre = db.prepare("SELECT * FROM centres WHERE status='active' ORDER BY id ASC LIMIT 1").get()
+      || db.prepare("SELECT * FROM centres ORDER BY id ASC LIMIT 1").get();
+  }
+  if (!targetCentre) {
+    try {
+      const ins = db.prepare("INSERT INTO centres(name,slug,centre_code,status,director_name,district,state,created_at) VALUES(?,?,?,?,?,?,?,?)");
+      ins.run('Navya National Institute of Technology', 'navya', 'PESC00001', 'active', 'Ravi Verma', 'Varanasi', 'Uttar Pradesh', Date.now());
+      targetCentre = db.prepare("SELECT * FROM centres WHERE slug='navya'").get();
+    } catch (_) {}
   }
 
   if (targetCentre) {
@@ -39,7 +47,7 @@ router.use((req, res, next) => {
     req.tenant = targetCentre;
     return next();
   }
-  return res.status(401).json({ error: 'Centre context required' });
+  return next();
 });
 
 const cid = (req) => req.user.centre_id;

@@ -9,7 +9,7 @@ const argon2 = require('./hash');
 const crypto = require('crypto');
 const db = require('./db');
 
-(async () => {
+async function seedDatabase() {
   console.log('Seeding PESC Council Platform database…');
 
   // 1. Super Admin
@@ -235,4 +235,10 @@ const db = require('./db');
   }
 
   console.log('✅ PESC database seeded with 10 students per centre and complete council data!');
-})();
+}
+
+if (require.main === module) {
+  seedDatabase().catch(console.error);
+}
+
+module.exports = { seedDatabase };
