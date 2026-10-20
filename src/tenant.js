@@ -6,17 +6,34 @@ const resolveSlug = (slug) => db.prepare('SELECT * FROM centres WHERE slug=?').g
 function slugOf(hostHeader) {
   const host = String(hostHeader || '').toLowerCase().split(':')[0];
   const base = cfg.BASE_DOMAIN;
-  if (host === base || host === 'localhost' || host === '127.0.0.1') return { kind: 'main' };
+
+  // 1. Root apex domains, www, and standard dev hosts
+  if (host === 'localhost' || host === '127.0.0.1' || host === 'pescouncil.in' || host === 'www.pescouncil.in') return { kind: 'main' };
+  if (base && (host === base || host === 'www.' + base)) return { kind: 'main' };
   if (host.endsWith('.trycloudflare.com')) return { kind: 'main' };
   if (process.env.RENDER_EXTERNAL_HOSTNAME && host === process.env.RENDER_EXTERNAL_HOSTNAME.toLowerCase()) return { kind: 'main' };
   if (host.endsWith('.onrender.com') && (base === 'onrender.com' || !base || base === 'localhost')) return { kind: 'main' };
-  if (base && base !== 'onrender.com' && host.endsWith('.' + base)) {
-    const sub = host.slice(0, -(base.length + 1));
+
+  // 2. Subdomains of configured base or pescouncil.in
+  const effectiveBases = [base, 'pescouncil.in'].filter(b => b && b !== 'localhost' && b !== 'onrender.com');
+  for (const b of effectiveBases) {
+    if (host.endsWith('.' + b)) {
+      const sub = host.slice(0, -(b.length + 1));
+      if (sub.includes('.')) return { kind: 'invalid' };
+      if (cfg.RESERVED.has(sub)) return { kind: 'main' };
+      return { kind: 'tenant', slug: sub };
+    }
+  }
+
+  // 3. Local development subdomains (e.g., navya.localhost)
+  if (host.endsWith('.localhost')) {
+    const sub = host.slice(0, -('.localhost'.length));
     if (sub.includes('.')) return { kind: 'invalid' };
     if (cfg.RESERVED.has(sub)) return { kind: 'main' };
     return { kind: 'tenant', slug: sub };
   }
-  return { kind: cfg.isProd ? 'invalid' : 'main' };
+
+  return { kind: 'main' };
 }
 
 const statusPage = (title, msg) =>
