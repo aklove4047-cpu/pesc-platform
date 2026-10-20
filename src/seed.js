@@ -1,3 +1,10 @@
+const fs = require('fs');
+const path = require('path');
+const envFile = path.join(__dirname, '..', '.env');
+if (fs.existsSync(envFile) && typeof process.loadEnvFile === 'function') {
+  try { process.loadEnvFile(envFile); } catch (_) {}
+}
+
 const argon2 = require('./hash');
 const crypto = require('crypto');
 const db = require('./db');
