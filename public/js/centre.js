@@ -1787,16 +1787,56 @@ function initAuthForms() {
     };
   }
 
-  // Submit Franchise Approved Password Setup
-  const formSetup = $('#formFranchiseSetup');
-  if (formSetup) {
-    formSetup.onsubmit = async (e) => {
+  // Step 1: Send OTP to Franchise Mobile
+  let currentSetupIdent = '';
+  const formSendOtp = $('#formSendSetupOtp');
+  if (formSendOtp) {
+    formSendOtp.onsubmit = async (e) => {
       e.preventDefault();
       const ident = $('#setupIdent').value.trim();
+      if (!ident) return;
+
+      currentSetupIdent = ident;
+      notice.style.display = 'block';
+      notice.innerHTML = `<div style="background:#e0f2fe; color:#0369a1; padding:10px; border-radius:8px; font-weight:600; text-align:center;">Sending 6-digit verification OTP to registered mobile...</div>`;
+
+      try {
+        const res = await api('/api/auth/otp/send', {
+          method: 'POST',
+          body: { identifier: ident }
+        });
+
+        notice.style.display = 'none';
+        $('#setupStep1').style.display = 'none';
+        $('#setupStep2').style.display = 'block';
+
+        const badge = $('#otpSentBadge');
+        if (badge) {
+          badge.innerHTML = `✓ ${esc(res.message || 'OTP sent successfully!')}` + (res.dev_otp ? `<br><span style="color:#0369a1; font-size:0.8rem; font-weight:700;">[OTP: ${esc(res.dev_otp)}]</span>` : '');
+        }
+
+        if (res.dev_otp && $('#setupOtpCode')) {
+          $('#setupOtpCode').value = res.dev_otp;
+        }
+
+        toast('OTP sent to registered mobile!');
+      } catch (err) {
+        notice.style.display = 'block';
+        notice.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✕ ${esc(err.message || 'Error sending OTP')}</div>`;
+      }
+    };
+  }
+
+  // Step 2: Verify OTP and Set Password
+  const formVerifySet = $('#formVerifyAndSetPassword');
+  if (formVerifySet) {
+    formVerifySet.onsubmit = async (e) => {
+      e.preventDefault();
+      const otp = $('#setupOtpCode').value.trim();
       const pw = $('#setupPassword').value.trim();
       const confirmPw = $('#setupConfirmPassword').value.trim();
 
-      if (!ident) return;
+      if (!otp) return;
       if (pw.length < 6) {
         notice.style.display = 'block';
         notice.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✕ Password must be at least 6 characters</div>`;
@@ -1809,16 +1849,20 @@ function initAuthForms() {
       }
 
       notice.style.display = 'block';
-      notice.innerHTML = `<div style="background:#fef3c7; color:#b45309; padding:10px; border-radius:8px; font-weight:600; text-align:center;">Activating franchise and saving password...</div>`;
+      notice.innerHTML = `<div style="background:#fef3c7; color:#b45309; padding:10px; border-radius:8px; font-weight:600; text-align:center;">Verifying OTP and activating Centre ERP...</div>`;
 
       try {
-        const res = await api('/api/auth/franchise-set-password', {
+        const res = await api('/api/auth/otp/verify-reset', {
           method: 'POST',
-          body: { identifier: ident, password: pw }
+          body: {
+            identifier: currentSetupIdent || $('#setupIdent').value.trim(),
+            otp,
+            new_password: pw
+          }
         });
 
-        notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:12px; border-radius:8px; font-weight:700; text-align:center;">🎉 ${esc(res.message || 'Password created successfully! Welcome to your ERP portal.')}</div>`;
-        toast('Franchise password created! Unlocking ERP Dashboard...');
+        notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:12px; border-radius:8px; font-weight:700; text-align:center;">🎉 ${esc(res.message || 'OTP Verified! Password created successfully.')}</div>`;
+        toast('OTP Verified! Unlocking ERP Dashboard...');
 
         setTimeout(async () => {
           showErpLayout();
@@ -1829,8 +1873,41 @@ function initAuthForms() {
           switchModule('MyStudents');
         }, 900);
       } catch (err) {
-        notice.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✕ ${esc(err.message || 'Error setting password')}</div>`;
+        notice.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✕ ${esc(err.message || 'Invalid or expired OTP code')}</div>`;
       }
+    };
+  }
+
+  // Resend OTP Link
+  if ($('#linkResendOtp')) {
+    $('#linkResendOtp').onclick = async (e) => {
+      e.preventDefault();
+      const ident = currentSetupIdent || $('#setupIdent').value.trim();
+      if (!ident) return;
+      try {
+        const res = await api('/api/auth/otp/send', {
+          method: 'POST',
+          body: { identifier: ident }
+        });
+        toast('New OTP sent to your registered mobile!');
+        const badge = $('#otpSentBadge');
+        if (badge) {
+          badge.innerHTML = `✓ ${esc(res.message || 'New OTP sent!')}` + (res.dev_otp ? `<br><span style="color:#0369a1; font-size:0.8rem; font-weight:700;">[OTP: ${esc(res.dev_otp)}]</span>` : '');
+        }
+        if (res.dev_otp && $('#setupOtpCode')) $('#setupOtpCode').value = res.dev_otp;
+      } catch (err) {
+        toast('Error resending OTP: ' + err.message);
+      }
+    };
+  }
+
+  // Change Mobile Number Link
+  if ($('#linkChangeMobile')) {
+    $('#linkChangeMobile').onclick = (e) => {
+      e.preventDefault();
+      $('#setupStep2').style.display = 'none';
+      $('#setupStep1').style.display = 'block';
+      if (notice) notice.style.display = 'none';
     };
   }
 
@@ -1838,10 +1915,7 @@ function initAuthForms() {
   if ($('#linkForgotPassword')) {
     $('#linkForgotPassword').onclick = (e) => {
       e.preventDefault();
-      const code = prompt('Enter your registered Centre Code or Mobile Number:');
-      if (code && code.trim()) {
-        window.location.href = `/setup?identifier=${encodeURIComponent(code.trim())}`;
-      }
+      switchTab('setup');
     };
   }
 }
