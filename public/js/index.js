@@ -1,4 +1,9 @@
-// Public Index Script - Interactive Verification, Course Filters, FAQ Accordion, Centre Search & Application
+// Mobile Navigation Toggle
+const navToggleBtn = $('#navToggle');
+const navLinksEl = $('#navLinks');
+if (navToggleBtn && navLinksEl) {
+  navToggleBtn.onclick = () => navLinksEl.classList.toggle('open');
+}
 
 // Certificate Verification Handler
 const showCertVerify = (d) => {
@@ -232,9 +237,9 @@ function renderCentresShowcase(list) {
           <span>📍</span> <b>${esc(c.district)}, ${esc(c.state)}</b>
         </div>
 
-        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.84rem; display:flex; justify-content:space-between; align-items:center;">
-          <span style="color:#166534; font-weight:700;">🌐 Official Portal:</span>
-          <a href="${portalUrl}" target="_blank" style="color:#047857; font-family:monospace; font-weight:700; text-decoration:none;">${esc(portalSubdomain)} ↗</a>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
+          <div style="font-size:0.75rem; color:#15803d; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">🌐 Official Institute Portal</div>
+          <a href="${portalUrl}" target="_blank" style="color:#047857; font-family:monospace; font-size:0.92rem; font-weight:800; text-decoration:none; display:inline-block; word-break:break-all;">${esc(portalSubdomain)} ↗</a>
         </div>
 
         <div style="display:flex; gap:6px; margin-bottom:18px; font-size:0.78rem; flex-wrap:wrap;">
