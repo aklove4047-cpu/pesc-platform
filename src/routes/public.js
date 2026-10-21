@@ -55,7 +55,7 @@ router.get('/application/:no', (req, res) => {
   res.json(a);
 });
 router.get('/centres', (req, res) => {
-  const centres = db.prepare(`SELECT c.id, c.name, c.centre_code, c.district, c.state, c.slug,
+  const centres = db.prepare(`SELECT c.id, c.name, c.centre_code, c.district, c.state, c.slug, c.director_name, c.phone, c.address,
     (SELECT COUNT(*) FROM students WHERE centre_id=c.id) AS student_count
     FROM centres c
     WHERE c.status='active'

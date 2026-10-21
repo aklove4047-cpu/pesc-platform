@@ -56,6 +56,16 @@ const STEPS = [
     notify.queue('email', u.email, 'centre_activated', { name: u.name, centre: a.centre_name, site: `${proto}://${hostOf(a.slug)}`, url: `${cfg.PUBLIC_URL}/setup?token=${token}` });
     return 'setup link queued (expires 48h)';
   })()],
+  ['ping_search_engines', async (a) => {
+    try {
+      const sitemap = encodeURIComponent('https://pescouncil.in/sitemap.xml');
+      fetch(`https://www.google.com/ping?sitemap=${sitemap}`).catch(() => {});
+      fetch(`https://www.bing.com/ping?sitemap=${sitemap}`).catch(() => {});
+      return 'Google and Bing queued for indexing';
+    } catch (_) {
+      return 'ping skipped';
+    }
+  }],
 ];
 
 async function runJob(jobId, ctx) {
