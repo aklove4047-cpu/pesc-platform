@@ -2,6 +2,28 @@
 // Authorized Franchise Centre ERP & Management Suite - 17 Modules Complete Implementation
 
 const V = $('#view');
+const pathMatch = location.pathname.match(/\/c\/([a-z0-9-]+)/i);
+const urlParams = new URLSearchParams(location.search);
+const currentSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || 'navya';
+
+// Intercept all /api/centre requests to ensure slug & header are always provided
+const origFetch = window.fetch;
+window.fetch = function(url, init = {}) {
+  if (typeof url === 'string' && url.startsWith('/api/centre')) {
+    init.headers = init.headers || {};
+    if (init.headers instanceof Headers) {
+      if (!init.headers.has('x-centre-slug')) init.headers.set('x-centre-slug', currentSlug);
+    } else {
+      init.headers['x-centre-slug'] = init.headers['x-centre-slug'] || currentSlug;
+    }
+    const sep = url.includes('?') ? '&' : '?';
+    if (!url.includes('slug=') && !url.includes('centre=')) {
+      url = url + sep + 'slug=' + encodeURIComponent(currentSlug);
+    }
+  }
+  return origFetch(url, init);
+};
+
 let activeTab = 'MyStudents';
 let currentCentre = null;
 let allCentresList = [];
@@ -928,66 +950,195 @@ const views = {
     `;
   },
 
-  // 17. Profile / Settings (Logo, Name, Address, subdomain settings)
+  // 17. Profile & Settings (Logo, Name, Address, Photo, Phone & Password Change)
   async Profile() {
-    const sData = await api('/api/centre/settings');
+    const [sData, pData] = await Promise.all([
+      api('/api/centre/settings'),
+      api('/api/centre/profile')
+    ]);
     const c = sData.centre || {};
+    const u = pData.user || {};
 
     V.innerHTML = `
-      <div style="max-width:850px; margin:0 auto; background:#ffffff; border-radius:14px; padding:28px; border:1px solid #e2e8f0; box-shadow:0 4px 16px rgba(0,0,0,0.04);">
-        <div style="border-bottom:1px solid #f1f5f9; padding-bottom:14px; margin-bottom:20px;">
-          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.5rem;">17. Profile &amp; Subdomain Settings</h2>
-          <p class="muted" style="margin:0;">Manage institute credentials, contact details, physical address, and subdomain website</p>
+      <div style="max-width:920px; margin:0 auto;">
+        <div style="margin-bottom:20px;">
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">17. Director Profile &amp; Centre Settings</h2>
+          <p class="muted" style="margin:0;">Apna naam, photo, mobile number edit karein, password change karein aur centre details manage karein</p>
         </div>
 
-        <form id="centreProfileForm" class="row">
-          <div style="grid-column:span 2;">
-            <label>Accredited Institute Full Name *</label>
-            <input name="name" value="${esc(c.name || '')}" required style="font-size:1.05rem; font-weight:700;">
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:24px;">
+          <!-- Director Identity & Photo Edit Card -->
+          <div class="card" style="background:#ffffff; border-radius:14px; padding:24px; border:1px solid #e2e8f0;">
+            <h3 style="margin:0 0 16px; color:#064e3b; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+              <span>👨‍🏫</span> Director Identity &amp; Photo
+            </h3>
+
+            <div style="text-align:center; margin-bottom:18px;">
+              <div style="width:120px; height:120px; border-radius:14px; border:3px solid #047857; margin:0 auto 12px; overflow:hidden; background:#f1f5f9; display:flex; align-items:center; justify-content:center;" id="dirPhotoPreviewBox">
+                ${u.photo_url ? `<img src="${esc(u.photo_url)}" style="width:100%; height:100%; object-fit:cover;">` : `<img src="/assets/img/director.jpg" style="width:100%; height:100%; object-fit:cover;">`}
+              </div>
+              <label class="btn sm gold" style="cursor:pointer; display:inline-block; margin-bottom:6px;">
+                📷 Choose Director Photo
+                <input type="file" id="dirPhotoFileInput" accept="image/*" style="display:none;">
+              </label>
+              <div style="font-size:0.75rem; color:#64748b;">Square photo recommended (JPG/PNG)</div>
+            </div>
+
+            <form id="directorDetailsForm">
+              <input type="hidden" id="dirPhotoUrlInput" name="photo_url" value="${esc(u.photo_url || '')}">
+              
+              <div style="margin-bottom:12px;">
+                <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Director Full Name *</label>
+                <input name="name" value="${esc(u.name || c.director_name || '')}" required placeholder="e.g. Dr. Ramesh Kumar" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+              </div>
+
+              <div style="margin-bottom:12px;">
+                <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Mobile Number (Login &amp; Public) *</label>
+                <input name="mobile" value="${esc(u.mobile || c.phone || '')}" required placeholder="e.g. 9876543210" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+              </div>
+
+              <div style="margin-bottom:14px;">
+                <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Official Email Address *</label>
+                <input name="email" type="email" value="${esc(u.email || c.email || '')}" required placeholder="e.g. director@centre.com" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+
+              <button type="submit" class="btn" style="width:100%; background:#047857; color:#fff; font-weight:700; padding:10px; border-radius:6px;">
+                💾 Save Director Profile
+              </button>
+            </form>
           </div>
 
-          <div>
-            <label>Centre Code (Council Issued)</label>
-            <input value="${esc(c.centre_code || 'PESC00001')}" readonly style="background:#f1f5f9; font-family:monospace; font-weight:700;">
-          </div>
+          <!-- Password Change Card -->
+          <div class="card" style="background:#ffffff; border-radius:14px; padding:24px; border:1px solid #e2e8f0;">
+            <h3 style="margin:0 0 8px; color:#064e3b; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+              <span>🔐</span> Change Login Password
+            </h3>
+            <p class="muted" style="font-size:0.84rem; margin:0 0 18px;">
+              Apna centre panel login password yahan se change karein. Naya password safe rakhein.
+            </p>
 
-          <div>
-            <label>Dedicated Subdomain Website</label>
-            <input value="${esc(c.slug || 'navya')}.pescouncil.in" readonly style="background:#f1f5f9; font-family:monospace; color:#064e3b; font-weight:700;">
-          </div>
+            <form id="changePasswordForm">
+              <div style="margin-bottom:12px;">
+                <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Current / Old Password</label>
+                <input name="old_password" type="password" placeholder="••••••••" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+                <span style="font-size:0.75rem; color:#64748b;">(Default: owner123)</span>
+              </div>
 
-          <div>
-            <label>District *</label>
-            <input name="district" value="${esc(c.district || '')}" required>
-          </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">New Password *</label>
+                <input name="new_password" type="password" required placeholder="Minimum 6 characters" minlength="6" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+              </div>
 
-          <div>
-            <label>State *</label>
-            <input name="state" value="${esc(c.state || '')}" required>
-          </div>
+              <div style="margin-bottom:18px;">
+                <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Confirm New Password *</label>
+                <input name="confirm_password" type="password" required placeholder="Re-enter new password" minlength="6" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+              </div>
 
-          <div style="grid-column:span 2;">
-            <label>Full Physical Institute Address</label>
-            <textarea name="address" rows="2">${esc(c.address || '')}</textarea>
+              <button type="submit" class="btn gold" style="width:100%; font-weight:700; padding:10px; border-radius:6px;">
+                🔑 Update Login Password
+              </button>
+            </form>
           </div>
+        </div>
 
-          <div>
-            <label>PIN Code</label>
-            <input name="pin" value="${esc(c.pin || '221001')}" maxlength="6">
-          </div>
+        <!-- Centre Details & Address Settings -->
+        <div class="card" style="background:#ffffff; border-radius:14px; padding:28px; border:1px solid #e2e8f0;">
+          <h3 style="margin:0 0 16px; color:#064e3b; font-size:1.25rem;">🏢 Centre Accreditation &amp; Address Details</h3>
 
-          <div>
-            <label>Institute Logo URL / Emoji</label>
-            <input name="logo_url" value="${esc(c.logo_url || '🎓')}">
-          </div>
+          <form id="centreProfileForm" class="row">
+            <div style="grid-column:span 2;">
+              <label>Accredited Institute Full Name *</label>
+              <input name="name" value="${esc(c.name || '')}" required style="font-size:1.05rem; font-weight:700;">
+            </div>
 
-          <div style="grid-column:span 2; display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
-            <button type="submit" class="btn gold" style="padding:12px 30px; font-weight:700;">💾 Save Profile Settings</button>
-          </div>
-        </form>
+            <div>
+              <label>Centre Code (Council Issued)</label>
+              <input value="${esc(c.centre_code || 'PESC00001')}" readonly style="background:#f1f5f9; font-family:monospace; font-weight:700;">
+            </div>
+
+            <div>
+              <label>Dedicated Subdomain Website</label>
+              <input value="${esc(c.slug || 'navya')}.pescouncil.in" readonly style="background:#f1f5f9; font-family:monospace; color:#064e3b; font-weight:700;">
+            </div>
+
+            <div>
+              <label>District *</label>
+              <input name="district" value="${esc(c.district || '')}" required>
+            </div>
+
+            <div>
+              <label>State *</label>
+              <input name="state" value="${esc(c.state || '')}" required>
+            </div>
+
+            <div style="grid-column:span 2;">
+              <label>Full Physical Institute Address *</label>
+              <textarea name="address" rows="2">${esc(c.address || '')}</textarea>
+            </div>
+
+            <div>
+              <label>PIN Code</label>
+              <input name="pin" value="${esc(c.pin || '221001')}" maxlength="6">
+            </div>
+
+            <div>
+              <label>Institute Logo Emoji / URL</label>
+              <input name="logo_url" value="${esc(c.logo_url || '🎓')}">
+            </div>
+
+            <div style="grid-column:span 2; display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
+              <button type="submit" class="btn" style="background:#047857; color:#fff; padding:12px 30px; font-weight:700; border-radius:6px;">
+                💾 Save Centre Address &amp; Info
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     `;
 
+    // Photo file upload handler
+    const photoFileInput = $('#dirPhotoFileInput');
+    if (photoFileInput) {
+      photoFileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          $('#dirPhotoUrlInput').value = ev.target.result;
+          $('#dirPhotoPreviewBox').innerHTML = `<img src="${ev.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+          toast('Photo loaded! Click "Save Director Profile" to save.');
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+
+    // Save Director Profile form
+    $('#directorDetailsForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const payload = form(e.target);
+        const res = await api('/api/centre/profile', { method: 'POST', body: payload });
+        toast(res.message || 'Director details updated successfully!');
+        initCentreHeader();
+      });
+    };
+
+    // Change Password form
+    $('#changePasswordForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const payload = form(e.target);
+        if (payload.new_password !== payload.confirm_password) {
+          toast('New password and confirm password do not match!', false);
+          return;
+        }
+        const res = await api('/api/centre/change-password', { method: 'POST', body: payload });
+        toast(res.message || 'Password changed successfully!');
+        e.target.reset();
+      });
+    };
+
+    // Save Centre Settings form
     $('#centreProfileForm').onsubmit = (e) => {
       e.preventDefault();
       guard(async () => {

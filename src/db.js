@@ -248,5 +248,9 @@ try { rawDb.exec("ALTER TABLE centre_courses ADD COLUMN selling_price_paise INTE
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN seal_url TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN signature_url TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN logo_url TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE users ADD COLUMN photo_url TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN director_name TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN phone TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN email TEXT;"); } catch (_) {}
 
 module.exports = db;

@@ -630,10 +630,10 @@
           Apply Admission
         </button>
 
-        <!-- Centre Admin Portal Button for Centre Director -->
-        <a href="/portal" id="linkCentreAdmin" class="c-btn-admin-portal" title="Centre Director ERP Panel (17 Modules)">
-          🏢 Centre Admin
-        </a>
+        <!-- Centre Admin Portal Button for Centre Director (Requires Password) -->
+        <button type="button" id="btnCentreAdmin" class="c-btn-admin-portal" title="Centre Director ERP Panel (17 Modules)">
+          🏢 Centre Login
+        </button>
       </div>
     </div>
   </header>
@@ -892,6 +892,40 @@
       </form>
       <div id="inqResult" style="margin-top:12px;"></div>
     </div>
+  <!-- Centre Director Login Modal (Requires Password) -->
+  <div id="centreLoginModal" class="c-modal-overlay">
+    <div class="c-modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">🏢 Centre Director Login</h3>
+        <button type="button" id="btnCloseCentreModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+      <p class="muted" style="font-size:0.88rem; margin:0 0 16px;">
+        Sign in to manage student admissions, course fees, attendance, certificates, and marksheets.
+      </p>
+
+      <div style="background:#fefce8; border:1px solid #fef08a; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.82rem; color:#854d0e;">
+        <b>🔑 Centre Login Credentials:</b><br>
+        <span>Centre Code / ID: <code style="font-weight:700;" id="demoCentreCode">PESC00001</code></span><br>
+        <span>Password: <code style="font-weight:700;">owner123</code></span>
+      </div>
+
+      <form id="centreLoginForm">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Centre Code or Email *</label>
+          <input name="email" id="modalCentreCode" required placeholder="e.g. PESC00001" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-weight:600;">
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Password *</label>
+          <input name="password" id="modalCentrePw" type="password" required value="owner123" placeholder="••••••••" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+        </div>
+
+        <button type="submit" class="btn gold" style="width:100%; font-weight:700; padding:12px; border-radius:8px; border:none; cursor:pointer;">
+          Log In to Centre ERP Portal →
+        </button>
+      </form>
+      <div id="modalCentreMsg" style="margin-top:12px;"></div>
+    </div>
   </div>
 
   <script src="/assets/js/app.js"></script>
@@ -1008,6 +1042,31 @@
         const res = await api('/api/auth/login', { method: 'POST', body });
         $('#modalLoginMsg').innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-weight:700; text-align:center;">✓ Login successful! Redirecting…</div>`;
         setTimeout(() => { location.href = '/student'; }, 1000);
+      });
+    };
+
+    // Centre Admin Login Modal Handlers (Password Required)
+    const centreModal = $('#centreLoginModal');
+    const openCentreLogin = () => {
+      if (centreData && centreData.centre) {
+        $('#modalCentreCode').value = centreData.centre.code;
+        $('#demoCentreCode').textContent = centreData.centre.code;
+      }
+      centreModal.style.display = 'flex';
+    };
+    if ($('#btnCentreAdmin')) $('#btnCentreAdmin').onclick = openCentreLogin;
+    if ($('#footerAdminLink')) $('#footerAdminLink').onclick = (e) => { e.preventDefault(); openCentreLogin(); };
+    $('#btnCloseCentreModal').onclick = () => { centreModal.style.display = 'none'; $('#modalCentreMsg').innerHTML = ''; };
+
+    // Centre Admin Login Submit
+    $('#centreLoginForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const body = form(e.target);
+        const res = await api('/api/auth/login', { method: 'POST', body });
+        $('#modalCentreMsg').innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-weight:700; text-align:center;">✓ Centre Login successful! Opening ERP Portal…</div>`;
+        const slug = (centreData && centreData.centre) ? centreData.centre.slug : 'navya';
+        setTimeout(() => { location.href = `/portal?centre=${encodeURIComponent(slug)}`; }, 800);
       });
     };
 
