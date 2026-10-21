@@ -4,6 +4,7 @@
 
 import initialBundle from './data_bundle.js';
 import centreSiteTemplate from './centre_site_template.js';
+import { MAIN_CSS } from './style_bundle.js';
 
 // In-memory runtime data cache with persistence
 const store = {
@@ -202,6 +203,16 @@ export default {
           'access-control-allow-origin': '*',
           'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'access-control-allow-headers': 'Content-Type, Authorization, x-centre-slug',
+        }
+      });
+    }
+
+    // 0. Instant CSS Delivery (Guaranteed 0ms response, zero 404s, works across all domains/subdomains)
+    if (path === '/css/style.css' || path === '/assets/css/style.css') {
+      return new Response(MAIN_CSS, {
+        headers: {
+          'content-type': 'text/css; charset=utf-8',
+          'cache-control': 'public, max-age=86400, stale-while-revalidate=604800'
         }
       });
     }
