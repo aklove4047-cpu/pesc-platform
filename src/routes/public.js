@@ -71,11 +71,14 @@ router.get('/site', (req, res) => {
   if (!tenant) throw new HttpError(404, 'Centre site not found');
 
   const owner = db.prepare("SELECT u.name, u.email, u.mobile FROM users u WHERE u.centre_id=? AND u.role='centre_owner'").get(tenant.id) || {};
-  const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.fee_paise, co.total_marks
+  let courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.fee_paise, co.total_marks
     FROM courses co
     JOIN centre_courses cc ON cc.course_id=co.id
     WHERE cc.centre_id=? AND co.active=1
     ORDER BY co.duration_months DESC, co.name ASC`).all(tenant.id);
+  if (!courses || courses.length === 0) {
+    courses = db.prepare(`SELECT id, code, name, duration_months, fee_paise, total_marks FROM courses WHERE active=1 ORDER BY duration_months DESC, name ASC LIMIT 6`).all();
+  }
 
   const studentCount = db.prepare('SELECT count(*) n FROM students WHERE centre_id=?').get(tenant.id).n;
   const certCount = db.prepare("SELECT count(*) n FROM certificates WHERE centre_id=? AND status='Valid'").get(tenant.id).n;

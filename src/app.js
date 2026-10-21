@@ -48,7 +48,7 @@ app.get('/', (req, res) => {
       res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', secure: cfg.isProd, maxAge: 7 * 864e5, path: '/' });
       req.user = ownerUser;
     }
-    return res.sendFile(path.join(PUB, 'centre.html'));
+    return res.sendFile(path.join(PUB, 'centre-site.html'));
   }
   return res.sendFile(path.join(PUB, 'index.html'));
 });
@@ -65,7 +65,11 @@ app.get('/c/:slug', (req, res) => {
     req.user = ownerUser;
     req.tenant = centre;
   }
-  return res.sendFile(path.join(PUB, 'centre.html'));
+  return res.sendFile(path.join(PUB, 'centre-site.html'));
+});
+
+app.get(['/c/:slug/admin', '/c/:slug/portal', '/c/:slug/erp'], (req, res) => {
+  return res.redirect(`/portal?centre=${encodeURIComponent(req.params.slug)}`);
 });
 
 app.get('/portal', (req, res) => {

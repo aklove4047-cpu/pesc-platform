@@ -3,37 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title id="pageTitle">Authorized Computer Training Centre – PES Council</title>
+  <title id="pageTitle">Navya Computer Institute – Franchise Centre of PES Council</title>
   <link rel="stylesheet" href="/assets/css/style.css">
   <style>
     :root {
-      --centre-green-dark: #022c22;
-      --centre-green-primary: #064e3b;
-      --centre-green-emerald: #047857;
-      --centre-green-light: #ecfdf5;
-      --centre-green-border: #a7f3d0;
+      --c-green-dark: #022c22;
+      --c-green-primary: #064e3b;
+      --c-green-emerald: #047857;
+      --c-green-light: #ecfdf5;
+      --c-green-border: #a7f3d0;
+      --c-gold: #d4af37;
     }
 
+    * { box-sizing: border-box; }
     body {
       background: #f8fafc;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       margin: 0;
       padding: 0;
       color: #1e293b;
+      line-height: 1.5;
     }
 
-    /* Centre Navbar */
-    .c-nav {
+    /* Top Navigation Header matching Mockup */
+    .c-header {
       background: #ffffff;
       border-bottom: 1px solid #e2e8f0;
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+    .c-header-inner {
+      max-width: 1240px;
+      margin: 0 auto;
       padding: 12px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      gap: 20px;
     }
     .c-brand {
       display: flex;
@@ -44,341 +52,259 @@
     .c-brand-logo {
       width: 44px;
       height: 44px;
-      border-radius: 8px;
-      background: var(--centre-green-emerald);
+      border-radius: 10px;
+      background: var(--c-green-emerald);
       color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: 800;
       box-shadow: 0 4px 10px rgba(4, 120, 87, 0.25);
+      flex-shrink: 0;
     }
     .c-brand-text h1 {
-      font-size: 1.25rem;
+      font-size: 1.35rem;
       margin: 0;
-      color: #0f172a;
+      color: #064e3b;
       font-weight: 800;
       letter-spacing: -0.3px;
+      line-height: 1.2;
     }
     .c-brand-text span {
-      font-size: 0.8rem;
-      color: var(--centre-green-emerald);
+      font-size: 0.82rem;
+      color: #047857;
       font-weight: 600;
       display: block;
     }
-    .c-nav-links {
+
+    .c-nav-menu {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 26px;
     }
-    .c-nav-links a {
+    .c-nav-menu a {
       color: #334155;
       text-decoration: none;
-      font-size: 0.92rem;
+      font-size: 0.96rem;
       font-weight: 600;
       transition: color 0.2s;
+      position: relative;
     }
-    .c-nav-links a:hover, .c-nav-links a.active {
-      color: var(--centre-green-emerald);
+    .c-nav-menu a:hover, .c-nav-menu a.active {
+      color: var(--c-green-emerald);
     }
-    /* Top Utility Bar */
-    .c-top-strip {
-      background: var(--centre-green-dark);
-      color: #d1fae5;
-      font-size: 0.8rem;
-      padding: 6px 24px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    .c-top-strip-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .c-top-strip-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.82rem;
-    }
-    .c-badge-affil {
-      background: var(--centre-green-emerald);
-      color: #ffffff;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-weight: 700;
-      font-size: 0.74rem;
-      letter-spacing: 0.2px;
-    }
-    .c-top-strip-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .c-strip-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-    .c-strip-btn.student-btn {
-      background: rgba(255, 255, 255, 0.15);
-      color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-    }
-    .c-strip-btn.student-btn:hover {
-      background: #ffffff;
-      color: var(--centre-green-dark);
-    }
-    .c-strip-btn.admin-btn {
-      background: #fde047;
-      color: #022c22;
-      border: 1px solid #facc15;
-    }
-    .c-strip-btn.admin-btn:hover {
-      background: #fef08a;
-      transform: translateY(-1px);
+    .c-nav-menu a.active::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--c-green-emerald);
+      border-radius: 2px;
     }
 
-    /* Compact Navbar Login Options */
-    .c-nav-logins {
+    .c-nav-actions {
       display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .c-btn-student-login {
+      background: #ffffff;
+      color: var(--c-green-primary);
+      border: 1.5px solid var(--c-green-primary);
+      padding: 9px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: #f8fafc;
-      padding: 3px 6px;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-    }
-    .c-mini-login-btn {
-      font-size: 0.82rem;
-      font-weight: 700;
-      padding: 6px 12px;
-      border-radius: 6px;
-      text-decoration: none;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
       white-space: nowrap;
     }
-    .c-mini-login-btn.student {
-      background: #ffffff;
-      color: #047857 !important;
-      border: 1.5px solid #a7f3d0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .c-mini-login-btn.student:hover {
+    .c-btn-student-login:hover {
       background: #ecfdf5;
-      color: #064e3b !important;
-    }
-    .c-mini-login-btn.admin {
-      background: #064e3b;
-      color: #ffffff !important;
-      border: 1.5px solid #064e3b;
-    }
-    .c-mini-login-btn.admin:hover {
-      background: #022c22;
+      color: #022c22;
       border-color: #022c22;
     }
-
-    /* Mobile Quick Logins Bar */
-    .c-mobile-logins {
-      display: none;
-      background: #f8fafc;
-      padding: 8px 16px;
-      border-bottom: 1px solid #e2e8f0;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    /* Hero Quick Logins Pill */
-    .c-hero-logins-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 30px;
-      padding: 6px 16px;
-      font-size: 0.84rem;
-    }
-    .c-hero-logins-pill a {
-      color: #fef08a;
-      text-decoration: none;
-      font-weight: 700;
-      transition: color 0.2s;
-    }
-    .c-hero-logins-pill a:hover {
-      color: #ffffff;
-      text-decoration: underline;
-    }
-    .c-hero-pill-sep {
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 0.8rem;
-    }
-
     .c-btn-apply {
-      background: var(--centre-green-emerald);
+      background: var(--c-green-emerald);
       color: #ffffff !important;
-      padding: 8px 20px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.88rem;
-      text-decoration: none;
-      box-shadow: 0 4px 12px rgba(4, 120, 87, 0.2);
-      transition: all 0.2s;
-      cursor: pointer;
       border: none;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);
+      transition: all 0.2s;
       white-space: nowrap;
     }
     .c-btn-apply:hover {
-      background: var(--centre-green-primary);
+      background: #065f46;
       transform: translateY(-1px);
     }
-
-
-    /* Centre Hero Section */
-    .c-hero {
-      position: relative;
-      background: linear-gradient(135deg, rgba(6, 78, 59, 0.94) 0%, rgba(2, 44, 34, 0.97) 100%),
-                  radial-gradient(circle at top right, rgba(16, 185, 129, 0.25), transparent 50%),
-                  #064e3b;
-      color: #ffffff;
-      padding: 64px 24px 48px;
-      overflow: hidden;
+    .c-btn-admin-portal {
+      background: #f8fafc;
+      color: #0f172a !important;
+      border: 1px solid #cbd5e1;
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
     }
-    .c-hero-content {
-      max-width: 1200px;
+    .c-btn-admin-portal:hover {
+      background: #022c22;
+      color: #ffffff !important;
+      border-color: #022c22;
+    }
+
+    /* Hero Section matching Mockup Banner */
+    .c-hero {
+      background: #064e3b;
+      position: relative;
+      overflow: hidden;
+      color: #ffffff;
+    }
+    .c-hero-wrap {
+      max-width: 1240px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 40px;
-      align-items: center;
-      position: relative;
+      grid-template-columns: 1.15fr 0.85fr;
+      min-height: 440px;
+      align-items: stretch;
+    }
+    .c-hero-left {
+      padding: 56px 24px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       z-index: 2;
     }
-    .c-hero-text h2 {
-      font-size: 3.2rem;
+    .c-hero-left h2 {
+      font-size: 3.4rem;
       font-weight: 900;
-      line-height: 1.1;
+      line-height: 1.05;
       margin: 0 0 16px;
       letter-spacing: -0.5px;
     }
-    .c-hero-text h2 span {
+    .c-hero-left h2 span {
       display: block;
-      color: #a7f3d0;
+      color: #ffffff;
     }
-    .c-hero-text p {
+    .c-hero-left p {
       font-size: 1.15rem;
       line-height: 1.6;
       color: #d1fae5;
-      max-width: 540px;
-      margin: 0 0 28px;
+      max-width: 520px;
+      margin: 0 0 32px;
     }
     .c-hero-actions {
       display: flex;
       gap: 16px;
       flex-wrap: wrap;
-      margin-bottom: 36px;
+      margin-bottom: 40px;
     }
     .c-btn-hero-join {
       background: #ffffff;
-      color: var(--centre-green-primary);
+      color: #064e3b;
       font-weight: 800;
-      font-size: 1rem;
+      font-size: 1.05rem;
       padding: 13px 28px;
       border-radius: 8px;
       text-decoration: none;
+      border: none;
+      cursor: pointer;
       box-shadow: 0 8px 20px rgba(0,0,0,0.2);
       transition: all 0.2s;
-      cursor: pointer;
-      border: none;
     }
     .c-btn-hero-join:hover {
-      background: #f0fdf4;
+      background: #ecfdf5;
       transform: translateY(-2px);
     }
     .c-btn-hero-verify {
-      background: transparent;
+      background: rgba(2, 44, 34, 0.4);
       color: #ffffff;
-      font-weight: 600;
-      font-size: 1rem;
-      padding: 12px 24px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      padding: 12px 26px;
       border-radius: 8px;
       text-decoration: none;
-      border: 1.5px solid rgba(255, 255, 255, 0.6);
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
       transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
     .c-btn-hero-verify:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.15);
       border-color: #ffffff;
     }
+
     .c-trust-strip {
       display: flex;
-      gap: 24px;
+      gap: 20px;
       flex-wrap: wrap;
       font-size: 0.88rem;
       color: #ecfdf5;
-      padding-top: 16px;
-      border-top: 1px solid rgba(255, 255, 255, 0.15);
     }
     .c-trust-item {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(255, 255, 255, 0.08);
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-weight: 600;
+    }
+    .c-trust-item b {
+      color: #ffffff;
     }
 
-    /* Hero Graphic side */
-    .c-hero-card {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 24px;
-      border-radius: 16px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    .c-hero-right {
+      position: relative;
+      overflow: hidden;
+      min-height: 380px;
     }
-    .c-hero-badge {
-      display: inline-block;
-      background: #fde047;
-      color: #713f12;
-      font-weight: 800;
-      font-size: 0.78rem;
-      padding: 4px 10px;
-      border-radius: 20px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
+    .c-hero-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+    }
+    .c-hero-fade {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, #064e3b 0%, rgba(6, 78, 59, 0.45) 25%, transparent 60%);
+      pointer-events: none;
     }
 
     /* Popular Courses Section */
     .c-section {
-      max-width: 1200px;
-      margin: 56px auto;
+      max-width: 1240px;
+      margin: 50px auto;
       padding: 0 24px;
     }
     .c-section-header {
       text-align: center;
-      margin-bottom: 36px;
+      margin-bottom: 34px;
     }
     .c-section-header h3 {
       font-size: 2.2rem;
-      color: var(--centre-green-primary);
+      color: #064e3b;
       margin: 0 0 8px;
       font-weight: 800;
+      letter-spacing: -0.3px;
     }
     .c-section-header p {
       font-size: 1.05rem;
@@ -388,14 +314,14 @@
 
     .c-course-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
     }
     .c-course-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 12px;
-      padding: 22px 18px;
+      padding: 22px 14px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
       display: flex;
       flex-direction: column;
@@ -406,78 +332,96 @@
     .c-course-card:hover {
       transform: translateY(-4px);
       box-shadow: 0 12px 24px rgba(4, 120, 87, 0.12);
-      border-color: var(--centre-green-border);
+      border-color: var(--c-green-border);
     }
     .c-course-icon {
-      width: 54px;
-      height: 54px;
-      border-radius: 12px;
-      background: var(--centre-green-light);
-      color: var(--centre-green-emerald);
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+      background: #f0fdf4;
+      color: #047857;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1.8rem;
-      margin-bottom: 14px;
-      border: 1px solid var(--centre-green-border);
+      margin-bottom: 12px;
+      border: 1px solid #bbf7d0;
     }
     .c-course-card h4 {
       font-size: 1.35rem;
-      margin: 0 0 6px;
+      margin: 0 0 4px;
       color: #0f172a;
       font-weight: 800;
     }
     .c-course-card span.sub {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: #64748b;
       margin-bottom: 12px;
       min-height: 38px;
       display: block;
+      line-height: 1.35;
     }
     .c-course-duration {
-      background: var(--centre-green-emerald);
+      background: var(--c-green-emerald);
       color: #ffffff;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       font-weight: 700;
       padding: 4px 12px;
       border-radius: 20px;
       margin-bottom: 14px;
     }
     .c-course-fee {
-      font-size: 0.88rem;
+      font-size: 0.86rem;
       color: #334155;
       margin-top: auto;
-      padding-top: 12px;
+      padding-top: 10px;
       border-top: 1px dashed #e2e8f0;
       width: 100%;
     }
     .c-course-fee b {
-      color: var(--centre-green-emerald);
-      font-size: 1.05rem;
+      color: #0f172a;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+    .c-btn-enroll {
+      margin-top: 12px;
+      width: 100%;
+      background: var(--c-green-emerald);
+      color: #ffffff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .c-btn-enroll:hover {
+      background: #065f46;
     }
 
-    /* About Section */
+    /* About Section & Director Profile */
     .c-about-grid {
       display: grid;
       grid-template-columns: 1.3fr 0.7fr;
       gap: 32px;
-      margin-top: 40px;
+      align-items: start;
     }
     .c-about-box {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 14px;
-      padding: 32px;
+      padding: 34px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     }
     .c-about-box h3 {
-      font-size: 1.6rem;
-      color: var(--centre-green-primary);
+      font-size: 1.65rem;
+      color: #064e3b;
       margin: 0 0 14px;
       font-weight: 800;
     }
     .c-about-box p {
-      font-size: 0.98rem;
+      font-size: 0.96rem;
       line-height: 1.7;
       color: #475569;
       margin-bottom: 20px;
@@ -491,27 +435,32 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 0.95rem;
+      font-size: 0.94rem;
       font-weight: 600;
       color: #1e293b;
       margin-bottom: 10px;
     }
     .c-feature-list li span.check {
-      color: var(--centre-green-emerald);
+      color: var(--c-green-emerald);
       font-weight: 900;
       font-size: 1.1rem;
     }
+
     .c-contact-card {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
       padding: 16px 20px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       color: #334155;
-      line-height: 1.6;
+    }
+    .c-contact-card h4 {
+      margin: 0 0 8px;
+      color: #064e3b;
+      font-size: 0.95rem;
     }
 
-    /* Director and Map cards */
+    /* Director Card matching Mockup */
     .c-side-cards {
       display: flex;
       flex-direction: column;
@@ -526,20 +475,17 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     }
     .c-director-photo {
-      width: 110px;
-      height: 110px;
-      border-radius: 50%;
-      border: 4px solid var(--centre-green-emerald);
+      width: 120px;
+      height: 120px;
+      border-radius: 12px;
+      border: 3px solid #047857;
       margin: 0 auto 14px;
       object-fit: cover;
-      background: #e2e8f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.5rem;
+      display: block;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     .c-director-card h4 {
-      font-size: 1.2rem;
+      font-size: 1.25rem;
       color: #0f172a;
       margin: 0 0 4px;
       font-weight: 800;
@@ -548,16 +494,18 @@
       font-size: 0.88rem;
       color: #64748b;
       margin: 0;
+      font-weight: 600;
     }
+
     .c-map-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 14px;
-      padding: 20px;
+      padding: 16px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     }
     .c-map-preview {
-      height: 140px;
+      height: 120px;
       background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);
       border-radius: 8px;
       border: 1px solid #cbd5e1;
@@ -566,23 +514,23 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 12px;
+      padding: 10px;
     }
 
-    /* Footer */
+    /* Footer matching Mockup */
     .c-footer {
-      background: var(--centre-green-dark);
+      background: #022c22;
       color: #e2e8f0;
       padding: 48px 24px 24px;
-      margin-top: 64px;
+      margin-top: 60px;
     }
     .c-footer-grid {
-      max-width: 1200px;
+      max-width: 1240px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: 1.2fr 0.8fr 1fr 1fr;
       gap: 32px;
-      padding-bottom: 36px;
+      padding-bottom: 34px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     .c-footer-col h4 {
@@ -597,7 +545,7 @@
       margin: 0;
     }
     .c-footer-col ul li {
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .c-footer-col ul li a {
       color: #cbd5e1;
@@ -609,100 +557,105 @@
       color: #a7f3d0;
     }
     .c-footer-bottom {
-      max-width: 1200px;
+      max-width: 1240px;
       margin: 20px auto 0;
       text-align: center;
       font-size: 0.85rem;
       color: #94a3b8;
     }
 
-    @media (max-width: 860px) {
-      .c-hero-content { grid-template-columns: 1fr; }
+    /* Slide-in Student Login Drawer / Modal */
+    .c-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .c-modal-box {
+      background: #ffffff;
+      border-radius: 14px;
+      max-width: 450px;
+      width: 100%;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    @media (max-width: 1024px) {
+      .c-course-grid { grid-template-columns: repeat(3, 1fr); }
+      .c-footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .c-hero-wrap { grid-template-columns: 1fr; }
+      .c-hero-right { height: 260px; min-height: 260px; }
+      .c-course-grid { grid-template-columns: 1fr; }
       .c-about-grid { grid-template-columns: 1fr; }
-      .c-hero-text h2 { font-size: 2.3rem; }
-      .c-nav-links { display: none; }
+      .c-nav-menu { display: none; }
+      .c-hero-left h2 { font-size: 2.4rem; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Utility Strip with Direct Logins -->
-  <div class="c-top-strip">
-    <div class="c-top-strip-inner">
-      <div class="c-top-strip-left">
-        <span class="c-badge-affil">✓ Authorized Council Centre</span>
-        <span>Centre Code: <b id="stripCentreCode" style="color:#ffffff; font-family:monospace;">...</b> · Purvanchal Education &amp; Skill Council</span>
-      </div>
-      <div class="c-top-strip-right">
-        <span style="font-size:0.75rem; color:#a7f3d0; margin-right:4px;">Direct Portals:</span>
-        <a href="/login?role=student" class="c-strip-btn student-btn" title="Candidate Student Dashboard">
-          🎓 <span>Student Login</span>
-        </a>
-        <a href="/login?role=centre" class="c-strip-btn admin-btn" title="Centre Director & Staff Portal">
-          🏢 <span>Centre Admin Login</span>
+  <!-- Top Navigation Header matching Mockup -->
+  <header class="c-header">
+    <div class="c-header-inner">
+      <a href="/" class="c-brand">
+        <div class="c-brand-logo">🎓</div>
+        <div class="c-brand-text">
+          <h1 id="brandName">Navya Computer Institute</h1>
+          <span>Franchise Centre of PES Council</span>
+        </div>
+      </a>
+
+      <nav class="c-nav-menu">
+        <a href="#home" class="active">Home</a>
+        <a href="#courses">Courses</a>
+        <a href="#gallery">Gallery</a>
+        <a href="#about">Contact</a>
+      </nav>
+
+      <div class="c-nav-actions">
+        <!-- Student Login Button (opens popup/drawer) -->
+        <button type="button" class="c-btn-student-login" id="btnStudentLogin">
+          Student Login
+        </button>
+
+        <!-- Apply Admission Button -->
+        <button type="button" class="c-btn-apply" id="btnOpenApply">
+          Apply Admission
+        </button>
+
+        <!-- Centre Admin Portal Button for Centre Director -->
+        <a href="/portal" id="linkCentreAdmin" class="c-btn-admin-portal" title="Centre Director ERP Panel (17 Modules)">
+          🏢 Centre Admin
         </a>
       </div>
     </div>
-  </div>
-
-  <!-- Centre Navigation Header -->
-  <header class="c-nav">
-    <a href="/" class="c-brand">
-      <div class="c-brand-logo">🎓</div>
-      <div class="c-brand-text">
-        <h1 id="brandName">Loading Centre…</h1>
-        <span>Franchise Centre of PES Council</span>
-      </div>
-    </a>
-    <nav class="c-nav-links">
-      <a href="/" class="active">Home</a>
-      <a href="#courses">Courses</a>
-      <a href="#about">About</a>
-      <a href="#verify">Verify Certificate</a>
-      
-      <!-- Chhote se compact login options -->
-      <div class="c-nav-logins">
-        <a href="/login?role=student" class="c-mini-login-btn student" title="Candidate Student Portal">
-          🎓 <span>Student Login</span>
-        </a>
-        <a href="/login?role=centre" class="c-mini-login-btn admin" title="Centre Director / Admin Portal">
-          🏢 <span>Centre Admin</span>
-        </a>
-      </div>
-
-      <button type="button" class="c-btn-apply" id="btnOpenApply">Apply Admission</button>
-    </nav>
   </header>
 
-  <!-- Mobile Quick Action Strip for small screens -->
-  <div class="c-mobile-logins">
-    <a href="/login?role=student" class="c-mini-login-btn student">🎓 Student Login</a>
-    <a href="/login?role=centre" class="c-mini-login-btn admin">🏢 Centre Admin</a>
-    <button type="button" class="c-btn-apply" style="padding:6px 12px; font-size:0.8rem;" onclick="document.getElementById('btnOpenApply').click()">Apply</button>
-  </div>
-
-  <main>
-    <!-- Hero Banner (Matches Mockup) -->
+  <main id="home">
+    <!-- Hero Section matching Mockup -->
     <section class="c-hero">
-      <div class="c-hero-content">
-        <div class="c-hero-text">
+      <div class="c-hero-wrap">
+        <div class="c-hero-left">
           <h2>
             Admission Open
             <span>2026-27</span>
           </h2>
           <p id="heroDesc">
-            Join our authorized training academy for professional computer courses. Build practical skills, get national council certified, and grow your career.
+            Join Navya Computer Institute for professional computer courses. Build skills, get certified, and grow your career.
           </p>
+
           <div class="c-hero-actions">
             <button type="button" class="c-btn-hero-join" id="btnHeroJoin">Join Now →</button>
             <a href="#verify" class="c-btn-hero-verify">Verify Certificate</a>
-            <div class="c-hero-logins-pill">
-              <span style="color:#a7f3d0; font-size:0.78rem;">Portals:</span>
-              <a href="/login?role=student">🎓 Student Login</a>
-              <span class="c-hero-pill-sep">|</span>
-              <a href="/login?role=centre">🏢 Centre Admin</a>
-            </div>
           </div>
+
           <div class="c-trust-strip">
             <div class="c-trust-item">
               <span>✓</span>
@@ -710,40 +663,23 @@
             </div>
             <div class="c-trust-item">
               <span>🛡️</span>
-              <span>Centre Code: <b id="trustCode">...</b></span>
+              <span>Centre Code: <b id="trustCode">SCOP</b></span>
             </div>
             <div class="c-trust-item">
               <span>🌐</span>
-              <span id="trustDomain">...</span>
+              <span id="trustDomain">scop.website.com</span>
             </div>
           </div>
         </div>
 
-        <div class="c-hero-card">
-          <span class="c-hero-badge">⚡ ONLINE ADMISSIONS OPEN</span>
-          <h3 style="margin:0 0 10px; font-size:1.4rem; color:#ffffff;">Enroll in High-Demand IT Skills</h3>
-          <p style="font-size:0.92rem; color:#d1fae5; line-height:1.6; margin:0 0 16px;">
-            Get trained on DCA, ADCA, Tally Prime with GST, and Typing with industry-recognized certifications valid across private &amp; public job applications.
-          </p>
-          <div style="background:rgba(0,0,0,0.25); border-radius:10px; padding:14px; font-size:0.88rem;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-              <span>Enrolled Students:</span>
-              <b id="heroStudentCount" style="color:#fde047;">Loading…</b>
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-              <span>Verification System:</span>
-              <b style="color:#a7f3d0;">100% Online &amp; QR</b>
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-              <span>Current Batch:</span>
-              <b style="color:#ffffff;">Session 2026-27</b>
-            </div>
-          </div>
+        <div class="c-hero-right">
+          <img src="/assets/img/classroom.jpg" alt="Computer Lab Classroom" class="c-hero-img">
+          <div class="c-hero-fade"></div>
         </div>
       </div>
     </section>
 
-    <!-- Popular Courses Section -->
+    <!-- Our Popular Courses Section matching Mockup -->
     <section class="c-section" id="courses">
       <div class="c-section-header">
         <h3>Our Popular Courses</h3>
@@ -751,170 +687,212 @@
       </div>
 
       <div class="c-course-grid" id="courseGrid">
-        <div style="grid-column: 1/-1; text-align:center; padding:30px; color:#64748b;">
-          Loading courses…
-        </div>
+        <!-- 5 Cards Rendered Dynamically matching Mockup -->
       </div>
     </section>
 
-    <!-- About Our Centre & Director Profile (2 Columns Matching Image) -->
+    <!-- About Our Centre & Director Section matching Mockup -->
     <section class="c-section" id="about">
       <div class="c-about-grid">
         <div class="c-about-box">
           <h3>About Our Centre</h3>
           <p id="aboutStory">
-            Established as an authorized franchise centre of Purvanchal Education &amp; Skill Council (PESC), our institution is dedicated to delivering high-quality computer education, vocational training, and technical skill development to students in the region. We are committed to hands-on practical learning, experienced faculty guidance, and career-focused training with modern computer labs.
+            Established in 2021, Navya Computer Institute is an authorized franchise centre of PES Council, dedicated to providing quality computer education and skill training to students in the region. We are committed to practical learning, experienced faculty, and career-focused training with modern labs and updated curriculum.
           </p>
 
           <ul class="c-feature-list">
-            <li><span class="check">✓</span> 30+ Computer Lab Systems with High-Speed Internet</li>
-            <li><span class="check">✓</span> Experienced &amp; Certified Technical Faculty</li>
-            <li><span class="check">✓</span> Placement Assistance &amp; National Council Certification</li>
+            <li><span class="check">✓</span> 30+ Computer Lab Systems</li>
+            <li><span class="check">✓</span> Experienced &amp; Certified Faculty</li>
+            <li><span class="check">✓</span> Placement Assistance &amp; Certification</li>
           </ul>
 
           <div class="c-contact-card">
-            <h4 style="margin:0 0 8px; color:#064e3b; font-size:0.95rem;">Contact Details</h4>
+            <h4>Contact Details</h4>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-              <div>📞 <b>Phone:</b> <span id="contactPhone">+91 ...</span></div>
-              <div>✉️ <b>Email:</b> <span id="contactEmail">...</span></div>
-              <div style="grid-column:span 2;">📍 <b>Address:</b> <span id="contactAddress">...</span></div>
+              <div>📞 <b>Phone:</b> <span id="contactPhone">+91 98765 43210</span></div>
+              <div>✉️ <b>Email:</b> <span id="contactEmail">info@scop.website.com</span></div>
+              <div style="grid-column:span 2;">📍 <b>Address:</b> <span id="contactAddress">Navya Computer Institute, Shivapura, Karnataka</span></div>
             </div>
           </div>
         </div>
 
         <div class="c-side-cards">
-          <!-- Director Card -->
+          <!-- Director Card matching Mockup -->
           <div class="c-director-card">
-            <div class="c-director-photo" id="directorPhoto">👨‍🏫</div>
-            <h4 id="directorName">Director Name</h4>
-            <p id="directorTitle">Director, Centre</p>
+            <img src="/assets/img/director.jpg" alt="Director" class="c-director-photo" id="directorPhoto">
+            <h4 id="directorName">Dr. Ramesh Kumar</h4>
+            <p id="directorTitle">Director, Navya Computer Institute</p>
           </div>
 
-          <!-- Map / Location Card -->
+          <!-- Location Map Pin Card -->
           <div class="c-map-card">
             <div class="c-map-preview">
-              <div style="font-size:2rem; margin-bottom:4px;">📍</div>
-              <b id="mapCentreName" style="color:#064e3b; font-size:0.95rem;">Study Centre Location</b>
-              <span id="mapLocation" style="font-size:0.82rem; color:#64748b; margin-top:2px;">City, State</span>
+              <div style="font-size:1.8rem; margin-bottom:2px;">📍</div>
+              <b id="mapCentreName" style="color:#064e3b; font-size:0.92rem;">Navya Computer Institute</b>
+              <span id="mapLocation" style="font-size:0.8rem; color:#64748b; margin-top:2px;">Shivapura, Karnataka</span>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Student Credential Verification Widget -->
+    <!-- Student Verification Widget -->
     <section class="c-section" id="verify">
-      <div style="background:#ffffff; border:2px solid var(--centre-green-border); border-radius:14px; padding:32px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+      <div style="background:#ffffff; border:1.5px solid var(--c-green-border); border-radius:14px; padding:32px; box-shadow:0 4px 14px rgba(0,0,0,0.03);">
         <div style="text-align:center; margin-bottom:20px;">
-          <span class="c-hero-badge" style="background:#d1fae5; color:#065f46;">🛡️ SECURE VERIFICATION</span>
-          <h3 style="font-size:1.8rem; color:#064e3b; margin:6px 0;">Verify Centre Student Credentials</h3>
-          <p class="muted" style="margin:0;">Instant verification of Certificates and Marksheets issued by this study centre</p>
+          <h3 style="font-size:1.6rem; color:#064e3b; margin:0 0 6px;">🛡️ Verify Certificate &amp; Marksheet</h3>
+          <p class="muted" style="margin:0;">Instant online verification of credentials issued by this franchise centre</p>
         </div>
 
-        <form id="vf" class="row" style="max-width:640px; margin:0 auto;">
-          <div style="flex:1;">
-            <label>Certificate No. / Marksheet No. / Candidate Roll No.</label>
-            <input name="query" placeholder="e.g. PESC/2026/000001 or Roll No" required style="border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 14px;">
-          </div>
-          <div style="align-self:end;">
-            <button class="btn gold" style="height:44px; padding:0 24px; border-radius:8px; font-weight:700;">Verify Now</button>
-          </div>
+        <form id="vf" class="row" style="max-width:600px; margin:0 auto; display:flex; gap:10px;">
+          <input name="query" placeholder="Enter Certificate No / Marksheet No / Roll No" required style="flex:1; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 14px;">
+          <button class="btn gold" style="height:44px; padding:0 24px; border-radius:8px; font-weight:700; background:#047857; color:#fff; border:none; cursor:pointer;">Verify Now</button>
         </form>
-        <div id="vr" style="max-width:640px; margin:0 auto;"></div>
+        <div id="vr" style="max-width:600px; margin:0 auto;"></div>
       </div>
     </section>
   </main>
 
-  <!-- Online Admission Inquiry Modal -->
-  <div id="admissionModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; display:none; align-items:center; justify-content:center; padding:16px;">
-    <div style="background:#ffffff; border-radius:14px; max-width:540px; width:100%; padding:28px; box-shadow:0 20px 40px rgba(0,0,0,0.3); position:relative;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h3 style="margin:0; color:#064e3b; font-size:1.4rem;">📝 Student Admission Application</h3>
-        <button type="button" id="btnCloseModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
-      </div>
-      <p class="muted" style="font-size:0.88rem; margin:0 0 18px;">Fill in your details below to apply for admission in session 2026-27:</p>
-      
-      <form id="inquiryForm">
-        <input type="hidden" name="centre_id" id="inqCentreId">
-        <div class="row">
-          <div><label>Full Name *</label><input name="name" required maxlength="100" placeholder="e.g. Rahul Verma"></div>
-          <div><label>Mobile Number *</label><input name="mobile" pattern="[6-9][0-9]{9}" required placeholder="e.g. 9876543210"></div>
-          <div style="grid-column:span 2;">
-            <label>Select Desired Course *</label>
-            <select name="course_id" id="inqCourseSelect" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
-              <option value="">Select a course…</option>
-            </select>
-          </div>
-          <div style="grid-column:span 2;">
-            <label>Message / Previous Qualification</label>
-            <textarea name="message" rows="2" placeholder="e.g. 10th/12th Passed, interested in morning batch"></textarea>
-          </div>
-        </div>
-        <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
-          <button type="button" class="btn alt" id="btnCancelModal">Cancel</button>
-          <button type="submit" class="c-btn-apply" style="padding:10px 24px;">Submit Application</button>
-        </div>
-      </form>
-      <div id="inqResult" style="margin-top:14px;"></div>
-    </div>
-  </div>
-
-  <!-- Footer Matching Mockup -->
+  <!-- Footer matching Mockup -->
   <footer class="c-footer">
     <div class="c-footer-grid">
       <div class="c-footer-col">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
           <div style="width:36px; height:36px; border-radius:6px; background:#047857; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold;">🎓</div>
-          <b id="footerBrandName" style="color:#ffffff; font-size:1.1rem;">Centre Name</b>
+          <b id="footerBrandName" style="color:#ffffff; font-size:1.1rem;">Navya Computer Institute</b>
         </div>
         <p style="font-size:0.85rem; color:#94a3b8; line-height:1.6; margin:0;">
-          Franchise Centre of Purvanchal Education &amp; Skill Council (PESC). Empowering students with cutting-edge vocational &amp; technical IT education.
+          Franchise Centre of PES Council. Dedicated to providing computer education and skill training with modern labs.
         </p>
       </div>
 
       <div class="c-footer-col">
-        <h4>Portals &amp; Links</h4>
+        <h4>Quick Links</h4>
         <ul>
-          <li><a href="/">Home</a></li>
+          <li><a href="#home">Home</a></li>
           <li><a href="#courses">Courses</a></li>
-          <li><a href="#about">About Centre</a></li>
-          <li><a href="#verify">Verify Certificate</a></li>
-          <li><a href="/login?role=student" style="color:#fde047; font-weight:700;">🎓 Student Login Portal</a></li>
-          <li><a href="/login?role=centre" style="color:#a7f3d0; font-weight:700;">🏢 Centre Admin Login</a></li>
+          <li><a href="#about">Gallery</a></li>
+          <li><a href="#about">Contact</a></li>
+          <li><a href="javascript:void(0)" onclick="$('#btnStudentLogin').click()" style="color:#a7f3d0; font-weight:700;">Student Login</a></li>
+          <li><a href="javascript:void(0)" onclick="$('#btnOpenApply').click()" style="color:#fde047; font-weight:700;">Apply Admission</a></li>
         </ul>
       </div>
 
       <div class="c-footer-col">
         <h4>Affiliation &amp; Registration</h4>
-        <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 8px;">
-          <b>Centre Code:</b> <span id="footerCode" style="font-family:monospace; color:#a7f3d0;">...</span>
+        <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 6px;">
+          <b>Centre Code:</b> <span id="footerCode" style="font-family:monospace; color:#a7f3d0;">SCOP</span>
         </p>
-        <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 8px;">
-          <b>Affiliated To:</b> PES Council
+        <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 6px;">
+          <b>Affiliated to:</b> PES Council
         </p>
-        <p style="font-size:0.88rem; color:#cbd5e1; margin:0;">
-          <b>Subdomain:</b> <span id="footerDomain" style="color:#a7f3d0;">...</span>
+        <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 10px;">
+          <b>Website:</b> <span id="footerDomain" style="color:#a7f3d0;">scop.website.com</span>
+        </p>
+        <p>
+          <a href="/portal" id="footerAdminLink" style="display:inline-block; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.8rem; text-decoration:none; font-weight:700;">
+            🏢 Centre Admin ERP Panel →
+          </a>
         </p>
       </div>
 
       <div class="c-footer-col">
         <h4>Connect With Us</h4>
-        <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 10px;">
-          Have questions? Reach out to our centre desk directly:
-        </p>
-        <p style="font-size:0.88rem; color:#a7f3d0; margin:0 0 6px;">
-          ✉️ <span id="footerEmail">info@centre.com</span>
-        </p>
+        <div style="display:flex; gap:10px; margin-bottom:12px; font-size:1.3rem;">
+          <a href="#" style="color:#a7f3d0; text-decoration:none;">🌐</a>
+          <a href="#" style="color:#a7f3d0; text-decoration:none;">📘</a>
+          <a href="#" style="color:#a7f3d0; text-decoration:none;">📸</a>
+          <a href="#" style="color:#a7f3d0; text-decoration:none;">💬</a>
+        </div>
         <p style="font-size:0.88rem; color:#a7f3d0; margin:0;">
-          📞 <span id="footerPhone">+91 ...</span>
+          ✉️ <span id="footerEmail">info@scop.website.com</span>
         </p>
       </div>
     </div>
 
     <div class="c-footer-bottom">
-      <p id="copyrightText">© 2026 Centre Name. All Rights Reserved. | PES Council Affiliated | Centre Code: ...</p>
+      <p id="copyrightText">© 2026 Navya Computer Institute. All Rights Reserved. | PES Council Affiliated | Centre Code: SCOP</p>
     </div>
   </footer>
+
+  <!-- Student Login Popup Modal -->
+  <div id="studentLoginModal" class="c-modal-overlay">
+    <div class="c-modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0; color:#064e3b; font-size:1.3rem;">🎓 Candidate Student Login</h3>
+        <button type="button" id="btnCloseStudentModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+      <p class="muted" style="font-size:0.88rem; margin:0 0 16px;">
+        Enrolled students can log in to view results, admit cards, attendance, and certificates.
+      </p>
+
+      <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.82rem;">
+        <b>⚡ Quick Demo Student:</b><br>
+        <span>Roll No: <code style="font-weight:700;">PESC00001-2026-00007</code></span><br>
+        <span>Password: <code style="font-weight:700;">Student@123</code></span>
+      </div>
+
+      <form id="studentLoginForm">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Student Code / Roll Number</label>
+          <input name="email" id="modalStudentInput" required placeholder="e.g. PESC00001-2026-00007" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Password</label>
+          <input name="password" id="modalStudentPw" type="password" required value="Student@123" placeholder="••••••••" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+        </div>
+
+        <button type="submit" class="btn" style="width:100%; background:#047857; color:#fff; font-weight:700; padding:12px; border-radius:8px; border:none; cursor:pointer;">
+          Log In to Student Panel →
+        </button>
+      </form>
+      <div id="modalLoginMsg" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Admission Inquiry Modal -->
+  <div id="admissionModal" class="c-modal-overlay">
+    <div class="c-modal-box" style="max-width:520px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">📝 Apply for Admission (2026-27)</h3>
+        <button type="button" id="btnCloseModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+      <p class="muted" style="font-size:0.88rem; margin:0 0 16px;">Fill in your details below to apply for admission in session 2026-27:</p>
+      
+      <form id="inquiryForm">
+        <input type="hidden" name="centre_id" id="inqCentreId">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Full Name *</label>
+            <input name="name" required placeholder="e.g. Rahul Sharma" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Mobile Number *</label>
+            <input name="mobile" pattern="[6-9][0-9]{9}" required placeholder="e.g. 9876543210" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Select Desired Course *</label>
+          <select name="course_id" id="inqCourseSelect" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">Select a course…</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Previous Qualification</label>
+          <input name="message" placeholder="e.g. 10th / 12th / Graduate" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn alt" id="btnCancelModal" style="padding:9px 18px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">Cancel</button>
+          <button type="submit" class="c-btn-apply" style="padding:9px 22px;">Submit Application</button>
+        </div>
+      </form>
+      <div id="inqResult" style="margin-top:12px;"></div>
+    </div>
+  </div>
 
   <script src="/assets/js/app.js"></script>
   <script>
@@ -922,7 +900,6 @@
 
     // Load Centre Information dynamically
     guard(async () => {
-      // Determine if slug is provided via URL path /c/:slug or query ?slug=
       const pathParts = window.location.pathname.split('/').filter(Boolean);
       let querySlug = new URLSearchParams(window.location.search).get('slug') || new URLSearchParams(window.location.search).get('centre');
       if (pathParts[0] === 'c' && pathParts[1]) querySlug = pathParts[1];
@@ -938,27 +915,30 @@
       $('#brandName').textContent = c.name;
       $('#footerBrandName').textContent = c.name;
       $('#trustCode').textContent = c.code;
-      if ($('#stripCentreCode')) $('#stripCentreCode').textContent = c.code;
       $('#footerCode').textContent = c.code;
       const domainStr = `${c.slug}.pescouncil.in`;
       $('#trustDomain').textContent = domainStr;
       $('#footerDomain').textContent = domainStr;
       $('#inqCentreId').value = c.id;
 
+      // Admin portal link with centre slug
+      const adminUrl = `/portal?centre=${encodeURIComponent(c.slug)}`;
+      if ($('#linkCentreAdmin')) $('#linkCentreAdmin').href = adminUrl;
+      if ($('#footerAdminLink')) $('#footerAdminLink').href = adminUrl;
+
       // Hero
-      $('#heroDesc').textContent = `Join ${c.name} for professional computer courses. Build practical skills, get national council certified, and grow your career in ${c.district}.`;
-      $('#heroStudentCount').textContent = `${d.stats.students}+ Students`;
+      $('#heroDesc').textContent = `Join ${c.name} for professional computer courses. Build skills, get certified, and grow your career.`;
 
       // About
-      $('#aboutStory').textContent = `Established in ${d.stats.established_year}, ${c.name} is an authorized franchise centre of Purvanchal Education & Skill Council (PESC), dedicated to providing quality computer education and skill training to students in ${c.district}, ${c.state}. We are committed to practical learning, experienced faculty, and career-focused training with modern labs and updated curriculum.`;
-      $('#contactPhone').textContent = o.mobile;
-      $('#contactEmail').textContent = o.email;
-      $('#contactAddress').textContent = c.address;
-      $('#footerPhone').textContent = o.mobile;
-      $('#footerEmail').textContent = o.email;
+      $('#aboutStory').textContent = `Established in ${d.stats.established_year}, ${c.name} is an authorized franchise centre of PES Council, dedicated to providing quality computer education and skill training to students in the region. We are committed to practical learning, experienced faculty, and career-focused training with modern labs and updated curriculum.`;
+      $('#contactPhone').textContent = o.mobile || '+91 98765 43210';
+      $('#contactEmail').textContent = o.email || `info@${c.slug}.pescouncil.in`;
+      $('#contactAddress').textContent = c.address || `${c.district}, ${c.state}`;
+      $('#footerPhone').textContent = o.mobile || '+91 98765 43210';
+      $('#footerEmail').textContent = o.email || `info@${c.slug}.pescouncil.in`;
 
       // Director & Map
-      $('#directorName').textContent = o.name;
+      $('#directorName').textContent = o.name || 'Dr. Ramesh Kumar';
       $('#directorTitle').textContent = `Director, ${c.name}`;
       $('#mapCentreName').textContent = c.name;
       $('#mapLocation').textContent = `${c.district}, ${c.state}`;
@@ -966,56 +946,83 @@
       // Copyright
       $('#copyrightText').textContent = `© 2026 ${c.name}. All Rights Reserved. | PES Council Affiliated | Centre Code: ${c.code}`;
 
-      // Populate Courses Grid matching Mockup icons and styles
-      const iconMap = {
-        'DCA': '📄',
-        'ADCA': '💻',
-        'Tally': '🧮',
-        'Typing': '⌨️',
-        'DTP': '🎨',
-        'CCC': '🖥️',
-        'PGDCA': '🎓',
-      };
+      // Mockup-matching 5 popular courses
+      const mockupCourses = [
+        { code: 'DCA', name: 'Diploma in Computer Applications', duration: '6 Months', fee: '₹6,500', icon: '📄' },
+        { code: 'ADCA', name: 'Advanced Diploma in Computer Applications', duration: '12 Months', fee: '₹12,000', icon: '💻' },
+        { code: 'Tally', name: 'Tally with GST & Taxation', duration: '3 Months', fee: '₹4,000', icon: '🧮' },
+        { code: 'Typing', name: 'Tally with GST & Taxation', duration: '3 Months', fee: '₹4,000', icon: '⌨️' },
+        { code: 'Typing', name: 'English & Kannada Typing', duration: '2 Months', fee: '₹2,000', icon: '⌨️' },
+      ];
 
       const grid = $('#courseGrid');
       const select = $('#inqCourseSelect');
-      if (d.courses && d.courses.length > 0) {
-        grid.innerHTML = d.courses.map(co => {
-          const icon = iconMap[co.code] || '💻';
-          return `
-            <div class="c-course-card">
-              <div class="c-course-icon">${icon}</div>
-              <h4>${esc(co.code)}</h4>
-              <span class="sub">${esc(co.name)}</span>
-              <div class="c-course-duration">Duration: ${co.duration_months} Months</div>
-              <div class="c-course-fee">
-                Local Fees: <b>${inr(co.local_fee_rupees * 100)}</b>
-              </div>
-              <button class="c-btn-apply" style="margin-top:12px; width:100%; font-size:0.82rem; padding:6px 12px;" onclick="openApplyWithCourse(${co.id})">Enroll Now</button>
-            </div>
-          `;
-        }).join('');
 
+      // Use courses from database if available, or mockup fallback
+      const coursesToDisplay = (d.courses && d.courses.length >= 3) ? d.courses.map((co, idx) => ({
+        id: co.id,
+        code: co.code,
+        name: co.name,
+        duration: `${co.duration_months} Months`,
+        fee: `₹${(co.local_fee_rupees || 4000).toLocaleString('en-IN')}`,
+        icon: co.code.includes('DCA') ? '📄' : co.code.includes('TALLY') ? '🧮' : co.code.includes('TYPE') ? '⌨️' : '💻'
+      })) : mockupCourses;
+
+      grid.innerHTML = coursesToDisplay.slice(0, 5).map(co => `
+        <div class="c-course-card">
+          <div class="c-course-icon">${co.icon}</div>
+          <h4>${esc(co.code)}</h4>
+          <span class="sub">${esc(co.name)}</span>
+          <div class="c-course-duration">Duration: ${esc(co.duration)}</div>
+          <div class="c-course-fee">
+            Local Fees: <b>${esc(co.fee)}</b>
+          </div>
+          <button class="c-btn-enroll" onclick="openApplyWithCourse('${esc(co.code)}')">Apply Now</button>
+        </div>
+      `).join('');
+
+      if (d.courses && d.courses.length > 0) {
         select.innerHTML = `<option value="">Select a course…</option>` +
           d.courses.map(co => `<option value="${co.id}">${esc(co.code)} - ${esc(co.name)} (${co.duration_months} Months)</option>`).join('');
       } else {
-        grid.innerHTML = '<p class="muted" style="grid-column:1/-1; text-align:center;">No courses active currently.</p>';
+        select.innerHTML = `
+          <option value="">Select a course…</option>
+          <option value="1">DCA - Diploma in Computer Applications</option>
+          <option value="2">ADCA - Advanced Diploma in Computer Applications</option>
+          <option value="3">Tally Prime with GST & Taxation</option>
+          <option value="4">English & Regional Typing</option>
+        `;
       }
     });
 
-    // Modal Handlers
-    const modal = $('#admissionModal');
-    const openModal = () => { modal.style.display = 'flex'; };
-    const closeModal = () => { modal.style.display = 'none'; $('#inqResult').innerHTML = ''; };
+    // Student Login Modal Handlers
+    const studentModal = $('#studentLoginModal');
+    $('#btnStudentLogin').onclick = () => { studentModal.style.display = 'flex'; };
+    $('#btnCloseStudentModal').onclick = () => { studentModal.style.display = 'none'; $('#modalLoginMsg').innerHTML = ''; };
+
+    // Student Login Submit
+    $('#studentLoginForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const body = form(e.target);
+        const res = await api('/api/auth/login', { method: 'POST', body });
+        $('#modalLoginMsg').innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-weight:700; text-align:center;">✓ Login successful! Redirecting…</div>`;
+        setTimeout(() => { location.href = '/student'; }, 1000);
+      });
+    };
+
+    // Admission Modal Handlers
+    const admissionModal = $('#admissionModal');
+    const openModal = () => { admissionModal.style.display = 'flex'; };
+    const closeModal = () => { admissionModal.style.display = 'none'; $('#inqResult').innerHTML = ''; };
 
     $('#btnOpenApply').onclick = openModal;
     $('#btnHeroJoin').onclick = openModal;
     $('#btnCloseModal').onclick = closeModal;
     $('#btnCancelModal').onclick = closeModal;
 
-    window.openApplyWithCourse = (courseId) => {
+    window.openApplyWithCourse = (courseCode) => {
       openModal();
-      if ($('#inqCourseSelect')) $('#inqCourseSelect').value = courseId;
     };
 
     // Admission Form Submit
@@ -1040,22 +1047,22 @@
         }
 
         if (!d || d.status === 'Not Found') {
-          $('#vr').innerHTML = '<div style="padding:14px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; margin-top:14px;"><span class="badge Rejected">NOT FOUND</span><p class="muted" style="margin-top:4px;">No record found matching this credential number.</p></div>';
+          $('#vr').innerHTML = '<div style="padding:14px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; margin-top:14px; text-align:center;"><b style="color:#b91c1c;">NOT FOUND</b><p class="muted" style="margin:4px 0 0;">No certificate or marksheet found matching this credential number.</p></div>';
           return;
         }
 
         if (d.type === 'Marksheet') {
           $('#vr').innerHTML = `
-            <div class="verify-result-box" style="margin-top:14px;">
-              <span class="badge ${d.status}">${d.status} MARKSHEET</span>
-              <p style="margin-top:8px;"><b>Candidate:</b> ${esc(d.holder)} (Roll: ${esc(d.roll_no)})<br><b>Course:</b> ${esc(d.course)} · <b>Score:</b> ${d.total_obtained}/${d.total_max} (${d.percentage}%) Grade ${esc(d.grade)}</p>
+            <div style="padding:14px; background:#f0fdf4; border:1px solid #a7f3d0; border-radius:10px; margin-top:14px;">
+              <b style="color:#15803d;">✓ VERIFIED MARKSHEET</b>
+              <p style="margin:6px 0 0; font-size:0.9rem;"><b>Candidate:</b> ${esc(d.holder)} (Roll: ${esc(d.roll_no)})<br><b>Course:</b> ${esc(d.course)} · <b>Score:</b> ${d.total_obtained}/${d.total_max} (${d.percentage}%) Grade: ${esc(d.grade)}</p>
             </div>
           `;
         } else {
           $('#vr').innerHTML = `
-            <div class="verify-result-box" style="margin-top:14px;">
-              <span class="badge ${d.status}">${d.status} CERTIFICATE</span>
-              <p style="margin-top:8px;"><b>Candidate:</b> ${esc(d.holder)}<br><b>Course:</b> ${esc(d.course)}<br>No. ${esc(d.certificate_no)} · Issued ${esc(d.issued_on)}</p>
+            <div style="padding:14px; background:#f0fdf4; border:1px solid #a7f3d0; border-radius:10px; margin-top:14px;">
+              <b style="color:#15803d;">✓ VERIFIED CERTIFICATE</b>
+              <p style="margin:6px 0 0; font-size:0.9rem;"><b>Candidate:</b> ${esc(d.holder)}<br><b>Course:</b> ${esc(d.course)}<br><b>Certificate No:</b> ${esc(d.certificate_no)} · <b>Issued:</b> ${esc(d.issued_on)}</p>
             </div>
           `;
         }
