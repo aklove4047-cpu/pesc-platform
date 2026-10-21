@@ -74,8 +74,10 @@ function renderCentreSite(centre, req) {
   // Extensive Target Keywords for Google Search
   const metaKeywords = `${cName}, ${slugCapital} Computer Institute, ${slugCapital} Computer Centre, ${cName} ${cDistrict}, ${cName} admission, ${cName} result, ${cName} fees, best computer institute in ${cDistrict}, top computer academy ${cDistrict}, ${cSlug}.pescouncil.in, PES Council affiliated centre ${cDistrict}, ADCA DCA CCC diploma ${cDistrict}, computer coaching center in ${cDistrict} ${cState}`;
 
-  const canonicalUrl = `https://${cSlug}.pescouncil.in/`;
-  const altUrl = `https://pescouncil.in/c/${cSlug}`;
+  const host = (req && req.headers ? (req.headers['x-forwarded-host'] || req.headers['host']) : '') || '';
+  const isSubdomain = host.startsWith(`${cSlug}.`);
+  const canonicalUrl = isSubdomain ? `https://${cSlug}.pescouncil.in/` : `https://pescouncil.in/c/${cSlug}`;
+  const altUrl = isSubdomain ? `https://pescouncil.in/c/${cSlug}` : `https://${cSlug}.pescouncil.in/`;
 
   // Structured Data (Schema.org JSON-LD for Google Rich Snippets)
   const schemaJson = {
@@ -248,16 +250,16 @@ app.get('/sitemap.xml', (req, res) => {
     xml += `
   <!-- ${esc(c.name)} (${esc(c.centre_code)}) -->
   <url>
-    <loc>https://${c.slug}.pescouncil.in/</loc>
-    <lastmod>${lastMod}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
     <loc>https://pescouncil.in/c/${c.slug}</loc>
     <lastmod>${lastMod}</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.9</priority>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://${c.slug}.pescouncil.in/</loc>
+    <lastmod>${lastMod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>`;
   }
 

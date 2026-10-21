@@ -23,16 +23,16 @@ let xml = `<?xml version="1.0" encoding="UTF-8"?>
 
 for (const c of centres) {
   xml += `  <url>
+    <loc>https://pescouncil.in/c/${c.slug}</loc>
+    <lastmod>${dateStr}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
     <loc>https://${c.slug}.pescouncil.in/</loc>
     <lastmod>${dateStr}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://pescouncil.in/c/${c.slug}</loc>
-    <lastmod>${dateStr}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.8</priority>
   </url>
 `;
 }
