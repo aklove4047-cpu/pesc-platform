@@ -206,6 +206,11 @@ app.get('/c/:slug', (req, res) => {
   return res.status(404).sendFile(path.join(PUB, 'index.html'));
 });
 
+// Google Search Console Site Verification File Endpoint
+app.get('/googleXRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo.html', (req, res) => {
+  res.type('html').send('google-site-verification: googleXRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo.html');
+});
+
 // Dynamic XML Sitemap for Google, Bing & Search Engine Indexing
 app.get('/sitemap.xml', (req, res) => {
   const centres = db.prepare("SELECT slug, centre_code, name, created_at FROM centres WHERE status='active' ORDER BY id ASC").all();
