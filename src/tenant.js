@@ -7,33 +7,41 @@ const resolveSlug = (slug) => {
   // 1. Direct match
   let c = db.prepare("SELECT * FROM centres WHERE LOWER(slug)=?").get(s);
   if (c) return c;
-  // 2. Try removing 'computer', '-computer', 'institute', 'academy' suffix (e.g. navyacomputer -> navya)
-  const stripped = s.replace(/[-_]?(?:computer|institute|academy|centre|center|tech|it)$/i, '');
+  // 2. Hyphen/underscore normalized match (e.g. shri-ram-computer vs shriramcomputer)
+  const noHyphens = s.replace(/[-_]/g, '');
+  c = db.prepare("SELECT * FROM centres WHERE REPLACE(REPLACE(LOWER(slug), '-', ''), '_', '')=?").get(noHyphens);
+  if (c) return c;
+  // 3. Try removing common suffixes (e.g. navyacomputer -> navya, zenith-tech -> zenith)
+  const stripped = s.replace(/[-_]?(?:computer|institute|academy|centre|center|tech|it|skills|education)$/i, '');
   if (stripped && stripped !== s && stripped.length >= 3) {
-    c = db.prepare("SELECT * FROM centres WHERE LOWER(slug)=?").get(stripped);
+    c = db.prepare("SELECT * FROM centres WHERE LOWER(slug)=? OR REPLACE(REPLACE(LOWER(slug), '-', ''), '_', '')=?").get(stripped, stripped.replace(/[-_]/g, ''));
     if (c) return c;
   }
-  // 3. Try adding 'computer' (e.g. navya -> navyacomputer)
+  // 4. Try adding 'computer' or '-computer'
   c = db.prepare("SELECT * FROM centres WHERE LOWER(slug)=?").get(s + 'computer');
   if (c) return c;
-  // 4. Match centre code (e.g. pesc00001)
+  c = db.prepare("SELECT * FROM centres WHERE LOWER(slug)=?").get(s + '-computer');
+  if (c) return c;
+  // 5. Match centre code (e.g. pesc00001, PESC00005)
   c = db.prepare("SELECT * FROM centres WHERE UPPER(centre_code)=?").get(s.toUpperCase());
-  return c || null;
+  if (c) return c;
+  return null;
 };
 
 function slugOf(hostHeader) {
-  const host = String(hostHeader || '').toLowerCase().split(':')[0];
+  const host = String(hostHeader || '').split(',')[0].trim().toLowerCase().split(':')[0];
   const base = cfg.BASE_DOMAIN;
 
   // 1. Root apex domains, www, and standard dev hosts
   if (host === 'localhost' || host === '127.0.0.1' || host === 'pescouncil.in' || host === 'www.pescouncil.in') return { kind: 'main' };
+  if (host === 'pmkvyedu.com' || host === 'www.pmkvyedu.com') return { kind: 'main' };
   if (base && (host === base || host === 'www.' + base)) return { kind: 'main' };
   if (host.endsWith('.trycloudflare.com')) return { kind: 'main' };
   if (process.env.RENDER_EXTERNAL_HOSTNAME && host === process.env.RENDER_EXTERNAL_HOSTNAME.toLowerCase()) return { kind: 'main' };
   if (host.endsWith('.onrender.com') && (base === 'onrender.com' || !base || base === 'localhost')) return { kind: 'main' };
 
-  // 2. Subdomains of configured base or pescouncil.in
-  const effectiveBases = [base, 'pescouncil.in'].filter(b => b && b !== 'localhost' && b !== 'onrender.com');
+  // 2. Subdomains of configured base, pescouncil.in, or pmkvyedu.com
+  const effectiveBases = [base, 'pescouncil.in', 'pmkvyedu.com'].filter(b => b && b !== 'localhost' && b !== 'onrender.com');
   for (const b of effectiveBases) {
     if (host.endsWith('.' + b)) {
       const sub = host.slice(0, -(b.length + 1));
@@ -43,7 +51,7 @@ function slugOf(hostHeader) {
     }
   }
 
-  // 3. Local development subdomains (e.g., navya.localhost)
+  // 3. Local development subdomains (e.g., navya.localhost, shriramcomputer.localhost)
   if (host.endsWith('.localhost')) {
     const sub = host.slice(0, -('.localhost'.length));
     if (sub.includes('.')) return { kind: 'invalid' };
@@ -60,14 +68,16 @@ const statusPage = (title, msg) =>
 const notFound = (res) => res.status(404).type('html').send(statusPage('Site not found', 'This address is not registered with PESC.'));
 
 function healthz(req, res) {
-  const r = slugOf(req.headers.host);
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  const r = slugOf(host);
   const c = r.kind === 'tenant' ? resolveSlug(r.slug) : null;
   res.json({ ok: true, tenant: c ? c.slug : null });
 }
 
 function tenant(req, res, next) {
   req.tenant = null;
-  const r = slugOf(req.headers.host);
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  const r = slugOf(host);
   if (r.kind === 'main') return next();
   if (r.kind === 'invalid') return notFound(res);
   const c = resolveSlug(r.slug);

@@ -12,6 +12,9 @@ const { HttpError, now, str, h, audit, paginate, next: counter, nextStudentCode,
 // This ensures that clicking a centre link NEVER forces an ID/password prompt!
 router.use((req, res, next) => {
   if (req.user && ['centre_owner', 'centre_staff'].includes(req.user.role) && req.user.centre_id) {
+    if (req.tenant && req.tenant.id !== req.user.centre_id) {
+      return res.status(403).json({ error: 'Forbidden: Cross-tenant access not permitted' });
+    }
     return next();
   }
 
@@ -444,7 +447,7 @@ router.get('/wallet', (req, res) => {
 router.post('/wallet/recharge', (req, res) => {
   const rupees = Math.round(+req.body.amount_rupees || 1000);
   const ref = 'WAL-' + Date.now().toString().slice(-6);
-  db.prepare('INSERT INTO payment_transactions(centre_id, provider_ref, amount_paise, status, created_at) VALUES(?,?,?,"pending",?)')
+  db.prepare("INSERT INTO payment_transactions(centre_id, provider_ref, amount_paise, status, created_at) VALUES(?,?,?,'pending',?)")
     .run(cid(req), ref, rupees * 100, now());
   res.json({ ok: true, provider_ref: ref, amount_paise: rupees * 100 });
 });

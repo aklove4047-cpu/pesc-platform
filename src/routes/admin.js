@@ -77,7 +77,7 @@ router.post('/centres/:id/courses', (req, res) => {
   const ids = (Array.isArray(req.body.course_ids) ? req.body.course_ids : []).map(Number).filter(Number.isInteger);
   const cid = +req.params.id; if (!db.prepare('SELECT 1 FROM centres WHERE id=?').get(cid)) throw new HttpError(404, 'Centre not found');
   db.transaction(() => { db.prepare('DELETE FROM centre_courses WHERE centre_id=?').run(cid);
-    for (const id of ids) if (db.prepare('SELECT 1 FROM courses WHERE id=?').get(id)) db.prepare('INSERT INTO centre_courses VALUES(?,?)').run(cid, id); })();
+    for (const id of ids) if (db.prepare('SELECT 1 FROM courses WHERE id=?').get(id)) db.prepare('INSERT INTO centre_courses(centre_id, course_id) VALUES(?,?)').run(cid, id); })();
   audit(req, 'centre.courses', 'centre', cid, 'ok', ids.join(',')); res.json({ ok: true });
 });
 router.post('/centres/:id/coordinator', (req, res) => {
