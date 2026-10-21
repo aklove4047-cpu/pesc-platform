@@ -3,6 +3,7 @@
 // Full Multi-Tenant Wildcard Subdomain Routing + SEO + APIs + Verification + Authentication
 
 import initialBundle from './data_bundle.js';
+import centreSiteTemplate from './centre_site_template.js';
 
 // In-memory runtime data cache with persistence
 const store = {
@@ -236,10 +237,7 @@ export default {
     const centreFromSlug = tenantInfo.kind === 'tenant' ? resolveSlug(tenantInfo.slug) : null;
 
     if (centreFromSlug && (path === '/' || path === '/index.html')) {
-      const templateReq = new Request(new URL('/centre-site.html', request.url));
-      const templateRes = await env.ASSETS.fetch(templateReq);
-      const templateText = await templateRes.text();
-      const renderedHtml = renderCentreSite(templateText, centreFromSlug, host);
+      const renderedHtml = renderCentreSite(centreSiteTemplate, centreFromSlug, host);
       return new Response(renderedHtml, { headers: { 'content-type': 'text/html; charset=utf-8' } });
     }
 
@@ -248,10 +246,7 @@ export default {
       const slug = path.split('/')[2];
       const centre = resolveSlug(slug);
       if (centre) {
-        const templateReq = new Request(new URL('/centre-site.html', request.url));
-        const templateRes = await env.ASSETS.fetch(templateReq);
-        const templateText = await templateRes.text();
-        const renderedHtml = renderCentreSite(templateText, centre, host);
+        const renderedHtml = renderCentreSite(centreSiteTemplate, centre, host);
         return new Response(renderedHtml, { headers: { 'content-type': 'text/html; charset=utf-8' } });
       }
     }
@@ -266,6 +261,12 @@ export default {
     if (path === '/api/public/courses') {
       const activeCourses = store.courses.filter(c => c.active !== 0);
       return jsonResponse({ courses: activeCourses });
+    }
+
+    if (path === '/api/public/centre-info') {
+      const targetSlug = url.searchParams.get('slug') || url.searchParams.get('centre') || (tenantInfo.kind === 'tenant' ? tenantInfo.slug : null);
+      const c = resolveSlug(targetSlug) || store.centres[0];
+      return jsonResponse({ centre: c });
     }
 
     if (path === '/api/public/stats') {
@@ -319,8 +320,8 @@ export default {
     }
 
     // --- Certificate Verification ---
-    if (path.startsWith('/api/certificates/verify/')) {
-      const rawNo = decodeURIComponent(path.split('/')[4] || '').trim();
+    if (path === '/api/public/verify' || path.startsWith('/api/certificates/verify/')) {
+      const rawNo = decodeURIComponent(url.searchParams.get('cert_no') || url.searchParams.get('token') || path.split('/')[4] || '').trim();
       const cert = store.certificates.find(c =>
         c.cert_no.toLowerCase() === rawNo.toLowerCase() ||
         (c.token && c.token.toLowerCase() === rawNo.toLowerCase())
@@ -345,8 +346,8 @@ export default {
     }
 
     // --- Marksheet Verification ---
-    if (path.startsWith('/api/marksheets/verify/')) {
-      const rawNo = decodeURIComponent(path.split('/')[4] || '').trim();
+    if (path === '/api/public/verify-marksheet' || path.startsWith('/api/marksheets/verify/')) {
+      const rawNo = decodeURIComponent(url.searchParams.get('marksheet_no') || url.searchParams.get('roll_no') || url.searchParams.get('token') || path.split('/')[4] || '').trim();
       const mrk = store.marksheets.find(m =>
         (m.marksheet_no && m.marksheet_no.toLowerCase() === rawNo.toLowerCase()) ||
         (m.roll_no && m.roll_no.toLowerCase() === rawNo.toLowerCase()) ||
@@ -363,6 +364,7 @@ export default {
 
       return jsonResponse({
         status: mrk.status || 'Approved',
+        type: 'Marksheet',
         marksheet_no: mrk.marksheet_no,
         token: mrk.token,
         holder: student.name || 'Candidate',
@@ -378,6 +380,7 @@ export default {
         grade: mrk.grade,
         result: mrk.result,
         subjects: parsedSubjects,
+        subject_count: parsedSubjects.length,
         issued_on: new Date(mrk.issue_date || mrk.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
       });
     }
