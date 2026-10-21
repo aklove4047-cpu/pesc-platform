@@ -66,9 +66,9 @@ router.get('/site', (req, res) => {
   const slug = req.query.slug || (req.tenant ? req.tenant.slug : null);
   let tenant = req.tenant;
   if (!tenant && slug) {
-    tenant = db.prepare("SELECT * FROM centres WHERE slug=? AND status='active'").get(slug);
+    tenant = resolveSlug(slug);
   }
-  if (!tenant) throw new HttpError(404, 'Centre site not found');
+  if (!tenant || tenant.status !== 'active') throw new HttpError(404, 'Centre site not found');
 
   const owner = db.prepare("SELECT u.name, u.email, u.mobile FROM users u WHERE u.centre_id=? AND u.role='centre_owner'").get(tenant.id) || {};
   let courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.fee_paise, co.total_marks

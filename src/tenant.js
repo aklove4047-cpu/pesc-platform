@@ -1,7 +1,25 @@
 const db = require('./db');
 const cfg = require('./config');
 
-const resolveSlug = (slug) => db.prepare('SELECT * FROM centres WHERE slug=?').get(slug);
+const resolveSlug = (slug) => {
+  if (!slug) return null;
+  const s = String(slug).toLowerCase().trim();
+  // 1. Direct match
+  let c = db.prepare("SELECT * FROM centres WHERE LOWER(slug)=?").get(s);
+  if (c) return c;
+  // 2. Try removing 'computer', '-computer', 'institute', 'academy' suffix (e.g. navyacomputer -> navya)
+  const stripped = s.replace(/[-_]?(?:computer|institute|academy|centre|center|tech|it)$/i, '');
+  if (stripped && stripped !== s && stripped.length >= 3) {
+    c = db.prepare("SELECT * FROM centres WHERE LOWER(slug)=?").get(stripped);
+    if (c) return c;
+  }
+  // 3. Try adding 'computer' (e.g. navya -> navyacomputer)
+  c = db.prepare("SELECT * FROM centres WHERE LOWER(slug)=?").get(s + 'computer');
+  if (c) return c;
+  // 4. Match centre code (e.g. pesc00001)
+  c = db.prepare("SELECT * FROM centres WHERE UPPER(centre_code)=?").get(s.toUpperCase());
+  return c || null;
+};
 
 function slugOf(hostHeader) {
   const host = String(hostHeader || '').toLowerCase().split(':')[0];

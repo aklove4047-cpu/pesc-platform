@@ -32,9 +32,24 @@ for (const c of centres) {
     <loc>https://${c.slug}.pescouncil.in/</loc>
     <lastmod>${dateStr}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
 `;
+  if (!c.slug.endsWith('computer')) {
+    xml += `  <url>
+    <loc>https://pescouncil.in/c/${c.slug}computer</loc>
+    <lastmod>${dateStr}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://${c.slug}computer.pescouncil.in/</loc>
+    <lastmod>${dateStr}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+`;
+  }
 }
 xml += `</urlset>\n`;
 

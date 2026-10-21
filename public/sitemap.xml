@@ -22,7 +22,19 @@
     <loc>https://navya.pescouncil.in/</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pescouncil.in/c/navyacomputer</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://navyacomputer.pescouncil.in/</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://pescouncil.in/c/apexskills</loc>
@@ -34,7 +46,19 @@
     <loc>https://apexskills.pescouncil.in/</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pescouncil.in/c/apexskillscomputer</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://apexskillscomputer.pescouncil.in/</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://pescouncil.in/c/anilit</loc>
@@ -46,7 +70,19 @@
     <loc>https://anilit.pescouncil.in/</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pescouncil.in/c/anilitcomputer</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://anilitcomputer.pescouncil.in/</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://pescouncil.in/c/zenith-tech</loc>
@@ -58,6 +94,18 @@
     <loc>https://zenith-tech.pescouncil.in/</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://pescouncil.in/c/zenith-techcomputer</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://zenith-techcomputer.pescouncil.in/</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
 </urlset>

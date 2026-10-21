@@ -4,7 +4,7 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
-const { tenant, healthz } = require('./tenant');
+const { tenant, healthz, resolveSlug } = require('./tenant');
 const { loadUser, originCheck } = require('./auth');
 const { HttpError, rand, sha, now } = require('./lib');
 const db = require('./db');
@@ -201,7 +201,7 @@ app.get('/', (req, res) => {
 
 app.get('/c/:slug', (req, res) => {
   const slug = req.params.slug.toLowerCase().trim();
-  const centre = db.prepare("SELECT * FROM centres WHERE slug=? OR centre_code=?").get(slug, slug.toUpperCase());
+  const centre = resolveSlug(slug);
   if (centre) {
     return res.type('html').send(renderCentreSite(centre, req));
   }
@@ -259,8 +259,23 @@ app.get('/sitemap.xml', (req, res) => {
     <loc>https://${c.slug}.pescouncil.in/</loc>
     <lastmod>${lastMod}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>`;
+    if (!c.slug.endsWith('computer')) {
+      xml += `
+  <url>
+    <loc>https://pescouncil.in/c/${c.slug}computer</loc>
+    <lastmod>${lastMod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://${c.slug}computer.pescouncil.in/</loc>
+    <lastmod>${lastMod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>`;
+    }
   }
 
   xml += `\n</urlset>`;
