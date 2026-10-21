@@ -150,13 +150,14 @@ ${JSON.stringify(schemaJson, null, 2)}
   html = html.replace(/<title id="pageTitle">[\s\S]*?<\/title>/i, seoBlock);
   html = html.replace(/id="brandName">[^<]*</, `id="brandName">${esc(cName)}<`);
   html = html.replace(/id="trustCode">[^<]*</, `id="trustCode">${esc(cCode)}<`);
-  html = html.replace(/id="trustDomain">[^<]*</, `id="trustDomain">${esc(cSlug)}.pescouncil.in<`);
+  const displayDomain = cSlug === 'navya' ? 'navyacomputer.pescouncil.in' : `${cSlug}.pescouncil.in`;
+  html = html.replace(/id="trustDomain">[^<]*</, `id="trustDomain">${esc(displayDomain)}<`);
   html = html.replace(/id="heroDesc">[^<]*</, `id="heroDesc">Join ${esc(cName)} for professional computer courses. Build skills, get certified, and grow your career.<`);
   html = html.replace(/id="aboutStory">[^<]*</, `id="aboutStory">Established as an authorized franchise centre of Purvanchal Education & Skill Council (PESC), ${esc(cName)} is dedicated to providing quality computer education and skill training in ${esc(cDistrict)}, ${esc(cState)}.<`);
   html = html.replace(/id="directorName">[^<]*</, `id="directorName">${esc(cDirector)}<`);
   html = html.replace(/id="directorPhone">[^<]*</, `id="directorPhone">${esc(cPhone)}<`);
   html = html.replace(/id="footerCode">[^<]*</, `id="footerCode">${esc(cCode)}<`);
-  html = html.replace(/id="footerDomain">[^<]*</, `id="footerDomain">${esc(cSlug)}.pescouncil.in<`);
+  html = html.replace(/id="footerDomain">[^<]*</, `id="footerDomain">${esc(displayDomain)}<`);
   html = html.replace(/id="copyrightText">[^<]*</, `id="copyrightText">© 2026 ${esc(cName)}. All Rights Reserved. | PES Council Affiliated | Centre Code: ${esc(cCode)}<`);
   html = html.replace(/href="\/portal"/g, `href="/portal?centre=${encodeURIComponent(cSlug)}"`);
   html = html.replace(/id="demoCentreCode">[^<]*</, `id="demoCentreCode">${esc(cCode)}<`);

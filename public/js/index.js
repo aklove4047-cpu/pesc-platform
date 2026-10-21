@@ -209,8 +209,9 @@ function renderCentresShowcase(list) {
     return;
   }
   container.innerHTML = list.map(c => {
-    const directUrl = `/c/${encodeURIComponent(c.slug)}`;
-    const subdomain = `${c.slug}.pescouncil.in`;
+    const slug = (c.slug || '').toLowerCase();
+    const portalSubdomain = slug === 'navya' ? 'navyacomputer.pescouncil.in' : `${slug}.pescouncil.in`;
+    const portalUrl = `https://${portalSubdomain}`;
     return `
       <div class="course-card" style="border-top: 5px solid #047857; display:flex; flex-direction:column; padding:22px; background:#fff; border-radius:14px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transition:transform 0.2s, box-shadow 0.2s;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
@@ -231,9 +232,9 @@ function renderCentresShowcase(list) {
           <span>📍</span> <b>${esc(c.district)}, ${esc(c.state)}</b>
         </div>
 
-        <div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:8px 12px; margin-bottom:14px; font-size:0.82rem; display:flex; justify-content:space-between; align-items:center;">
-          <span style="color:#64748b;">Subdomain:</span>
-          <b style="color:#047857; font-family:monospace;">${esc(subdomain)}</b>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.84rem; display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#166534; font-weight:700;">🌐 Official Portal:</span>
+          <a href="${portalUrl}" target="_blank" style="color:#047857; font-family:monospace; font-weight:700; text-decoration:none;">${esc(portalSubdomain)} ↗</a>
         </div>
 
         <div style="display:flex; gap:6px; margin-bottom:18px; font-size:0.78rem; flex-wrap:wrap;">
@@ -242,7 +243,7 @@ function renderCentresShowcase(list) {
         </div>
 
         <!-- Big Prominent Button to Open Centre Website -->
-        <a href="${directUrl}" target="_blank" class="btn" style="background:#047857; color:#fff; text-align:center; padding:12px 16px; border-radius:8px; font-weight:700; text-decoration:none; margin-bottom:10px; box-shadow:0 4px 12px rgba(4,120,87,0.25); display:block;">
+        <a href="${portalUrl}" target="_blank" class="btn" style="background:#047857; color:#fff; text-align:center; padding:12px 16px; border-radius:8px; font-weight:700; text-decoration:none; margin-bottom:10px; box-shadow:0 4px 12px rgba(4,120,87,0.25); display:block;">
           🌐 Open Centre Website →
         </a>
 
@@ -269,7 +270,10 @@ function renderCentres(list) {
     ['Accredited Centre Name', (r) => `<b>${esc(r.name)}</b>`],
     ['Centre Code', (r) => `<span style="font-family:monospace; font-weight:700;">${esc(r.centre_code || '-')}</span>`],
     ['District & State', (r) => `${esc(r.district)}, ${esc(r.state)}`],
-    ['Subdomain & Website', (r) => `<a href="/c/${encodeURIComponent(r.slug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; font-weight:600; padding:4px 10px;">🌐 Open ${esc(r.slug)}.pescouncil.in →</a>`],
+    ['Official Website', (r) => {
+      const pSub = r.slug === 'navya' ? 'navyacomputer.pescouncil.in' : `${r.slug}.pescouncil.in`;
+      return `<a href="https://${pSub}" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; font-weight:600; padding:4px 10px;">🌐 Open Portal ↗</a>`;
+    }],
   ], list, 'No affiliated centres match your search criteria');
 }
 
