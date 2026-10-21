@@ -235,9 +235,17 @@ export default {
     const tenantInfo = slugOf(host);
     const centreFromSlug = tenantInfo.kind === 'tenant' ? resolveSlug(tenantInfo.slug) : null;
 
-    if (centreFromSlug && (path === '/' || path === '/index.html')) {
+    if (centreFromSlug && (path === '/' || path === '' || path === '/index.html')) {
       const renderedHtml = renderCentreSite(centreSiteTemplate, centreFromSlug, host);
-      return new Response(renderedHtml, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+      return new Response(renderedHtml, {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'no-cache, no-store, must-revalidate',
+          'x-debug-host': host,
+          'x-debug-slug': tenantInfo.slug || 'none',
+          'x-debug-centre': centreFromSlug.slug
+        }
+      });
     }
 
     // 4. Centre Path Routing: /c/:slug
