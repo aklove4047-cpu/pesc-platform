@@ -149,6 +149,7 @@ function renderCentreSite(centre, req) {
   <title id="pageTitle">${esc(pageTitle)}</title>
   <meta name="description" content="${esc(metaDesc)}">
   <meta name="keywords" content="${esc(metaKeywords)}">
+  <meta name="google-site-verification" content="XRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo">
   <meta name="author" content="${esc(cName)} / Purvanchal Education & Skill Council">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="${canonicalUrl}">
