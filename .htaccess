@@ -1,3 +1,14 @@
+# Automatic Subdomain to Centre Portal Routing
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Subdomain routing (e.g. navyacomputer.pescouncil.in -> /c/navyacomputer)
+  RewriteCond %{HTTP_HOST} ^([a-zA-Z0-9_-]+)\.pescouncil\.in$ [NC]
+  RewriteCond %{HTTP_HOST} !^(www|mail|cpanel|webmail)\.pescouncil\.in$ [NC]
+  RewriteRule ^$ https://pescouncil.in/c/%1 [R=301,L]
+</IfModule>
+
 # Hostinger / cPanel / LiteSpeed Node.js Passenger & Reverse Proxy Config
 # DO NOT REMOVE THIS LINE IF RUNNING VIA CPANEL / CLOUDLINUX NODE.JS SELECTOR
 PassengerAppRoot "/home/username/public_html"
