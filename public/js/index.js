@@ -111,7 +111,7 @@ if (tabCertBtn && tabMrkBtn) {
   };
 }
 
-// Subdomain Slug Check
+// Official Portal Address Availability Check
 let st;
 const slugInput = $('#slug');
 if (slugInput) {
@@ -125,8 +125,8 @@ if (slugInput) {
       }
       const d = await api('/api/public/slug-check?slug=' + encodeURIComponent(val));
       $('#slugmsg').innerHTML = d.available
-        ? `<span style="color:#16a34a; font-weight:700;">✓ Subdomain "${val}.pescouncil.in" is available</span>`
-        : `<span style="color:#dc2626; font-weight:700;">✗ ${d.reason}</span>`;
+        ? `<span style="color:#16a34a; font-weight:700;">✓ Official Portal "https://${val}.pescouncil.in" is available!</span>`
+        : `<span style="color:#dc2626; font-weight:700;">✗ ${d.reason || 'This portal name is already reserved'}</span>`;
     }), 400);
   };
 }
@@ -145,7 +145,7 @@ if (afForm) {
         <div style="background:#dcfce7; border:1px solid #86efac; border-radius:12px; padding:22px; margin-top:18px;">
           <h3 style="color:#15803d; margin-bottom:8px;">✅ Franchise Application Successfully Submitted!</h3>
           <p style="font-size:1.15rem; color:#14532d; margin-bottom:8px;">Your Official Application Number is: <b style="font-family:monospace; background:#fff; padding:3px 8px; border-radius:4px;">${esc(d.application_no)}</b></p>
-          <p class="muted">Please save this application number. You can track your affiliation review and subdomain provisioning progress anytime using the status tracker below.</p>
+          <p class="muted">Please save this application number. You can track your affiliation review and official website portal activation progress anytime using the status tracker below.</p>
         </div>
       `;
       e.target.reset();
@@ -164,7 +164,7 @@ if (sfForm) {
       const d = await api(`/api/public/application/${encodeURIComponent(f.no)}?mobile=${encodeURIComponent(f.mobile)}`);
       $('#sr').innerHTML = `
         <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:18px; margin-top:16px;">
-          <p style="font-size:1.1rem; color:var(--navy); margin-bottom:6px;"><b>Centre Name:</b> ${esc(d.centre_name)} (Requested subdomain: <code>${esc(d.slug)}.pescouncil.in</code>)</p>
+          <p style="font-size:1.1rem; color:var(--navy); margin-bottom:6px;"><b>Centre Name:</b> ${esc(d.centre_name)} (Official Portal: <code style="color:#047857; font-weight:700;">https://${esc(d.slug)}.pescouncil.in</code>)</p>
           <p style="margin-bottom:6px;"><b>Application Status:</b> ${badge(d.status)}</p>
           ${d.decision_reason ? `<p class="muted" style="margin-top:6px;"><b>Council Committee Remark:</b> ${esc(d.decision_reason)}</p>` : ''}
         </div>

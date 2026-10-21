@@ -24,7 +24,7 @@ const views = {
     V.innerHTML = '<h2>Franchise Applications Management</h2>' + table([
       ['No.', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.app_no)}</b>`],
       ['Applicant', (r) => `<b>${esc(r.owner_name)}</b><br><span class="muted">${esc(r.email)} · ${esc(r.mobile)}</span>`],
-      ['Centre & Subdomain', (r) => `<b>${esc(r.centre_name)}</b><br><span class="muted">${esc(r.slug)}.pescouncil.in · ${esc(r.district)}</span>`],
+      ['Centre & Portal Website', (r) => `<b>${esc(r.centre_name)}</b><br><a href="https://${r.slug === 'navya' ? 'navyacomputer' : esc(r.slug)}.pescouncil.in" target="_blank" style="color:#047857; font-weight:700; text-decoration:none;">${r.slug === 'navya' ? 'navyacomputer' : esc(r.slug)}.pescouncil.in ↗</a> · <span class="muted">${esc(r.district)}</span>`],
       ['Status', (r) => badge(r.status)],
       ['Provisioning Status', (r) => r.job_id ? `${badge(r.job_status)}${r.job_error ? `<br><span class="muted">${esc(r.job_error)}</span>` : ''}<br>` + (r.log || []).map((l) => `<span class="muted">${l.ok ? '✓' : '✗'} ${esc(l.step)}: ${esc(l.detail)}</span>`).join('<br>') : '—'],
       ['Actions', (r) => `
@@ -56,7 +56,10 @@ const views = {
       ${table([
         ['Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.centre_code)}</b>`],
         ['Centre Name', (r) => `<b>${esc(r.name)}</b>`],
-        ['Subdomain', (r) => `<a href="http://${esc(r.slug)}.localhost:3000" target="_blank" class="muted" style="text-decoration:underline;">${esc(r.slug)}</a>`],
+        ['Official Portal', (r) => {
+          const pSub = r.slug === 'navya' ? 'navyacomputer.pescouncil.in' : `${r.slug}.pescouncil.in`;
+          return `<a href="https://${pSub}" target="_blank" style="color:#047857; font-family:monospace; font-weight:700; text-decoration:none;">${pSub} ↗</a>`;
+        }],
         ['Location', (r) => `${esc(r.district)}, ${esc(r.state)}`],
         ['Students', (r) => `<button class="btn sm" data-a="view_centre_students" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff;" title="Manage this centre's students">👥 ${r.students} Students</button>`],
         ['Status', (r) => badge(r.status)],
@@ -79,7 +82,7 @@ const views = {
         <div><label>Mobile Number *</label><input name="mobile" required placeholder="9876543210"></div>
         <div><label>State *</label><input name="state" required value="Uttar Pradesh"></div>
         <div><label>District *</label><input name="district" required placeholder="e.g. Lucknow"></div>
-        <div><label>Requested Subdomain *</label><input name="slug" required placeholder="e.g. modernskill"></div>
+        <div><label>Portal Website Name (e.g. yourname.pescouncil.in) *</label><input name="slug" required placeholder="e.g. modernskill"></div>
         <div><label>Initial Wallet Credit (₹)</label><input name="initial_credit_rupees" type="number" min="0" value="10000"></div>
         <div><label>Temporary Password</label><input name="password" value="Centre@12345"></div>
         <div style="align-self:end;"><button class="btn gold">⚡ Create &amp; Activate Centre</button></div>
@@ -836,7 +839,7 @@ V.addEventListener('submit', (e) => {
     if (e.target.id === 'kf') await api('/api/admin/coordinators', { method: 'POST', body: form(e.target) });
     if (e.target.id === 'centreDirectForm') {
       const r = await api('/api/admin/centres/direct-create', { method: 'POST', body: form(e.target) });
-      toast(`Centre ${r.centreCode} created successfully! Subdomain: ${r.slug}`);
+      toast(`Centre ${r.centreCode} created successfully! Live Portal: https://${r.slug}.pescouncil.in`);
     }
     if (e.target.id === 'studentDirectForm') {
       const r = await api('/api/admin/students/direct-enroll', { method: 'POST', body: form(e.target) });

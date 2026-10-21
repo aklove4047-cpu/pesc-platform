@@ -286,8 +286,22 @@ export default {
       });
     }
 
-    if (path.startsWith('/api/public/track/')) {
-      const appNo = path.split('/')[4];
+    if (path === '/api/public/slug-check') {
+      const slug = (url.searchParams.get('slug') || '').toLowerCase().trim();
+      const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/;
+      if (!SLUG_RE.test(slug)) {
+        return jsonResponse({ available: false, reason: 'Portal address must be 3-30 chars: a-z, 0-9, hyphen' });
+      }
+      const existingCentre = resolveSlug(slug);
+      const existingApp = store.applications.find(a => a.slug === slug && a.status !== 'Rejected' && a.status !== 'Cancelled');
+      if (existingCentre || existingApp) {
+        return jsonResponse({ available: false, reason: 'Portal address is already reserved or taken' });
+      }
+      return jsonResponse({ available: true, slug, portal_url: `https://${slug}.pescouncil.in` });
+    }
+
+    if (path.startsWith('/api/public/track/') || path.startsWith('/api/public/application/')) {
+      const appNo = decodeURIComponent(path.split('/')[4] || '').trim();
       const mobile = url.searchParams.get('mobile');
       const app = store.applications.find(a => a.app_no === appNo && (!mobile || a.mobile === mobile));
       if (!app) return jsonResponse({ error: 'Application not found' }, 404);

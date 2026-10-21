@@ -46,7 +46,7 @@ const MODULES = [
   { id: 'Library', num: '14', title: 'Library / Study Material', desc: 'PDF Notes, Video upload', icon: '📖' },
   { id: 'Helpdesk', num: '15', title: 'Helpdesk / Messages', desc: 'Student doubt, complaint ka jawab', icon: '💬' },
   { id: 'Payments', num: '16', title: 'Payments / Wallet', desc: 'Council ko System Fees jama, Wallet balance', icon: '💳' },
-  { id: 'Profile', num: '17', title: 'Profile / Settings', desc: 'Logo, Name, Address, subdomain settings', icon: '⚙️' },
+  { id: 'Profile', num: '17', title: 'Profile / Settings', desc: 'Logo, Name, Address, portal website settings', icon: '⚙️' },
 ];
 
 // Render Left Sidebar Navigation (17 Items)
@@ -1057,8 +1057,11 @@ const views = {
             </div>
 
             <div>
-              <label>Dedicated Subdomain Website</label>
-              <input value="${esc(c.slug || 'navya')}.pescouncil.in" readonly style="background:#f1f5f9; font-family:monospace; color:#064e3b; font-weight:700;">
+              <label>Official Live Portal Website</label>
+              <div style="display:flex; gap:8px;">
+                <input value="https://${(c.slug === 'navya' ? 'navyacomputer' : esc(c.slug || 'navya'))}.pescouncil.in" readonly style="background:#f1f5f9; font-family:monospace; color:#064e3b; font-weight:700; flex:1;">
+                <a href="https://${(c.slug === 'navya' ? 'navyacomputer' : esc(c.slug || 'navya'))}.pescouncil.in" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; padding:8px 12px; display:inline-flex; align-items:center;">Visit ↗</a>
+              </div>
             </div>
 
             <div>
