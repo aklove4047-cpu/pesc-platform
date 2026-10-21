@@ -95,35 +95,66 @@ router.get('/me', (req, res) => {
     return res.json({ user: { id, name, email, role, centre_id, student_id }, tenant: req.tenant ? { name: req.tenant.name, slug: req.tenant.slug, code: req.tenant.centre_code } : null });
   }
 
-  // Seamless Auto-Context for Centre Portal / Website
-  let targetCentre = req.tenant;
-  if (!targetCentre) {
-    const slug = req.query.centre || req.query.slug || req.headers['x-centre-slug'];
-    if (slug) {
-      targetCentre = db.prepare("SELECT * FROM centres WHERE slug=? OR centre_code=? OR id=?").get(slug, slug, +slug || 0);
-    }
-  }
-  if (!targetCentre && req.headers.referer) {
-    const m = req.headers.referer.match(/\/c\/([a-z0-9-]+)/i);
-    if (m) targetCentre = db.prepare("SELECT * FROM centres WHERE slug=?").get(m[1].toLowerCase());
-  }
-  if (!targetCentre) {
-    targetCentre = db.prepare("SELECT * FROM centres WHERE status='active' ORDER BY id ASC LIMIT 1").get();
-  }
-
-  if (targetCentre) {
-    let ownerUser = db.prepare("SELECT * FROM users WHERE centre_id=? AND role='centre_owner'").get(targetCentre.id);
-    if (!ownerUser) {
-      ownerUser = { id: 99900 + targetCentre.id, name: targetCentre.name + ' Director', role: 'centre_owner', centre_id: targetCentre.id };
-    }
-    const sid = rand(32);
-    db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(sid), ownerUser.id, now() + 7 * 864e5);
-    res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', secure: cfg.isProd, maxAge: 7 * 864e5, path: '/' });
-    return res.json({ user: { id: ownerUser.id, name: ownerUser.name, email: ownerUser.email || `desk@${targetCentre.slug}.pescouncil.in`, role: 'centre_owner', centre_id: targetCentre.id, student_id: null }, tenant: { name: targetCentre.name, slug: targetCentre.slug, code: targetCentre.centre_code } });
-  }
-
   return res.status(401).json({ error: 'Unauthenticated' });
 });
+
+// Franchise Owner First-Time Password Setup & Activation (After approval by Head Office)
+router.post('/franchise-set-password', h(async (req, res) => {
+  const ident = str(req.body.identifier || req.body.centre_code || req.body.email || req.body.mobile, 150).trim();
+  const password = String(req.body.password || req.body.new_password || '').trim();
+
+  if (!ident) throw new HttpError(400, 'Centre code, registered mobile, or email is required');
+  if (!password || password.length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
+
+  let u = null;
+  let centre = db.prepare("SELECT * FROM centres WHERE UPPER(centre_code)=UPPER(?) OR slug=?").get(ident, ident.toLowerCase());
+  if (centre) {
+    if (centre.owner_user_id) u = db.prepare("SELECT * FROM users WHERE id=?").get(centre.owner_user_id);
+    if (!u) u = db.prepare("SELECT * FROM users WHERE centre_id=? AND role='centre_owner'").get(centre.id);
+  }
+  if (!u) {
+    u = db.prepare("SELECT * FROM users WHERE mobile=? AND (role='centre_owner' OR role='centre_staff')").get(ident);
+  }
+  if (!u) {
+    u = db.prepare("SELECT * FROM users WHERE LOWER(email)=LOWER(?) AND (role='centre_owner' OR role='centre_staff')").get(ident);
+  }
+  if (!u) {
+    throw new HttpError(404, 'No approved franchise found matching this Centre Code, Mobile, or Email. Please contact Head Office.');
+  }
+
+  if (!centre && u.centre_id) {
+    centre = db.prepare("SELECT * FROM centres WHERE id=?").get(u.centre_id);
+  }
+
+  if (centre && centre.status === 'suspended') {
+    throw new HttpError(403, 'This centre is currently suspended. Please contact Council Head Office.');
+  }
+
+  const hash = await argon2.hash(password);
+
+  db.transaction(() => {
+    db.prepare("UPDATE users SET password_hash=?, status='active', failed_logins=0, locked_until=NULL WHERE id=?").run(hash, u.id);
+    if (centre && ['provisioning', 'pending'].includes(centre.status)) {
+      db.prepare("UPDATE centres SET status='active' WHERE id=?").run(centre.id);
+    }
+    db.prepare("UPDATE setup_tokens SET used_at=? WHERE user_id=? AND used_at IS NULL").run(now(), u.id);
+    db.prepare("DELETE FROM sessions WHERE user_id=?").run(u.id);
+  })();
+
+  // Automatically log in the user upon successful password creation
+  const sid = rand(32);
+  db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(sid), u.id, now() + 7 * 864e5);
+  res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', secure: cfg.isProd, maxAge: 7 * 864e5, path: '/' });
+
+  audit({ user: { id: u.id, role: u.role }, ip: req.ip }, 'franchise.password_set', 'user', u.id, 'ok');
+
+  res.json({
+    ok: true,
+    message: 'Password created successfully! Logging you into Centre ERP Portal...',
+    centre: centre ? { name: centre.name, code: centre.centre_code, slug: centre.slug } : null,
+    user: { id: u.id, name: u.name, role: u.role }
+  });
+}));
 
 // First-time account setup and password reset share one-time, expiring tokens.
 router.post('/setup', h(async (req, res) => {

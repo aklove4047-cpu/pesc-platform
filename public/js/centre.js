@@ -1656,10 +1656,213 @@ async function initCentreHeader() {
   }
 }
 
-// Initial Bootstrapping
+// Authentication & Dashboard Visibility Controls
+function showCentreAuthScreen() {
+  const authEl = $('#centreAuthContainer');
+  const erpEl = $('#erpMainLayout');
+  if (erpEl) erpEl.style.display = 'none';
+  if (authEl) {
+    authEl.style.display = 'flex';
+    initAuthForms();
+  }
+}
+
+function showErpLayout() {
+  const authEl = $('#centreAuthContainer');
+  const erpEl = $('#erpMainLayout');
+  if (authEl) authEl.style.display = 'none';
+  if (erpEl) erpEl.style.display = 'block';
+}
+
+function initSignOutButton() {
+  const btn = $('#btnSignOutCentre');
+  if (btn) {
+    btn.onclick = async (e) => {
+      e.preventDefault();
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+      } catch (_) {}
+      toast('Signed out successfully');
+      setTimeout(() => { window.location.href = '/portal'; }, 400);
+    };
+  }
+}
+
+let authFormsInitialized = false;
+function initAuthForms() {
+  if (authFormsInitialized) return;
+  authFormsInitialized = true;
+
+  const tabLogin = $('#tabBtnLogin');
+  const tabSetup = $('#tabBtnSetup');
+  const contentLogin = $('#tabContentLogin');
+  const contentSetup = $('#tabContentSetup');
+  const notice = $('#authNotice');
+
+  const switchTab = (tab) => {
+    if (notice) notice.style.display = 'none';
+    if (tab === 'setup') {
+      tabSetup.style.background = '#ffffff';
+      tabSetup.style.color = '#064e3b';
+      tabSetup.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)';
+      tabLogin.style.background = 'transparent';
+      tabLogin.style.color = '#64748b';
+      tabLogin.style.boxShadow = 'none';
+      contentLogin.style.display = 'none';
+      contentSetup.style.display = 'block';
+    } else {
+      tabLogin.style.background = '#ffffff';
+      tabLogin.style.color = '#064e3b';
+      tabLogin.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)';
+      tabSetup.style.background = 'transparent';
+      tabSetup.style.color = '#64748b';
+      tabSetup.style.boxShadow = 'none';
+      contentSetup.style.display = 'none';
+      contentLogin.style.display = 'block';
+    }
+  };
+
+  if (tabLogin) tabLogin.onclick = () => switchTab('login');
+  if (tabSetup) tabSetup.onclick = () => switchTab('setup');
+  if ($('#linkGoToSetup')) $('#linkGoToSetup').onclick = (e) => { e.preventDefault(); switchTab('setup'); };
+  if ($('#linkBackToLogin')) $('#linkBackToLogin').onclick = (e) => { e.preventDefault(); switchTab('login'); };
+
+  // Password visibility toggle
+  const btnToggle = $('#btnToggleLoginPw');
+  if (btnToggle) {
+    btnToggle.onclick = () => {
+      const pwField = $('#loginPassword');
+      if (pwField.type === 'password') {
+        pwField.type = 'text';
+        btnToggle.textContent = '🔒';
+      } else {
+        pwField.type = 'password';
+        btnToggle.textContent = '👁️';
+      }
+    };
+  }
+
+  // Pre-fill or switch tab if URL params indicate setup
+  const params = new URLSearchParams(window.location.search);
+  const codeParam = params.get('code') || params.get('centre_code') || params.get('centre');
+  if (params.get('setup') === 'true' || params.get('tab') === 'setup') {
+    switchTab('setup');
+    if (codeParam && $('#setupIdent')) $('#setupIdent').value = codeParam;
+  } else if (codeParam && $('#loginIdent')) {
+    $('#loginIdent').value = codeParam;
+  }
+
+  // Submit Centre Login
+  const formLogin = $('#formCentreLogin');
+  if (formLogin) {
+    formLogin.onsubmit = async (e) => {
+      e.preventDefault();
+      const ident = $('#loginIdent').value.trim();
+      const password = $('#loginPassword').value.trim();
+      if (!ident || !password) return;
+
+      notice.style.display = 'block';
+      notice.innerHTML = `<div style="background:#e0f2fe; color:#0369a1; padding:10px; border-radius:8px; font-weight:600; text-align:center;">Checking credentials...</div>`;
+
+      try {
+        await api('/api/auth/login', {
+          method: 'POST',
+          body: { email: ident, password }
+        });
+
+        notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✓ Centre Login successful! Opening ERP Portal…</div>`;
+        toast('Centre Login successful!');
+
+        setTimeout(async () => {
+          showErpLayout();
+          renderSidebar();
+          initStudentLoginModal();
+          initSignOutButton();
+          await initCentreHeader();
+          switchModule('MyStudents');
+        }, 600);
+      } catch (err) {
+        notice.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✕ ${esc(err.message || 'Invalid Centre Code or Password')}</div>`;
+      }
+    };
+  }
+
+  // Submit Franchise Approved Password Setup
+  const formSetup = $('#formFranchiseSetup');
+  if (formSetup) {
+    formSetup.onsubmit = async (e) => {
+      e.preventDefault();
+      const ident = $('#setupIdent').value.trim();
+      const pw = $('#setupPassword').value.trim();
+      const confirmPw = $('#setupConfirmPassword').value.trim();
+
+      if (!ident) return;
+      if (pw.length < 6) {
+        notice.style.display = 'block';
+        notice.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✕ Password must be at least 6 characters</div>`;
+        return;
+      }
+      if (pw !== confirmPw) {
+        notice.style.display = 'block';
+        notice.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✕ Passwords do not match! Please check again.</div>`;
+        return;
+      }
+
+      notice.style.display = 'block';
+      notice.innerHTML = `<div style="background:#fef3c7; color:#b45309; padding:10px; border-radius:8px; font-weight:600; text-align:center;">Activating franchise and saving password...</div>`;
+
+      try {
+        const res = await api('/api/auth/franchise-set-password', {
+          method: 'POST',
+          body: { identifier: ident, password: pw }
+        });
+
+        notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:12px; border-radius:8px; font-weight:700; text-align:center;">🎉 ${esc(res.message || 'Password created successfully! Welcome to your ERP portal.')}</div>`;
+        toast('Franchise password created! Unlocking ERP Dashboard...');
+
+        setTimeout(async () => {
+          showErpLayout();
+          renderSidebar();
+          initStudentLoginModal();
+          initSignOutButton();
+          await initCentreHeader();
+          switchModule('MyStudents');
+        }, 900);
+      } catch (err) {
+        notice.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✕ ${esc(err.message || 'Error setting password')}</div>`;
+      }
+    };
+  }
+
+  // Forgot password handler
+  if ($('#linkForgotPassword')) {
+    $('#linkForgotPassword').onclick = (e) => {
+      e.preventDefault();
+      const code = prompt('Enter your registered Centre Code or Mobile Number:');
+      if (code && code.trim()) {
+        window.location.href = `/setup?identifier=${encodeURIComponent(code.trim())}`;
+      }
+    };
+  }
+}
+
+// Initial Bootstrapping with Strict Authentication Check
 guard(async () => {
-  renderSidebar();
-  initStudentLoginModal();
-  await initCentreHeader();
-  switchModule('MyStudents');
+  try {
+    const meRes = await api('/api/auth/me').catch(() => null);
+    if (!meRes || !meRes.user || !['centre_owner', 'centre_staff', 'super_admin', 'admin', 'coordinator'].includes(meRes.user.role)) {
+      showCentreAuthScreen();
+      return;
+    }
+
+    // Authenticated user exists -> open ERP layout
+    showErpLayout();
+    renderSidebar();
+    initStudentLoginModal();
+    initSignOutButton();
+    await initCentreHeader();
+    switchModule('MyStudents');
+  } catch (err) {
+    showCentreAuthScreen();
+  }
 });

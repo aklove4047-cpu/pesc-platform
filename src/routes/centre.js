@@ -15,42 +15,31 @@ router.use((req, res, next) => {
     return next();
   }
 
-  let targetCentre = req.tenant;
-  if (!targetCentre) {
+  if (req.user && ['super_admin', 'admin'].includes(req.user.role)) {
     const slugOrId = req.query.centre || req.query.slug || req.headers['x-centre-slug'];
+    let targetCentre = null;
     if (slugOrId) {
       targetCentre = db.prepare("SELECT * FROM centres WHERE slug=? OR centre_code=? OR id=?").get(slugOrId, slugOrId, +slugOrId || 0);
     }
-  }
-  if (!targetCentre && req.headers.referer) {
-    const m = req.headers.referer.match(/\/c\/([a-z0-9-]+)/i);
-    if (m) targetCentre = db.prepare("SELECT * FROM centres WHERE slug=?").get(m[1].toLowerCase());
-  }
-  if (!targetCentre) {
-    targetCentre = db.prepare("SELECT * FROM centres WHERE status='active' ORDER BY id ASC LIMIT 1").get()
-      || db.prepare("SELECT * FROM centres ORDER BY id ASC LIMIT 1").get();
-  }
-  if (!targetCentre) {
-    try {
-      const ins = db.prepare("INSERT INTO centres(name,slug,centre_code,status,director_name,district,state,created_at) VALUES(?,?,?,?,?,?,?,?)");
-      ins.run('Navya National Institute of Technology', 'navya', 'PESC00001', 'active', 'Ravi Verma', 'Varanasi', 'Uttar Pradesh', Date.now());
-      targetCentre = db.prepare("SELECT * FROM centres WHERE slug='navya'").get();
-    } catch (_) {}
-  }
-
-  if (targetCentre) {
-    let ownerUser = db.prepare("SELECT * FROM users WHERE centre_id=? AND role='centre_owner'").get(targetCentre.id);
-    if (!ownerUser) {
-      ownerUser = { id: 99900 + targetCentre.id, name: targetCentre.name + ' Director', role: 'centre_owner', centre_id: targetCentre.id };
+    if (!targetCentre && req.user.centre_id) {
+      targetCentre = db.prepare("SELECT * FROM centres WHERE id=?").get(req.user.centre_id);
     }
-    req.user = ownerUser;
+    if (!targetCentre) {
+      targetCentre = db.prepare("SELECT * FROM centres WHERE status='active' ORDER BY id ASC LIMIT 1").get();
+    }
     req.tenant = targetCentre;
     return next();
   }
-  return next();
+
+  return res.status(401).json({ error: 'Centre login required. Please sign in with your Centre Code and password.' });
 });
 
-const cid = (req) => req.user.centre_id;
+const cid = (req) => {
+  if (['super_admin', 'admin'].includes(req.user?.role) && req.tenant) {
+    return req.tenant.id;
+  }
+  return req.user?.centre_id || 1;
+};
 
 // 17. All Centres list for 1-click Centre Switcher
 router.get('/all-centres', (req, res) => {

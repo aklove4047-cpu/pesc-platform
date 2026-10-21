@@ -73,23 +73,6 @@ app.get(['/c/:slug/admin', '/c/:slug/portal', '/c/:slug/erp'], (req, res) => {
 });
 
 app.get('/portal', (req, res) => {
-  const slug = req.query.centre || req.query.slug;
-  let centre = null;
-  if (slug) {
-    centre = db.prepare("SELECT * FROM centres WHERE slug=? OR centre_code=? OR id=?").get(slug, slug, +slug || 0);
-  }
-  if (!centre) {
-    centre = db.prepare("SELECT * FROM centres WHERE status='active' ORDER BY id ASC LIMIT 1").get();
-  }
-  if (centre) {
-    let ownerUser = db.prepare("SELECT * FROM users WHERE centre_id=? AND role='centre_owner'").get(centre.id);
-    if (!ownerUser) ownerUser = { id: 99900 + centre.id, name: centre.name + ' Director', role: 'centre_owner', centre_id: centre.id };
-    const sid = rand(32);
-    db.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(sid), ownerUser.id, now() + 7 * 864e5);
-    res.cookie('sid', sid, { httpOnly: true, sameSite: 'lax', secure: cfg.isProd, maxAge: 7 * 864e5, path: '/' });
-    req.user = ownerUser;
-    req.tenant = centre;
-  }
   return res.sendFile(path.join(PUB, 'centre.html'));
 });
 app.get('/login', async (req, res) => {
