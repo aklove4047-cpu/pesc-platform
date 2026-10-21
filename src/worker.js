@@ -190,8 +190,7 @@ function parseCookie(header) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const hostHeader = request.headers.get('x-forwarded-host') || request.headers.get('host') || url.hostname;
-    const host = hostHeader.split(',')[0].trim().toLowerCase().split(':')[0];
+    const host = (url.hostname || request.headers.get('host') || '').split(':')[0].trim().toLowerCase();
     const path = url.pathname;
     const cookies = parseCookie(request.headers.get('Cookie'));
 
