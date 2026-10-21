@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Purvanchal Education &amp; Skill Council (PESC) – National Autonomous Vocational Education Council</title>
   <meta name="description" content="Purvanchal Education & Skill Council provides nationwide computer centre franchise affiliation, skill certifications, online verifiable marksheets, student portals, and regional monitoring.">
+  <script>
+    (function() {
+      try {
+        var h = window.location.hostname.toLowerCase();
+        var b = '.pescouncil.in';
+        if (h.endsWith(b) && h !== 'pescouncil.in' && h !== 'www.pescouncil.in') {
+          var sub = h.replace(b, '');
+          var res = ['www', 'admin', 'api', 'mail', 'support', 'verify', 'login', 'portal', 'app', 'static'];
+          if (res.indexOf(sub) === -1 && (window.location.pathname === '/' || window.location.pathname === '/index.html')) {
+            window.location.replace('/c/' + encodeURIComponent(sub));
+          }
+        }
+      } catch(e) {}
+    })();
+  </script>
   <meta name="google-site-verification" content="XRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo">
   <link rel="stylesheet" href="/assets/css/style.css">
 </head>
