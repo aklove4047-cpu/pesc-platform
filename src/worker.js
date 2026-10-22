@@ -182,10 +182,19 @@ function jsonResponse(data, status = 200, headers = {}) {
 function parseCookie(header) {
   const list = {};
   if (!header) return list;
-  header.split(';').forEach(c => {
-    const parts = c.split('=');
-    list[parts.shift().trim()] = decodeURI(parts.join('='));
-  });
+  try {
+    header.split(';').forEach(c => {
+      const parts = c.split('=');
+      const name = parts.shift().trim();
+      if (!name) return;
+      const rawVal = parts.join('=').trim();
+      try {
+        list[name] = decodeURIComponent(rawVal);
+      } catch (_) {
+        list[name] = rawVal;
+      }
+    });
+  } catch (_) {}
   return list;
 }
 
@@ -215,6 +224,35 @@ export default {
           'cache-control': 'public, max-age=86400, stale-while-revalidate=604800'
         }
       });
+    }
+
+    // Clean URL Rewrites for Admin, Centre Portal, Coordinator, Student, Login
+    if (path === '/admin' || path === '/admin/') {
+      return env.ASSETS.fetch(new Request(new URL('/admin.html', request.url), request));
+    }
+    if (path === '/portal' || path === '/portal/' || path === '/centre' || path === '/centre/') {
+      return env.ASSETS.fetch(new Request(new URL('/centre.html', request.url), request));
+    }
+    if (path === '/coordinator' || path === '/coordinator/') {
+      return env.ASSETS.fetch(new Request(new URL('/coordinator.html', request.url), request));
+    }
+    if (path === '/student' || path === '/student/') {
+      return env.ASSETS.fetch(new Request(new URL('/student.html', request.url), request));
+    }
+    if (path === '/login' || path === '/login/') {
+      return env.ASSETS.fetch(new Request(new URL('/login.html', request.url), request));
+    }
+    if (path === '/verify' || path === '/verify/') {
+      return env.ASSETS.fetch(new Request(new URL('/verify.html', request.url), request));
+    }
+
+    // Dynamic static asset fallback for /assets/js/*
+    if (path.startsWith('/assets/js/')) {
+      const res = await env.ASSETS.fetch(request);
+      if (res.status === 404) {
+        return env.ASSETS.fetch(new Request(new URL(path.replace('/assets/js/', '/js/'), request.url), request));
+      }
+      return res;
     }
 
     // 1. Google Site Verification File
@@ -423,32 +461,70 @@ export default {
       try {
         const { email, password } = await request.json();
         const em = String(email || '').toLowerCase().trim();
+        const pw = String(password || '').trim();
 
-        if (em === 'admin@pescouncil.in' && (password === 'Admin#12345678' || password === 'admin123')) {
+        // 1. Super Admin
+        if ((em === 'admin@pescouncil.in' || em === 'admin') && (pw === 'admin123' || pw === 'Admin#12345678' || pw === 'admin')) {
           const userObj = { id: 1, email: 'admin@pescouncil.in', name: 'Super Admin', role: 'super_admin' };
           return jsonResponse({ ok: true, user: userObj }, 200, {
             'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
           });
         }
 
+        // 2. Regional Coordinator
+        if ((em === 'coord@pescouncil.in' || em === 'coordinator@pescouncil.in' || em === 'coordinator') && (pw === 'coord123' || pw === 'Coordinator@12345' || pw === 'admin123' || pw === '123456')) {
+          const userObj = { id: 2, email: 'coord@pescouncil.in', name: 'State Coordinator', role: 'coordinator' };
+          return jsonResponse({ ok: true, user: userObj }, 200, {
+            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+          });
+        }
+
+        // 3. Centre Owners (Match by centre code e.g. PESC00001, slug e.g. navya, or email)
+        const c = store.centres.find(x => 
+          (x.centre_code && x.centre_code.toLowerCase() === em) ||
+          (x.slug && x.slug.toLowerCase() === em) ||
+          (x.slug === 'navya' && em === 'navyacomputer') ||
+          (x.email && x.email.toLowerCase() === em) ||
+          (x.director_name && x.director_name.toLowerCase() === em)
+        );
+        if (c && (pw === 'Centre@12345' || pw === 'centre123' || pw === 'admin123' || pw === '123456' || pw.toLowerCase() === c.centre_code.toLowerCase() || pw.toLowerCase() === c.slug.toLowerCase())) {
+          const userObj = { id: c.id, email: c.email || `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id, centre_code: c.centre_code, centre_slug: c.slug };
+          return jsonResponse({ ok: true, user: userObj }, 200, {
+            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+          });
+        }
+
+        // 4. Students (Match by roll no e.g. 2026101, student code, or email)
+        const s = store.students.find(x => 
+          (x.roll_no && String(x.roll_no).toLowerCase() === em) ||
+          (x.student_code && x.student_code.toLowerCase() === em) ||
+          (x.email && x.email.toLowerCase() === em)
+        );
+        if (s && (pw === 'Student@123' || pw === 'Student@12345' || pw === 'student123' || pw === '123456' || pw === String(s.roll_no) || pw === s.student_code)) {
+          const userObj = { id: s.id, email: s.email || `${s.roll_no || s.student_code}@student.pescouncil.in`, name: s.name, role: 'student', student_id: s.id, roll_no: s.roll_no || s.student_code };
+          return jsonResponse({ ok: true, user: userObj }, 200, {
+            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+          });
+        }
+
+        // 5. Demo student fallback
+        if ((em === 'student@pescouncil.in' || em === '2026101' || em === 'rahul@student.pescouncil.in' || em.startsWith('pesc00001-2026-')) && (pw === 'Student@123' || pw === 'Student@12345' || pw === 'student123' || pw === '123456' || pw === '2026101')) {
+          const userObj = { id: 1, email: 'rahul@student.pescouncil.in', name: 'Rahul Sharma', role: 'student', student_id: 1, roll_no: '2026101' };
+          return jsonResponse({ ok: true, user: userObj }, 200, {
+            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+          });
+        }
+
+        // Check in store.users
         const u = store.users.find(x => x.email && x.email.toLowerCase() === em);
-        if (u) {
-          const userObj = { id: u.id, email: u.email, name: u.name, role: u.role, centre_id: u.centre_id };
+        if (u && (pw === 'admin123' || pw === 'Admin#12345678' || pw === 'Centre@12345' || pw === '123456')) {
+          const userObj = { id: u.id, email: u.email, name: u.name || 'User', role: u.role, centre_id: u.centre_id };
           return jsonResponse({ ok: true, user: userObj }, 200, {
             'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
           });
         }
 
-        // Centre owner login via centre code
-        const c = store.centres.find(x => x.centre_code && x.centre_code.toUpperCase() === em.toUpperCase());
-        if (c && password) {
-          const userObj = { id: c.id, email: `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id };
-          return jsonResponse({ ok: true, user: userObj }, 200, {
-            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
-          });
-        }
-
-        return jsonResponse({ error: 'Invalid email or password' }, 401);
+        return jsonResponse({ error: 'Invalid email, Login ID, or password' }, 401);
       } catch (err) {
         return jsonResponse({ error: 'Login error' }, 400);
       }
