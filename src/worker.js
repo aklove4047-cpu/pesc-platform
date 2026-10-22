@@ -648,11 +648,23 @@ export default {
       if (path === '/api/centre/dashboard') {
         const stus = store.students.filter(s => s.centre_id === c.id);
         const certs = store.certificates.filter(x => x.centre_id === c.id);
+        let totalPaid = 0;
+        let totalPending = 0;
+        stus.forEach(s => {
+          totalPaid += (s.fee_paid || 8000);
+          totalPending += Math.max(0, (s.fee_total || 12000) - (s.fee_paid || 8000));
+        });
         return jsonResponse({
           centre: c,
+          students: stus.length,
           students_count: stus.length,
+          courses: store.courses.length,
+          today_attendance_pct: 94,
+          wallet_paise: 50000000,
+          wallet_balance_inr: 500000,
+          fee_paid_rupees: totalPaid,
+          fee_pending_rupees: totalPending,
           certificates_count: certs.length,
-          wallet_balance_inr: 5000
         });
       }
 
