@@ -727,8 +727,8 @@ export default {
     }
 
     // --- Certificate Verification ---
-    if (path === '/api/public/verify' || path.startsWith('/api/certificates/verify/')) {
-      const rawNo = decodeURIComponent(url.searchParams.get('cert_no') || url.searchParams.get('token') || path.split('/')[4] || '').trim();
+    if (path === '/api/public/verify' || path.startsWith('/api/certificates/verify/') || path.startsWith('/api/public/verify/certificate/')) {
+      const rawNo = decodeURIComponent(url.searchParams.get('cert_no') || url.searchParams.get('token') || path.split('/').pop() || '').trim();
       const cert = store.certificates.find(c =>
         c.cert_no.toLowerCase() === rawNo.toLowerCase() ||
         (c.token && c.token.toLowerCase() === rawNo.toLowerCase())
@@ -739,22 +739,40 @@ export default {
       const course = store.courses.find(co => co.id === cert.course_id) || {};
       const centre = store.centres.find(ce => ce.id === cert.centre_id) || {};
 
+      const cAddress = centre.address || `${centre.district || 'Varanasi'}, ${centre.state || 'Uttar Pradesh'} - ${centre.pin || '221001'}`;
+      const dName = centre.director_name || 'Dr. Ramesh Kumar';
+      const dPhoto = centre.director_photo || centre.photo_url || '';
+
       return jsonResponse({
         status: cert.status,
+        type: 'Certificate',
         certificate_no: cert.cert_no,
         token: cert.token,
         holder: student.name || 'Candidate',
+        father_name: student.father_name || 'N/A',
         student_code: student.student_code || 'PESC-STU',
+        roll_no: student.roll_no || student.student_code || 'PESC-STU',
         course: course.name || 'Diploma in Computer Application',
+        course_code: course.code || 'DCA',
         centre: centre.name || 'Authorized Training Centre',
+        institute_name: centre.name || 'Authorized Training Centre',
         centre_code: centre.centre_code || 'PESC',
+        institute_address: cAddress,
+        director_name: dName,
+        director_photo: dPhoto,
+        validity: 'Lifetime Validity / Session 2026-27',
+        session: student.session || '2026-27',
+        run_by: 'Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)',
+        registration: 'Ministry of Micro, Small and Medium Enterprises of India (MSME), Govt. of NCT Delhi, NITI Aayog Recognized, ISO with IAF ISO 9001:2015',
+        coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
+        head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi',
         issued_on: new Date(cert.issued_at || cert.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
       });
     }
 
     // --- Marksheet Verification ---
-    if (path === '/api/public/verify-marksheet' || path.startsWith('/api/marksheets/verify/')) {
-      const rawNo = decodeURIComponent(url.searchParams.get('marksheet_no') || url.searchParams.get('roll_no') || url.searchParams.get('token') || path.split('/')[4] || '').trim();
+    if (path === '/api/public/verify-marksheet' || path.startsWith('/api/marksheets/verify/') || path.startsWith('/api/public/verify/marksheet/') || path.startsWith('/api/public/verify-marksheet/')) {
+      const rawNo = decodeURIComponent(url.searchParams.get('marksheet_no') || url.searchParams.get('roll_no') || url.searchParams.get('token') || path.split('/').pop() || '').trim();
       const mrk = store.marksheets.find(m =>
         (m.marksheet_no && m.marksheet_no.toLowerCase() === rawNo.toLowerCase()) ||
         (m.roll_no && m.roll_no.toLowerCase() === rawNo.toLowerCase()) ||
@@ -769,18 +787,33 @@ export default {
       let parsedSubjects = [];
       try { parsedSubjects = JSON.parse(mrk.subjects || '[]'); } catch (_) {}
 
+      const cAddress = centre.address || `${centre.district || 'Varanasi'}, ${centre.state || 'Uttar Pradesh'} - ${centre.pin || '221001'}`;
+      const dName = centre.director_name || 'Dr. Ramesh Kumar';
+      const dPhoto = centre.director_photo || centre.photo_url || '';
+
       return jsonResponse({
         status: mrk.status || 'Approved',
         type: 'Marksheet',
         marksheet_no: mrk.marksheet_no,
         token: mrk.token,
         holder: student.name || 'Candidate',
+        father_name: student.father_name || 'N/A',
         roll_no: mrk.roll_no,
         student_code: student.student_code || mrk.roll_no,
         course: course.name || 'Diploma in Computer Application',
-        session: mrk.exam_session || 'Annual 2026',
+        course_code: course.code || 'DCA',
+        session: mrk.exam_session || 'Annual 2026-27',
         centre: centre.name || 'Authorized Training Centre',
+        institute_name: centre.name || 'Authorized Training Centre',
         centre_code: centre.centre_code || 'PESC',
+        institute_address: cAddress,
+        director_name: dName,
+        director_photo: dPhoto,
+        validity: 'Lifetime Validity / Session 2026-27',
+        run_by: 'Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)',
+        registration: 'Ministry of Micro, Small and Medium Enterprises of India (MSME), Govt. of NCT Delhi, NITI Aayog Recognized, ISO with IAF ISO 9001:2015',
+        coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
+        head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi',
         total_obtained: mrk.total_obtained,
         total_max: mrk.total_max,
         percentage: mrk.percentage,
@@ -1630,10 +1663,44 @@ export default {
         return jsonResponse({ student: enrichedStudent, course, centre });
       }
       if (path === '/api/student/marksheets') {
-        return jsonResponse({ marksheets: mrk ? [mrk] : store.marksheets.slice(0, 3) });
+        const enrichedMrk = (mrk ? [mrk] : store.marksheets.slice(0, 3)).map(m => {
+          const cTarget = store.centres.find(x => x.id === m.centre_id) || centre;
+          return {
+            ...m,
+            institute_name: cTarget.name,
+            centre_name: cTarget.name,
+            centre_code: cTarget.centre_code,
+            institute_address: cTarget.address || `${cTarget.district}, ${cTarget.state} - ${cTarget.pin || '221001'}`,
+            director_name: cTarget.director_name || 'Dr. Ramesh Kumar',
+            director_photo: cTarget.director_photo || cTarget.photo_url || '',
+            validity: 'Lifetime Validity / Session 2026-27',
+            run_by: 'Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)',
+            registration: 'Ministry of Micro, Small and Medium Enterprises of India (MSME), Govt. of NCT Delhi, NITI Aayog Recognized, ISO with IAF ISO 9001:2015',
+            coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
+            head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi'
+          };
+        });
+        return jsonResponse({ marksheets: enrichedMrk });
       }
       if (path === '/api/student/certificates') {
-        return jsonResponse({ certificates: cert ? [cert] : store.certificates.slice(0, 3) });
+        const enrichedCert = (cert ? [cert] : store.certificates.slice(0, 3)).map(cItem => {
+          const cTarget = store.centres.find(x => x.id === cItem.centre_id) || centre;
+          return {
+            ...cItem,
+            institute_name: cTarget.name,
+            centre_name: cTarget.name,
+            centre_code: cTarget.centre_code,
+            institute_address: cTarget.address || `${cTarget.district}, ${cTarget.state} - ${cTarget.pin || '221001'}`,
+            director_name: cTarget.director_name || 'Dr. Ramesh Kumar',
+            director_photo: cTarget.director_photo || cTarget.photo_url || '',
+            validity: 'Lifetime Validity / Session 2026-27',
+            run_by: 'Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)',
+            registration: 'Ministry of Micro, Small and Medium Enterprises of India (MSME), Govt. of NCT Delhi, NITI Aayog Recognized, ISO with IAF ISO 9001:2015',
+            coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
+            head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi'
+          };
+        });
+        return jsonResponse({ certificates: enrichedCert });
       }
       if (path === '/api/student/syllabus') {
         return jsonResponse({

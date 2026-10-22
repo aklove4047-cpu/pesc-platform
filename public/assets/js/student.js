@@ -350,31 +350,118 @@ guard(async () => {
         `;
       }
 
+      const cName = m.institute_name || m.centre_name || 'Authorized Training Centre';
+      const cCode = m.centre_code || 'PESC00001';
+      const cAddress = m.institute_address || 'City Campus, Main Road';
+      const directorName = m.director_name || 'Dr. Ramesh Kumar';
+      const directorPhoto = m.director_photo || '';
+      const validityText = m.validity || 'Lifetime Recognition / Session 2026-27';
+
+      const directorPhotoHtml = directorPhoto
+        ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
+        : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
+
       viewEl.innerHTML = `
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
             <div>
-              <h2>Statement of Marks</h2>
-              <p class="muted">Marksheet No: <b style="color:var(--navy);">${esc(m.marksheet_no || 'Pending Approval')}</b> · Exam Session: ${esc(m.exam_session)}</p>
+              <h2 style="margin:0 0 4px; color:#064e3b;">Official Statement of Marks</h2>
+              <p class="muted" style="margin:0;">Marksheet No: <b style="color:var(--navy); font-family:monospace;">${esc(m.marksheet_no || 'PESC-MRK-2026-001')}</b> · Exam Session: <b>${esc(m.exam_session || '2026-27')}</b></p>
             </div>
-            ${m.status === 'Approved' ? `
-              <a href="/api/marksheets/${m.id}/pdf" target="_blank" class="btn gold">
-                📥 Download Official Marksheet (PDF)
-              </a>
-            ` : `<span class="badge ${m.status}">${m.status}</span>`}
+            <div style="display:flex; gap:10px;">
+              <button onclick="window.print()" class="btn gold">🖨️ Print Official Marksheet</button>
+            </div>
           </div>
 
-          <div class="grid" style="margin-bottom:16px;">
-            <div class="stat"><span>Total Marks</span><b>${m.total_obtained} / ${m.total_max}</b></div>
-            <div class="stat"><span>Percentage</span><b>${m.percentage}%</b></div>
-            <div class="stat"><span>Grade</span><b>${esc(m.grade)}</b></div>
-            <div class="stat"><span>Result</span><b>${badge(m.result)}</b></div>
-          </div>
+          <!-- Official Standardized Marksheet Container -->
+          <div class="printable-area" style="background:#ffffff; border:10px double #d4af37; padding:28px 32px; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,0.06); text-align:center; position:relative;">
+            <!-- Top Accreditations & Run By Bar -->
+            <div style="border-bottom:2px solid #b45309; padding-bottom:8px; margin-bottom:12px; text-align:center;">
+              <div style="font-size:0.92rem; font-weight:800; color:#b45309; letter-spacing:0.8px; text-transform:uppercase;">
+                Run by: Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)
+              </div>
+              <div style="font-size:0.72rem; color:#334155; font-weight:600; line-height:1.4; margin-top:3px; max-width:820px; margin-left:auto; margin-right:auto;">
+                Register - Ministry of Micro, Small and Medium Enterprises of India (MSME) · Govt. of NCT Delhi · Niti Aayog Recognized · ISO with IAF · ISO 9001:2015 Certified
+              </div>
+            </div>
 
-          ${subjectsHtml}
+            <!-- Institute & Director Top Header Row -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1.5px solid #d4af37; padding-bottom:10px; margin-bottom:14px; gap:12px; text-align:left;">
+              <!-- Left: Institute Info & Centre Code -->
+              <div style="flex:1; max-width:280px;">
+                <span style="display:inline-block; background:#064e3b; color:#ffffff; font-size:0.66rem; font-weight:800; padding:2px 7px; border-radius:4px; margin-bottom:3px; letter-spacing:0.5px;">AUTHORIZED TRAINING CENTRE</span>
+                <div style="font-size:1.05rem; font-weight:900; color:#064e3b; line-height:1.2; margin-bottom:2px;">${esc(cName)}</div>
+                <div style="font-size:0.82rem; font-weight:800; color:#b45309;">Centre Code: <span style="font-family:monospace;">${esc(cCode)}</span></div>
+                <div style="font-size:0.73rem; color:#475569; line-height:1.3; margin-top:2px;">📍 ${esc(cAddress)}</div>
+              </div>
 
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; font-size:0.85rem; color:#64748b;">
-            💡 <b>Verification Note:</b> This official statement of marks is certified by Purvanchal Education & Skill Council. An online QR code is embedded in the PDF for instant digital validation.
+              <!-- Center: Council Crest & Title -->
+              <div style="flex:1; text-align:center;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, #0a2a5e, #064e3b); color:#d4af37; font-weight:900; font-size:1.4rem; box-shadow:0 2px 6px rgba(0,0,0,0.15); margin-bottom:3px; border:2px solid #d4af37;">P</div>
+                <div style="font-size:1.15rem; font-weight:900; color:#0a2a5e; letter-spacing:0.5px; line-height:1.2;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</div>
+                <div style="font-size:0.82rem; font-weight:800; color:#b45309; letter-spacing:1px; text-transform:uppercase; margin-top:2px;">OFFICIAL STATEMENT OF MARKS</div>
+              </div>
+
+              <!-- Right: Director Photo & Validity -->
+              <div style="display:flex; align-items:flex-start; gap:10px; max-width:260px; text-align:right;">
+                <div style="flex:1;">
+                  <span style="display:inline-block; font-size:0.68rem; font-weight:700; color:#64748b; text-transform:uppercase;">Director In-charge</span>
+                  <div style="font-size:0.88rem; font-weight:800; color:#0f172a; margin-top:1px;">${esc(directorName)}</div>
+                  <div style="font-size:0.72rem; font-weight:700; color:#16a34a; margin-top:4px;">
+                    <span style="display:inline-block; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 6px; border-radius:4px;">Validity: ${esc(validityText)}</span>
+                  </div>
+                </div>
+                <div style="width:58px; height:72px; flex-shrink:0; border:2px solid #d4af37; border-radius:6px; overflow:hidden; background:#f8fafc; box-shadow:0 2px 5px rgba(0,0,0,0.08); display:flex; align-items:center; justify-content:center;">
+                  ${directorPhotoHtml}
+                </div>
+              </div>
+            </div>
+
+            <!-- Student Metadata Box -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.86rem; margin-bottom:12px; background:#f8fafc; padding:10px 14px; border-radius:6px; text-align:left; border:1px solid #e2e8f0;">
+              <div>Candidate Name: <b>${esc(me.user.name)}</b></div>
+              <div>Roll No / Student Code: <b style="font-family:monospace; color:#0a2a5e;">${esc(m.roll_no || me.user.student_code || me.user.email)}</b></div>
+              <div>Father's Name: <b>${esc(m.father_name || me.user.father_name || 'N/A')}</b></div>
+              <div>Course: <b style="color:#064e3b;">${esc(m.course_name || 'Diploma in Computer Application')}</b></div>
+            </div>
+
+            ${subjectsHtml}
+
+            <!-- Bottom 3 Official Mohar & Signatures -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:20px; padding-top:14px; border-top:1.5px dashed #cbd5e1; text-align:center;">
+              <!-- 1. Centre Director Mohar Sign -->
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <div style="width:68px; height:68px; border:2px dashed #047857; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#047857; font-size:0.56rem; font-weight:800; text-transform:uppercase; transform:rotate(-4deg); background:rgba(4,120,87,0.04); box-shadow:inset 0 0 4px rgba(4,120,87,0.12);">
+                  <span style="font-size:0.52rem;">★ MOHAR ★</span>
+                  <span style="font-size:0.58rem; font-weight:900;">${esc(cCode)}</span>
+                  <span style="font-size:0.48rem;">CENTRE SEAL</span>
+                </div>
+                <div style="font-family:cursive; font-size:1.15rem; color:#064e3b; margin:6px 0 2px; line-height:1;">${esc(directorName)}</div>
+                <span style="font-size:0.75rem; font-weight:800; color:#0f172a; border-top:1px solid #94a3b8; display:block; padding-top:3px; width:100%; max-width:160px;">Centre Director Mohar &amp; Sign</span>
+              </div>
+
+              <!-- 2. Coordinator Office Mohar Sign -->
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <div style="width:68px; height:68px; border:2px dashed #0284c7; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#0284c7; font-size:0.56rem; font-weight:800; text-transform:uppercase; transform:rotate(3deg); background:rgba(2,132,199,0.04); box-shadow:inset 0 0 4px rgba(2,132,199,0.12);">
+                  <span style="font-size:0.52rem;">★ REGIONAL ★</span>
+                  <span style="font-size:0.58rem; font-weight:900;">COORDINATOR</span>
+                  <span style="font-size:0.48rem;">STATE OFFICE</span>
+                </div>
+                <div style="font-family:cursive; font-size:1.15rem; color:#0369a1; margin:6px 0 2px; line-height:1;">Dr. Rajesh Verma</div>
+                <span style="font-size:0.75rem; font-weight:800; color:#0f172a; border-top:1px solid #94a3b8; display:block; padding-top:3px; width:100%; max-width:170px;">Coordinator Office Mohar &amp; Sign</span>
+              </div>
+
+              <!-- 3. Head Office Mohar Sign -->
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <div style="width:68px; height:68px; border:2.5px solid #d4af37; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#b45309; font-size:0.56rem; font-weight:800; text-transform:uppercase; background:radial-gradient(circle, #fefce8, #fef3c7); box-shadow:0 0 6px rgba(212,175,55,0.4);">
+                  <span style="font-size:0.52rem;">★ PESC ★</span>
+                  <span style="font-size:0.58rem; font-weight:900;">HEAD OFFICE</span>
+                  <span style="font-size:0.48rem;">NEW DELHI</span>
+                </div>
+                <div style="font-family:cursive; font-size:1.15rem; color:#b45309; margin:6px 0 2px; line-height:1;">Prof. S. N. Mishra</div>
+                <span style="font-size:0.75rem; font-weight:800; color:#0f172a; border-top:1px solid #94a3b8; display:block; padding-top:3px; width:100%; max-width:160px;">Head Office Mohar &amp; Sign</span>
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -396,32 +483,132 @@ guard(async () => {
       }
 
       const c = list[0];
+      const cName = c.institute_name || c.centre_name || 'Authorized Training Centre';
+      const cCode = c.centre_code || 'PESC00001';
+      const cAddress = c.institute_address || 'City Campus, Main Road';
+      const directorName = c.director_name || 'Dr. Ramesh Kumar';
+      const directorPhoto = c.director_photo || '';
+      const validityText = c.validity || 'Lifetime Recognition / Session 2026-27';
+
+      const directorPhotoHtml = directorPhoto
+        ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
+        : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
+
       viewEl.innerHTML = `
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
             <div>
-              <h2>Course Completion Certificate</h2>
-              <p class="muted">Status: ${badge(c.status)}</p>
+              <h2 style="margin:0 0 4px; color:#064e3b;">Course Completion Certificate</h2>
+              <p class="muted" style="margin:0;">Status: ${badge(c.status)} · Certificate No: <b style="color:var(--navy); font-family:monospace;">${esc(c.cert_no || 'Processing')}</b></p>
             </div>
-            ${c.status === 'Valid' ? `
-              <div style="display:flex; gap:10px;">
-                <a href="/verify/${c.token}" target="_blank" class="btn alt">🔍 Public Verification Page</a>
-                <a href="/api/certificates/${c.id}/pdf" target="_blank" class="btn gold">📥 Download Certificate (PDF)</a>
-              </div>
-            ` : ''}
+            <div style="display:flex; gap:10px;">
+              <a href="/verify/${c.token}" target="_blank" class="btn alt">🔍 Public Verification Page</a>
+              <button onclick="window.print()" class="btn gold">🖨️ Print Certificate</button>
+            </div>
           </div>
 
-          <div style="border: 3px solid #d4af37; border-radius:14px; padding:36px; text-align:center; background: radial-gradient(circle, #ffffff 60%, #fefce8 100%); box-shadow:var(--shadow-md);">
-            <h3 style="color:#0a2a5e; letter-spacing:1px; font-size:1.5rem; margin:0 0 6px;">PURVANCHAL EDUCATION & SKILL COUNCIL</h3>
-            <p class="muted" style="margin-bottom:20px; font-weight:600;">Autonomous Body for Skill & Vocational Training</p>
-            <h1 style="color:#0a2a5e; font-size:2rem; margin:16px 0;">Certificate of Competency & Completion</h1>
-            <p style="font-size:1.15rem; color:#475569; margin:12px 0;">This is to certify that candidate <b>${esc(me.user.name)}</b> has successfully qualified the prescribed curriculum for</p>
-            <h2 style="color:#0a2a5e; font-size:1.8rem; margin:14px 0;">"${esc(c.course_name)}"</h2>
-            <p class="muted" style="font-size:1.05rem;">Conducted through accredited study centre <b>${esc(c.centre_name)}</b></p>
-            <div style="margin-top:32px; display:flex; justify-content:space-around; font-size:0.95rem; color:#475569; border-top:1px dashed #cbd5e1; padding-top:18px;">
-              <div>Certificate No: <b style="color:var(--navy); font-family:monospace;">${esc(c.cert_no || 'Processing')}</b></div>
-              <div>Issue Date: <b>${date(c.issued_at) || 'Pending'}</b></div>
-              <div>Digital Token: <code style="color:#16a34a;">${esc(c.token ? c.token.slice(0, 10) + '…' : '—')}</code></div>
+          <!-- Official Standardized Certificate Container -->
+          <div class="printable-area" style="background:#ffffff; border:12px double #d4af37; padding:32px 36px; border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,0.08); text-align:center; position:relative;">
+            <!-- Top Accreditations & Run By Bar -->
+            <div style="border-bottom:2px solid #b45309; padding-bottom:8px; margin-bottom:12px; text-align:center;">
+              <div style="font-size:0.92rem; font-weight:800; color:#b45309; letter-spacing:0.8px; text-transform:uppercase;">
+                Run by: Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)
+              </div>
+              <div style="font-size:0.72rem; color:#334155; font-weight:600; line-height:1.4; margin-top:3px; max-width:820px; margin-left:auto; margin-right:auto;">
+                Register - Ministry of Micro, Small and Medium Enterprises of India (MSME) · Govt. of NCT Delhi · Niti Aayog Recognized · ISO with IAF · ISO 9001:2015 Certified
+              </div>
+            </div>
+
+            <!-- Institute & Director Top Header Row -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1.5px solid #d4af37; padding-bottom:10px; margin-bottom:14px; gap:12px; text-align:left;">
+              <!-- Left: Institute Info & Centre Code -->
+              <div style="flex:1; max-width:280px;">
+                <span style="display:inline-block; background:#064e3b; color:#ffffff; font-size:0.66rem; font-weight:800; padding:2px 7px; border-radius:4px; margin-bottom:3px; letter-spacing:0.5px;">AUTHORIZED TRAINING CENTRE</span>
+                <div style="font-size:1.05rem; font-weight:900; color:#064e3b; line-height:1.2; margin-bottom:2px;">${esc(cName)}</div>
+                <div style="font-size:0.82rem; font-weight:800; color:#b45309;">Centre Code: <span style="font-family:monospace;">${esc(cCode)}</span></div>
+                <div style="font-size:0.73rem; color:#475569; line-height:1.3; margin-top:2px;">📍 ${esc(cAddress)}</div>
+              </div>
+
+              <!-- Center: Council Crest & Title -->
+              <div style="flex:1; text-align:center;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, #0a2a5e, #064e3b); color:#d4af37; font-weight:900; font-size:1.4rem; box-shadow:0 2px 6px rgba(0,0,0,0.15); margin-bottom:3px; border:2px solid #d4af37;">P</div>
+                <div style="font-size:1.15rem; font-weight:900; color:#0a2a5e; letter-spacing:0.5px; line-height:1.2;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</div>
+                <div style="font-size:0.72rem; font-weight:700; color:#b45309; letter-spacing:1px; text-transform:uppercase; margin-top:2px;">Central Autonomous Skill Development Board</div>
+              </div>
+
+              <!-- Right: Director Photo & Validity -->
+              <div style="display:flex; align-items:flex-start; gap:10px; max-width:260px; text-align:right;">
+                <div style="flex:1;">
+                  <span style="display:inline-block; font-size:0.68rem; font-weight:700; color:#64748b; text-transform:uppercase;">Director In-charge</span>
+                  <div style="font-size:0.88rem; font-weight:800; color:#0f172a; margin-top:1px;">${esc(directorName)}</div>
+                  <div style="font-size:0.72rem; font-weight:700; color:#16a34a; margin-top:4px;">
+                    <span style="display:inline-block; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 6px; border-radius:4px;">Validity: ${esc(validityText)}</span>
+                  </div>
+                </div>
+                <div style="width:58px; height:72px; flex-shrink:0; border:2px solid #d4af37; border-radius:6px; overflow:hidden; background:#f8fafc; box-shadow:0 2px 5px rgba(0,0,0,0.08); display:flex; align-items:center; justify-content:center;">
+                  ${directorPhotoHtml}
+                </div>
+              </div>
+            </div>
+
+            <!-- Certificate Body -->
+            <div style="margin:16px 0 6px; font-size:1.25rem; font-family:serif; font-style:italic; color:#0f172a;">Statement of Skill Proficiency &amp; Completion</div>
+            <div style="font-size:0.9rem; color:#475569; margin-bottom:12px;">This is to officially certify that</div>
+
+            <div style="font-size:1.85rem; font-weight:900; color:#064e3b; text-decoration:underline; text-decoration-color:#d4af37; margin-bottom:6px; letter-spacing:0.5px;">
+              ${esc(me.user.name)}
+            </div>
+
+            <div style="font-size:0.92rem; color:#334155; margin-bottom:14px;">
+              Registration / Student Code: <b style="font-family:monospace; color:#0a2a5e;">${esc(me.user.student_code || me.user.roll_no || c.student_code || 'PESC-STU')}</b>
+            </div>
+
+            <div style="font-size:0.94rem; color:#334155; line-height:1.6; max-width:700px; margin:0 auto 18px;">
+              has successfully completed the prescribed curriculum and passed the examination for the professional program:
+              <div style="font-size:1.35rem; font-weight:800; margin:6px 0; color:#0a2a5e;">"${esc(c.course_name || 'Diploma in Computer Application')}"</div>
+              with <b>Grade A+ (Exemplary Performance)</b> conducted under council national quality standards.
+            </div>
+
+            <div style="display:flex; justify-content:center; gap:24px; font-size:0.8rem; color:#64748b; margin-bottom:12px;">
+              <div>Certificate No: <b style="color:var(--navy); font-family:monospace;">${esc(c.cert_no || 'PESC/2026/000001')}</b></div>
+              <div>Issue Date: <b>${date(c.issued_at) || '01 Apr 2026'}</b></div>
+              <div>Digital Token: <code style="color:#16a34a; font-weight:700;">${esc(c.token ? c.token.slice(0, 14) + '…' : 'PESC-TOKEN')}</code></div>
+            </div>
+
+            <!-- Bottom 3 Official Mohar & Signatures -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:20px; padding-top:14px; border-top:1.5px dashed #cbd5e1; text-align:center;">
+              <!-- 1. Centre Director Mohar Sign -->
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <div style="width:68px; height:68px; border:2px dashed #047857; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#047857; font-size:0.56rem; font-weight:800; text-transform:uppercase; transform:rotate(-4deg); background:rgba(4,120,87,0.04); box-shadow:inset 0 0 4px rgba(4,120,87,0.12);">
+                  <span style="font-size:0.52rem;">★ MOHAR ★</span>
+                  <span style="font-size:0.58rem; font-weight:900;">${esc(cCode)}</span>
+                  <span style="font-size:0.48rem;">CENTRE SEAL</span>
+                </div>
+                <div style="font-family:cursive; font-size:1.15rem; color:#064e3b; margin:6px 0 2px; line-height:1;">${esc(directorName)}</div>
+                <span style="font-size:0.75rem; font-weight:800; color:#0f172a; border-top:1px solid #94a3b8; display:block; padding-top:3px; width:100%; max-width:160px;">Centre Director Mohar &amp; Sign</span>
+              </div>
+
+              <!-- 2. Coordinator Office Mohar Sign -->
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <div style="width:68px; height:68px; border:2px dashed #0284c7; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#0284c7; font-size:0.56rem; font-weight:800; text-transform:uppercase; transform:rotate(3deg); background:rgba(2,132,199,0.04); box-shadow:inset 0 0 4px rgba(2,132,199,0.12);">
+                  <span style="font-size:0.52rem;">★ REGIONAL ★</span>
+                  <span style="font-size:0.58rem; font-weight:900;">COORDINATOR</span>
+                  <span style="font-size:0.48rem;">STATE OFFICE</span>
+                </div>
+                <div style="font-family:cursive; font-size:1.15rem; color:#0369a1; margin:6px 0 2px; line-height:1;">Dr. Rajesh Verma</div>
+                <span style="font-size:0.75rem; font-weight:800; color:#0f172a; border-top:1px solid #94a3b8; display:block; padding-top:3px; width:100%; max-width:170px;">Coordinator Office Mohar &amp; Sign</span>
+              </div>
+
+              <!-- 3. Head Office Mohar Sign -->
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <div style="width:68px; height:68px; border:2.5px solid #d4af37; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#b45309; font-size:0.56rem; font-weight:800; text-transform:uppercase; background:radial-gradient(circle, #fefce8, #fef3c7); box-shadow:0 0 6px rgba(212,175,55,0.4);">
+                  <span style="font-size:0.52rem;">★ PESC ★</span>
+                  <span style="font-size:0.58rem; font-weight:900;">HEAD OFFICE</span>
+                  <span style="font-size:0.48rem;">NEW DELHI</span>
+                </div>
+                <div style="font-family:cursive; font-size:1.15rem; color:#b45309; margin:6px 0 2px; line-height:1;">Prof. S. N. Mishra</div>
+                <span style="font-size:0.75rem; font-weight:800; color:#0f172a; border-top:1px solid #94a3b8; display:block; padding-top:3px; width:100%; max-width:160px;">Head Office Mohar &amp; Sign</span>
+              </div>
             </div>
           </div>
         </div>
