@@ -1042,10 +1042,40 @@ const views = {
         </div>
 
         <!-- Centre Details & Address Settings -->
-        <div class="card" style="background:#ffffff; border-radius:14px; padding:28px; border:1px solid #e2e8f0;">
-          <h3 style="margin:0 0 16px; color:#064e3b; font-size:1.25rem;">🏢 Centre Accreditation &amp; Address Details</h3>
+        <div class="card" style="background:#ffffff; border-radius:14px; padding:28px; border:1px solid #e2e8f0; margin-bottom:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <span style="background:#ecfdf5; color:#047857; font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase;">Main Website Showcase</span>
+              <h3 style="margin:4px 0 0; color:#064e3b; font-size:1.25rem;">🏢 Centre Building Photo &amp; Accreditation Details</h3>
+            </div>
+            <span class="badge active">Live on pescouncil.in</span>
+          </div>
+
+          <!-- Centre Building Photo Upload Box -->
+          <div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:12px; padding:18px; margin-bottom:20px;">
+            <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+              <div style="width:190px; height:125px; border-radius:10px; border:2px solid #047857; overflow:hidden; background:#e2e8f0; display:flex; align-items:center; justify-content:center; flex-shrink:0;" id="centrePhotoPreviewBox">
+                <img src="${esc(c.center_photo || c.photo_url || '/assets/img/centre_varanasi.jpg')}" style="width:100%; height:100%; object-fit:cover;">
+              </div>
+              <div style="flex:1; min-width:240px;">
+                <h4 style="margin:0 0 6px; color:#064e3b;">🏛️ Centre Building / Premises Photo</h4>
+                <p class="muted" style="font-size:0.84rem; margin:0 0 10px; line-height:1.4;">
+                  Yeh photo <b>pescouncil.in</b> main website par <b>"Our Affiliated Centres"</b> me aapke centre ke naam ke saath display hogi.
+                </p>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                  <label class="btn sm gold" style="cursor:pointer; display:inline-block;">
+                    📷 Choose Centre Photo
+                    <input type="file" id="centrePhotoFileInput" accept="image/*" style="display:none;">
+                  </label>
+                  <span style="font-size:0.75rem; color:#64748b;">(JPG/PNG building photo)</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <form id="centreProfileForm" class="row">
+            <input type="hidden" id="centrePhotoUrlInput" name="center_photo" value="${esc(c.center_photo || c.photo_url || '')}">
+
             <div style="grid-column:span 2;">
               <label>Accredited Institute Full Name *</label>
               <input name="name" value="${esc(c.name || '')}" required style="font-size:1.05rem; font-weight:700;">
@@ -1163,6 +1193,22 @@ const views = {
         </div>
       </div>
     `;
+
+    // Centre Building photo file upload handler
+    const cPhotoInput = $('#centrePhotoFileInput');
+    if (cPhotoInput) {
+      cPhotoInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          $('#centrePhotoUrlInput').value = ev.target.result;
+          $('#centrePhotoPreviewBox').innerHTML = `<img src="${ev.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+          toast('Centre building photo selected! Click "Save Centre Address & Info" to save.');
+        };
+        reader.readAsDataURL(file);
+      };
+    }
 
     // Photo file upload handler
     const photoFileInput = $('#dirPhotoFileInput');

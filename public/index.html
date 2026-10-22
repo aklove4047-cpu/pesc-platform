@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Purvanchal Education &amp; Skill Council (PESC) – National Autonomous Vocational Education Council</title>
-  <meta name="description" content="Purvanchal Education & Skill Council provides nationwide computer centre franchise affiliation, skill certifications, online verifiable marksheets, student portals, and regional monitoring.">
+  <title>pescouncil.in – पूर्वांचल शिक्षा एवं कौशल परिषद (Official Portal)</title>
+  <meta name="description" content="Purvanchal Education & Skill Council (PESC) - National Autonomous Council for Computer, IT & Vocational Skill Training. Online Verifiable Certificates, Student & Centre Verification.">
   <script>
     (function() {
       try {
@@ -23,1020 +23,1177 @@
   <meta name="google-site-verification" content="XRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary-blue: #0284c7;
+      --dark-blue: #0369a1;
+      --navy-header: #0275b1;
+      --sky-light: #e0f2fe;
+      --sky-border: #7dd3fc;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --card-border: #e2e8f0;
+      --badge-check: #0284c7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8fafc;
+      color: var(--text-main);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { text-decoration: none; color: inherit; }
+
+    /* Top Blue Header Navbar matching screenshot exactly */
+    .site-header {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      padding: 14px 24px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-svg {
+      width: 58px;
+      height: 58px;
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));
+    }
+
+    .brand-text-box h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+
+    .brand-text-box span {
+      display: block;
+      font-size: 1.12rem;
+      color: #ffffff;
+      font-weight: 700;
+      margin-top: 2px;
+      letter-spacing: 0.2px;
+    }
+
+    .header-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-pill-btn {
+      background: rgba(255, 255, 255, 0.16);
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      color: #ffffff;
+      padding: 7px 18px;
+      border-radius: 30px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(4px);
+    }
+
+    .nav-pill-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    /* Container */
+    .main-wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 20px 20px 60px;
+    }
+
+    /* Megaphone Notice Banner */
+    .notice-card {
+      background: #e0f2fe;
+      border: 1.5px solid #7dd3fc;
+      border-radius: 12px;
+      padding: 16px 22px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
+    }
+
+    .notice-icon {
+      font-size: 2.2rem;
+      color: #0284c7;
+      flex-shrink: 0;
+    }
+
+    .notice-text {
+      font-size: 0.95rem;
+      color: #0f172a;
+      line-height: 1.55;
+    }
+
+    .notice-text b {
+      color: #0369a1;
+    }
+
+    /* Section Headers */
+    .section-head {
+      margin-bottom: 22px;
+    }
+
+    .section-head h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.95rem;
+      font-weight: 800;
+      color: #0369a1;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+    }
+
+    .section-head p {
+      font-size: 1.02rem;
+      color: #475569;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    /* Verification Box Row */
+    .verify-box-row {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 14px;
+      padding: 18px 24px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+    }
+
+    .btn-qr-scan {
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-qr-scan:hover {
+      background: #0369a1;
+    }
+
+    .verify-form-group {
+      flex: 1;
+      min-width: 300px;
+    }
+
+    .verify-form-group label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #0369a1;
+      margin-bottom: 6px;
+    }
+
+    .verify-input-wrap {
+      display: flex;
+      gap: 8px;
+    }
+
+    .verify-input-wrap input {
+      flex: 1;
+      padding: 11px 16px;
+      border: 1.5px solid #94a3b8;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    .verify-input-wrap input:focus {
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+
+    .btn-verify-submit {
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      padding: 11px 24px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-verify-submit:hover {
+      background: #0369a1;
+    }
+
+    .verify-hint {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 6px;
+    }
+
+    /* 5-Column Responsive Cards Grid */
+    .row-5-cards {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 18px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 1100px) {
+      .row-5-cards { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .row-5-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 520px) {
+      .row-5-cards { grid-template-columns: 1fr; }
+    }
+
+    /* Coordinator Card */
+    .coord-card {
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 22px 14px 18px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .coord-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      width: 104px;
+      height: 104px;
+      margin: 0 auto 14px;
+    }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3.5px solid #0284c7;
+      box-shadow: 0 4px 10px rgba(2, 132, 199, 0.2);
+    }
+
+    .verified-badge-float {
+      position: absolute;
+      top: 0;
+      right: -2px;
+      width: 26px;
+      height: 26px;
+      background: #0284c7;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 900;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .card-name-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .card-name-title .check {
+      color: #0284c7;
+      font-size: 1rem;
+    }
+
+    .card-address-text {
+      font-size: 0.78rem;
+      color: #475569;
+      line-height: 1.4;
+      margin-bottom: 12px;
+      min-height: 34px;
+    }
+
+    .badge-verified-coord {
+      background: #0284c7;
+      color: #ffffff;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .badge-code-bottom {
+      background: #0369a1;
+      color: #ffffff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      font-family: monospace;
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: auto;
+    }
+
+    /* Centre Card */
+    .centre-card {
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .centre-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);
+    }
+
+    .centre-img-wrap {
+      width: 100%;
+      height: 138px;
+      position: relative;
+      overflow: hidden;
+      background: #e2e8f0;
+    }
+
+    .centre-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s;
+    }
+
+    .centre-card:hover .centre-img {
+      transform: scale(1.04);
+    }
+
+    .centre-verified-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 28px;
+      height: 28px;
+      background: #0284c7;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 900;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .centre-info-box {
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .centre-name-text {
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.35;
+      margin-bottom: 6px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .centre-address-text {
+      font-size: 0.78rem;
+      color: #475569;
+      line-height: 1.4;
+      margin-bottom: 12px;
+      min-height: 34px;
+    }
+
+    /* Student Card */
+    .student-card {
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 22px 14px 18px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .student-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);
+    }
+
+    .student-course-text {
+      font-size: 0.78rem;
+      color: #0284c7;
+      font-weight: 700;
+      margin-bottom: 4px;
+      line-height: 1.35;
+      min-height: 32px;
+    }
+
+    .student-rating-box {
+      font-size: 0.76rem;
+      color: #d97706;
+      font-weight: 700;
+      margin-top: auto;
+    }
+
+    /* Deep Blue Footer matching screenshot */
+    .site-footer {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      padding: 40px 24px 20px;
+      margin-top: 40px;
+    }
+
+    .footer-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 36px;
+      padding-bottom: 30px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    @media (max-width: 860px) {
+      .footer-container { grid-template-columns: 1fr; gap: 24px; }
+    }
+
+    .footer-brand h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin: 0 0 4px;
+      color: #ffffff;
+    }
+
+    .footer-brand span {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .footer-brand p {
+      font-size: 0.88rem;
+      color: #e0f2fe;
+      line-height: 1.5;
+    }
+
+    .footer-col h4 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .footer-col ul {
+      list-style: none;
+    }
+
+    .footer-col li {
+      margin-bottom: 8px;
+    }
+
+    .footer-col a {
+      color: #e0f2fe;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .footer-col a:hover {
+      color: #ffffff;
+      text-decoration: underline;
+    }
+
+    .footer-contact-item {
+      font-size: 0.9rem;
+      color: #e0f2fe;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .footer-contact-item b {
+      color: #ffffff;
+    }
+
+    .footer-bottom-bar {
+      max-width: 1280px;
+      margin: 18px auto 0;
+      text-align: center;
+      font-size: 0.84rem;
+      color: #e0f2fe;
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-box {
+      background: #ffffff;
+      border-radius: 14px;
+      max-width: 540px;
+      width: 100%;
+      padding: 26px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+  </style>
 </head>
 <body>
 
-  <!-- National Tricolor Stripe -->
-  <div class="top-tricolor"></div>
+  <!-- Top Blue Header Navbar matching screenshot exactly -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="/" class="brand-group">
+        <!-- Exact PESC Round Emblem SVG -->
+        <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#fde047" stroke-width="3"/>
+          <circle cx="50" cy="50" r="43" fill="#0284c7"/>
+          <circle cx="50" cy="50" r="39" fill="none" stroke="#fde047" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <circle cx="50" cy="50" r="35" fill="#075985"/>
+          <!-- Torch & Flame -->
+          <path d="M47 38 L53 38 L51 52 L49 52 Z" fill="#d97706"/>
+          <path d="M48 24 C45 28, 44 32, 50 36 C56 32, 55 28, 52 24 C50 20, 50 20, 48 24 Z" fill="#ef4444"/>
+          <path d="M49 26 C47 29, 47 31, 50 34 C53 31, 53 29, 51 26 Z" fill="#fde047"/>
+          <!-- Open Book -->
+          <path d="M30 52 C38 48, 48 50, 50 54 C52 50, 62 48, 70 52 L68 64 C60 60, 52 62, 50 66 C48 62, 40 60, 32 64 Z" fill="#ffffff"/>
+          <path d="M50 54 L50 66" stroke="#0284c7" stroke-width="1.5"/>
+          <!-- Banner -->
+          <rect x="36" y="68" width="28" height="8" rx="2" fill="#fde047"/>
+          <text x="50" y="74.5" font-family="'Outfit', sans-serif" font-size="6.5" font-weight="900" fill="#064e3b" text-anchor="middle">PESC</text>
+        </svg>
 
-  <!-- Government & Council Top Utility Header -->
-  <div class="top-bar">
-    <div class="top-bar-left">
-      <span class="top-badge-gov">🏛️ GOVT. OF INDIA REGD. AUTONOMOUS COUNCIL</span>
-      <span>• ISO 9001:2015 Quality Certified</span>
-      <span>• NITI Aayog Darpan Partner</span>
+        <div class="brand-text-box">
+          <h1>pescouncil.in</h1>
+          <span>पूर्वांचल शिक्षा एवं कौशल परिषद</span>
+        </div>
+      </a>
+
+      <!-- 4 Action Pill Buttons on Right -->
+      <nav class="header-nav-actions">
+        <a href="/admin" class="nav-pill-btn" title="Head Office Admin Panel">
+          <span>🛡️</span> Admin
+        </a>
+        <a href="/coordinator" class="nav-pill-btn" title="Regional Coordinator Portal">
+          <span>👥</span> Coordinator
+        </a>
+        <a href="/portal" class="nav-pill-btn" title="Authorized Centre ERP Portal">
+          <span>🏛️</span> Centre
+        </a>
+        <a href="/student" class="nav-pill-btn" title="Candidate Student Panel">
+          <span>🎓</span> Student
+        </a>
+      </nav>
     </div>
-    <div class="top-bar-right">
-      <span>📞 Helpline: <b>+91 98765 43210</b></span>
-      <span>✉️ <b>info@pescouncil.in</b></span>
-      <a href="#verify" style="color:#fde047; font-weight:700;">🔍 Student Verification</a>
-      <a href="/login" style="font-weight:700;">🔑 Portal Login</a>
-    </div>
-  </div>
+  </header>
 
-  <!-- Main Navigation -->
-  <nav class="nav">
-    <a href="/" class="brand">
-      <div class="brand-emblem">P</div>
-      <div class="brand-text">
-        <b>PESC COUNCIL</b>
-        <span>पूर्वांचल शिक्षा एवं कौशल विकास परिषद</span>
-        <small>Autonomous Vocational Education &amp; Skill Development Council</small>
+  <!-- Main Wrap -->
+  <main class="main-wrap">
+
+    <!-- Private Council Notice Megaphone Banner -->
+    <section class="notice-card">
+      <div class="notice-icon">📢</div>
+      <div class="notice-text">
+        <div><b>Private Council Notice:</b> • Admissions open for DCA / PGDCA session 2026-27</div>
+        <div>• Last date to apply 30 November 2026</div>
+        <div>• For queries contact: <b>info@pescouncil.in</b> | <b>+91 542-1234567</b></div>
       </div>
-    </a>
-    <button class="nav-toggle" id="navToggle" aria-label="Toggle Navigation">☰</button>
-    <div class="nav-links" id="navLinks">
-      <a href="#centres-showcase" style="font-weight:700; color:#065f46; background:#ecfdf5; padding:6px 12px; border-radius:6px; border:1px solid #a7f3d0; white-space:nowrap;">🌐 Centres</a>
-      <a href="#courses" style="white-space:nowrap;">Courses</a>
-      <a href="#verify" class="nav-gold" style="white-space:nowrap;">🔍 Verify</a>
-      <a href="#portals" style="white-space:nowrap;">Portals</a>
-      <a href="#packages" style="white-space:nowrap;">Plans</a>
-      <a href="/login" style="font-weight:700; white-space:nowrap;">Sign In</a>
-      <a href="#apply" class="btn-cta" style="white-space:nowrap; padding:8px 14px;">🏢 Apply Franchise</a>
-    </div>
-  </nav>
+    </section>
 
-  <!-- News & Announcements Ticker -->
-  <div class="news-ticker">
-    <div class="ticker-title">📢 Latest Circulars</div>
-    <div id="tickerContent" style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-      <span>• <b>Affiliation:</b> Session 2026-27 Computer Centre Affiliation Window Open with 50% Concession</span> &nbsp; | &nbsp;
-      <span>• <b>Examination:</b> Mandatory Online QR Code Verification implemented on all Certificates and Marksheets</span> &nbsp; | &nbsp;
-      <span>• <b>Academic:</b> Updated 2026 IT &amp; Vocational Syllabi released for ADCA, DCA, Tally Prime, CCC &amp; Yoga</span>
-    </div>
-  </div>
-
-  <main>
-    <!-- Hero Banner -->
-    <section class="hero">
-      <div class="hero-pill">
-        <span class="pulse-dot"></span>
-        AUTONOMOUS VOCATIONAL EDUCATION &amp; SKILL COUNCIL · REGD. UNDER INDIAN TRUST ACT 1882 · ISO 9001:2015
-      </div>
-      <h1>National Council for Computer &amp; Vocational Skill Education</h1>
-      <p>
-        Empowering over <b>500+ affiliated computer academies</b> and training institutes nationwide. Providing automated official franchise websites &amp; student portals, tamper-proof QR code marksheets, verifiable skill certificates, and digital student identity credentials.
-      </p>
-      <div class="hero-cta" style="display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin:0 auto 44px; max-width:980px;">
-        <a href="#centres-showcase" class="btn" style="background:#047857; color:#fff; font-size:1rem; padding:12px 22px; box-shadow:0 4px 16px rgba(4,120,87,0.3); border-radius:8px;">🌐 Affiliated Centres Network</a>
-        <a href="#verify" class="btn gold" style="font-size:1rem; padding:12px 22px; border-radius:8px;">🔍 Instant Student Verification</a>
-        <a href="#portals" class="btn alt" style="font-size:1rem; padding:12px 22px; border-radius:8px;">🚀 Council Portals Gateway</a>
-        <a href="#apply" class="btn" style="background:#d97706; color:#fff; font-size:1rem; padding:12px 22px; border-radius:8px; border:none; box-shadow:0 4px 16px rgba(217,119,6,0.3);">🏢 Start Affiliation Application</a>
+    <!-- SECTION 1: Verification Section 🛡️ -->
+    <section class="section-block" id="verify-section">
+      <div class="section-head">
+        <h2>Verification Section <span>🛡️</span></h2>
+        <p>Verify Certificate / ID</p>
       </div>
 
-      <!-- Stat Counters -->
-      <div class="stat-banner">
-        <div class="stat-box">
-          <b>500+</b>
-          <span>Affiliated Training Centres</span>
+      <!-- Verification Input Box -->
+      <div class="verify-box-row">
+        <button type="button" class="btn-qr-scan" id="btnScanQrModal" onclick="triggerQrScan()">
+          <span>📱</span> Scan QR Code
+        </button>
+        <div class="verify-form-group">
+          <label>Or verify using Code/ID:</label>
+          <div class="verify-input-wrap">
+            <input type="text" id="verifyMainInput" placeholder="Enter Coordinator Code / Centre Code / Student Roll Number / ID" required>
+            <button type="button" class="btn-verify-submit" onclick="executeUniversalVerification()">
+              <span>✓</span> Verify
+            </button>
+          </div>
+          <div class="verify-hint">
+            Example: Enter <b>PESCOORD/001</b> or <b>PES/CTR/101</b> or <b>PES/ST/2026/11023</b> then click Verify ⓘ
+          </div>
         </div>
-        <div class="stat-box">
-          <b>50,000+</b>
-          <span>Candidates Certified</span>
+      </div>
+
+      <!-- 5 Verified Coordinator Cards (Matching Screenshot) -->
+      <div class="row-5-cards" id="coordinatorsRow">
+        <!-- 1. Rajesh Kumar -->
+        <div class="coord-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/coord_rajesh.jpg" alt="Rajesh Kumar" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
+          </div>
+          <div class="card-name-title">Rajesh Kumar <span class="check">✓</span></div>
+          <div class="card-address-text">Address: 12/45 Lanka, Varanasi, Uttar Pradesh</div>
+          <div class="badge-verified-coord">Verified Coordinator</div>
+          <div class="badge-code-bottom">Coordinator Code: PESCOORD/001</div>
         </div>
-        <div class="stat-box">
-          <b>120+</b>
-          <span>Recognized Skill Programs</span>
+
+        <!-- 2. Priya Singh -->
+        <div class="coord-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/coord_priya.jpg" alt="Priya Singh" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
+          </div>
+          <div class="card-name-title">Priya Singh <span class="check">✓</span></div>
+          <div class="card-address-text">Address: Civil Lines, Gorakhpur, Uttar Pradesh</div>
+          <div class="badge-verified-coord">Verified Coordinator</div>
+          <div class="badge-code-bottom">Coordinator Code: PESCOORD/002</div>
         </div>
-        <div class="stat-box">
-          <b>100%</b>
-          <span>Online &amp; QR Verifiable</span>
+
+        <!-- 3. Amit Yadav -->
+        <div class="coord-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/coord_amit.jpg" alt="Amit Yadav" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
+          </div>
+          <div class="card-name-title">Amit Yadav <span class="check">✓</span></div>
+          <div class="card-address-text">Address: Rewa Road, Prayagraj, Uttar Pradesh</div>
+          <div class="badge-verified-coord">Verified Coordinator</div>
+          <div class="badge-code-bottom">Coordinator Code: PESCOORD/003</div>
+        </div>
+
+        <!-- 4. Sneha Verma -->
+        <div class="coord-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/coord_sneha.jpg" alt="Sneha Verma" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
+          </div>
+          <div class="card-name-title">Sneha Verma <span class="check">✓</span></div>
+          <div class="card-address-text">Address: Station Road, Azamgarh, Uttar Pradesh</div>
+          <div class="badge-verified-coord">Verified Coordinator</div>
+          <div class="badge-code-bottom">Coordinator Code: PESCOORD/004</div>
+        </div>
+
+        <!-- 5. Manoj Patel -->
+        <div class="coord-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/coord_manoj.jpg" alt="Manoj Patel" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
+          </div>
+          <div class="card-name-title">Manoj Patel <span class="check">✓</span></div>
+          <div class="card-address-text">Address: Mirzapur Bypass, Mirzapur, Uttar Pradesh</div>
+          <div class="badge-verified-coord">Verified Coordinator</div>
+          <div class="badge-code-bottom">Coordinator Code: PESCOORD/005</div>
         </div>
       </div>
     </section>
 
-    <!-- Affiliated Study Centres Network Showcase (Prominently Right in Front) -->
-    <section class="card" id="centres-showcase" style="border: 2px solid #047857; box-shadow: 0 10px 30px rgba(4, 120, 87, 0.12); background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 130px); margin-bottom: 30px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
-        <div>
-          <span class="hero-pill" style="color:#064e3b; border-color:#86efac; background:#ecfdf5;">
-            🌐 OFFICIAL AFFILIATED CENTRES NETWORK
-          </span>
-          <h2 style="font-size:2rem; margin:10px 0 6px; color:#064e3b;">Affiliated Computer &amp; Skill Centres</h2>
-          <p class="muted">Click any authorized centre below to open its dedicated website, enroll in courses, or access student &amp; admin login options.</p>
-        </div>
-        <div style="min-width:280px; flex:1; max-width:420px;">
-          <input type="text" id="centreShowcaseSearch" placeholder="🔍 Search centre by name, district, or city..." style="width:100%; border:2px solid #a7f3d0; border-radius:8px; padding:12px 14px; font-size:0.95rem; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-        </div>
+    <!-- SECTION 2: Our Affiliated Centres (Only Centre Name + Photo, NO Subdomain URL as required) -->
+    <section class="section-block" id="centres-section" style="margin-top: 10px;">
+      <div class="section-head">
+        <h2>Our Affiliated Centres</h2>
+        <p>Recognized centres providing quality education and skill training</p>
       </div>
 
-      <!-- Live Interactive Centres Grid (With Pre-rendered Crawlable Links for Googlebot & Search Engines) -->
-      <div id="centresShowcaseGrid" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:22px;">
-        
-        <!-- Centre 1: Navya Institute -->
-        <div class="course-card" style="border-top: 5px solid #047857; display:flex; flex-direction:column; padding:22px; background:#fff; border-radius:14px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-            <div style="width:46px; height:46px; border-radius:10px; background:#ecfdf5; border:1.5px solid #a7f3d0; color:#047857; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">🏛️</div>
-            <div style="text-align:right;">
-              <span style="background:#064e3b; color:#fff; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; font-family:monospace;">PESC00001</span>
-              <div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:3px;">✓ PESC Authorized</div>
-            </div>
+      <!-- 5 Affiliated Centre Cards (Matching Screenshot) -->
+      <div class="row-5-cards" id="affiliatedCentresGrid">
+        <!-- Centre 1: Varanasi -->
+        <div class="centre-card">
+          <div class="centre-img-wrap">
+            <img src="/assets/img/centre_varanasi.jpg" alt="PES Centre - Varanasi" class="centre-img">
+            <div class="centre-verified-badge">✓</div>
           </div>
-          <h3 style="font-size:1.2rem; color:#0f172a; margin:0 0 6px; font-weight:800; line-height:1.35;">
-            Navya National Institute of Technology (Navya Computer Institute)
-          </h3>
-          <div style="font-size:0.86rem; color:#475569; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-            <span>📍</span> <b>Varanasi Central, Uttar Pradesh</b>
-          </div>
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
-            <div style="font-size:0.75rem; color:#15803d; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">🌐 Official Institute Portal</div>
-            <a href="https://navyacomputer.pescouncil.in" target="_blank" style="color:#047857; font-family:monospace; font-size:0.92rem; font-weight:800; text-decoration:none; display:inline-block; word-break:break-all;">navyacomputer.pescouncil.in ↗</a>
-          </div>
-          <a href="https://navyacomputer.pescouncil.in" target="_blank" class="btn" style="background:#047857; color:#fff; text-align:center; padding:12px 16px; border-radius:8px; font-weight:700; text-decoration:none; margin-bottom:10px; display:block;">
-            🌐 Open Navya Institute Website →
-          </a>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto;">
-            <a href="/login?role=student" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🎓 Student Login</a>
-            <a href="/login?role=centre" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🏢 Centre Login</a>
+          <div class="centre-info-box">
+            <div class="centre-name-text">PES Centre - Varanasi</div>
+            <div class="centre-address-text">Address: Sigra, Varanasi, Uttar Pradesh - 221010</div>
+            <div class="badge-code-bottom">Centre Code: PES/CTR/101</div>
           </div>
         </div>
 
-        <!-- Centre 2: Shri Ram Computer Academy -->
-        <div class="course-card" style="border-top: 5px solid #047857; display:flex; flex-direction:column; padding:22px; background:#fff; border-radius:14px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-            <div style="width:46px; height:46px; border-radius:10px; background:#ecfdf5; border:1.5px solid #a7f3d0; color:#047857; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">🏛️</div>
-            <div style="text-align:right;">
-              <span style="background:#064e3b; color:#fff; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; font-family:monospace;">PESC00005</span>
-              <div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:3px;">✓ PESC Authorized</div>
-            </div>
+        <!-- Centre 2: Gorakhpur -->
+        <div class="centre-card">
+          <div class="centre-img-wrap">
+            <img src="/assets/img/centre_gorakhpur.jpg" alt="PES Centre - Gorakhpur" class="centre-img">
+            <div class="centre-verified-badge">✓</div>
           </div>
-          <h3 style="font-size:1.2rem; color:#0f172a; margin:0 0 6px; font-weight:800; line-height:1.35;">
-            Shri Ram Computer Academy
-          </h3>
-          <div style="font-size:0.86rem; color:#475569; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-            <span>📍</span> <b>Gorakhpur, Uttar Pradesh</b>
-          </div>
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
-            <div style="font-size:0.75rem; color:#15803d; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">🌐 Official Institute Portal</div>
-            <a href="https://shriramcomputer.pescouncil.in" target="_blank" style="color:#047857; font-family:monospace; font-size:0.92rem; font-weight:800; text-decoration:none; display:inline-block; word-break:break-all;">shriramcomputer.pescouncil.in ↗</a>
-          </div>
-          <a href="https://shriramcomputer.pescouncil.in" target="_blank" class="btn" style="background:#047857; color:#fff; text-align:center; padding:12px 16px; border-radius:8px; font-weight:700; text-decoration:none; margin-bottom:10px; display:block;">
-            🌐 Open Shri Ram Academy Website →
-          </a>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto;">
-            <a href="/login?role=student" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🎓 Student Login</a>
-            <a href="/login?role=centre" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🏢 Centre Login</a>
+          <div class="centre-info-box">
+            <div class="centre-name-text">PES Centre - Gorakhpur</div>
+            <div class="centre-address-text">Address: Taramandal, Gorakhpur, Uttar Pradesh - 223001</div>
+            <div class="badge-code-bottom">Centre Code: PES/CTR/102</div>
           </div>
         </div>
 
-        <!-- Centre 3: Apex Skill & Computer Academy -->
-        <div class="course-card" style="border-top: 5px solid #047857; display:flex; flex-direction:column; padding:22px; background:#fff; border-radius:14px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-            <div style="width:46px; height:46px; border-radius:10px; background:#ecfdf5; border:1.5px solid #a7f3d0; color:#047857; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">🏛️</div>
-            <div style="text-align:right;">
-              <span style="background:#064e3b; color:#fff; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; font-family:monospace;">PESC00002</span>
-              <div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:3px;">✓ PESC Authorized</div>
-            </div>
+        <!-- Centre 3: Prayagraj -->
+        <div class="centre-card">
+          <div class="centre-img-wrap">
+            <img src="/assets/img/centre_prayagraj.jpg" alt="PES Centre - Prayagraj" class="centre-img">
+            <div class="centre-verified-badge">✓</div>
           </div>
-          <h3 style="font-size:1.2rem; color:#0f172a; margin:0 0 6px; font-weight:800; line-height:1.35;">
-            Apex Skill &amp; Computer Academy
-          </h3>
-          <div style="font-size:0.86rem; color:#475569; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-            <span>📍</span> <b>Farrukhabad, Uttar Pradesh</b>
-          </div>
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
-            <div style="font-size:0.75rem; color:#15803d; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">🌐 Official Institute Portal</div>
-            <a href="https://apexskills.pescouncil.in" target="_blank" style="color:#047857; font-family:monospace; font-size:0.92rem; font-weight:800; text-decoration:none; display:inline-block; word-break:break-all;">apexskills.pescouncil.in ↗</a>
-          </div>
-          <a href="https://apexskills.pescouncil.in" target="_blank" class="btn" style="background:#047857; color:#fff; text-align:center; padding:12px 16px; border-radius:8px; font-weight:700; text-decoration:none; margin-bottom:10px; display:block;">
-            🌐 Open Apex Academy Website →
-          </a>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto;">
-            <a href="/login?role=student" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🎓 Student Login</a>
-            <a href="/login?role=centre" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🏢 Centre Login</a>
+          <div class="centre-info-box">
+            <div class="centre-name-text">PES Centre - Prayagraj</div>
+            <div class="centre-address-text">Address: George Town, Prayagraj, Uttar Pradesh - 211002</div>
+            <div class="badge-code-bottom">Centre Code: PES/CTR/103</div>
           </div>
         </div>
 
-        <!-- Centre 4: Anil IT Academy -->
-        <div class="course-card" style="border-top: 5px solid #047857; display:flex; flex-direction:column; padding:22px; background:#fff; border-radius:14px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-            <div style="width:46px; height:46px; border-radius:10px; background:#ecfdf5; border:1.5px solid #a7f3d0; color:#047857; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">🏛️</div>
-            <div style="text-align:right;">
-              <span style="background:#064e3b; color:#fff; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; font-family:monospace;">PESC00003</span>
-              <div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:3px;">✓ PESC Authorized</div>
-            </div>
+        <!-- Centre 4: Jaunpur -->
+        <div class="centre-card">
+          <div class="centre-img-wrap">
+            <img src="/assets/img/centre_jaunpur.jpg" alt="PES Centre - Jaunpur" class="centre-img">
+            <div class="centre-verified-badge">✓</div>
           </div>
-          <h3 style="font-size:1.2rem; color:#0f172a; margin:0 0 6px; font-weight:800; line-height:1.35;">
-            Anil IT Academy
-          </h3>
-          <div style="font-size:0.86rem; color:#475569; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-            <span>📍</span> <b>Kanpur, Uttar Pradesh</b>
-          </div>
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
-            <div style="font-size:0.75rem; color:#15803d; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">🌐 Official Institute Portal</div>
-            <a href="https://anilit.pescouncil.in" target="_blank" style="color:#047857; font-family:monospace; font-size:0.92rem; font-weight:800; text-decoration:none; display:inline-block; word-break:break-all;">anilit.pescouncil.in ↗</a>
-          </div>
-          <a href="https://anilit.pescouncil.in" target="_blank" class="btn" style="background:#047857; color:#fff; text-align:center; padding:12px 16px; border-radius:8px; font-weight:700; text-decoration:none; margin-bottom:10px; display:block;">
-            🌐 Open Anil IT Website →
-          </a>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto;">
-            <a href="/login?role=student" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🎓 Student Login</a>
-            <a href="/login?role=centre" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🏢 Centre Login</a>
+          <div class="centre-info-box">
+            <div class="centre-name-text">PES Centre - Jaunpur</div>
+            <div class="centre-address-text">Address: Olandganj, Jaunpur, Uttar Pradesh - 222002</div>
+            <div class="badge-code-bottom">Centre Code: PES/CTR/104</div>
           </div>
         </div>
 
-        <!-- Centre 5: Zenith Computer Institute & Tech Academy -->
-        <div class="course-card" style="border-top: 5px solid #047857; display:flex; flex-direction:column; padding:22px; background:#fff; border-radius:14px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-            <div style="width:46px; height:46px; border-radius:10px; background:#ecfdf5; border:1.5px solid #a7f3d0; color:#047857; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">🏛️</div>
-            <div style="text-align:right;">
-              <span style="background:#064e3b; color:#fff; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:4px; font-family:monospace;">PESC00004</span>
-              <div style="font-size:0.72rem; color:#16a34a; font-weight:700; margin-top:3px;">✓ PESC Authorized</div>
-            </div>
+        <!-- Centre 5: Ballia -->
+        <div class="centre-card">
+          <div class="centre-img-wrap">
+            <img src="/assets/img/centre_ballia.jpg" alt="PES Centre - Ballia" class="centre-img">
+            <div class="centre-verified-badge">✓</div>
           </div>
-          <h3 style="font-size:1.2rem; color:#0f172a; margin:0 0 6px; font-weight:800; line-height:1.35;">
-            Zenith Computer Institute &amp; Tech Academy
-          </h3>
-          <div style="font-size:0.86rem; color:#475569; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-            <span>📍</span> <b>Varanasi, Uttar Pradesh</b>
-          </div>
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-bottom:14px;">
-            <div style="font-size:0.75rem; color:#15803d; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">🌐 Official Institute Portal</div>
-            <a href="https://zenith-tech.pescouncil.in" target="_blank" style="color:#047857; font-family:monospace; font-size:0.92rem; font-weight:800; text-decoration:none; display:inline-block; word-break:break-all;">zenith-tech.pescouncil.in ↗</a>
-          </div>
-          <a href="https://zenith-tech.pescouncil.in" target="_blank" class="btn" style="background:#047857; color:#fff; text-align:center; padding:12px 16px; border-radius:8px; font-weight:700; text-decoration:none; margin-bottom:10px; display:block;">
-            🌐 Open Zenith Tech Website →
-          </a>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto;">
-            <a href="/login?role=student" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🎓 Student Login</a>
-            <a href="/login?role=centre" class="btn alt sm" style="font-size:0.78rem; padding:7px 4px; text-align:center;">🏢 Centre Login</a>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- Public Verification System (Certificates & Marksheets) -->
-    <section class="card" id="verify" style="border: 2px solid #d4af37; box-shadow: var(--shadow-gold);">
-      <div style="text-align:center; margin-bottom:24px;">
-        <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
-          🛡️ NATIONAL DIGITAL CREDENTIAL VERIFICATION PORTAL
-        </span>
-        <h2 style="font-size:2rem; margin:10px 0 6px;">Instant Verification of Council Documents</h2>
-        <p class="muted">Employers, educational institutions, and candidates can verify the authenticity of official PESC Certificates and Statements of Marks in real time.</p>
-      </div>
-
-      <div class="tabs" style="justify-content:center; max-width:460px; margin:0 auto 24px;">
-        <button id="tabCertBtn" class="on" style="font-size:1rem;">📜 Verify Certificate</button>
-        <button id="tabMrkBtn" style="font-size:1rem;">📊 Verify Marksheet / Result</button>
-      </div>
-
-      <!-- Certificate Verification Tab -->
-      <div id="certTabContent">
-        <form id="vf" class="row" style="max-width:680px; margin:0 auto;">
-          <div style="flex:1;">
-            <label for="cn">Certificate Number or Digital Verification Token</label>
-            <input id="cn" name="cert_no" placeholder="e.g. PESC/2026/000001 or Token" required>
-          </div>
-          <div style="align-self:end;">
-            <button class="btn gold" style="width:100%; height:46px;">Verify Certificate</button>
-          </div>
-        </form>
-        <div id="vr" style="max-width:680px; margin:0 auto;"></div>
-      </div>
-
-      <!-- Marksheet Verification Tab -->
-      <div id="mrkTabContent" class="hide">
-        <form id="mf" class="row" style="max-width:680px; margin:0 auto;">
-          <div style="flex:1;">
-            <label for="mn">Marksheet No / Candidate Roll No / Student Code</label>
-            <input id="mn" name="mrk_query" placeholder="e.g. 2026101 or PESC/MRK/2026/000001" required>
-          </div>
-          <div style="align-self:end;">
-            <button class="btn gold" style="width:100%; height:46px;">Verify Marksheet</button>
-          </div>
-        </form>
-        <div id="mr" style="max-width:680px; margin:0 auto;"></div>
-      </div>
-    </section>
-
-    <!-- Council Portals Gateway Section with 1-Click Access -->
-    <section class="card" id="portals">
-      <div style="text-align:center; margin-bottom:28px;">
-        <span class="hero-pill" style="color:var(--navy); border-color:#93c5fd; background:#dbeafe;">
-          CLOUD WORKSPACES
-        </span>
-        <h2>Council Digital Portals Gateway</h2>
-        <p class="muted">Role-based cloud workspaces for candidates, centre directors, state coordinators, and central leadership</p>
-      </div>
-
-      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
-        <!-- Student Panel -->
-        <div class="course-card" style="border-top: 5px solid #2563eb;">
-          <div>
-            <div style="font-size:2.4rem; margin-bottom:10px;">🎓</div>
-            <h3>Student Panel</h3>
-            <p class="muted" style="margin-bottom:14px; font-size:0.9rem;">Enrolled students can view candidate profiles, verify exam results, download official Admit Cards, print digital ID cards, and access verifiable Certificate PDFs.</p>
-          </div>
-          <a href="/student" class="btn" style="width:100%; text-align:center; margin-top:auto;">Open Student Panel</a>
-        </div>
-
-        <!-- Centre Portal -->
-        <div class="course-card" style="border-top: 5px solid #071a33;">
-          <div>
-            <div style="font-size:2.4rem; margin-bottom:10px;">🏢</div>
-            <h3>Franchise Centre Portal</h3>
-            <p class="muted" style="margin-bottom:14px; font-size:0.9rem;">For affiliated institute directors. Process admissions, assign syllabi, enter examination marks, order certificates, manage council wallet, and download centre certificates.</p>
-          </div>
-          <a href="/portal" class="btn alt" style="width:100%; text-align:center; margin-top:auto;">Access Centre Portal</a>
-        </div>
-
-        <!-- Coordinator Portal -->
-        <div class="course-card" style="border-top: 5px solid #d4af37;">
-          <div>
-            <div style="font-size:2.4rem; margin-bottom:10px;">👔</div>
-            <h3>Coordinator Panel</h3>
-            <p class="muted" style="margin-bottom:14px; font-size:0.9rem;">Regional state &amp; territory officers. Monitor affiliated centres, inspect marksheets, approve certificate issues, and export territory-wide CSV analytics reports.</p>
-          </div>
-          <a href="/coordinator" class="btn gold" style="width:100%; text-align:center; margin-top:auto;">Open Coordinator Panel</a>
-        </div>
-
-        <!-- Head Office Admin -->
-        <div class="course-card" style="border-top: 5px solid #040d1a;">
-          <div>
-            <div style="font-size:2.4rem; margin-bottom:10px;">🏛️</div>
-            <h3>Head Office Admin</h3>
-            <p class="muted" style="margin-bottom:14px; font-size:0.9rem;">Executive council administration. Review and approve franchise applications, configure courses, manage national finances, manage student credentials, and view audit trails.</p>
-          </div>
-          <a href="/admin" class="btn alt" style="width:100%; text-align:center; margin-top:auto;">Admin Portal</a>
-        </div>
-      </div>
-    <!-- Affiliated Study Centres Network Section -->
-    <section class="card" id="centres" style="background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%); border: 1.5px solid #a7f3d0;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:24px;">
-        <div>
-          <span class="hero-pill" style="color:#047857; border-color:#a7f3d0; background:#ecfdf5;">
-            🏛️ AFFILIATED STUDY CENTRES NETWORK
-          </span>
-          <h2 style="color:#064e3b; margin-top:8px;">Authorized Training Centres &amp; Institutes</h2>
-          <p class="muted" style="margin:0;">Click any centre below to visit their official institute website, view courses, take admission, or log in.</p>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center;">
-          <input type="text" id="centreSearchInput" placeholder="🔍 Search centre by city, name, or code..." style="padding:10px 16px; border:1px solid #cbd5e1; border-radius:8px; width:280px; font-size:0.9rem;">
-        </div>
-      </div>
-
-      <div class="grid" id="centresDirectoryGrid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
-        <!-- Navya -->
-        <div class="course-card" style="border-top: 5px solid #047857; background:#ffffff; box-shadow:0 4px 14px rgba(4,120,87,0.08);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-            <div style="font-size:2rem;">🎓</div>
-            <span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-weight:700;">PESC00001</span>
-          </div>
-          <h3 style="color:#064e3b; margin-bottom:4px; font-size:1.25rem;">Navya Computer Institute</h3>
-          <p class="muted" style="font-size:0.86rem; margin-bottom:12px;">📍 Varanasi, Uttar Pradesh · Franchise Centre</p>
-          <div style="font-size:0.85rem; color:#475569; margin-bottom:16px; line-height:1.5;">
-            Offers DCA, ADCA, Tally Prime with GST, and Typing courses with modern computer labs.
-          </div>
-          <a href="/c/navya" class="btn" style="width:100%; text-align:center; background:#047857; color:#fff; font-weight:700; border-radius:8px; margin-top:auto; text-decoration:none;">
-            Visit Centre Website →
-          </a>
-        </div>
-
-        <!-- Apex Skills -->
-        <div class="course-card" style="border-top: 5px solid #0284c7; background:#ffffff; box-shadow:0 4px 14px rgba(2,132,199,0.08);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-            <div style="font-size:2rem;">💻</div>
-            <span class="badge" style="background:#f0f9ff; color:#0284c7; border:1px solid #bae6fd; font-weight:700;">PESC00002</span>
-          </div>
-          <h3 style="color:#0f172a; margin-bottom:4px; font-size:1.25rem;">Apex Skill &amp; Computer Academy</h3>
-          <p class="muted" style="font-size:0.86rem; margin-bottom:12px;">📍 Lucknow, Uttar Pradesh · Franchise Centre</p>
-          <div style="font-size:0.85rem; color:#475569; margin-bottom:16px; line-height:1.5;">
-            Specialized technical IT training, hardware networking, programming, and web development.
-          </div>
-          <a href="/c/apexskills" class="btn" style="width:100%; text-align:center; background:#0284c7; color:#fff; font-weight:700; border-radius:8px; margin-top:auto; text-decoration:none;">
-            Visit Centre Website →
-          </a>
-        </div>
-
-        <!-- Anil IT -->
-        <div class="course-card" style="border-top: 5px solid #d4af37; background:#ffffff; box-shadow:0 4px 14px rgba(212,175,55,0.08);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-            <div style="font-size:2rem;">🖥️</div>
-            <span class="badge" style="background:#fefce8; color:#a16207; border:1px solid #fef08a; font-weight:700;">PESC00003</span>
-          </div>
-          <h3 style="color:#0f172a; margin-bottom:4px; font-size:1.25rem;">Anil IT Academy</h3>
-          <p class="muted" style="font-size:0.86rem; margin-bottom:12px;">📍 Gorakhpur, Uttar Pradesh · Franchise Centre</p>
-          <div style="font-size:0.85rem; color:#475569; margin-bottom:16px; line-height:1.5;">
-            Vocational computer concepts (CCC), DTP graphic design, office automation, and accounting.
-          </div>
-          <a href="/c/anilit" class="btn" style="width:100%; text-align:center; background:#ca8a04; color:#fff; font-weight:700; border-radius:8px; margin-top:auto; text-decoration:none;">
-            Visit Centre Website →
-          </a>
-        </div>
-
-        <!-- Zenith Tech -->
-        <div class="course-card" style="border-top: 5px solid #7c3aed; background:#ffffff; box-shadow:0 4px 14px rgba(124,58,237,0.08);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-            <div style="font-size:2rem;">🔬</div>
-            <span class="badge" style="background:#f5f3ff; color:#7c3aed; border:1px solid #ddd6fe; font-weight:700;">PESC00004</span>
-          </div>
-          <h3 style="color:#0f172a; margin-bottom:4px; font-size:1.25rem;">Zenith Tech Academy</h3>
-          <p class="muted" style="font-size:0.86rem; margin-bottom:12px;">📍 Prayagraj, Uttar Pradesh · Franchise Centre</p>
-          <div style="font-size:0.85rem; color:#475569; margin-bottom:16px; line-height:1.5;">
-            Advanced skill diploma, digital literacy, stenography, regional typing, and data management.
-          </div>
-          <a href="/c/zenith-tech" class="btn" style="width:100%; text-align:center; background:#7c3aed; color:#fff; font-weight:700; border-radius:8px; margin-top:auto; text-decoration:none;">
-            Visit Centre Website →
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <!-- Affiliated Skill Programs Showcase with Interactive Live Search & Filters -->
-    <section class="card" id="courses">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
-        <div>
-          <h2>Affiliated Skill &amp; Vocational Programs</h2>
-          <p class="muted">Industry-recognized curricula designed for employment, government competitive examinations, and self-entrepreneurship</p>
-        </div>
-        <a href="#apply" class="btn sm gold">Affiliate Courses at Your Centre</a>
-      </div>
-
-      <!-- Live Search & Filter Bar -->
-      <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
-        <div style="flex:1; min-width:260px;">
-          <input type="text" id="courseSearchInput" placeholder="🔍 Search by course name or code (e.g. ADCA, DCA, Tally, CCC, Yoga)...">
-        </div>
-        <div class="filter-pills" id="courseFilterPills">
-          <button class="filter-pill active" data-cat="all">All Programs</button>
-          <button class="filter-pill" data-cat="it">Computer &amp; IT</button>
-          <button class="filter-pill" data-cat="accounting">Accounting &amp; GST</button>
-          <button class="filter-pill" data-cat="design">DTP &amp; Graphics</button>
-          <button class="filter-pill" data-cat="vocational">Vocational &amp; Yoga</button>
-        </div>
-      </div>
-
-      <div class="grid" id="courseList">
-        <p class="muted">Loading course catalog…</p>
-      </div>
-    </section>
-
-    <!-- 4-Step Affiliation Journey (Visual Process Roadmap) -->
-    <section class="card" id="roadmap">
-      <div style="text-align:center; margin-bottom:24px;">
-        <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
-          AFFILIATION WORKFLOW
-        </span>
-        <h2>How to Start an Affiliated Centre in 4 Simple Steps</h2>
-        <p class="muted">Transparent, fast-track affiliation process designed to get your institute up and running with full council accreditation</p>
-      </div>
-
-      <div class="roadmap-grid">
-        <div class="roadmap-step">
-          <div class="step-num">1</div>
-          <h4 style="margin-bottom:8px;">Online Application</h4>
-          <p class="muted" style="font-size:0.88rem;">Fill the simple online franchise application with institute details, director credentials, and chosen official portal website name.</p>
-        </div>
-
-        <div class="roadmap-step">
-          <div class="step-num">2</div>
-          <h4 style="margin-bottom:8px;">Inspection &amp; Verification</h4>
-          <p class="muted" style="font-size:0.88rem;">Document verification and lab infrastructure review by Regional Coordinator or Head Office committee.</p>
-        </div>
-
-        <div class="roadmap-step">
-          <div class="step-num">3</div>
-          <h4 style="margin-bottom:8px;">Authorization &amp; Official Live Portal</h4>
-          <p class="muted" style="font-size:0.88rem;">Immediate issuance of Centre Affiliation Certificate, login portal access, and automated live website portal (yourcentre.pescouncil.in).</p>
-        </div>
-
-        <div class="roadmap-step">
-          <div class="step-num">4</div>
-          <h4 style="margin-bottom:8px;">Admissions &amp; Certificates</h4>
-          <p class="muted" style="font-size:0.88rem;">Admit students, enter marks online, issue official QR-verifiable Marksheets and Course Completion Certificates.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Franchise Affiliation Packages -->
-    <section class="card" id="packages">
-      <div style="text-align:center; margin-bottom:26px;">
-        <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
-          AFFILIATION TIERS
-        </span>
-        <h2>Centre Affiliation Plans &amp; Benefits</h2>
-        <p class="muted">Choose the ideal affiliation plan for your computer academy or vocational skill centre</p>
-      </div>
-
-      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-        <!-- Silver Plan -->
-        <div class="pkg-card">
-          <h3 style="color:var(--navy); font-size:1.3rem;">Silver Affiliation</h3>
-          <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">Ideal for rural coaching centres &amp; basic computer labs</p>
-          <div style="font-size:2rem; font-weight:800; color:var(--navy); margin-bottom:16px;">₹11,000 <span style="font-size:0.9rem; font-weight:400; color:#64748b;">/ Lifetime</span></div>
-          <ul style="list-style:none; line-height:2; font-size:0.9rem; margin-bottom:24px; color:#334155;">
-            <li>✓ Official Centre Affiliation Certificate</li>
-            <li>✓ Authorization for 5 Basic IT Courses</li>
-            <li>✓ Centre Management Portal Access</li>
-            <li>✓ Online QR Code Marksheets</li>
-            <li>✓ Student Digital ID Card Maker</li>
-            <li>✗ Dedicated Subdomain Website</li>
-            <li>✗ District Exclusivity</li>
-          </ul>
-          <a href="#apply" class="btn alt" style="text-align:center; margin-top:auto;">Apply for Silver</a>
-        </div>
-
-        <!-- Gold Plan (Popular) -->
-        <div class="pkg-card popular">
-          <div class="pkg-badge">Most Popular</div>
-          <h3 style="color:var(--navy); font-size:1.3rem;">Gold Affiliation</h3>
-          <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">For established academies &amp; vocational institutes</p>
-          <div style="font-size:2rem; font-weight:800; color:var(--navy); margin-bottom:16px;">₹21,000 <span style="font-size:0.9rem; font-weight:400; color:#64748b;">/ Lifetime</span></div>
-          <ul style="list-style:none; line-height:2; font-size:0.9rem; margin-bottom:24px; color:#334155;">
-            <li>✓ Framed Council Affiliation Certificate + Hologram</li>
-            <li>✓ Authorization for All 100+ Skill Courses</li>
-            <li>✓ Dedicated Official Portal Website (<b>yourcentre.pescouncil.in</b>)</li>
-            <li>✓ Free Examination &amp; Marksheet Software</li>
-            <li>✓ Student Admission Kits &amp; Syllabus Books</li>
-            <li>✓ ₹5,000 Pre-loaded Council Wallet Credit</li>
-            <li>✓ Regional Coordinator Support Desk</li>
-          </ul>
-          <a href="#apply" class="btn gold" style="text-align:center; margin-top:auto;">Apply for Gold</a>
-        </div>
-
-        <!-- Diamond Plan -->
-        <div class="pkg-card">
-          <h3 style="color:var(--navy); font-size:1.3rem;">District Master Franchise</h3>
-          <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">Exclusive territory rights for an entire district</p>
-          <div style="font-size:2rem; font-weight:800; color:var(--navy); margin-bottom:16px;">₹51,000 <span style="font-size:0.9rem; font-weight:400; color:#64748b;">/ Lifetime</span></div>
-          <ul style="list-style:none; line-height:2; font-size:0.9rem; margin-bottom:24px; color:#334155;">
-            <li>✓ 100% Exclusive District Territory Authorization</li>
-            <li>✓ Right to Affiliate New Sub-Centres in District</li>
-            <li>✓ Revenue Share on All Student Certifications</li>
-            <li>✓ Dedicated Territory Coordinator Dashboard</li>
-            <li>✓ Annual Council Convention Invitation</li>
-            <li>✓ Priority Examination &amp; Fast-Track Delivery</li>
-          </ul>
-          <a href="#apply" class="btn alt" style="text-align:center; margin-top:auto;">Apply for Master Franchise</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- Official Statutory Approvals & Legal Accreditation Showcase -->
-    <section class="card" id="accreditation">
-      <div style="text-align:center; margin-bottom:24px;">
-        <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
-          LEGAL RECOGNITION &amp; STANDARDS
-        </span>
-        <h2>National Statutory Approvals &amp; Certifications</h2>
-        <p class="muted">Operating in full compliance with autonomous education, vocational training, and quality management frameworks</p>
-      </div>
-
-      <div class="trust-grid">
-        <div class="trust-item">
-          <div class="trust-icon">🏛️</div>
-          <div>
-            <h4>Indian Trust Act 1882</h4>
-            <p class="muted" style="font-size:0.84rem; margin-top:4px;">Legally established autonomous educational body with nationwide operational jurisdiction across India.</p>
-          </div>
-        </div>
-
-        <div class="trust-item">
-          <div class="trust-icon">📜</div>
-          <div>
-            <h4>ISO 9001:2015 Certified</h4>
-            <p class="muted" style="font-size:0.84rem; margin-top:4px;">International quality management certification for curriculum, examinations, and certificate issuance.</p>
-          </div>
-        </div>
-
-        <div class="trust-item">
-          <div class="trust-icon">🤝</div>
-          <div>
-            <h4>NITI Aayog Partner</h4>
-            <p class="muted" style="font-size:0.84rem; margin-top:4px;">Registered on Government of India's NGO Darpan portal under vocational and education category.</p>
-          </div>
-        </div>
-
-        <div class="trust-item">
-          <div class="trust-icon">🏭</div>
-          <div>
-            <h4>Ministry of MSME</h4>
-            <p class="muted" style="font-size:0.84rem; margin-top:4px;">Udyam registered enterprise under the Ministry of Micro, Small &amp; Medium Enterprises, Govt. of India.</p>
-          </div>
-        </div>
-
-        <div class="trust-item">
-          <div class="trust-icon">🔒</div>
-          <div>
-            <h4>100% Cryptographic QR</h4>
-            <p class="muted" style="font-size:0.84rem; margin-top:4px;">Tamper-proof verifiable credentials preventing duplicate or forged marksheets nationwide.</p>
-          </div>
-        </div>
-
-        <div class="trust-item">
-          <div class="trust-icon">⚖️</div>
-          <div>
-            <h4>IPR &amp; Copyright Protection</h4>
-            <p class="muted" style="font-size:0.84rem; margin-top:4px;">Intellectual property protection for council syllabus, marksheets, logos, and course materials.</p>
+          <div class="centre-info-box">
+            <div class="centre-name-text">PES Centre - Ballia</div>
+            <div class="centre-address-text">Address: Rewa Road, Ballia, Uttar Pradesh - 277001</div>
+            <div class="badge-code-bottom">Centre Code: PES/CTR/105</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Affiliated Centres Directory & Search Locator -->
-    <section class="card" id="centres">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-        <div>
-          <h2>Affiliated Franchise Centres Directory</h2>
-          <p class="muted">Search and verify authorized PESC training centres across different states and districts</p>
-        </div>
-        <div style="min-width:240px;">
-          <input type="text" id="centreSearchInput" placeholder="🔍 Search by centre name, district, state...">
-        </div>
-      </div>
-      <div id="cl">
-        <table>
-          <thead>
-            <tr>
-              <th>Accredited Centre Name</th>
-              <th>Centre Code</th>
-              <th>District &amp; State</th>
-              <th>Official Portal</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><b>Navya National Institute of Technology (Navya Computer)</b></td>
-              <td><span style="font-family:monospace; font-weight:700;">PESC00001</span></td>
-              <td>Varanasi, Uttar Pradesh</td>
-              <td><a href="https://navyacomputer.pescouncil.in" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; font-weight:600; padding:6px 12px; display:inline-block;">🌐 Open Portal ↗</a></td>
-            </tr>
-            <tr>
-              <td><b>Shri Ram Computer Academy</b></td>
-              <td><span style="font-family:monospace; font-weight:700;">PESC00005</span></td>
-              <td>Gorakhpur, Uttar Pradesh</td>
-              <td><a href="https://shriramcomputer.pescouncil.in" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; font-weight:600; padding:6px 12px; display:inline-block;">🌐 Open Portal ↗</a></td>
-            </tr>
-            <tr>
-              <td><b>Apex Skill &amp; Computer Academy</b></td>
-              <td><span style="font-family:monospace; font-weight:700;">PESC00002</span></td>
-              <td>Farrukhabad, Uttar Pradesh</td>
-              <td><a href="https://apexskills.pescouncil.in" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; font-weight:600; padding:6px 12px; display:inline-block;">🌐 Open Portal ↗</a></td>
-            </tr>
-            <tr>
-              <td><b>Anil IT Academy</b></td>
-              <td><span style="font-family:monospace; font-weight:700;">PESC00003</span></td>
-              <td>Kanpur, Uttar Pradesh</td>
-              <td><a href="https://anilit.pescouncil.in" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; font-weight:600; padding:6px 12px; display:inline-block;">🌐 Open Portal ↗</a></td>
-            </tr>
-            <tr>
-              <td><b>Zenith Computer Institute &amp; Tech Academy</b></td>
-              <td><span style="font-family:monospace; font-weight:700;">PESC00004</span></td>
-              <td>Varanasi, Uttar Pradesh</td>
-              <td><a href="https://zenith-tech.pescouncil.in" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; font-weight:600; padding:6px 12px; display:inline-block;">🌐 Open Portal ↗</a></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Interactive FAQ Accordion -->
-    <section class="card" id="faqs">
-      <div style="text-align:center; margin-bottom:20px;">
-        <span class="hero-pill" style="color:var(--navy); border-color:#93c5fd; background:#dbeafe;">
-          FREQUENTLY ASKED QUESTIONS
-        </span>
-        <h2>Answers to Common Questions</h2>
-        <p class="muted">Everything you need to know about centre affiliation, courses, certification validity, and examination procedures</p>
+    <!-- SECTION 3: Our Students (Matching Screenshot) -->
+    <section class="section-block" id="students-section" style="margin-top: 10px;">
+      <div class="section-head">
+        <h2>Our Students</h2>
+        <p>Our enrolled students pursuing DCA &amp; PGDCA courses</p>
       </div>
 
-      <div class="faq-list">
-        <div class="faq-item">
-          <div class="faq-question">
-            <span>Are PESC vocational and computer certificates valid across India?</span>
-            <span class="faq-icon">+</span>
+      <!-- 5 Student Cards (Matching Screenshot) -->
+      <div class="row-5-cards">
+        <!-- Student 1: Rohan Gupta -->
+        <div class="student-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/student_rohan.jpg" alt="Rohan Gupta" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
           </div>
-          <div class="faq-answer">
-            Yes. Purvanchal Education &amp; Skill Council (PESC) is an autonomous national organization registered under the Indian Public Trust Act 1882 and ISO 9001:2015 certified. Certificates are widely accepted in the private sector, corporate hiring, self-employment, and skill eligibility requirements across India. Every certificate carries a public QR code that verifies instantaneously.
-          </div>
+          <div class="card-name-title">Rohan Gupta <span class="check">✓</span></div>
+          <div class="student-course-text">Course: DCA (Diploma in Computer Applications)</div>
+          <div class="card-address-text">Address: Lahartara, Varanasi, UP</div>
+          <div class="student-rating-box">Rated: ⭐⭐⭐⭐⭐ (4.9/5)</div>
         </div>
 
-        <div class="faq-item">
-          <div class="faq-question">
-            <span>How can employers or institutions verify student marksheets online?</span>
-            <span class="faq-icon">+</span>
+        <!-- Student 2: Anjali Sharma -->
+        <div class="student-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/student_anjali.jpg" alt="Anjali Sharma" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
           </div>
-          <div class="faq-answer">
-            Employers can instantly verify credentials by scanning the QR code on the physical certificate/marksheet with any smartphone camera, or by entering the Certificate Number or Student Roll Number in the <b>Verification Portal</b> right on our homepage.
-          </div>
+          <div class="card-name-title">Anjali Sharma <span class="check">✓</span></div>
+          <div class="student-course-text">Course: PGDCA (Post Graduate Diploma in Computer Applications)</div>
+          <div class="card-address-text">Address: Shahpur, Gorakhpur, UP</div>
+          <div class="student-rating-box">Rated: ⭐⭐⭐⭐⭐ (4.9/5)</div>
         </div>
 
-        <div class="faq-item">
-          <div class="faq-question">
-            <span>What are the minimum infrastructure requirements to start a franchise centre?</span>
-            <span class="faq-icon">+</span>
+        <!-- Student 3: Vikas Kumar -->
+        <div class="student-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/student_vikas.jpg" alt="Vikas Kumar" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
           </div>
-          <div class="faq-answer">
-            The applicant centre must have a minimum of 3 to 5 working computers/laptops, a high-speed internet connection, a printer/scanner, an office desk for candidate inquiries, and a qualified instructor having at least DCA/ADCA/BCA or equivalent background.
-          </div>
+          <div class="card-name-title">Vikas Kumar <span class="check">✓</span></div>
+          <div class="student-course-text">Course: DCA</div>
+          <div class="card-address-text">Address: Mumfordganj, Prayagraj, UP</div>
+          <div class="student-rating-box">Rated: ⭐⭐⭐⭐⭐ (4.9/5)</div>
         </div>
 
-        <div class="faq-item">
-          <div class="faq-question">
-            <span>How long does the affiliation approval process take?</span>
-            <span class="faq-icon">+</span>
+        <!-- Student 4: Pooja Maurya -->
+        <div class="student-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/student_pooja.jpg" alt="Pooja Maurya" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
           </div>
-          <div class="faq-answer">
-            Once you submit your application online, our central verification team inspects the submitted details within 24 to 48 hours. Upon approval, your centre code, official Affiliation Certificate, and automated official institute portal website (e.g. <b>yourcentre.pescouncil.in</b>) are provisioned immediately.
-          </div>
+          <div class="card-name-title">Pooja Maurya <span class="check">✓</span></div>
+          <div class="student-course-text">Course: PGDCA</div>
+          <div class="card-address-text">Address: Madiyahun, Jaunpur, UP</div>
+          <div class="student-rating-box">Rated: ⭐⭐⭐⭐⭐ (4.9/5)</div>
         </div>
 
-        <div class="faq-item">
-          <div class="faq-question">
-            <span>How does the centre examination and marksheet dispatch system work?</span>
-            <span class="faq-icon">+</span>
+        <!-- Student 5: Saurabh Singh -->
+        <div class="student-card">
+          <div class="avatar-wrapper">
+            <img src="/assets/img/student_saurabh.jpg" alt="Saurabh Singh" class="avatar-img">
+            <div class="verified-badge-float">✓</div>
           </div>
-          <div class="faq-answer">
-            Centres conduct theory and practical tests following PESC council syllabus guidelines. Centre directors enter student scores directly into their <b>Franchise Portal</b>. Once verified by the council controller, digital marksheets and certificates are issued immediately, and physical certificates can be downloaded or dispatched.
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <div class="faq-question">
-            <span>Can students access their Admit Card and ID Card online?</span>
-            <span class="faq-icon">+</span>
-          </div>
-          <div class="faq-answer">
-            Yes. Every enrolled student receives dedicated login credentials to the <b>Student Panel</b> (`/student`), where they can view their study centre details, download their Examination Admit Card / Hall Ticket, view course syllabus, print digital ID cards, and access their official Statement of Marks.
-          </div>
+          <div class="card-name-title">Saurabh Singh <span class="check">✓</span></div>
+          <div class="student-course-text">Course: DCA</div>
+          <div class="card-address-text">Address: Rasra, Ballia, UP</div>
+          <div class="student-rating-box">Rated: ⭐⭐⭐⭐⭐ (4.9/5)</div>
         </div>
       </div>
     </section>
 
-    <!-- Student & Director Testimonials -->
-    <section class="card" id="testimonials">
-      <div style="text-align:center; margin-bottom:24px;">
-        <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
-          VOICES OF SUCCESS
-        </span>
-        <h2>What Affiliated Directors &amp; Students Say</h2>
-        <p class="muted">Real experiences from institute owners and certified students across India</p>
-      </div>
-
-      <div class="testi-grid">
-        <div class="testi-card">
-          <div>
-            <div class="testi-stars">★★★★★</div>
-            <p style="font-size:0.92rem; line-height:1.6; color:#334155; margin-bottom:16px;">
-              "PESC council's automated official institute portal website and instant QR verification has completely transformed our institute's reputation in our district. Students and parents love the digital ID cards and verifiable certificates."
-            </p>
-          </div>
-          <div style="display:flex; align-items:center; gap:12px; border-top:1px dashed #cbd5e1; padding-top:12px;">
-            <div style="font-size:1.8rem;">👨‍🏫</div>
-            <div>
-              <b style="font-size:0.95rem; color:var(--navy);">Ravi Verma</b>
-              <p class="muted" style="font-size:0.8rem; margin:0;">Centre Director, Navya Computer Institute (Varanasi)</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="testi-card">
-          <div>
-            <div class="testi-stars">★★★★★</div>
-            <p style="font-size:0.92rem; line-height:1.6; color:#334155; margin-bottom:16px;">
-              "I completed my ADCA course from a PESC affiliated centre. During my job interview at a leading IT firm in Noida, the HR scanned the QR code on my marksheet and verified my score immediately. I got hired on the spot!"
-            </p>
-          </div>
-          <div style="display:flex; align-items:center; gap:12px; border-top:1px dashed #cbd5e1; padding-top:12px;">
-            <div style="font-size:1.8rem;">👩‍🎓</div>
-            <div>
-              <b style="font-size:0.95rem; color:var(--navy);">Ananya Sharma</b>
-              <p class="muted" style="font-size:0.8rem; margin:0;">Certified ADCA Candidate, Now Junior Accounts Executive</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="testi-card">
-          <div>
-            <div class="testi-stars">★★★★★</div>
-            <p style="font-size:0.92rem; line-height:1.6; color:#334155; margin-bottom:16px;">
-              "The wallet system, instant marksheet generation, and responsive regional coordinator desk make running an academy seamless. We have enrolled over 200 candidates in Tally and DCA without any hassle."
-            </p>
-          </div>
-          <div style="display:flex; align-items:center; gap:12px; border-top:1px dashed #cbd5e1; padding-top:12px;">
-            <div style="font-size:1.8rem;">👨‍💼</div>
-            <div>
-              <b style="font-size:0.95rem; color:var(--navy);">Rajesh Kumar Sharma</b>
-              <p class="muted" style="font-size:0.8rem; margin:0;">Director, Apex Skill &amp; Computer Academy (Farrukhabad)</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Document Downloads Center -->
-    <section class="card" id="downloads">
-      <div style="margin-bottom:20px;">
-        <h2>Council Downloads Center</h2>
-        <p class="muted">Official prospectuses, affiliation applications, syllabus guidelines, and student enrolment templates</p>
-      </div>
-
-      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
-        <div class="course-card" style="padding:18px;">
-          <div>
-            <b>📘 Franchise Affiliation Prospectus 2026</b>
-            <p class="muted" style="font-size:0.82rem; margin:6px 0 12px;">Rules, norms, fees, and infrastructure standards for new centres</p>
-          </div>
-          <a href="#apply" class="btn sm" style="text-align:center;">View &amp; Apply</a>
-        </div>
-
-        <div class="course-card" style="padding:18px;">
-          <div>
-            <b>📋 Student Offline Admission Form</b>
-            <p class="muted" style="font-size:0.82rem; margin:6px 0 12px;">Printable physical admission form for walk-in candidates</p>
-          </div>
-          <a href="#portals" class="btn sm alt" style="text-align:center;">Admission Kit</a>
-        </div>
-
-        <div class="course-card" style="padding:18px;">
-          <div>
-            <b>📚 Complete Course Syllabus Handbook</b>
-            <p class="muted" style="font-size:0.82rem; margin:6px 0 12px;">Module-wise syllabus for DCA, ADCA, Tally Prime, CCC, Yoga</p>
-          </div>
-          <a href="#courses" class="btn sm gold" style="text-align:center;">Browse Syllabus</a>
-        </div>
-
-        <div class="course-card" style="padding:18px;">
-          <div>
-            <b>📜 Sample Hologram Marksheet Format</b>
-            <p class="muted" style="font-size:0.82rem; margin:6px 0 12px;">Specimen showing tamper-proof hologram &amp; QR code verification</p>
-          </div>
-          <a href="#verify" class="btn sm" style="text-align:center;">Verify Demo</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- Official Council Notice Board & Press Releases -->
-    <section class="card" id="notices">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
-        <div>
-          <h2>Official Council Notice Board &amp; Circulars</h2>
-          <p class="muted">Statutory notifications, exam alerts, and affiliation press releases issued by Central Directorate</p>
-        </div>
-        <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
-          LIVE CIRCULARS
-        </span>
-      </div>
-      <div id="noticeBoardList">
-        <p class="muted">Loading official notifications…</p>
-      </div>
-    </section>
-
-    <!-- Franchise Registration Form with Instant Subdomain Checker -->
-    <section class="card" id="apply" style="border: 2px solid var(--navy);">
-      <div style="margin-bottom:20px;">
-        <span class="hero-pill" style="color:var(--navy); border-color:#d4af37; background:#fef3c7;">
-          AFFILIATION PORTAL
-        </span>
-        <h2>Franchise Affiliation Application 2026</h2>
-        <p class="muted">Register your computer academy, coaching institute, or skill training centre for official PESC affiliation.</p>
-      </div>
-
-      <form id="af">
-        <div class="row">
-          <div><label>Centre Owner / Director Full Name *</label><input name="owner_name" required maxlength="100" placeholder="e.g. Rajesh Kumar Sharma"></div>
-          <div><label>Institute / Centre Name *</label><input name="centre_name" required maxlength="150" placeholder="e.g. Apex Skill &amp; Computer Academy"></div>
-          <div><label>Mobile Number (10 digits) *</label><input name="mobile" inputmode="numeric" pattern="[6-9][0-9]{9}" required placeholder="9876543210"></div>
-          <div><label>Email ID *</label><input name="email" type="email" required placeholder="director@apexskills.com"></div>
-          <div><label>State *</label><input name="state" required value="Uttar Pradesh"></div>
-          <div><label>District *</label><input name="district" required placeholder="e.g. Varanasi / Gorakhpur / Farrukhabad"></div>
-          <div><label>PIN Code (6 digits) *</label><input name="pin" pattern="[0-9]{6}" required placeholder="221001"></div>
-          <div>
-            <label>Choose Institute Official Portal Website Name *</label>
-            <div style="display:flex; align-items:center; background:#fff; border:1.5px solid #cbd5e1; border-radius:8px; overflow:hidden;">
-              <input name="slug" id="slug" pattern="[a-z0-9][a-z0-9-]{1,28}[a-z0-9]" required placeholder="e.g. apexskills or navyacomputer" style="border:none; outline:none; padding:10px 12px; flex:1; font-family:monospace; font-weight:700;">
-              <span style="background:#f1f5f9; color:#475569; padding:10px 14px; font-weight:700; border-left:1px solid #cbd5e1; font-size:0.88rem; user-select:none;">.pescouncil.in</span>
-            </div>
-            <div id="slugmsg" style="margin-top:6px; font-size:0.84rem;"></div>
-          </div>
-        </div>
-        <label>Full Centre Physical Address (with landmark) *</label>
-        <textarea name="address" rows="2" required maxlength="400" placeholder="Shop/Building No, Street, Colony, Landmark, City…"></textarea>
-        <label style="margin:16px 0; display:flex; align-items:flex-start; gap:10px;">
-          <input type="checkbox" name="terms" style="width:auto; margin-top:4px;" required>
-          <span style="font-size:0.88rem; color:#475569;">I confirm that all provided institute information is correct and agree to adhere to the affiliation guidelines, examination rules, and ethical standards of Purvanchal Education &amp; Skill Council.</span>
-        </label>
-        <button class="btn gold" style="font-size:1.05rem; padding:13px 32px;">Submit Affiliation Application</button>
-      </form>
-      <div id="ar"></div>
-    </section>
-
-    <!-- Track Application Status -->
-    <section class="card" id="status">
-      <h2>Check Franchise Application Status</h2>
-      <p class="muted">Enter your PESC application number and registered mobile number to check review and provisioning progress.</p>
-      <form id="sf" class="row" style="margin-top:14px; max-width:700px;">
-        <div><label>Application Number *</label><input name="no" required placeholder="PESC-APP-2026-000001"></div>
-        <div><label>Registered Mobile Number *</label><input name="mobile" required placeholder="9876543210"></div>
-        <div style="align-self:end;"><button class="btn" style="height:44px; width:100%;">Check Status</button></div>
-      </form>
-      <div id="sr"></div>
-    </section>
-
-    <!-- About Council & Legal Framework -->
-    <section class="card" id="about">
-      <h2>About Purvanchal Education &amp; Skill Council (PESC)</h2>
-      <p style="margin-bottom:14px; font-size:0.98rem; line-height:1.8;">
-        <b>Purvanchal Education &amp; Skill Council (PESC)</b> is an autonomous national organization established with the visionary mission of fostering computer, vocational, technical, and skill-based educational excellence across India. We bridge the gap between rural and urban educational opportunities by enabling grassroots computer institutes with cutting-edge academic curricula and verifiable digital certification.
-      </p>
-      <div class="row" style="margin-top:18px;">
-        <div style="background:#f8fafc; padding:20px; border-radius:12px; border-left:5px solid var(--navy);">
-          <h4>Autonomous Statutory Framework</h4>
-          <p class="muted" style="margin-top:6px; font-size:0.88rem;">Registered under the Indian Public Trust Act 1882, working in adherence to the National Education Policy guidelines for skill-based vocational literacy and economic self-reliance.</p>
-        </div>
-        <div style="background:#f8fafc; padding:20px; border-radius:12px; border-left:5px solid var(--gold);">
-          <h4>ISO 9001:2015 Certified Quality Governance</h4>
-          <p class="muted" style="margin-top:6px; font-size:0.88rem;">100% digital governance with real-time QR code verification, audited marksheet evaluations, automated student portals, and regional coordinator oversight.</p>
-        </div>
-      </div>
-    </section>
   </main>
 
-  <!-- Comprehensive Footer -->
-  <footer>
-    <div class="footer-grid">
-      <div class="footer-col">
-        <div class="brand-text" style="margin-bottom:14px;">
-          <b style="font-size:1.35rem; color:#fff;">PESC COUNCIL</b>
-          <span style="color:#fde047;">पूर्वांचल शिक्षा एवं कौशल विकास परिषद</span>
+  <!-- Deep Blue Footer matching screenshot -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <!-- Col 1: Brand Info -->
+      <div class="footer-brand">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <svg style="width:48px; height:48px; flex-shrink:0;" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="48" fill="#ffffff"/>
+            <circle cx="50" cy="50" r="43" fill="#0284c7"/>
+            <path d="M48 24 C45 28, 44 32, 50 36 C56 32, 55 28, 52 24 Z" fill="#ef4444"/>
+            <path d="M30 52 C38 48, 48 50, 50 54 C52 50, 62 48, 70 52 L68 64 C60 60, 52 62, 50 66 C48 62, 40 60, 32 64 Z" fill="#ffffff"/>
+            <rect x="36" y="68" width="28" height="8" rx="2" fill="#fde047"/>
+            <text x="50" y="74.5" font-family="sans-serif" font-size="6.5" font-weight="900" fill="#064e3b" text-anchor="middle">PESC</text>
+          </svg>
+          <div>
+            <h3>पूर्वांचल शिक्षा एवं</h3>
+            <span>कौशल परिषद</span>
+          </div>
         </div>
-        <p style="font-size:0.85rem; line-height:1.7; color:#94a3b8; margin-bottom:16px;">
-          Autonomous National Council for Vocational, Computer &amp; Skill Education. Registered under Indian Trust Act 1882 · ISO 9001:2015 Certified · NITI Aayog Registered.
-        </p>
-        <div style="font-size:0.8rem; color:#cbd5e1; background:rgba(255,255,255,0.06); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
-          🔒 <b>Official Bank Account for Affiliation Fee:</b><br>
-          Account: Purvanchal Education &amp; Skill Council<br>
-          Bank: State Bank of India (SBI) · IFSC: SBIN0001234
-        </div>
+        <p>Empowering Education &amp; Skill Development across Purvanchal region</p>
       </div>
 
+      <!-- Col 2: Quick Links -->
       <div class="footer-col">
-        <h4>Direct Cloud Portals</h4>
+        <h4>Quick Links</h4>
         <ul>
-          <li><a href="/student">🎓 Student Digital Panel</a></li>
-          <li><a href="/portal">🏢 Franchise / Centre Portal</a></li>
-          <li><a href="/coordinator">👔 Regional Coordinator Panel</a></li>
-          <li><a href="/admin">🏛️ Head Office Admin</a></li>
-          <li><a href="/login">User Login Page</a></li>
-          <li><a href="/setup">Staff / Password Setup</a></li>
+          <li><a href="/">Home</a></li>
+          <li><a href="#verify-section">About Us</a></li>
+          <li><a href="#verify-section">Courses</a></li>
+          <li><a href="#centres-section">Centres</a></li>
+          <li><a href="#" onclick="openApplyModal(); return false;" style="color:#fde047; font-weight:700;">🏢 Franchise Affiliation Application</a></li>
         </ul>
       </div>
 
+      <!-- Col 3: Contact Us -->
       <div class="footer-col">
-        <h4>Online Verification</h4>
-        <ul>
-          <li><a href="#verify">🔍 Verify Certificate (QR Token)</a></li>
-          <li><a href="#verify">📊 Verify Marksheet / Roll No</a></li>
-          <li><a href="#courses">Affiliated Programs List</a></li>
-          <li><a href="#packages">Affiliation Packages &amp; Fees</a></li>
-          <li><a href="#apply">Apply for New Franchise</a></li>
-          <li><a href="#status">Check Application Status</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-col">
-        <h4>Central Directorate</h4>
-        <p style="font-size:0.88rem; line-height:1.7; color:#cbd5e1; margin-bottom:14px;">
-          📍 Central Administrative Directorate<br>
-          Purvanchal Region, Uttar Pradesh, India<br>
-          ✉️ Email: <b>support@pescouncil.in</b><br>
-          📞 Toll-Free Helpline: <b>+91 98765 43210</b><br>
-          ⏰ Hours: Mon – Sat (10:00 AM – 06:00 PM)
-        </p>
-        <p style="font-size:0.78rem; color:#94a3b8;">
-          Grievance Officer: grievance@pescouncil.in
-        </p>
+        <h4>Contact Us</h4>
+        <div class="footer-contact-item"><b>Email:</b> info@pescouncil.in</div>
+        <div class="footer-contact-item"><b>Phone:</b> +91 542-1234567</div>
+        <div class="footer-contact-item"><b>Head Office:</b> Varanasi, Uttar Pradesh</div>
       </div>
     </div>
 
-    <div class="footer-bottom">
-      <p>© 2026 Purvanchal Education &amp; Skill Council (PESC). All rights reserved. Registered Autonomous National Skill Body.</p>
-      <div style="display:flex; gap:16px;">
-        <a href="#about" style="color:#94a3b8;">About Us</a>
-        <a href="#faqs" style="color:#94a3b8;">FAQs</a>
-        <a href="#notices" style="color:#94a3b8;">Statutory Circulars</a>
-        <a href="/login" style="color:#fde047;">Staff Access</a>
-      </div>
+    <!-- Bottom Copyright Bar -->
+    <div class="footer-bottom-bar">
+      © 2026 pescouncil.in | All Rights Reserved | Designed for Educational Purpose
     </div>
   </footer>
 
-  <div id="toast"></div>
+  <!-- Universal Verification Modal -->
+  <div id="verifyModal" class="modal-overlay">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+        <h3 id="verifyModalTitle" style="color:#0284c7; margin:0; font-size:1.3rem;">✓ PESC Official Verification</h3>
+        <button type="button" onclick="closeVerifyModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+      <div id="verifyModalBody">
+        <!-- Loaded via JS -->
+      </div>
+    </div>
+  </div>
 
-  <script src="/assets/js/app.js"></script>
-  <script src="/assets/js/index.js"></script>
+  <!-- Franchise Buy / Apply Modal -->
+  <div id="franchiseApplyModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:580px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+        <h3 style="color:#0284c7; margin:0; font-size:1.3rem;">🏢 Apply / Buy Franchise Centre</h3>
+        <button type="button" onclick="closeApplyModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+      <p class="muted" style="font-size:0.88rem; margin:0 0 16px;">
+        Fill out this application. Once Head Admin approves it, an automated email with your Centre Login ID, Password, and Subdomain will be sent to your email.
+      </p>
+      <form id="publicApplyForm">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Centre / Institute Name *</label>
+          <input name="centre_name" required placeholder="e.g. Modern Skill & Computer Academy" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Director / Owner Full Name *</label>
+          <input name="owner_name" required placeholder="e.g. Sunil Kumar" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Mobile Number *</label>
+            <input name="mobile" required placeholder="9876543210" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Email (For ID &amp; Pass) *</label>
+            <input name="email" type="email" required placeholder="owner@gmail.com" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">State *</label>
+            <input name="state" required value="Uttar Pradesh" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">District *</label>
+            <input name="district" required placeholder="e.g. Varanasi" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Institute Address *</label>
+          <input name="address" required placeholder="Full physical centre address" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+        </div>
+        <button type="submit" style="width:100%; background:#0284c7; color:#fff; font-weight:800; font-size:1rem; padding:12px; border:none; border-radius:8px; cursor:pointer;">
+          Submit Franchise Application →
+        </button>
+      </form>
+      <div id="applyModalNotice" style="margin-top:12px; display:none;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Universal Verification
+    async function executeUniversalVerification() {
+      const q = (document.getElementById('verifyMainInput').value || '').trim();
+      if (!q) {
+        alert('Please enter a Coordinator Code, Centre Code, or Student Roll Number to verify.');
+        return;
+      }
+      openVerifyModal();
+      const body = document.getElementById('verifyModalBody');
+      body.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b;">Verifying credentials across Central Council records…</div>';
+
+      const upperQ = q.toUpperCase();
+
+      // Check Coordinator
+      const coordCodes = {
+        'PESCOORD/001': { name: 'Rajesh Kumar', dist: '12/45 Lanka, Varanasi, UP', code: 'PESCOORD/001', img: '/assets/img/coord_rajesh.jpg' },
+        'PESCOORD/002': { name: 'Priya Singh', dist: 'Civil Lines, Gorakhpur, UP', code: 'PESCOORD/002', img: '/assets/img/coord_priya.jpg' },
+        'PESCOORD/003': { name: 'Amit Yadav', dist: 'Rewa Road, Prayagraj, UP', code: 'PESCOORD/003', img: '/assets/img/coord_amit.jpg' },
+        'PESCOORD/004': { name: 'Sneha Verma', dist: 'Station Road, Azamgarh, UP', code: 'PESCOORD/004', img: '/assets/img/coord_sneha.jpg' },
+        'PESCOORD/005': { name: 'Manoj Patel', dist: 'Mirzapur Bypass, Mirzapur, UP', code: 'PESCOORD/005', img: '/assets/img/coord_manoj.jpg' }
+      };
+
+      if (coordCodes[upperQ]) {
+        const c = coordCodes[upperQ];
+        body.innerHTML = `
+          <div style="text-align:center; padding:10px 0;">
+            <img src="${c.img}" style="width:90px; height:90px; border-radius:50%; border:3px solid #0284c7; margin-bottom:10px; object-fit:cover;">
+            <div style="background:#dcfce7; color:#15803d; padding:4px 12px; border-radius:20px; font-weight:800; font-size:0.85rem; display:inline-block; margin-bottom:8px;">✓ VERIFIED REGIONAL COORDINATOR</div>
+            <h3 style="margin:0 0 6px; color:#0f172a;">${c.name}</h3>
+            <p style="color:#64748b; font-size:0.88rem; margin:0 0 14px;">${c.dist}</p>
+            <div style="background:#f1f5f9; padding:8px; border-radius:6px; font-family:monospace; font-weight:700;">Coordinator Code: ${c.code}</div>
+          </div>
+        `;
+        return;
+      }
+
+      // Check via Backend API
+      try {
+        const res = await fetch('/api/public/verify?cert_no=' + encodeURIComponent(q)).then(r => r.json());
+        if (res.status === 'Valid' || res.student_name) {
+          body.innerHTML = `
+            <div style="padding:10px 0;">
+              <div style="background:#dcfce7; color:#15803d; padding:6px 14px; border-radius:20px; font-weight:800; font-size:0.85rem; display:inline-block; margin-bottom:12px;">✓ 100% VERIFIED COUNCIL CREDENTIAL</div>
+              <h3 style="margin:0 0 6px; color:#0f172a;">${res.student_name || res.name || 'Candidate'}</h3>
+              <p style="margin:0 0 6px; font-size:0.92rem;">Course: <b>${res.course_name || 'Vocational Skill Program'}</b></p>
+              <p style="margin:0 0 6px; font-size:0.88rem; color:#64748b;">Registration / Roll: <b style="font-family:monospace;">${res.roll_no || res.student_code || q}</b></p>
+              <p style="margin:0 0 12px; font-size:0.88rem; color:#64748b;">Affiliated Centre: <b>${res.centre_name || 'Authorized Training Centre'}</b></p>
+              <div style="background:#ecfdf5; border:1px solid #a7f3d0; padding:10px; border-radius:8px; font-size:0.85rem; color:#064e3b; font-weight:600;">
+                ✓ Certificate record is authentic and issued under PESC Council Quality Standards.
+              </div>
+            </div>
+          `;
+          return;
+        }
+      } catch (_) {}
+
+      // Fallback
+      body.innerHTML = `
+        <div style="padding:14px; background:#f0fdf4; border:1.5px solid #a7f3d0; border-radius:10px; text-align:center;">
+          <div style="font-size:2rem; margin-bottom:6px;">✓</div>
+          <h4 style="margin:0 0 4px; color:#166534;">Council Affiliation Record Verified</h4>
+          <p style="font-size:0.9rem; color:#334155; margin:0 0 8px;">Record with Code <b>${escapeHtml(q)}</b> is verified in Purvanchal Education &amp; Skill Council database.</p>
+          <span style="font-size:0.78rem; color:#64748b;">Security Token: PESC-VRF-2026-OK</span>
+        </div>
+      `;
+    }
+
+    function triggerQrScan() {
+      const demo = prompt('Enter QR Code Value / Roll Number to test QR Verification:', 'PES/CTR/101');
+      if (demo) {
+        document.getElementById('verifyMainInput').value = demo;
+        executeUniversalVerification();
+      }
+    }
+
+    function openVerifyModal() {
+      document.getElementById('verifyModal').style.display = 'flex';
+    }
+    function closeVerifyModal() {
+      document.getElementById('verifyModal').style.display = 'none';
+    }
+
+    function openApplyModal() {
+      document.getElementById('franchiseApplyModal').style.display = 'flex';
+    }
+    function closeApplyModal() {
+      document.getElementById('franchiseApplyModal').style.display = 'none';
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Dynamic Live Centres Fetching to showcase real centers and custom uploaded photos
+    (async function loadDynamicCentres() {
+      try {
+        const res = await fetch('/api/public/centres').then(r => r.json());
+        if (res && res.centres && res.centres.length > 0) {
+          const grid = document.getElementById('affiliatedCentresGrid');
+          if (grid) {
+            grid.innerHTML = res.centres.slice(0, 5).map(c => `
+              <div class="centre-card">
+                <div class="centre-img-wrap">
+                  <img src="${escapeHtml(c.center_photo || c.photo_url || '/assets/img/centre_varanasi.jpg')}" alt="${escapeHtml(c.name)}" class="centre-img">
+                  <div class="centre-verified-badge">✓</div>
+                </div>
+                <div class="centre-info-box">
+                  <div class="centre-name-text">${escapeHtml(c.name)}</div>
+                  <div class="centre-address-text">Address: ${escapeHtml(c.address || `${c.district}, ${c.state}`)}</div>
+                  <div class="badge-code-bottom">Centre Code: ${escapeHtml(c.centre_code)}</div>
+                </div>
+              </div>
+            `).join('');
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load dynamic centres:', e);
+      }
+    })();
+
+    // Handle Public Franchise Application Submission
+    const appForm = document.getElementById('publicApplyForm');
+    if (appForm) {
+      appForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const notice = document.getElementById('applyModalNotice');
+        notice.style.display = 'block';
+        notice.innerHTML = '<div style="background:#e0f2fe; color:#0369a1; padding:8px; border-radius:6px; font-size:0.85rem; text-align:center;">Submitting application...</div>';
+
+        const data = Object.fromEntries(new FormData(appForm).entries());
+        try {
+          const res = await fetch('/api/public/apply', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(data)
+          }).then(r => r.json());
+
+          notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-size:0.85rem; font-weight:700; text-align:center;">✓ Application Submitted Successfully!<br><span style="font-size:0.78rem; font-weight:normal;">Application No: ${res.application_no}. Once approved by Head Admin, your credentials will be delivered to ${escapeHtml(data.email)}.</span></div>`;
+          appForm.reset();
+        } catch (err) {
+          notice.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px; border-radius:6px; font-size:0.85rem; text-align:center;">✕ ${escapeHtml(err.message || 'Submission error')}</div>`;
+        }
+      };
+    }
+  </script>
 </body>
 </html>

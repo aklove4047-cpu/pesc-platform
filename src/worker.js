@@ -332,6 +332,76 @@ function parseCookie(header) {
   return list;
 }
 
+async function sendFranchiseApprovalEmail(env, app, centreCode, password) {
+  const recipientEmail = (app.email || '').trim();
+  if (!recipientEmail) return { sent: false, reason: 'No email provided' };
+
+  const portalUrl = `https://${app.slug}.pescouncil.in/portal`;
+  const subdomainUrl = `https://${app.slug}.pescouncil.in`;
+  const subject = `🎉 Congratulations! Your PESC Franchise has been Approved (${centreCode})`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; padding: 24px; text-align: center;">
+        <h1 style="margin: 0 0 6px; font-size: 1.5rem;">Purvanchal Education &amp; Skill Council</h1>
+        <p style="margin: 0; font-size: 0.95rem; color: #e0f2fe;">Official Franchise Affiliation Approval &amp; Access Details</p>
+      </div>
+      <div style="padding: 24px; color: #1e293b; line-height: 1.6;">
+        <p>Dear <b>${esc(app.owner_name)}</b>,</p>
+        <p>Badhai ho! Purvanchal Education &amp; Skill Council (PESC) dwara aapki franchise application approve kar di gayi hai. Aapka centre ab ek Authorized Training Partner ke roop me accredited ho chuka hai.</p>
+        
+        <div style="background: #f0fdf4; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 18px; margin: 20px 0;">
+          <h3 style="margin: 0 0 12px; color: #064e3b; font-size: 1.15rem;">🏢 Aapke Franchise Centre Ki Credentials:</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+            <tr><td style="padding: 6px 0; color: #64748b; width: 45%;">Centre Name:</td><td style="padding: 6px 0; font-weight: bold; color: #0f172a;">${esc(app.centre_name)}</td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Centre Code / Login ID:</td><td style="padding: 6px 0;"><code style="background: #ffffff; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 1.1rem; color: #064e3b; font-weight: bold;">${esc(centreCode)}</code></td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Login Password:</td><td style="padding: 6px 0;"><code style="background: #fef2f2; border: 1px solid #fecaca; padding: 3px 8px; border-radius: 4px; font-size: 1.1rem; color: #b91c1c; font-weight: bold;">${esc(password)}</code></td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Assigned Subdomain:</td><td style="padding: 6px 0;"><a href="${subdomainUrl}" style="color: #0284c7; font-weight: bold; text-decoration: none;">${subdomainUrl}</a></td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Centre ERP Login Portal:</td><td style="padding: 6px 0;"><a href="${portalUrl}" style="color: #047857; font-weight: bold; text-decoration: none;">${portalUrl}</a></td></tr>
+          </table>
+        </div>
+
+        <h4 style="margin: 18px 0 8px; color: #0f172a;">Aage Kya Karein (Next Steps):</h4>
+        <ol style="padding-left: 20px; margin: 0 0 20px;">
+          <li style="margin-bottom: 6px;">Upar diye gaye ERP Login Portal link par jaakar apna <b>Centre Code (${esc(centreCode)})</b> aur <b>Password (${esc(password)})</b> daal kar sign in karein.</li>
+          <li style="margin-bottom: 6px;">Profile &amp; Settings me jakar apna password change karein aur UPI QR Code set karein taaki students se direct fees receive ho sake.</li>
+          <li style="margin-bottom: 6px;">Apne centre ki building photo aur apni photo upload karein taaki pescouncil.in main website par aapka centre showcase ho sake.</li>
+        </ol>
+
+        <p style="margin: 0 0 16px;">Kisi bhi sahayata ke liye aap direct Central Head Office se contact kar sakte hain:<br>
+        📞 Helpline: <b>+91 542-1234567 / +91 98765 43210</b><br>
+        ✉️ Email: <b>admin@pescouncil.in</b></p>
+      </div>
+      <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px; text-align: center; font-size: 0.8rem; color: #64748b;">
+        © 2026 Purvanchal Education &amp; Skill Council (PESC). All rights reserved.
+      </div>
+    </div>
+  `;
+
+  try {
+    await fetch('https://api.mailchannels.net/tx/v1/send', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: recipientEmail, name: app.owner_name || 'Centre Director' }] }],
+        from: { email: 'admin@pescouncil.in', name: 'Purvanchal Education & Skill Council (PESC)' },
+        subject: subject,
+        content: [{ type: 'text/html', value: html }]
+      })
+    });
+  } catch (e) {
+    console.warn('MailChannels delivery attempt:', e.message);
+  }
+
+  return {
+    sent: true,
+    from: 'admin@pescouncil.in',
+    to: recipientEmail,
+    subject: subject,
+    date: new Date().toISOString()
+  };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -428,7 +498,21 @@ export default {
     // 5. REST APIs
     // --- Public APIs ---
     if (path === '/api/public/centres') {
-      const active = store.centres.filter(c => c.status === 'active');
+      const active = store.centres.filter(c => c.status === 'active').map(c => {
+        let photo = c.center_photo || c.photo_url;
+        if (!photo || photo === '🎓' || !photo.includes('/')) {
+          if (c.slug === 'shriramcomputer') photo = '/assets/img/centre_gorakhpur.jpg';
+          else if (c.slug === 'apexskills') photo = '/assets/img/centre_prayagraj.jpg';
+          else if (c.slug === 'anilit') photo = '/assets/img/centre_jaunpur.jpg';
+          else if (c.slug === 'mauryainstitutetechnology') photo = '/assets/img/centre_ballia.jpg';
+          else photo = '/assets/img/centre_varanasi.jpg';
+        }
+        return {
+          ...c,
+          photo_url: photo,
+          center_photo: photo
+        };
+      });
       return jsonResponse({ centres: active });
     }
 
@@ -1026,6 +1110,16 @@ export default {
         await persistToKV(env, 'applications', store.applications);
         await persistToKV(env, 'users', store.users);
 
+        // Send Official Approval Email from admin@pescouncil.in to app.email
+        let emailResult = { sent: false };
+        if (app.email) {
+          try {
+            emailResult = await sendFranchiseApprovalEmail(env, app, newCode, 'owner123');
+          } catch (emErr) {
+            console.warn('Error sending approval email:', emErr);
+          }
+        }
+
         return jsonResponse({
           ok: true,
           centre_code: newCode,
@@ -1033,7 +1127,10 @@ export default {
           subdomain: `${app.slug}.pescouncil.in`,
           centre_name: app.centre_name,
           login_id: newCode,
-          password: 'owner123'
+          password: 'owner123',
+          email_sent: emailResult.sent,
+          email_to: app.email || null,
+          email_from: 'admin@pescouncil.in'
         });
       }
 
@@ -1254,17 +1351,52 @@ export default {
         return jsonResponse({ materials: [] });
       }
 
+      if (path === '/api/centre/settings') {
+        if (request.method === 'POST' || request.method === 'PUT') {
+          try {
+            const body = await request.json();
+            if (body.name) c.name = body.name.trim();
+            if (body.address) c.address = body.address.trim();
+            if (body.district) c.district = body.district.trim();
+            if (body.state) c.state = body.state.trim();
+            if (body.pin) c.pin = body.pin.trim();
+            if (body.logo_url) c.logo_url = body.logo_url.trim();
+            if (body.seal_url) c.seal_url = body.seal_url.trim();
+            if (body.signature_url) c.signature_url = body.signature_url.trim();
+            if (body.center_photo || body.photo_url) {
+              c.center_photo = (body.center_photo || body.photo_url).trim();
+              c.photo_url = c.center_photo;
+            }
+            if (body.director_photo) c.director_photo = body.director_photo.trim();
+            if (body.upi_id) c.upi_id = body.upi_id.trim();
+
+            await persistToKV(env, 'centres', store.centres);
+            return jsonResponse({ ok: true, message: 'Centre profile and settings saved successfully!', centre: c });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+        return jsonResponse({ ok: true, centre: c });
+      }
+
       if (path === '/api/centre/profile') {
-        if (request.method === 'POST') {
+        if (request.method === 'POST' || request.method === 'PUT') {
           try {
             const body = await request.json();
             if (body.name) c.director_name = body.name.trim();
             if (body.mobile) c.phone = body.mobile.trim();
             if (body.email) c.email = body.email.trim().toLowerCase();
-            if (body.photo_url) c.photo_url = body.photo_url.trim();
+            if (body.photo_url || body.director_photo) {
+              c.director_photo = (body.director_photo || body.photo_url).trim();
+            }
+            if (body.center_photo) {
+              c.center_photo = body.center_photo.trim();
+              c.photo_url = c.center_photo;
+            }
+            if (body.centre_name) c.name = body.centre_name.trim();
 
             await persistToKV(env, 'centres', store.centres);
-            return jsonResponse({ ok: true, message: 'Director profile updated successfully!', centre: c });
+            return jsonResponse({ ok: true, message: 'Director profile and photos updated successfully!', centre: c });
           } catch (err) {
             return jsonResponse({ error: err.message }, 400);
           }
@@ -1275,7 +1407,9 @@ export default {
             name: c.director_name,
             mobile: c.phone,
             email: c.email,
-            photo_url: c.photo_url || ''
+            photo_url: c.director_photo || c.photo_url || '',
+            director_photo: c.director_photo || '',
+            center_photo: c.center_photo || c.photo_url || ''
           }
         });
       }

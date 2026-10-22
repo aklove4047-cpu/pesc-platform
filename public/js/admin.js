@@ -841,12 +841,16 @@ V.addEventListener('click', (e) => {
       showModal(`🎉 Franchise Approved: ${r.centre_code}`, `
         <div style="padding:10px 0;">
           <div style="background:#ecfdf5; border:1.5px solid #a7f3d0; border-radius:10px; padding:16px; margin-bottom:16px;">
-            <h4 style="margin:0 0 8px; color:#064e3b; font-size:1.15rem;">✓ Centre Successfully Provisioned!</h4>
+            <h4 style="margin:0 0 8px; color:#064e3b; font-size:1.15rem;">✓ Centre Successfully Provisioned &amp; Approved!</h4>
+            <div style="background:#e0f2fe; border:1px solid #7dd3fc; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:0.86rem; color:#0369a1; line-height:1.4;">
+              ✉️ <b>Official Email Sent:</b> Login ID, Password &amp; Subdomain credentials have been sent from <b>admin@pescouncil.in</b> to <b>${esc(r.email_to || 'Franchise Director')}</b>!
+            </div>
             <p style="margin:0 0 12px; font-size:0.88rem; color:#047857;">Share these login credentials with the Franchise Director:</p>
             <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
               <tr><td style="padding:6px 0; color:#64748b; width:45%;">Centre Code / Login ID:</td><td style="padding:6px 0;"><code style="font-size:1.15rem; color:#064e3b; font-weight:800; background:#fff; padding:2px 8px; border:1px solid #bbf7d0; border-radius:4px;">${r.centre_code}</code></td></tr>
               <tr><td style="padding:6px 0; color:#64748b;">Login Password:</td><td style="padding:6px 0;"><code style="font-size:1.15rem; color:#b91c1c; font-weight:800; background:#fef2f2; padding:2px 8px; border:1px solid #fecaca; border-radius:4px;">${r.password || 'owner123'}</code></td></tr>
               <tr><td style="padding:6px 0; color:#64748b;">Subdomain Portal:</td><td style="padding:6px 0;"><a href="https://${r.slug}.pescouncil.in" target="_blank" style="color:#0284c7; font-weight:700;">https://${r.slug}.pescouncil.in ↗</a></td></tr>
+              <tr><td style="padding:6px 0; color:#64748b;">Email Delivered To:</td><td style="padding:6px 0; color:#0369a1; font-weight:bold;">${esc(r.email_to || 'Registered Email')}</td></tr>
             </table>
           </div>
           <div style="display:flex; justify-content:space-between; gap:10px;">
