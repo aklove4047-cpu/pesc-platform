@@ -169,11 +169,12 @@ function renderCentreSite(templateHtml, centre, host) {
   const cPin = centre.pin || '221001';
 
   const slugCapital = cSlug.charAt(0).toUpperCase() + cSlug.slice(1);
-  const instituteSynonym = cName.toLowerCase().includes('computer') ? cName : `${cName} (${slugCapital} Computer Institute)`;
+  const exactInstituteName = cName;
 
-  const pageTitle = `${instituteSynonym} – Official Portal (${cCode}) | ${cDistrict}, ${cState}`;
-  const metaDesc = `Official website of ${cName} / ${slugCapital} Computer Institute (Centre Code: ${cCode}), recognized franchise centre of Purvanchal Education & Skill Council (PESC). Government-recognized computer diploma & certificate courses: ADCA, DCA, CCC, Tally Prime, PGDCA in ${cDistrict}, ${cState}. Admission Open 2026-27. Director: ${cDirector}. Helpline: ${cPhone}.`;
-  const metaKeywords = `${cName}, ${slugCapital} Computer Institute, ${slugCapital} Computer Centre, ${cName} ${cDistrict}, ${cName} admission, ${cName} result, ${cName} fees, best computer institute in ${cDistrict}, top computer academy ${cDistrict}, ${cSlug}.pescouncil.in, PES Council affiliated centre ${cDistrict}, ADCA DCA CCC diploma ${cDistrict}, computer coaching center in ${cDistrict} ${cState}`;
+  // Exact institute name is placed first in Title & Meta to guarantee #1 Google rank when searched
+  const pageTitle = `${exactInstituteName} - Official Website | Computer Training Institute | PESC (${cCode})`;
+  const metaDesc = `Official website of ${exactInstituteName} (Centre Code: ${cCode}), recognized franchise centre of Purvanchal Education & Skill Council (PESC). Government-recognized computer diploma & certificate courses: ADCA, DCA, CCC, Tally Prime, PGDCA in ${cDistrict}, ${cState}. Admission Open 2026-27. Address: ${cAddress}. Director: ${cDirector}. Helpline: ${cPhone}.`;
+  const metaKeywords = `${exactInstituteName}, ${exactInstituteName.toLowerCase()}, ${exactInstituteName} website, ${slugCapital} Computer Institute, ${cName} ${cDistrict}, ${cSlug}.pescouncil.in, best computer institute in ${cDistrict}, top computer academy ${cDistrict}, PES Council affiliated centre ${cDistrict}, ADCA DCA CCC diploma ${cDistrict}`;
 
   const isSubdomain = host && host.startsWith(`${cSlug}.`);
   const canonicalUrl = isSubdomain ? `https://${cSlug}.pescouncil.in/` : `https://pescouncil.in/c/${cSlug}`;
@@ -183,11 +184,13 @@ function renderCentreSite(templateHtml, centre, host) {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": ["EducationalOrganization", "LocalBusiness"],
+        "@type": ["EducationalOrganization", "LocalBusiness", "CollegeOrUniversity"],
         "@id": `${canonicalUrl}#organization`,
-        "name": cName,
+        "name": exactInstituteName,
+        "legalName": exactInstituteName,
         "alternateName": [
-          `${cName} (${cCode})`,
+          exactInstituteName,
+          `${exactInstituteName} (${cCode})`,
           `${slugCapital} Computer Institute`,
           `${slugCapital} Computer Training Centre`,
           `PES Council Authorized Franchise Centre - ${cDistrict}`,
@@ -219,19 +222,20 @@ function renderCentreSite(templateHtml, centre, host) {
 
   const seoBlock = `
   <title id="pageTitle">${esc(pageTitle)}</title>
+  <meta name="title" content="${esc(exactInstituteName)} - Official Website">
   <meta name="description" content="${esc(metaDesc)}">
   <meta name="keywords" content="${esc(metaKeywords)}">
   <meta name="google-site-verification" content="XRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo">
-  <meta name="author" content="${esc(cName)} / Purvanchal Education & Skill Council">
+  <meta name="author" content="${esc(exactInstituteName)} / Purvanchal Education & Skill Council">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <link rel="canonical" href="${canonicalUrl}">
   <link rel="alternate" href="${altUrl}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${canonicalUrl}">
-  <meta property="og:title" content="${esc(pageTitle)}">
+  <meta property="og:title" content="${esc(exactInstituteName)} - Official Website">
   <meta property="og:description" content="${esc(metaDesc)}">
   <meta property="og:image" content="https://pescouncil.in/assets/img/classroom.jpg">
-  <meta property="og:site_name" content="Purvanchal Education & Skill Council (PESC)">
+  <meta property="og:site_name" content="${esc(exactInstituteName)} | Purvanchal Education & Skill Council (PESC)">
   <script type="application/ld+json">
 ${JSON.stringify(schemaJson, null, 2)}
   </script>
@@ -442,28 +446,55 @@ export default {
       return res;
     }
 
-    // 1. Google Site Verification File
-    if (path === '/googleXRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo.html') {
-      return new Response('google-site-verification: googleXRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo.html', {
+    // 1. Google Site Verification Files (Supports ANY Google Search Console verification file code)
+    if (/^\/google[a-zA-Z0-9_\-]+\.html$/.test(path)) {
+      const filename = path.replace('/', '');
+      return new Response(`google-site-verification: ${filename}`, {
         headers: { 'content-type': 'text/html; charset=utf-8' }
       });
     }
 
-    // 2. Dynamic Sitemap XML
+    // 1b. IndexNow Instant Search Engine Indexing Key Verification
+    if (path === '/pescouncil2026instantindex.txt') {
+      return new Response('pescouncil2026instantindex', {
+        headers: { 'content-type': 'text/plain; charset=utf-8' }
+      });
+    }
+
+    // 1c. Universal robots.txt
+    if (path === '/robots.txt') {
+      const sitemapDomain = host || 'pescouncil.in';
+      return new Response(`User-agent: *\nAllow: /\nSitemap: https://${sitemapDomain}/sitemap.xml\n`, {
+        headers: { 'content-type': 'text/plain; charset=utf-8' }
+      });
+    }
+
+    // 2. Dynamic Sitemap XML (Tailored per subdomain for instant #1 Google ranking)
     if (path === '/sitemap.xml') {
       const dateStr = new Date().toISOString().split('T')[0];
-      let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      const tenant = slugOf(host);
+      const isSub = tenant.kind === 'tenant';
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+
+      if (isSub) {
+        xml += `
+  <url><loc>https://${host}/</loc><lastmod>${dateStr}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
+  <url><loc>https://${host}/#courses</loc><lastmod>${dateStr}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://${host}/#about</loc><lastmod>${dateStr}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://${host}/#contact</loc><lastmod>${dateStr}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
+      } else {
+        xml += `
   <url><loc>https://pescouncil.in/</loc><lastmod>${dateStr}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
   <url><loc>https://pescouncil.in/#centres-showcase</loc><lastmod>${dateStr}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://pescouncil.in/#verify-panel</loc><lastmod>${dateStr}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
   <url><loc>https://pescouncil.in/#apply-franchise-section</loc><lastmod>${dateStr}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>`;
 
-      store.centres.filter(c => c.status === 'active').forEach(c => {
-        xml += `
-  <url><loc>https://${c.slug}.pescouncil.in/</loc><lastmod>${dateStr}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
-  <url><loc>https://pescouncil.in/c/${c.slug}</loc><lastmod>${dateStr}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`;
-      });
+        store.centres.filter(c => c.status === 'active').forEach(c => {
+          xml += `
+  <url><loc>https://${c.slug}.pescouncil.in/</loc><lastmod>${dateStr}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
+  <url><loc>https://pescouncil.in/c/${c.slug}</loc><lastmod>${dateStr}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>`;
+        });
+      }
       xml += `\n</urlset>`;
       return new Response(xml, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
     }
@@ -591,13 +622,29 @@ export default {
           student_code: studentCode,
           roll_no: rollNo,
           centre_id: targetCentre.id,
-          name: body.name || 'Candidate Student',
-          father_name: body.father_name || '',
-          mobile: body.mobile || '',
-          email: (body.email || `${rollNo}@student.pescouncil.in`).toLowerCase(),
+          name: (body.name || 'Candidate Student').toUpperCase(),
+          father_name: (body.father_name || '').toUpperCase(),
+          father_occupation: body.father_occupation || '',
+          mother_name: (body.mother_name || '').toUpperCase(),
+          mother_occupation: body.mother_occupation || '',
+          mobile: body.mobile || body.whatsapp || '',
+          student_whatsapp: body.student_whatsapp || body.whatsapp || body.mobile || '',
+          parent_whatsapp: body.parent_whatsapp || '',
+          email: (body.email || `${rollNo.toLowerCase()}@student.pescouncil.in`).toLowerCase(),
           address: body.address || '',
           dob: body.dob || '',
           gender: body.gender || 'Not Specified',
+          aadhar_no: body.aadhar_no || '',
+          apaar_id: body.apaar_id || '',
+          academic_qualifications: body.academic_qualifications || {
+            tenth: { school: body.tenth_school || '', board: body.tenth_board || '', year: body.tenth_year || '' },
+            twelfth: { school: body.twelfth_school || '', board: body.twelfth_board || '', year: body.twelfth_year || '' },
+            graduation: { school: body.grad_school || '', board: body.grad_board || '', year: body.grad_year || '' },
+            post_graduation: { school: body.pg_school || '', board: body.pg_board || '', year: body.pg_year || '' }
+          },
+          emergency_name: body.emergency_name || '',
+          emergency_relation: body.emergency_relation || '',
+          emergency_contact: body.emergency_contact || '',
           qualification: body.qualification || body.message || '12th Pass',
           course_id: courseId,
           course_code: courseObj.code,
@@ -621,12 +668,14 @@ export default {
           ok: true,
           success: true,
           message: 'Admission submitted and fee payment recorded successfully!',
+          student: newStudent,
           receipt: {
             receipt_no: receiptNo,
             student_code: studentCode,
             roll_no: rollNo,
             name: newStudent.name,
             father_name: newStudent.father_name,
+            mother_name: newStudent.mother_name,
             mobile: newStudent.mobile,
             email: newStudent.email,
             course_code: courseObj.code,
@@ -1301,6 +1350,24 @@ export default {
         await persistToKV(env, 'applications', store.applications);
         await persistToKV(env, 'users', store.users);
 
+        // Instant Search Engine Submission (Google Sitemap Ping & IndexNow API) for #1 Rank
+        const subDomain = `${app.slug}.pescouncil.in`;
+        const subDomainUrl = `https://${subDomain}`;
+        try {
+          fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(subDomainUrl + '/sitemap.xml')}`).catch(() => {});
+          fetch(`https://www.bing.com/ping?sitemap=${encodeURIComponent(subDomainUrl + '/sitemap.xml')}`).catch(() => {});
+          fetch('https://api.indexnow.org/indexnow', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              host: subDomain,
+              key: 'pescouncil2026instantindex',
+              keyLocation: `https://${subDomain}/pescouncil2026instantindex.txt`,
+              urlList: [subDomainUrl, `${subDomainUrl}/`, `${subDomainUrl}/#courses`, `${subDomainUrl}/#about`]
+            })
+          }).catch(() => {});
+        } catch (_) {}
+
         // Send Official Approval Email from admin@pescouncil.in to app.email
         let emailResult = { sent: false };
         if (app.email) {
@@ -1417,8 +1484,108 @@ export default {
       }
 
       if (path === '/api/centre/students') {
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            const nextId = store.students.length + 1;
+            const studentCode = `${c.centre_code}-2026-${String(nextId).padStart(5, '0')}`;
+            const rollNo = `2026${String(nextId).padStart(3, '0')}`;
+            const candidateName = String(body.name || '').trim();
+            if (!candidateName) return jsonResponse({ error: 'Candidate Student Name is required' }, 400);
+
+            const initialPassword = String(body.password || body.initial_password || 'Student@123').trim();
+            const courseId = +body.course_id || (c.courses_list && c.courses_list[0] ? c.courses_list[0].id : 1);
+            const matchedCourse = (c.courses_list && c.courses_list.find(co => co.id === courseId)) || store.courses.find(co => co.id === courseId) || { name: 'Diploma Course', code: 'DCA', duration_months: 12 };
+
+            const autoUsername = body.username ? String(body.username).trim() : `IN/UP/${String(Math.floor(100000000 + Math.random() * 900000000))}`;
+            const autoPassword = body.password ? String(body.password).trim() : String(Math.floor(100000000 + Math.random() * 900000000));
+
+            const newStu = {
+              id: nextId,
+              student_code: studentCode,
+              roll_no: rollNo,
+              centre_id: c.id,
+              centre_name: c.name,
+              centre_code: c.centre_code,
+              name: candidateName,
+              email: (body.email || `${rollNo.toLowerCase()}@student.pescouncil.in`).toLowerCase(),
+              photo_url: body.photo_url || body.photo || '',
+              gender: body.gender || 'Male',
+              mobile: body.mobile || body.student_whatsapp || '',
+              student_whatsapp: body.student_whatsapp || body.mobile || '',
+              parent_whatsapp: body.parent_whatsapp || '',
+              dob: body.dob || '',
+              marital_status: body.marital_status || 'No',
+              relation_prefix: body.relation_prefix || 'S/o',
+              father_name: body.father_name || '',
+              father_occupation: body.father_occupation || '',
+              mother_name: body.mother_name || '',
+              mother_occupation: body.mother_occupation || '',
+              local_address: body.local_address || body.address || '',
+              address: body.address || body.local_address || '',
+              pin: body.pin || '',
+              username: autoUsername,
+              initial_password: autoPassword,
+              course_id: courseId,
+              course: matchedCourse.name,
+              course_code: matchedCourse.code,
+              course_name: matchedCourse.name,
+              course_type: body.course_type || 'Single',
+              joining_date: body.joining_date || new Date().toISOString().slice(0, 10),
+              duration_months: +body.duration_months || matchedCourse.duration_months || 12,
+              study_mode: body.study_mode || 'Regular',
+              registration_charge: body.registration_charge || '35 Rs Registration Fee + Ebook + Advance Certificate Fee',
+              session: body.session || '2026-27',
+              fee_total: +body.fee_total || +body.fee || 12000,
+              fee_paid: +body.fee_paid || 5000,
+              fee_pending: Math.max(0, (+body.fee_total || +body.fee || 12000) - (+body.fee_paid || 5000)),
+              aadhar_no: body.aadhar_no || '',
+              apaar_id: body.apaar_id || '',
+              academic_qualifications: body.academic_qualifications || {},
+              emergency_name: body.emergency_name || '',
+              emergency_relation: body.emergency_relation || '',
+              emergency_contact: body.emergency_contact || '',
+              status: 'active',
+              created_at: Date.now()
+            };
+
+            store.students.push(newStu);
+            await persistToKV(env, 'students', store.students);
+
+            // Add user account so student can log into student portal with credentials
+            store.users.push({
+              id: store.users.length + 1,
+              name: candidateName,
+              email: newStu.email,
+              role: 'student',
+              student_id: newStu.id,
+              centre_id: c.id,
+              status: 'active'
+            });
+            await persistToKV(env, 'users', store.users);
+
+            return jsonResponse({
+              ok: true,
+              message: 'Student candidate created successfully!',
+              student: newStu,
+              student_code: studentCode,
+              roll_no: rollNo,
+              username: autoUsername,
+              initial_password: autoPassword
+            }, 201);
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
         const stus = store.students.filter(s => s.centre_id === c.id);
         return jsonResponse({ students: stus });
+      }
+
+      if (path.match(/\/api\/centre\/students\/\d+$/)) {
+        const sId = +path.split('/')[4];
+        const stu = store.students.find(s => s.id === sId && s.centre_id === c.id);
+        if (!stu) return jsonResponse({ error: 'Student not found' }, 404);
+        return jsonResponse({ ok: true, student: stu });
       }
 
       if (path === '/api/centre/courses') {

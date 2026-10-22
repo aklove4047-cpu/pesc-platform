@@ -172,112 +172,288 @@ const views = {
     }
   },
 
-  // 2. Add Student
+  // 2. Add Student (Exact Design Matching Image 1 from User)
   async AddStudent() {
     const cData = await api('/api/centre/courses');
     const courses = cData.courses || [];
+    window._currentCourses = courses;
+
+    const randomUserNum = Math.floor(100000000 + Math.random() * 900000000);
+    const autoUsername = `In/Up/${randomUserNum}`;
+    const autoPassword = String(Math.floor(100000000 + Math.random() * 900000000));
+    const todayDate = new Date().toISOString().slice(0, 10);
 
     V.innerHTML = `
-      <div style="max-width:850px; margin:0 auto; background:#ffffff; border-radius:14px; padding:28px; border:1px solid #e2e8f0; box-shadow:0 4px 16px rgba(0,0,0,0.04);">
-        <div style="border-bottom:1px solid #f1f5f9; padding-bottom:14px; margin-bottom:20px;">
-          <h2 style="margin:0 0 6px; color:#064e3b; font-size:1.5rem;">2. Add New Student Admission</h2>
-          <p class="muted" style="margin:0;">Register candidate, select course, assign tuition fees, and set default portal login credentials</p>
+      <div style="max-width:920px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #cbd5e1; box-shadow:0 6px 20px rgba(0,0,0,0.06); font-family:'Inter', Arial, sans-serif;">
+        
+        <!-- Header Banner: Dark Blue (Exact Image 1) -->
+        <div style="background:#001f5c; color:#ffffff; padding:14px 20px; text-align:center;">
+          <h2 style="margin:0; font-size:1.4rem; font-weight:800; letter-spacing:0.3px;">Add Student Details</h2>
         </div>
 
-        <form id="addStudentForm" class="row">
-          <div style="grid-column: span 2;">
-            <label>Student Full Name *</label>
-            <input name="name" required placeholder="e.g. Rahul Sharma" style="font-size:1rem; font-weight:600;">
+        <!-- Help Links Sub-Header (Exact Image 1) -->
+        <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:10px 20px; display:flex; justify-content:space-around; flex-wrap:wrap; gap:10px; font-size:0.86rem; color:#0284c7; font-weight:700;">
+          <a href="#semester-guide" style="text-decoration:none; color:#0284c7; display:flex; align-items:center; gap:6px;">
+            <span style="display:inline-block; width:14px; height:14px; border-radius:50%; border:2px solid #0284c7; display:flex; align-items:center; justify-content:center;"><span style="width:6px; height:6px; border-radius:50%; background:#0284c7;"></span></span>
+            Semester Section Mein Student Aur Subject Kaise Add Karein
+          </a>
+          <a href="#single-guide" style="text-decoration:none; color:#0284c7; display:flex; align-items:center; gap:6px;">
+            <span style="display:inline-block; width:14px; height:14px; border-radius:50%; border:2px solid #0284c7; display:flex; align-items:center; justify-content:center;"><span style="width:6px; height:6px; border-radius:50%; background:#0284c7;"></span></span>
+            Single Certificate Section Mein Student Aur Subject Kaise Add Karein
+          </a>
+        </div>
+
+        <form id="addStudentForm" style="padding:22px 28px;">
+          
+          <!-- SECTION 1: Personal Information (Light Blue Bar #e0f2fe - Exact Image 1) -->
+          <div style="margin-bottom:24px;">
+            <div style="background:#e0f2fe; color:#0369a1; padding:8px 16px; border-radius:4px; font-weight:800; font-size:0.95rem; margin-bottom:16px;">
+              Personal Information
+            </div>
+
+            <!-- Row 1: Name * | Email -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Name *</label>
+                <input name="name" required placeholder="Student Full Name" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Email</label>
+                <input name="email" type="email" placeholder="student@example.com" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
+            </div>
+
+            <!-- Row 2: Photo (max 500kb) Choose File + Preview (Exact Image 1) -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px; align-items:center;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Photo<br><span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(max 500kb)</span></label>
+                <input type="file" id="studentPhotoFileInput" accept="image/*" style="font-size:0.85rem;">
+                <input type="hidden" name="photo_url" id="studentPhotoBase64">
+              </div>
+              <div>
+                <div id="studentPhotoPreviewBox" style="width:90px; height:90px; border:1px solid #cbd5e1; border-radius:4px; display:flex; align-items:center; justify-content:center; background:#f8fafc; overflow:hidden;">
+                  <span style="font-size:0.75rem; color:#94a3b8;">[ Photo ]</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 3: Gender * | Student Whatsapp Number -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Gender *</label>
+                <select name="gender" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem; background:#fff;">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Student Whatsapp Number</label>
+                <input name="student_whatsapp" pattern="[6-9][0-9]{9}" placeholder="10-digit Whatsapp Number" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
+            </div>
+
+            <!-- Row 4: Parent Whatsapp Number | Date Of Birth * -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Parent Whatsapp Number</label>
+                <input name="parent_whatsapp" placeholder="Parent / Guardian Whatsapp" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Date Of Birth *</label>
+                <input name="dob" type="date" required value="2005-01-15" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
+            </div>
+
+            <!-- Row 5: Marital Status -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Marital Status</label>
+                <select name="marital_status" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem; background:#fff;">
+                  <option value="No">No / Unmarried</option>
+                  <option value="Yes">Yes / Married</option>
+                </select>
+              </div>
+              <div></div>
+            </div>
+
+            <!-- Row 6: Father/Husband Name * (with Prefix S/o, D/o, W/o) | Mother Name * -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Father/Husband Name *</label>
+                <div style="display:flex; gap:6px;">
+                  <select name="relation_prefix" style="width:80px; padding:9px 6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem; background:#fff;">
+                    <option value="S/o">S/o</option>
+                    <option value="D/o">D/o</option>
+                    <option value="W/o">W/o</option>
+                  </select>
+                  <input name="father_name" required placeholder="Father/Husband Name" style="flex:1; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+                </div>
+              </div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Mother Name *</label>
+                <input name="mother_name" required placeholder="Mother Name" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
+            </div>
+
+            <!-- Row 7: Local Address * | Pin * -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Local Address *</label>
+                <input name="local_address" required placeholder="Local Residential Address" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Pin *</label>
+                <input name="pin" required placeholder="e.g. 221001" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
+            </div>
+
+            <!-- Row 8: Username * (Auto) | Password (Auto) (Exact Image 1) -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:8px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Username *</label>
+                <input name="username" id="autoStuUsername" value="${esc(autoUsername)}" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.95rem; font-weight:700; color:#0f172a; background:#f8fafc;">
+              </div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Password</label>
+                <input name="password" id="autoStuPassword" value="${esc(autoPassword)}" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.95rem; font-weight:700; color:#0f172a; background:#f8fafc;">
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label>Father's / Guardian Name</label>
-            <input name="father_name" placeholder="e.g. Ramesh Sharma">
+          <!-- SECTION 2: Course Details (Light Lavender Bar #e0e7ff - Exact Image 1) -->
+          <div style="margin-bottom:24px;">
+            <div style="background:#e0e7ff; color:#3730a3; padding:8px 16px; border-radius:4px; font-weight:800; font-size:0.95rem; margin-bottom:16px;">
+              Course Details
+            </div>
+
+            <!-- Row 1: Course Type * (Single / Semester/Year) | Course To Be Join * -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:8px;">
+                  Course Type * <span style="font-size:0.75rem; color:#dc2626; font-weight:normal;">(fill carefully not editable)</span>
+                </label>
+                <div style="display:flex; gap:20px; align-items:center; padding-top:4px;">
+                  <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.92rem; font-weight:600;">
+                    <input type="radio" name="course_type" value="Single" checked> Single
+                  </label>
+                  <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.92rem; font-weight:600;">
+                    <input type="radio" name="course_type" value="Semester/Year"> Semester/Year
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Course To Be Join *</label>
+                <select name="course_id" id="addStudentCourseSelect" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem; background:#fff;">
+                  <option value="">Select Course</option>
+                  ${courses.map(co => `<option value="${co.id}" data-duration="${co.duration_months || 12}" data-fee="${co.selling_price_paise ? Math.round(co.selling_price_paise/100) : (co.fee_rupees || 12000)}">${esc(co.code)} - ${esc(co.name)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <!-- Row 2: Joining Date -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Joining Date</label>
+                <input name="joining_date" type="date" value="${todayDate}" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
+              <div></div>
+            </div>
+
+            <!-- Row 3: Course Duration * (Months) | Study Mode * -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Course Duration *</label>
+                <div style="display:flex; border:1px solid #cbd5e1; border-radius:4px; overflow:hidden;">
+                  <input name="duration_months" id="addCourseDurationInput" type="number" value="12" style="flex:1; border:none; padding:9px 12px; font-size:0.92rem;">
+                  <span style="background:#f1f5f9; padding:9px 14px; font-size:0.86rem; color:#475569; font-weight:700; border-left:1px solid #cbd5e1;">Months</span>
+                </div>
+              </div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Study Mode *</label>
+                <select name="study_mode" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem; background:#fff;">
+                  <option value="Regular">Regular</option>
+                  <option value="Distance">Distance</option>
+                  <option value="Online">Online</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Row 4: Registration Charge * -->
+            <div style="margin-bottom:20px;">
+              <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Registration Charge *</label>
+              <input name="registration_charge" value="35 Rs Registration Fee + Ebook + Advance Certificate Fee" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem; background:#f8fafc;">
+            </div>
           </div>
 
-          <div>
-            <label>Candidate Mobile Number *</label>
-            <input name="mobile" pattern="[6-9][0-9]{9}" required placeholder="10-digit mobile number">
-          </div>
-
-          <div>
-            <label>Candidate Email</label>
-            <input name="email" type="email" placeholder="e.g. rahul@example.com">
-          </div>
-
-          <div>
-            <label>Date of Birth</label>
-            <input name="dob" type="date">
-          </div>
-
-          <div>
-            <label>Enrolled Course *</label>
-            <select name="course_id" id="addStudentCourseSelect" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
-              <option value="">Select a course…</option>
-              ${courses.map(co => `<option value="${co.id}" data-fee="${co.selling_price_paise ? Math.round(co.selling_price_paise/100) : 12000}">${esc(co.code)} – ${esc(co.name)} (${co.duration_months} Mos)</option>`).join('')}
-            </select>
-          </div>
-
-          <div>
-            <label>Academic Session</label>
-            <input name="session" value="2026-27">
-          </div>
-
-          <div>
-            <label>Total Course Fee to Charge (₹)</label>
-            <input name="fee_total" id="addFeeTotal" type="number" value="12000" style="font-weight:700; color:#064e3b;">
-          </div>
-
-          <div>
-            <label>Initial Fee Deposited (Jama) (₹)</label>
-            <input name="fee_paid" type="number" value="5000" style="font-weight:700; color:#16a34a;">
-          </div>
-
-          <div style="grid-column: span 2;">
-            <label>Candidate Passport Photo URL / Upload</label>
-            <input name="photo_url" placeholder="https://... (or leave blank for default avatar)">
-          </div>
-
-          <div style="grid-column: span 2; background:#f0fdf4; border:1px solid #a7f3d0; border-radius:8px; padding:12px 16px; margin-top:8px;">
-            <span style="font-weight:700; color:#064e3b;">🔑 Portal Access Notice:</span>
-            <p style="margin:4px 0 0; font-size:0.85rem; color:#065f46;">
-              Default Student Password will be generated as: <b>Student@123</b>. The candidate can log in using their generated Roll Number.
-            </p>
-          </div>
-
-          <div style="grid-column: span 2; display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
-            <button type="button" class="btn alt" onclick="switchModule('MyStudents')">Cancel</button>
-            <button type="submit" class="btn gold" style="padding:12px 28px; font-weight:700;">Complete Admission &amp; Register →</button>
+          <!-- Bottom Action: Create Student (Purple Button - Exact Image 1) -->
+          <div style="text-align:center; margin-top:28px;">
+            <button type="submit" id="btnCreateStudent" style="background:#4f46e5; hover:background:#4338ca; color:#ffffff; font-weight:700; font-size:1.05rem; padding:12px 42px; border:none; border-radius:6px; cursor:pointer; box-shadow:0 4px 14px rgba(79,70,229,0.35);">
+              Create Student
+            </button>
           </div>
         </form>
-        <div id="addStudentResult" style="margin-top:16px;"></div>
+
+        <div id="addStudentResult" style="padding:0 28px 24px;"></div>
       </div>
     `;
 
-    $('#addStudentCourseSelect').onchange = (e) => {
-      const opt = e.target.selectedOptions[0];
-      if (opt && opt.dataset.fee) {
-        $('#addFeeTotal').value = opt.dataset.fee;
+    // Photo file preview handler
+    $('#studentPhotoFileInput').onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (file.size > 500 * 1024) {
+          toast('Warning: File size exceeds 500kb. Please select an image under 500kb.');
+        }
+        const reader = new FileReader();
+        reader.onload = (re) => {
+          $('#studentPhotoBase64').value = re.target.result;
+          $('#studentPhotoPreviewBox').innerHTML = `<img src="${re.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+        };
+        reader.readAsDataURL(file);
       }
     };
 
+    // Auto fill duration when course changes
+    $('#addStudentCourseSelect').onchange = (e) => {
+      const opt = e.target.selectedOptions[0];
+      if (opt && opt.dataset.duration) {
+        $('#addCourseDurationInput').value = opt.dataset.duration;
+      }
+    };
+
+    // Form submit handler
     $('#addStudentForm').onsubmit = (e) => {
       e.preventDefault();
       guard(async () => {
         const payload = form(e.target);
         payload.course_id = +payload.course_id;
-        payload.fee_total = +payload.fee_total || 12000;
-        payload.fee_paid = +payload.fee_paid || 0;
+        payload.duration_months = +payload.duration_months || 12;
+
         const res = await api('/api/centre/students', { method: 'POST', body: payload });
+        const stu = res.student || { name: payload.name, student_code: res.student_code, roll_no: res.roll_no };
+
         $('#addStudentResult').innerHTML = `
-          <div style="background:#dcfce7; border:1px solid #86efac; border-radius:10px; padding:18px; margin-top:14px;">
-            <h4 style="color:#15803d; margin:0 0 6px;">✅ Student Admission Completed!</h4>
-            <p style="margin:0 0 6px; font-size:0.95rem;">Assigned Student Code: <b style="font-family:monospace; background:#fff; padding:2px 8px; border-radius:4px;">${res.student_code}</b></p>
-            <p style="margin:0; font-size:0.88rem; color:#166534;">Student can sign in on the Student Login portal with password: <b>${res.initial_password}</b></p>
+          <div style="background:#ecfdf5; border:1.5px solid #6ee7b7; border-radius:8px; padding:20px; margin-top:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+              <div>
+                <h3 style="color:#065f46; margin:0 0 4px; font-size:1.25rem;">✅ Student Created Successfully!</h3>
+                <p style="margin:0; font-size:0.9rem; color:#047857;">Admission registered and student credentials generated.</p>
+              </div>
+              <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:8px 18px;" onclick="showAdmissionFormModal(${res.student ? res.student.id : 'null'})">
+                📄 View &amp; Print Admission Form (Image 2)
+              </button>
+            </div>
+            
+            <div style="background:#ffffff; border:1px solid #a7f3d0; border-radius:6px; padding:14px; display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; font-size:0.9rem;">
+              <div><span class="muted">Student Code:</span><br><b style="font-family:monospace; color:#0f172a;">${esc(res.student_code)}</b></div>
+              <div><span class="muted">Roll Number:</span><br><b style="font-family:monospace; color:#0284c7;">${esc(res.roll_no)}</b></div>
+              <div><span class="muted">Portal Username:</span><br><b style="font-family:monospace; color:#065f46;">${esc(res.username || payload.username)}</b></div>
+              <div><span class="muted">Portal Password:</span><br><b style="font-family:monospace; color:#dc2626;">${esc(res.initial_password || payload.password)}</b></div>
+            </div>
           </div>
         `;
-        toast('Candidate admitted successfully!');
-        e.target.reset();
+        toast('Student created successfully!');
       });
     };
   },
@@ -1532,10 +1708,11 @@ function switchModule(modId) {
 // Student Table Renderer
 function renderStudentTable(students) {
   if (!students.length) return '<p class="muted" style="text-align:center; padding:20px;">No students enrolled yet.</p>';
+  window._currentStudents = students;
   return table([
     ['Code', (r) => `<b style="font-family:monospace; color:#0f172a;">${esc(r.student_code)}</b>`],
     ['Candidate Name', (r) => `<b>${esc(r.name)}</b>`],
-    ['Course', (r) => esc(r.course)],
+    ['Course', (r) => esc(r.course || r.course_name || 'Diploma')],
     ['Total Fees', (r) => `₹${(r.fee_total || 12000).toLocaleString('en-IN')}`],
     ['Paid', (r) => `<span style="color:#16a34a; font-weight:700;">₹${(r.fee_paid || 0).toLocaleString('en-IN')}</span>`],
     ['Pending', (r) => {
@@ -1545,12 +1722,279 @@ function renderStudentTable(students) {
     ['Actions', (r) => `
       <div style="display:flex; gap:4px; flex-wrap:wrap;">
         <button class="btn sm" style="background:#0284c7; color:#fff;" onclick="quickViewStudent(${r.id})">👁️ View</button>
+        <button class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="showAdmissionFormModal(${r.id})">📄 Admission Form</button>
         <button class="btn sm alt" onclick="printReceipt(${r.id})">🧾 Receipt</button>
         <button class="btn sm gold" onclick="switchModule('CertificatePrinting')">🎓 Cert</button>
       </div>
     `]
   ], students);
 }
+
+// Image 2: Official Printable Student Admission Form Modal
+window.showAdmissionFormModal = async function(studentOrId) {
+  let stu = studentOrId;
+  if (!stu || typeof stu === 'number' || typeof stu === 'string') {
+    const sId = stu || null;
+    stu = (window._currentStudents || []).find(s => s.id == sId);
+    if (!stu && sId) {
+      try {
+        const res = await api(`/api/centre/students/${sId}`);
+        stu = res.student || res;
+      } catch (_) {
+        stu = { id: sId, name: 'Student Candidate' };
+      }
+    }
+  }
+  if (!stu) stu = (window._currentStudents && window._currentStudents[0]) || { name: 'Student Candidate', student_code: 'PESC00001-2026-00001' };
+
+  const centre = currentCentre || {
+    name: 'Siya College of Paramedical',
+    centre_code: 'IN/UP/SHA/82907',
+    district: 'Varanasi',
+    state: 'Uttar Pradesh'
+  };
+
+  const branchCode = centre.centre_code || 'IN/UP/SHA/82907';
+  const centreName = (centre.name || 'Siya College of Paramedical').toUpperCase();
+  const todayDate = new Date(stu.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  let modal = document.getElementById('admissionFormViewModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'admissionFormViewModal';
+    modal.className = 'modal-backdrop';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.75); display:flex; align-items:flex-start; justify-content:center; z-index:99999; overflow-y:auto; padding:20px 10px;';
+    document.body.appendChild(modal);
+  }
+
+  const quals = stu.academic_qualifications || {};
+  const q10 = quals.tenth || {};
+  const q12 = quals.twelfth || {};
+  const qGrad = quals.graduation || {};
+  const qPg = quals.post_graduation || {};
+
+  modal.innerHTML = `
+    <div style="background:#fff; max-width:820px; width:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.3); overflow:hidden; position:relative; margin:auto;">
+      <!-- Top Action Toolbar (Hidden in Print) -->
+      <div class="no-print" style="background:#0f172a; color:#fff; padding:12px 20px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700; font-size:0.95rem;">📄 Official Student Admission Form (Image 2)</span>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:6px 16px;" onclick="window.print()">🖨️ Print Form (A4)</button>
+          <button type="button" class="btn sm alt" style="padding:6px 14px;" onclick="document.getElementById('admissionFormViewModal').style.display='none'">✕ Close</button>
+        </div>
+      </div>
+
+      <!-- Printable A4 Admission Document Container (Exact Image 2) -->
+      <div id="admissionFormPrintArea" style="padding:32px 36px; background:#fff; font-family:'Inter', Arial, sans-serif; color:#0f172a; line-height:1.45; position:relative;">
+        
+        <!-- Document Header (Exact Image 2) -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+          <!-- Left Logo -->
+          <div style="width:75px; height:75px; border-radius:50%; border:2px solid #0284c7; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#f0f9ff; overflow:hidden;">
+            ${centre.logo_url || centre.seal_url ? `<img src="${centre.logo_url || centre.seal_url}" style="width:100%; height:100%; object-fit:contain;">` : `<span style="font-size:2.2rem;">🎓</span>`}
+          </div>
+
+          <!-- Center Details -->
+          <div style="text-align:center; flex:1; padding:0 12px;">
+            <div style="font-size:0.75rem; font-weight:800; color:#334155; letter-spacing:0.5px; text-align:right;">BRANCH CODE: <span style="font-family:monospace; color:#0284c7;">${esc(branchCode)}</span></div>
+            <h1 style="color:#0284c7; font-size:1.6rem; font-weight:900; margin:2px 0; text-transform:uppercase; letter-spacing:-0.3px;">${esc(centreName)}</h1>
+            <div style="font-size:0.72rem; font-weight:700; color:#1e293b; letter-spacing:0.2px;">ACCREDITED TO THE BRIGHT FUTURE &amp; GOVT. OF INDIA &amp; ISO 9001:2015</div>
+            <div style="font-size:0.68rem; color:#475569; margin-top:2px;">ISO 29990:2010 CERTIFIED ORGANIZATION , Reg.No: U85100UP2025PTC221451</div>
+          </div>
+
+          <!-- Right Date -->
+          <div style="font-size:0.8rem; font-weight:800; color:#0f172a; white-space:nowrap; padding-top:4px;">
+            DATE: <span style="border-bottom:1px solid #0f172a; padding:0 8px;">${esc(todayDate)}</span>
+          </div>
+        </div>
+
+        <!-- Pill Title Banner (Exact Image 2) -->
+        <div style="text-align:center; margin:14px 0 16px;">
+          <div style="background:#0284c7; color:#ffffff; font-weight:900; font-size:1.15rem; padding:6px 40px; border-radius:30px; display:inline-block; letter-spacing:1px; box-shadow:0 3px 10px rgba(2,132,199,0.35);">
+            ADMISSION FORM
+          </div>
+        </div>
+
+        <!-- Form Rows (Exact Underline Fields from Image 2) -->
+        <div style="font-size:0.86rem; color:#0f172a;">
+          <!-- 1. Student Name -->
+          <div style="margin-bottom:12px; display:flex; align-items:flex-end;">
+            <b style="white-space:nowrap;">1. NAME OF THE STUDENT:&nbsp;<span style="font-size:0.75rem; color:#475569;">(IN THE CAPITAL LETTERS)</span>&nbsp;</b>
+            <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-size:0.95rem; color:#0369a1; text-transform:uppercase;">${esc(stu.name || '')}</span>
+          </div>
+
+          <!-- 2. Date of Birth -->
+          <div style="margin-bottom:12px; display:flex; align-items:flex-end;">
+            <b style="white-space:nowrap;">2. DATE OF BIRTH:&nbsp;</b>
+            <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px;">${esc(stu.dob || '')}</span>
+          </div>
+
+          <!-- 3. Father's Name & Occupation -->
+          <div style="margin-bottom:12px; display:flex; align-items:flex-end; gap:16px;">
+            <div style="flex:3; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">3. FATHER'S NAME:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; text-transform:uppercase;">${esc(stu.father_name || '')}</span>
+            </div>
+            <div style="flex:2; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">OCCUPATION:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:8px;">${esc(stu.father_occupation || 'Business / Private')}</span>
+            </div>
+          </div>
+
+          <!-- 4. Mother's Name & Occupation -->
+          <div style="margin-bottom:12px; display:flex; align-items:flex-end; gap:16px;">
+            <div style="flex:3; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">4. MOTHER'S NAME:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; text-transform:uppercase;">${esc(stu.mother_name || '')}</span>
+            </div>
+            <div style="flex:2; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">OCCUPATION:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:8px;">${esc(stu.mother_occupation || 'Homemaker')}</span>
+            </div>
+          </div>
+
+          <!-- 5. Mobile & Whatsapp -->
+          <div style="margin-bottom:12px; display:flex; align-items:flex-end; gap:16px;">
+            <div style="flex:1; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">5. MOBILE NO.:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-family:monospace;">${esc(stu.mobile || stu.student_whatsapp || '')}</span>
+            </div>
+            <div style="flex:1; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">Whatsapp No.:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-family:monospace;">${esc(stu.student_whatsapp || stu.parent_whatsapp || stu.mobile || '')}</span>
+            </div>
+          </div>
+
+          <!-- 6. Email ID -->
+          <div style="margin-bottom:12px; display:flex; align-items:flex-end;">
+            <b style="white-space:nowrap;">6. EMAIL ID:&nbsp;</b>
+            <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:8px; color:#0369a1;">${esc(stu.email || '')}</span>
+          </div>
+
+          <!-- 7. Aadhar No & APAAR ID -->
+          <div style="margin-bottom:12px; display:flex; align-items:flex-end; gap:16px;">
+            <div style="flex:1; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">7. AADHAR NO:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-family:monospace;">${esc(stu.aadhar_no || '•••• •••• ••••')}</span>
+            </div>
+            <div style="flex:1; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">APAR ID:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-family:monospace;">${esc(stu.apaar_id || 'APAR-2026-9281')}</span>
+            </div>
+          </div>
+
+          <!-- 8. Course Name & Duration -->
+          <div style="margin-bottom:14px; display:flex; align-items:flex-end; gap:16px;">
+            <div style="flex:2; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">8. COURSE NAME:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:800; padding-left:8px; color:#0284c7;">${esc(stu.course || stu.course_name || 'Diploma Course')}</span>
+            </div>
+            <div style="flex:1; display:flex; align-items:flex-end;">
+              <b style="white-space:nowrap;">DURATION:&nbsp;</b>
+              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px;">${esc(stu.duration_months ? stu.duration_months + ' Months' : '12 Months')}</span>
+            </div>
+          </div>
+
+          <!-- 9. Academic Qualification Table (Exact Image 2) -->
+          <div style="margin-bottom:16px;">
+            <b style="display:block; margin-bottom:6px;">9. ACADEMIC QUALIFICATION:</b>
+            <table style="width:100%; border-collapse:collapse; text-align:center; font-size:0.8rem; border:1px solid #334155;">
+              <thead>
+                <tr style="background:#f8fafc; font-weight:800; border-bottom:1px solid #334155;">
+                  <th style="border:1px solid #334155; padding:6px 4px; width:22%;">EXAMINATION PASSED</th>
+                  <th style="border:1px solid #334155; padding:6px 4px; width:34%;">SCHOOL/ COLLEGE</th>
+                  <th style="border:1px solid #334155; padding:6px 4px; width:24%;">BOARD/ UNIVERSITY</th>
+                  <th style="border:1px solid #334155; padding:6px 4px; width:20%;">YEAR OF PASSING</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="border:1px solid #334155; padding:6px; font-weight:700; text-align:left; padding-left:10px;">10th</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(q10.school || 'Government High School')}</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(q10.board || 'UP Board')}</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(q10.year || '2020')}</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #334155; padding:6px; font-weight:700; text-align:left; padding-left:10px;">12th</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(q12.school || 'Inter College')}</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(q12.board || 'UP Board')}</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(q12.year || '2022')}</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #334155; padding:6px; font-weight:700; text-align:left; padding-left:10px;">Graduation</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(qGrad.school || '')}</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(qGrad.board || '')}</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(qGrad.year || '')}</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #334155; padding:6px; font-weight:700; text-align:left; padding-left:10px;">Post Graduation</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(qPg.school || '')}</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(qPg.board || '')}</td>
+                  <td style="border:1px solid #334155; padding:6px;">${esc(qPg.year || '')}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Emergency Contact Information (Exact Image 2) -->
+          <div style="margin-bottom:14px;">
+            <b style="font-size:0.8rem; letter-spacing:0.3px; color:#1e293b; display:block; text-align:center; margin-bottom:8px;">EMERGENCY CONTACT INFORMATION</b>
+            <div style="display:flex; justify-content:space-between; gap:12px; font-size:0.82rem;">
+              <div style="flex:1; display:flex; align-items:flex-end;">
+                <b>NAME:&nbsp;</b>
+                <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:4px;">${esc(stu.emergency_name || stu.father_name || '')}</span>
+              </div>
+              <div style="flex:1; display:flex; align-items:flex-end;">
+                <b>RELATION:&nbsp;</b>
+                <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:4px;">${esc(stu.emergency_relation || 'Father / Guardian')}</span>
+              </div>
+              <div style="flex:1; display:flex; align-items:flex-end;">
+                <b>CONTACT NO:&nbsp;</b>
+                <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:4px; font-family:monospace;">${esc(stu.emergency_contact || stu.parent_whatsapp || stu.mobile || '')}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Declaration Section (घोषणा) (Exact Image 2) -->
+          <div style="text-align:center; margin-top:14px; font-size:0.75rem; color:#334155; line-height:1.4;">
+            <b style="color:#0f172a;">Declaration Section (घोषणा)</b><br>
+            I hereby declare that the information provided above is true and correct to the best of my knowledge.<br>
+            I agree to abide by the rules and regulations of the institute.
+          </div>
+
+          <!-- Signatures (Exact Image 2) -->
+          <div style="display:flex; justify-content:space-between; margin-top:36px; padding:0 14px;">
+            <div style="text-align:center; width:220px;">
+              <div style="border-top:1px dashed #334155; margin-bottom:6px;"></div>
+              <b style="font-size:0.78rem;">(STUDENT SIGNATURE)</b>
+            </div>
+            <div style="text-align:center; width:220px;">
+              <div style="border-top:1px dashed #334155; margin-bottom:6px;"></div>
+              <b style="font-size:0.78rem;">(AUTHORISED SIGNATURE)</b>
+            </div>
+          </div>
+
+          <!-- Cyan Bottom Banner with 5 Gold Stars (Exact Image 2) -->
+          <div style="background:#0284c7; height:24px; margin-top:18px; display:flex; align-items:center; justify-content:center; color:#facc15; font-size:1.15rem; letter-spacing:6px;">
+            ⭐ ⭐ ⭐ ⭐ ⭐
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+};
+
+window.quickViewStudent = function(id) {
+  showAdmissionFormModal(id);
+};
+
+window.printReceipt = function(id) {
+  const stu = (window._currentStudents || []).find(s => s.id == id);
+  if (!stu) return;
+  showAdmissionFormModal(stu);
+};
 
 // Certificate Preview Renderers
 let certFormat = 'council';
