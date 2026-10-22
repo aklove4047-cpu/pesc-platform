@@ -822,6 +822,16 @@ export default {
           (x.director_name && x.director_name.toLowerCase() === em)
         );
         if (c && (pw === 'owner123' || pw === 'Centre@12345' || pw === 'centre123' || pw === 'admin123' || pw === '123456' || pw.toLowerCase() === c.centre_code.toLowerCase() || pw.toLowerCase() === c.slug.toLowerCase() || (c.login_password && pw === c.login_password))) {
+          if (c.status === 'terminated') {
+            return jsonResponse({
+              error: `यह सेंटर फ्रैंचाइज़ी (${c.centre_code} - ${c.name}) पूर्वांचल शिक्षा एवं कौशल परिषद (Head Office) द्वारा समाप्त (Terminate) कर दी गई है। कृपया परिषद मुख्यालय से संपर्क करें।`
+            }, 403);
+          }
+          if (c.status === 'suspended') {
+            return jsonResponse({
+              error: `यह सेंटर (${c.centre_code}) वर्तमान में निलंबित (Suspended) है। कृपया परिषद मुख्यालय से संपर्क करें।`
+            }, 403);
+          }
           const userObj = { id: c.id, email: c.email || `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id, centre_code: c.centre_code, centre_slug: c.slug };
           return jsonResponse({ ok: true, user: userObj }, 200, {
             'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
@@ -941,6 +951,55 @@ export default {
         } catch (err) {
           return jsonResponse({ error: err.message }, 400);
         }
+      }
+
+      if (path.match(/\/api\/admin\/centres\/\d+\/terminate/) && request.method === 'POST') {
+        const cId = +path.split('/')[4];
+        const targetC = store.centres.find(c => c.id === cId);
+        if (!targetC) return jsonResponse({ error: 'Centre not found' }, 404);
+        const body = await request.json().catch(() => ({}));
+        targetC.status = 'terminated';
+        targetC.terminated_at = Date.now();
+        targetC.termination_reason = body.reason || 'Terminated by Council Administration';
+        await persistToKV(env, 'centres', store.centres);
+        return jsonResponse({ ok: true, message: `Franchise for ${targetC.name} (${targetC.centre_code}) has been terminated!` });
+      }
+
+      if (path.match(/\/api\/admin\/centres\/\d+\/activate/) && request.method === 'POST') {
+        const cId = +path.split('/')[4];
+        const targetC = store.centres.find(c => c.id === cId);
+        if (!targetC) return jsonResponse({ error: 'Centre not found' }, 404);
+        targetC.status = 'active';
+        delete targetC.terminated_at;
+        delete targetC.termination_reason;
+        await persistToKV(env, 'centres', store.centres);
+        return jsonResponse({ ok: true, message: `Franchise for ${targetC.name} (${targetC.centre_code}) reactivated successfully!` });
+      }
+
+      if (path.match(/\/api\/admin\/centres\/\d+\/affiliation-cert/)) {
+        const cId = +path.split('/')[4];
+        const targetC = store.centres.find(c => c.id === cId) || store.centres[0];
+        return jsonResponse({
+          ok: true,
+          certificate: {
+            cert_no: `PESC/ATC/2026/${targetC.centre_code}`,
+            centre_code: targetC.centre_code,
+            name: targetC.name,
+            director_name: targetC.director_name || 'Centre Director',
+            address: targetC.address || `${targetC.district}, ${targetC.state}`,
+            district: targetC.district,
+            state: targetC.state,
+            pin: targetC.pin || '221001',
+            phone: targetC.phone || '+91 98765 43210',
+            email: targetC.email || `director@${targetC.slug}.pescouncil.in`,
+            issue_date: '01 April 2026',
+            valid_thru: '31 March 2029',
+            session: '2026 - 2029 (3 Academic Years)',
+            status: targetC.status || 'active',
+            authorized_courses: 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
+            qr_url: `https://pescouncil.in/verify?code=${targetC.centre_code}`
+          }
+        });
       }
 
       if (path === '/api/admin/courses') {
@@ -1351,6 +1410,30 @@ export default {
         return jsonResponse({ materials: [] });
       }
 
+      if (path === '/api/centre/affiliation-cert') {
+        return jsonResponse({
+          ok: true,
+          certificate: {
+            cert_no: `PESC/ATC/2026/${c.centre_code}`,
+            centre_code: c.centre_code,
+            name: c.name,
+            director_name: c.director_name || 'Centre Director',
+            address: c.address || `${c.district}, ${c.state}`,
+            district: c.district,
+            state: c.state,
+            pin: c.pin || '221001',
+            phone: c.phone || '+91 98765 43210',
+            email: c.email || `director@${c.slug}.pescouncil.in`,
+            issue_date: '01 April 2026',
+            valid_thru: '31 March 2029',
+            session: '2026 - 2029 (3 Academic Years)',
+            status: c.status || 'active',
+            authorized_courses: 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
+            qr_url: `https://pescouncil.in/verify?code=${c.centre_code}`
+          }
+        });
+      }
+
       if (path === '/api/centre/settings') {
         if (request.method === 'POST' || request.method === 'PUT') {
           try {
@@ -1417,14 +1500,48 @@ export default {
 
     // --- Student APIs ---
     if (path.startsWith('/api/student/')) {
-      const student = store.students[0];
+      let currentStudent = store.students[0];
+      try {
+        const cookieHeader = request.headers.get('cookie') || '';
+        const m = cookieHeader.split(';').find(x => x.trim().startsWith('pesc_auth='));
+        if (m) {
+          const u = JSON.parse(decodeURIComponent(m.split('=')[1].trim()));
+          if (u.student_id) {
+            const found = store.students.find(s => s.id === u.student_id);
+            if (found) currentStudent = found;
+          } else if (u.roll_no || u.student_code) {
+            const r = String(u.roll_no || u.student_code).toLowerCase();
+            const found = store.students.find(s => (s.roll_no && String(s.roll_no).toLowerCase() === r) || (s.student_code && s.student_code.toLowerCase() === r));
+            if (found) currentStudent = found;
+          }
+        }
+      } catch (e) {}
+
+      const student = currentStudent;
       const cert = store.certificates.find(x => x.student_id === student.id);
       const mrk = store.marksheets.find(x => x.student_id === student.id);
       const course = store.courses.find(x => x.id === student.course_id) || store.courses[0];
       const centre = store.centres.find(x => x.id === student.centre_id) || store.centres[0];
 
+      const enrichedStudent = {
+        ...student,
+        course_name: course.name,
+        course_code: course.code,
+        duration_months: course.duration_months || 12,
+        centre_name: centre.name,
+        centre_code: centre.centre_code,
+        centre_district: centre.district,
+        centre_state: centre.state,
+        centre_address: centre.address || `${centre.district}, ${centre.state}`,
+        centre_phone: centre.phone || '+91 98765 43210',
+        centre_email: centre.email || `desk@${centre.slug}.pescouncil.in`,
+        incharge_name: centre.director_name || 'Centre Director',
+        incharge_mobile: centre.phone || '+91 98765 43210',
+        incharge_email: centre.email || `desk@${centre.slug}.pescouncil.in`
+      };
+
       if (path === '/api/student/profile') {
-        return jsonResponse({ student, course, centre });
+        return jsonResponse({ student: enrichedStudent, course, centre });
       }
       if (path === '/api/student/marksheets') {
         return jsonResponse({ marksheets: mrk ? [mrk] : store.marksheets.slice(0, 3) });
@@ -1433,21 +1550,94 @@ export default {
         return jsonResponse({ certificates: cert ? [cert] : store.certificates.slice(0, 3) });
       }
       if (path === '/api/student/syllabus') {
-        return jsonResponse({ syllabus: [] });
+        return jsonResponse({
+          course_code: course.code,
+          syllabus: {
+            title: course.name,
+            duration: `${course.duration_months || 12} Months`,
+            total_hours: 360,
+            modules: [
+              { code: `${course.code}-01`, name: 'Computer Fundamentals & Digital Office Tools', theory: 30, practical: 40, topics: ['Computer Architecture & Operating Systems', 'Word Processing, Spreadsheets & Presentations'] },
+              { code: `${course.code}-02`, name: 'Programming Concepts & Database Management', theory: 35, practical: 55, topics: ['Data Structures & Logic Flow', 'Relational Databases & SQL Queries'] },
+              { code: `${course.code}-03`, name: 'Industrial Project & Lab Practical', theory: 20, practical: 80, topics: ['Live Project Development', 'Comprehensive Viva Voce'] }
+            ]
+          }
+        });
       }
       if (path === '/api/student/admit-card') {
-        return jsonResponse({ admit_card: null });
+        return jsonResponse({
+          admit_card: {
+            roll_no: student.roll_no || '2026101',
+            student_name: student.name,
+            father_name: student.father_name || 'Shri Candidate Father',
+            enrollment_no: student.student_code,
+            course_code: course.code,
+            course_name: course.name,
+            dob: student.dob || '15/07/2004',
+            gender: student.gender || 'Male',
+            exam_session: student.session || '2026-27',
+            exam_venue: `${centre.name}, ${centre.address || centre.district}`,
+            centre_code: centre.centre_code,
+            papers: [
+              { paper_code: `${course.code}-101`, subject: 'Core IT & Professional Computing', exam_date: '10 Nov 2026', timing: '10:00 AM - 01:00 PM', max_marks: 100 },
+              { paper_code: `${course.code}-102`, subject: 'Applied Technical Modules & Lab Practical', exam_date: '12 Nov 2026', timing: '02:00 PM - 05:00 PM', max_marks: 100 }
+            ],
+            instructions: [
+              'Admit card and institutional ID card are strictly mandatory for examination hall entry.',
+              'Candidates must report at the allocated examination centre 30 minutes prior to paper start time.'
+            ]
+          }
+        });
       }
       if (path === '/api/student/fee-receipt') {
-        return jsonResponse({ receipts: [] });
+        return jsonResponse({
+          receipt: {
+            receipt_no: `REC-2026-${student.id || 101}`,
+            student_name: student.name,
+            student_code: student.student_code,
+            roll_no: student.roll_no || student.student_code,
+            course_name: course.name,
+            course_code: course.code,
+            centre_name: centre.name,
+            centre_code: centre.centre_code,
+            centre_address: centre.address || `${centre.district}, ${centre.state}`,
+            total_fee: student.fee_total || 12000,
+            amount_paid: student.fee_paid || 8000,
+            pending_balance: (student.fee_total || 12000) - (student.fee_paid || 8000),
+            date: new Date(student.created_at || Date.now()).toLocaleDateString('en-IN')
+          }
+        });
       }
       if (path === '/api/student/id-card') {
-        return jsonResponse({ id_card: null });
+        return jsonResponse({
+          id_card: {
+            name: student.name,
+            student_code: student.student_code,
+            roll_no: student.roll_no || student.student_code,
+            father_name: student.father_name || 'N/A',
+            dob: student.dob || '15/07/2004',
+            gender: student.gender || 'Male',
+            course_name: course.name,
+            course_code: course.code,
+            duration_months: course.duration_months || 12,
+            centre_id: centre.id,
+            centre_name: centre.name,
+            centre_code: centre.centre_code,
+            centre_address: centre.address || `${centre.district}, ${centre.state}`,
+            centre_phone: centre.phone || '+91 98765 43210',
+            centre_email: centre.email || `director@${centre.slug}.pescouncil.in`,
+            director_name: centre.director_name || 'Centre Director',
+            session: student.session || '2026-27',
+            issued_on: new Date(student.created_at || Date.now()).toLocaleDateString('en-IN'),
+            valid_until: 'December 2027',
+            status: student.status || 'active'
+          }
+        });
       }
       if (path === '/api/student/tickets') {
         return jsonResponse({ tickets: [] });
       }
-      return jsonResponse({ student, certificate: cert, marksheet: mrk });
+      return jsonResponse({ student: enrichedStudent, certificate: cert, marksheet: mrk });
     }
 
     // 6. Default Fallback: Serve static assets from public directory

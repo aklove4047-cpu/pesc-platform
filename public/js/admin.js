@@ -69,12 +69,15 @@ const views = {
         }],
         ['Location', (r) => `${esc(r.district)}, ${esc(r.state)}`],
         ['Students', (r) => `<button class="btn sm" data-a="view_centre_students" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff;" title="Manage this centre's students">👥 ${r.students} Students</button>`],
-        ['Status', (r) => badge(r.status)],
+        ['Status', (r) => r.status === 'terminated' ? '<span class="badge" style="background:#fee2e2; color:#991b1b; font-weight:800; border:1px solid #f87171;">🔴 TERMINATED</span>' : badge(r.status)],
         ['Actions', (r) => `
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button class="btn sm" data-a="view_centre_creds" data-id="${r.id}" data-code="${esc(r.centre_code)}" data-name="${esc(r.name)}" data-slug="${esc(r.slug)}" data-pass="${esc(r.login_password || 'owner123')}" style="background:#047857; color:#fff; font-weight:700;" title="View &amp; Manage Login Credentials">🔑 ID &amp; Pass</button>
+            <button class="btn sm" data-a="view_affiliation_cert" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.centre_code)}" style="background:#ca8a04; color:#fff; font-weight:700;" title="View Official Affiliation Certificate">📜 Affiliation Cert</button>
             <button class="btn sm alt" data-a="edit_centre" data-id="${r.id}" title="Edit Centre Information">✏️ Edit</button>
-            ${r.status === 'active' ? `<button class="btn sm danger" data-a="suspend" data-id="${r.id}">Suspend</button>` : r.status === 'suspended' ? `<button class="btn sm" data-a="unsuspend" data-id="${r.id}">Activate</button>` : ''}
+            ${r.status === 'active' 
+              ? `<button class="btn sm danger" data-a="terminate_franchise" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.centre_code)}" style="background:#dc2626; color:#fff; font-weight:700;" title="Terminate Centre Franchise">❌ Terminate Franchise</button>` 
+              : `<button class="btn sm" data-a="activate_franchise" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.centre_code)}" style="background:#16a34a; color:#fff; font-weight:700;" title="Reactivate Centre Franchise">✅ Reactivate</button>`}
             <button class="btn sm alt" data-a="courses" data-id="${r.id}">Courses</button>
             ${coordinators.length ? `<button class="btn sm alt" data-a="coord" data-id="${r.id}">Coordinator</button>` : ''}
           </div>
@@ -551,6 +554,84 @@ function showModal(title, bodyHtml, onSave) {
   }
 }
 
+async function showAffiliationCertModal(cId) {
+  const res = await api(`/api/admin/centres/${cId}/affiliation-cert`);
+  const cert = res.certificate || {};
+
+  showModal(`📜 Affiliation Certificate - ${cert.centre_code}`, `
+    <div style="background:#f8fafc; padding:20px; text-align:center;">
+      <div style="margin-bottom:14px; text-align:right;">
+        <button type="button" onclick="window.print()" class="btn gold sm" style="font-weight:700;">🖨️ Print Official Certificate</button>
+      </div>
+      <div style="border: 6px double #d4af37; outline: 2px solid #b45309; outline-offset: 4px; border-radius: 12px; padding: 32px 36px; background: radial-gradient(circle, #ffffff 60%, #fffdf0 100%); position:relative; box-shadow:0 10px 25px rgba(212,175,55,0.15); text-align:center;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #d4af37; padding-bottom: 14px; margin-bottom: 18px;">
+          <div style="text-align:left;">
+            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Govt. Recognized Autonomy</span>
+            <div style="font-size:0.8rem; color:#0a2a5e; font-weight:700;">ISO 9001:2015 Certified</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="width:58px; height:58px; border-radius:50%; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#fde047; font-size:1.8rem; font-weight:900; display:grid; place-items:center; margin:0 auto 4px; border:2px solid #d4af37;">P</div>
+            <h2 style="margin:0; font-size:1.35rem; color:#0a2a5e; letter-spacing:0.5px; font-weight:800;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h2>
+            <div style="font-size:0.9rem; color:#b45309; font-weight:700;">पूर्वांचल शिक्षा एवं कौशल परिषद</div>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">ATC Accredit No.</span>
+            <div style="font-size:0.85rem; color:#b45309; font-family:monospace; font-weight:800;">${esc(cert.cert_no)}</div>
+          </div>
+        </div>
+
+        <h1 style="color:#0a2a5e; font-size:1.7rem; margin:14px 0 4px; text-transform:uppercase; letter-spacing:1px; font-family:serif;">Certificate of Affiliation</h1>
+        <div style="font-size:0.92rem; color:#78350f; font-weight:600; margin-bottom:16px;">(सम्बद्धता एवं मान्यता प्रमाण पत्र)</div>
+
+        <p style="font-size:1rem; color:#475569; line-height:1.6; margin:0 auto 14px; max-width:720px;">
+          This is to officially certify that the educational institution named below has met the council's academic infrastructure, faculty, and operational standards and is hereby granted official status as an <b>Authorized Training Centre (ATC)</b>:
+        </p>
+
+        <div style="margin:16px 0; padding:14px; background:#f0fdf4; border:2px solid #86efac; border-radius:8px; display:inline-block; min-width:65%;">
+          <h2 style="margin:0; font-size:1.5rem; color:#064e3b; font-weight:800; letter-spacing:0.5px;">${esc(cert.name)}</h2>
+          <div style="font-size:0.95rem; color:#0f172a; margin-top:4px; font-weight:600;">Director / Incharge: <span style="color:#0a2a5e;">${esc(cert.director_name)}</span></div>
+          <div style="font-size:0.88rem; color:#475569; margin-top:2px;">Address: ${esc(cert.address)}</div>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:16px; margin:14px 0; flex-wrap:wrap;">
+          <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 14px; border-radius:6px; font-size:0.88rem;">
+            <span style="color:#92400e; font-weight:700;">Centre Code:</span> <b style="font-family:monospace; color:#78350f; font-size:1rem;">${esc(cert.centre_code)}</b>
+          </div>
+          <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 14px; border-radius:6px; font-size:0.88rem;">
+            <span style="color:#92400e; font-weight:700;">Affiliation Period:</span> <b style="color:#78350f;">${esc(cert.session)}</b>
+          </div>
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:6px 14px; border-radius:6px; font-size:0.88rem;">
+            <span style="color:#166534; font-weight:700;">Status:</span> <b style="color:#15803d; text-transform:uppercase;">✓ ${esc(cert.status)}</b>
+          </div>
+        </div>
+
+        <p style="font-size:0.85rem; color:#64748b; margin:10px auto; max-width:700px; line-height:1.5;">
+          Authorized to conduct national vocational training, skill certifications, and examinations for courses: <b>${esc(cert.authorized_courses)}</b>.
+        </p>
+
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px dashed #cbd5e1; padding-top:20px; margin-top:20px; font-size:0.82rem; color:#475569;">
+          <div style="text-align:center;">
+            <div style="font-weight:700; color:#0a2a5e;">Verified Online</div>
+            <div style="font-size:0.75rem; color:#64748b; font-family:monospace;">pescouncil.in/verify</div>
+            <div style="border-bottom:1.5px solid #334155; width:130px; margin:6px auto 3px;"></div>
+            <span>Council Verification Desk</span>
+          </div>
+          <div style="text-align:center;">
+            <div style="width:60px; height:60px; border-radius:50%; border:2px double #d4af37; margin:0 auto 3px; display:grid; place-items:center; background:#fefce8; color:#b45309; font-weight:900; font-size:0.65rem;">COUNCIL<br>SEAL</div>
+            <span style="font-weight:700; color:#78350f;">Official Seal of PESC</span>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-weight:700; color:#0a2a5e;">Authorized Signatory</div>
+            <div style="font-size:0.75rem; color:#64748b;">PES Council, Head Office</div>
+            <div style="border-bottom:1.5px solid #334155; width:150px; margin:6px auto 3px;"></div>
+            <span>Director General / Registrar</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
 V.addEventListener('click', (e) => {
   const b = e.target.closest('[data-a]');
   if (!b) return;
@@ -882,6 +963,21 @@ V.addEventListener('click', (e) => {
       const r = ask('Reason (audited)');
       if (!r) return;
       await post(`/api/admin/centres/${id}/${a === 'suspend' ? 'suspend' : 'activate'}`, { reason: r });
+    } else if (a === 'terminate_franchise') {
+      const cName = b.dataset.name || 'this centre';
+      const cCode = b.dataset.code || '';
+      if (!confirm(`⚠️ WARNING: क्या आप सच में सेंटर '${cName}' (${cCode}) की फ्रैंचाइज़ी समाप्त (Terminate) करना चाहते हैं?\n\n- इस सेंटर का ERP/Portal लॉगिन तुरंत ब्लॉक हो जाएगा।\n- मुख्य वेबसाइट (pescouncil.in) से यह सेंटर तुरंत हट जाएगा।`)) return;
+      const r = ask('Termination Reason (कारण दर्ज करें):') || 'Terminated by Council Administration';
+      await post(`/api/admin/centres/${id}/terminate`, { reason: r });
+      toast(`✓ Franchise for '${cName}' (${cCode}) has been terminated.`);
+    } else if (a === 'activate_franchise') {
+      const cName = b.dataset.name || 'this centre';
+      const cCode = b.dataset.code || '';
+      if (!confirm(`क्या आप सेंटर '${cName}' (${cCode}) की फ्रैंचाइज़ी पुनः चालू (Reactivate) करना चाहते हैं?`)) return;
+      await post(`/api/admin/centres/${id}/activate`, { reason: 'Reactivated by Admin' });
+      toast(`✓ Franchise for '${cName}' (${cCode}) reactivated successfully.`);
+    } else if (a === 'view_affiliation_cert') {
+      showAffiliationCertModal(id);
     } else if (a === 'courses') {
       const ids = ask('Course IDs, comma separated:\n' + V._courses.map((c) => `${c.id} = ${c.code} (${c.name})`).join('\n'));
       if (ids === null) return;

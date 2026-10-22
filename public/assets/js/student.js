@@ -36,6 +36,7 @@ guard(async () => {
               <span style="font-size:0.85rem; color:#64748b;">Affiliated Study Centre</span>
               <h4 style="margin:2px 0; color:var(--navy);">${esc(s.centre_name)} (${esc(s.centre_code)})</h4>
               <p style="font-size:0.8rem; color:#64748b; margin:0;">${esc(s.centre_district)}, ${esc(s.centre_state)}</p>
+              <button type="button" class="btn gold sm" onclick="document.querySelectorAll('.tabs button')[5]?.click() || R['Digital ID Card']()" style="font-weight:700; margin-top:6px; font-size:0.75rem;">🪪 View / Print Centre ID Card</button>
             </div>
           </div>
         </div>
@@ -517,35 +518,105 @@ guard(async () => {
       const idc = data.id_card;
 
       viewEl.innerHTML = `
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
+        <div class="card" style="margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div>
-              <h2>Digital Student Identity Card</h2>
-              <p class="muted">Official identity credential issued by Purvanchal Education & Skill Council</p>
+              <span class="badge active" style="font-size:0.8rem;">✓ OFFICIAL INSTITUTIONAL CREDENTIAL</span>
+              <h2 style="margin:6px 0 2px;">Student Identity Card (छात्र पहचान पत्र)</h2>
+              <p class="muted" style="margin:0;">Official student identity card issued by <b>${esc(idc.centre_name)}</b> under affiliation of PES Council</p>
             </div>
-            <button onclick="window.print()" class="btn alt">🖨️ Print ID Card</button>
+            <button onclick="window.print()" class="btn gold" style="font-weight:700;">🖨️ Print Student ID Card (Both Sides)</button>
           </div>
+        </div>
 
-          <div class="id-card-preview" style="max-width:440px; margin:0 auto; box-shadow:var(--shadow-lg);">
-            <div class="id-card-header">
-              <h4>PURVANCHAL EDUCATION & SKILL COUNCIL</h4>
-              <p>STUDENT IDENTITY CARD</p>
-            </div>
-            <div class="id-card-body">
-              <div class="id-photo" style="font-size:3rem;">🎓</div>
-              <div class="id-info">
-                <p><b>Name:</b> ${esc(idc.name)}</p>
-                <p><b>Roll / Code:</b> ${esc(idc.student_code)}</p>
-                <p><b>Father's Name:</b> ${esc(idc.father_name || 'N/A')}</p>
-                <p><b>Course:</b> ${esc(idc.course_name)}</p>
-                <p><b>Centre:</b> ${esc(idc.centre_name)}</p>
+        <!-- Dual Sided ID Card Display -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:24px; max-width:860px; margin:0 auto 30px;">
+          
+          <!-- SIDE 1: FRONT OF ID CARD -->
+          <div>
+            <div style="text-align:center; font-weight:700; color:#64748b; margin-bottom:8px; font-size:0.85rem;">SIDE 1: FRONT</div>
+            <div style="background:#ffffff; border:2px solid #0a2a5e; border-radius:14px; overflow:hidden; box-shadow:0 12px 24px rgba(0,0,0,0.12); font-family:inherit;">
+              
+              <!-- Header with Centre Name -->
+              <div style="background:linear-gradient(135deg, #0a2a5e 0%, #1e3a8a 100%); color:#ffffff; padding:12px 14px; text-align:center; border-bottom:3px solid #d4af37;">
+                <div style="font-size:0.95rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">${esc(idc.centre_name)}</div>
+                <div style="font-size:0.7rem; color:#fde047; font-weight:600; margin-top:2px;">AFFILIATED TO PURVANCHAL EDUCATION &amp; SKILL COUNCIL</div>
+                <div style="background:#ffffff; color:#0a2a5e; font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:999px; display:inline-block; margin-top:4px; letter-spacing:0.5px;">STUDENT IDENTITY CARD · 2026-27</div>
+              </div>
+
+              <!-- Body with Photo & Details -->
+              <div style="padding:16px 14px; display:flex; gap:14px; align-items:center;">
+                <!-- Student Photo Box -->
+                <div style="text-align:center;">
+                  <div style="width:84px; height:104px; background:#f1f5f9; border-radius:8px; border:2px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-size:2.6rem; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                    🎓
+                    <div style="position:absolute; bottom:-6px; right:-6px; width:22px; height:22px; background:#16a34a; color:#fff; border-radius:50%; display:grid; place-items:center; font-size:0.75rem; font-weight:bold; border:2px solid #fff;">✓</div>
+                  </div>
+                  <span style="font-size:0.65rem; color:#64748b; font-weight:700; margin-top:4px; display:block;">Verified</span>
+                </div>
+
+                <!-- Info Grid -->
+                <div style="font-size:0.82rem; line-height:1.5; flex:1;">
+                  <div style="font-size:1.05rem; font-weight:800; color:#0a2a5e; margin-bottom:2px;">${esc(idc.name)}</div>
+                  <div>Roll No: <b style="font-family:monospace; color:#064e3b; font-size:0.95rem;">${esc(idc.roll_no)}</b></div>
+                  <div>Enrollment: <code style="font-family:monospace; font-size:0.8rem; color:#475569;">${esc(idc.student_code)}</code></div>
+                  <div>Course: <b style="color:#0a2a5e;">${esc(idc.course_name)}</b></div>
+                  <div>Father: ${esc(idc.father_name)}</div>
+                  <div>DOB: ${esc(idc.dob)}</div>
+                </div>
+              </div>
+
+              <!-- Footer with Sign & Validity -->
+              <div style="background:#f8fafc; border-top:1px dashed #cbd5e1; padding:8px 14px; display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:#475569;">
+                <div>
+                  <span style="color:#64748b;">Centre Code:</span> <b>${esc(idc.centre_code)}</b><br>
+                  <span style="color:#64748b;">Valid Session:</span> <b>${esc(idc.session || '2026-27')}</b>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:0.68rem; color:#064e3b; font-weight:bold;">[Digitally Certified]</div>
+                  <div style="font-weight:700; color:#0a2a5e;">Centre Director Sign</div>
+                </div>
               </div>
             </div>
-            <div class="id-card-footer">
-              <span>Code: <b>${esc(idc.centre_code)}</b></span>
-              <span>Valid Session: <b>${esc(idc.valid_until)}</b></span>
+          </div>
+
+          <!-- SIDE 2: BACK OF ID CARD -->
+          <div>
+            <div style="text-align:center; font-weight:700; color:#64748b; margin-bottom:8px; font-size:0.85rem;">SIDE 2: BACK</div>
+            <div style="background:#ffffff; border:2px solid #0a2a5e; border-radius:14px; overflow:hidden; box-shadow:0 12px 24px rgba(0,0,0,0.12); font-family:inherit; min-height:230px; display:flex; flex-direction:column; justify-content:space-between;">
+              
+              <!-- Back Header -->
+              <div style="background:#f1f5f9; border-bottom:1px solid #cbd5e1; padding:8px 12px; text-align:center;">
+                <span style="font-size:0.75rem; font-weight:800; color:#0a2a5e; letter-spacing:0.5px;">STUDY CENTRE DIRECTORY &amp; RULES</span>
+              </div>
+
+              <!-- Back Content -->
+              <div style="padding:14px; font-size:0.75rem; color:#475569; line-height:1.5;">
+                <div style="margin-bottom:8px;">
+                  <b style="color:#0a2a5e;">Authorized Centre:</b><br>
+                  ${esc(idc.centre_name)} (${esc(idc.centre_code)})
+                </div>
+                <div style="margin-bottom:8px;">
+                  <b style="color:#0a2a5e;">Campus Address:</b><br>
+                  ${esc(idc.centre_address)}
+                </div>
+                <div style="margin-bottom:8px;">
+                  <b style="color:#0a2a5e;">Helpline / Contact:</b> ${esc(idc.centre_phone)}
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:6px 8px; margin-top:6px; font-size:0.7rem; color:#64748b;">
+                  • This card is institutional property issued under accreditation of PESC.<br>
+                  • Online digital verification: <b>pescouncil.in/verify</b>
+                </div>
+              </div>
+
+              <!-- Back Footer Barcode -->
+              <div style="background:#f8fafc; border-top:1px dashed #cbd5e1; padding:8px 14px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-family:monospace; font-size:1.1rem; letter-spacing:2px; color:#334155;">||| | |||| | ||| ||||| | |||</div>
+                <span style="font-size:0.7rem; color:#15803d; font-weight:800;">✓ PESC VERIFIED</span>
+              </div>
             </div>
           </div>
+
         </div>
       `;
     },
