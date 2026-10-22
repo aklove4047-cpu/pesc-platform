@@ -226,27 +226,7 @@ export default {
       });
     }
 
-    // Clean URL Rewrites for Admin, Centre Portal, Coordinator, Student, Login
-    if (path === '/admin' || path === '/admin/') {
-      return env.ASSETS.fetch(new Request(new URL('/admin.html', request.url), request));
-    }
-    if (path === '/portal' || path === '/portal/' || path === '/centre' || path === '/centre/') {
-      return env.ASSETS.fetch(new Request(new URL('/centre.html', request.url), request));
-    }
-    if (path === '/coordinator' || path === '/coordinator/') {
-      return env.ASSETS.fetch(new Request(new URL('/coordinator.html', request.url), request));
-    }
-    if (path === '/student' || path === '/student/') {
-      return env.ASSETS.fetch(new Request(new URL('/student.html', request.url), request));
-    }
-    if (path === '/login' || path === '/login/') {
-      return env.ASSETS.fetch(new Request(new URL('/login.html', request.url), request));
-    }
-    if (path === '/verify' || path === '/verify/') {
-      return env.ASSETS.fetch(new Request(new URL('/verify.html', request.url), request));
-    }
-
-    // Dynamic static asset fallback for /assets/js/*
+    // Static asset fallback for /assets/js/* to /js/* if ever needed
     if (path.startsWith('/assets/js/')) {
       const res = await env.ASSETS.fetch(request);
       if (res.status === 404) {
