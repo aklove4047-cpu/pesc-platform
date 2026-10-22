@@ -18,6 +18,55 @@ const store = {
   centre_courses: [...initialBundle.centre_courses],
 };
 
+let kvLoaded = false;
+async function syncFromKV(env) {
+  if (!env || !env.PESC_KV || kvLoaded) return;
+  try {
+    const [c, a, s, u] = await Promise.all([
+      env.PESC_KV.get('centres', 'json'),
+      env.PESC_KV.get('applications', 'json'),
+      env.PESC_KV.get('students', 'json'),
+      env.PESC_KV.get('users', 'json'),
+    ]);
+    if (Array.isArray(c) && c.length) {
+      c.forEach(item => {
+        if (!store.centres.some(x => x.id === item.id || (x.slug && x.slug === item.slug))) {
+          store.centres.push(item);
+        }
+      });
+    }
+    if (Array.isArray(a) && a.length) {
+      a.forEach(item => {
+        if (!store.applications.some(x => x.id === item.id || x.app_no === item.app_no)) {
+          store.applications.push(item);
+        }
+      });
+    }
+    if (Array.isArray(s) && s.length) {
+      s.forEach(item => {
+        if (!store.students.some(x => x.id === item.id || x.student_code === item.student_code)) {
+          store.students.push(item);
+        }
+      });
+    }
+    if (Array.isArray(u) && u.length) {
+      u.forEach(item => {
+        if (!store.users.some(x => x.id === item.id || (x.email && x.email === item.email))) {
+          store.users.push(item);
+        }
+      });
+    }
+    kvLoaded = true;
+  } catch (_) {}
+}
+
+async function persistToKV(env, key, data) {
+  if (!env || !env.PESC_KV) return;
+  try {
+    await env.PESC_KV.put(key, JSON.stringify(data));
+  } catch (_) {}
+}
+
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -44,7 +93,47 @@ function resolveSlug(slug) {
   // 5. Centre code match (e.g. pesc00001, PESC00005)
   c = store.centres.find(x => x.centre_code && x.centre_code.toUpperCase() === s.toUpperCase());
   if (c) return c;
-  return null;
+
+  // 6. Check applications (for newly applied or approved centres)
+  const app = store.applications.find(a => a.slug && (a.slug.toLowerCase() === s || a.slug.toLowerCase().replace(/[-_]/g, '') === noHyphens));
+  if (app) {
+    return {
+      id: app.id || 99,
+      centre_code: app.app_no || 'PESC',
+      name: app.centre_name || 'Authorized Training Centre',
+      slug: app.slug,
+      director_name: app.owner_name || 'Centre Director',
+      phone: app.mobile || '+91 98765 43210',
+      email: app.email || `desk@${app.slug}.pescouncil.in`,
+      district: app.district || 'Varanasi',
+      state: app.state || 'Uttar Pradesh',
+      address: app.address || '',
+      pin: app.pin || '221001',
+      status: 'active'
+    };
+  }
+
+  // 7. Dynamic intelligent generator for ANY custom subdomain
+  const cleanParts = s.split(/[-_]+/).filter(Boolean);
+  const formattedName = cleanParts.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const instituteName = formattedName.toLowerCase().includes('computer') || formattedName.toLowerCase().includes('institute') || formattedName.toLowerCase().includes('academy')
+    ? formattedName
+    : `${formattedName} Computer Institute`;
+
+  return {
+    id: 900 + Math.abs(s.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 99),
+    centre_code: `PESC-${s.toUpperCase().slice(0, 8)}`,
+    name: instituteName,
+    slug: s,
+    director_name: `${formattedName} Director`,
+    phone: '+91 98765 43210',
+    email: `desk@${s}.pescouncil.in`,
+    district: 'Varanasi',
+    state: 'Uttar Pradesh',
+    address: 'City Campus, Main Road',
+    pin: '221001',
+    status: 'active'
+  };
 }
 
 function slugOf(hostHeader) {
@@ -205,6 +294,9 @@ export default {
     const path = url.pathname;
     const cookies = parseCookie(request.headers.get('Cookie'));
 
+    // Synchronize dynamic updates from Cloudflare KV
+    await syncFromKV(env);
+
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -364,6 +456,7 @@ export default {
           created_at: Date.now()
         };
         store.applications.push(newApp);
+        await persistToKV(env, 'applications', store.applications);
         return jsonResponse({ id: newApp.id, application_no: appNo, status: 'Submitted' }, 201);
       } catch (err) {
         return jsonResponse({ error: err.message }, 400);
@@ -577,6 +670,103 @@ export default {
         return jsonResponse({ logs: [] });
       }
 
+      if (path === '/api/admin/centres/direct-create' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nextId = store.centres.length + 1;
+          const newCode = `PESC${String(nextId).padStart(5, '0')}`;
+          const rawSlug = (body.slug || body.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          const slug = rawSlug || `centre${nextId}`;
+
+          const newCentre = {
+            id: nextId,
+            centre_code: newCode,
+            name: body.name || 'Authorized Training Centre',
+            slug: slug,
+            director_name: body.owner_name || 'Centre Director',
+            email: (body.email || `director@${slug}.pescouncil.in`).toLowerCase(),
+            phone: body.mobile || '+91 98765 43210',
+            state: body.state || 'Uttar Pradesh',
+            district: body.district || 'Varanasi',
+            address: body.address || '',
+            pin: body.pin || '221001',
+            status: 'active',
+            created_at: Date.now()
+          };
+
+          // Store in memory
+          store.centres.push(newCentre);
+
+          // Add centre owner user
+          const newUserId = store.users.length + 1;
+          store.users.push({
+            id: newUserId,
+            email: newCentre.email,
+            name: newCentre.director_name,
+            role: 'centre_owner',
+            centre_id: newCentre.id,
+            status: 'active'
+          });
+
+          // Persist to Cloudflare KV
+          await persistToKV(env, 'centres', store.centres);
+          await persistToKV(env, 'users', store.users);
+
+          return jsonResponse({
+            ok: true,
+            centreCode: newCode,
+            centre_code: newCode,
+            slug: slug,
+            portal_url: `https://${slug}.pescouncil.in`,
+            message: `Centre ${newCode} created successfully!`
+          }, 201);
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
+      }
+
+      if (path === '/api/admin/students/direct-enroll' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nextId = store.students.length + 1;
+          const centreId = +body.centre_id || 1;
+          const targetCentre = store.centres.find(c => c.id === centreId) || store.centres[0];
+          const studentCode = `${targetCentre.centre_code}-2026-${String(nextId).padStart(5, '0')}`;
+          const rollNo = `2026${String(nextId).padStart(3, '0')}`;
+
+          const newStudent = {
+            id: nextId,
+            student_code: studentCode,
+            roll_no: rollNo,
+            centre_id: targetCentre.id,
+            name: body.name || 'Student Candidate',
+            father_name: body.father_name || '',
+            mobile: body.mobile || '',
+            email: (body.email || `${rollNo}@student.pescouncil.in`).toLowerCase(),
+            course_id: +body.course_id || 1,
+            session: body.session || '2026-27',
+            status: 'active',
+            initial_password: body.password || 'Student@123',
+            fee_total: +body.fee_total || 12000,
+            fee_paid: +body.fee_paid || 8000,
+            created_at: Date.now()
+          };
+
+          store.students.push(newStudent);
+          await persistToKV(env, 'students', store.students);
+
+          return jsonResponse({
+            ok: true,
+            studentCode: studentCode,
+            student_code: studentCode,
+            roll_no: rollNo,
+            message: `Student enrolled successfully!`
+          }, 201);
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
+      }
+
       if (path.match(/\/api\/admin\/applications\/\d+\/approve/) && request.method === 'POST') {
         const id = +path.split('/')[4];
         const app = store.applications.find(a => a.id === id);
@@ -592,6 +782,7 @@ export default {
           slug: app.slug,
           director_name: app.owner_name,
           phone: app.mobile,
+          email: app.email,
           state: app.state,
           district: app.district,
           address: app.address,
@@ -600,6 +791,22 @@ export default {
           created_at: Date.now()
         };
         store.centres.push(newCentre);
+
+        // Add owner user
+        store.users.push({
+          id: store.users.length + 1,
+          email: app.email || `director@${app.slug}.pescouncil.in`,
+          name: app.owner_name,
+          role: 'centre_owner',
+          centre_id: newCentre.id,
+          status: 'active'
+        });
+
+        // Persist to Cloudflare KV
+        await persistToKV(env, 'centres', store.centres);
+        await persistToKV(env, 'applications', store.applications);
+        await persistToKV(env, 'users', store.users);
+
         return jsonResponse({ ok: true, centre_code: newCode, slug: app.slug, subdomain: `${app.slug}.pescouncil.in` });
       }
 

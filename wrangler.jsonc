@@ -6,6 +6,22 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "routes": [
+    {
+      "pattern": "pescouncil.in/*",
+      "zone_name": "pescouncil.in"
+    },
+    {
+      "pattern": "*.pescouncil.in/*",
+      "zone_name": "pescouncil.in"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "PESC_KV",
+      "id": "bdb74490a1c3495a83508697c39b3ba0"
+    }
+  ],
   "assets": {
     "directory": "public",
     "binding": "ASSETS",
