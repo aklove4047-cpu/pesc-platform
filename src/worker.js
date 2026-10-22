@@ -530,7 +530,9 @@ export default {
     if (path === '/api/public/site') {
       const targetSlug = url.searchParams.get('slug') || url.searchParams.get('centre') || (tenantInfo.kind === 'tenant' ? tenantInfo.slug : null);
       const c = resolveSlug(targetSlug) || store.centres[0];
-      const activeCourses = store.courses.filter(co => co.active !== 0);
+      const activeCourses = (c.courses_list && c.courses_list.length) 
+        ? c.courses_list.filter(co => co.active !== false) 
+        : store.courses.filter(co => co.active !== 0);
       const cPhone = c.phone || '+91 98765 43210';
       const upiId = c.upi_id || `${cPhone.replace(/[^0-9]/g, '')}@paytm`;
       const bankHolder = c.account_holder || c.director_name || c.name;
@@ -1290,7 +1292,91 @@ export default {
       }
 
       if (path === '/api/centre/courses') {
-        return jsonResponse({ courses: store.courses });
+        if (!Array.isArray(c.courses_list) || !c.courses_list.length) {
+          c.courses_list = store.courses.map(co => ({
+            id: co.id,
+            code: co.code,
+            name: co.name,
+            duration_months: co.duration_months || 6,
+            fee_rupees: Math.round((co.selling_price_paise || 800000) / 100),
+            selling_price_paise: co.selling_price_paise || 800000,
+            system_fee_paise: co.system_fee_paise || 50000,
+            active: co.active !== 0,
+            description: co.description || ''
+          }));
+        }
+
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            const maxId = c.courses_list.reduce((m, x) => Math.max(m, x.id || 0), 100);
+            const feeRupees = +body.fee_rupees || +body.fee || +body.selling_price_rupees || 6000;
+            const newCourse = {
+              id: maxId + 1,
+              code: String(body.code || 'CERT').trim().toUpperCase(),
+              name: String(body.name || 'New Certification Course').trim(),
+              duration_months: +body.duration_months || 6,
+              fee_rupees: feeRupees,
+              selling_price_paise: feeRupees * 100,
+              system_fee_paise: 50000,
+              active: true,
+              description: String(body.description || '').trim(),
+              created_at: Date.now()
+            };
+            c.courses_list.push(newCourse);
+            await persistToKV(env, 'centres', store.centres);
+            return jsonResponse({ ok: true, message: 'Course added successfully!', course: newCourse }, 201);
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+
+        return jsonResponse({ courses: c.courses_list.filter(x => x.active !== false) });
+      }
+
+      if (path.match(/\/api\/centre\/courses\/\d+\/price/)) {
+        const courseId = +path.split('/')[4];
+        const body = await request.json();
+        if (!c.courses_list) c.courses_list = [...store.courses];
+        const target = c.courses_list.find(x => x.id === courseId);
+        if (target) {
+          const fee = +body.selling_price_rupees || +body.fee_rupees || 8000;
+          target.fee_rupees = fee;
+          target.selling_price_paise = fee * 100;
+          await persistToKV(env, 'centres', store.centres);
+        }
+        return jsonResponse({ ok: true, message: 'Course fee updated successfully!' });
+      }
+
+      if (path.match(/\/api\/centre\/courses\/\d+\/delete/) || (path.match(/\/api\/centre\/courses\/\d+$/) && request.method === 'DELETE')) {
+        const courseId = +path.split('/')[4];
+        if (!c.courses_list) c.courses_list = [...store.courses];
+        const idx = c.courses_list.findIndex(x => x.id === courseId);
+        if (idx !== -1) {
+          c.courses_list.splice(idx, 1);
+          await persistToKV(env, 'centres', store.centres);
+          return jsonResponse({ ok: true, message: 'Course deleted successfully!' });
+        }
+        return jsonResponse({ error: 'Course not found' }, 404);
+      }
+
+      if (path.match(/\/api\/centre\/courses\/\d+$/) && (request.method === 'PUT' || request.method === 'POST')) {
+        const courseId = +path.split('/')[4];
+        const body = await request.json();
+        if (!c.courses_list) c.courses_list = [...store.courses];
+        let target = c.courses_list.find(x => x.id === courseId);
+        if (!target) return jsonResponse({ error: 'Course not found' }, 404);
+        if (body.name) target.name = String(body.name).trim();
+        if (body.code) target.code = String(body.code).trim().toUpperCase();
+        if (body.duration_months) target.duration_months = +body.duration_months;
+        if (body.fee_rupees !== undefined || body.selling_price_rupees !== undefined || body.fee !== undefined) {
+          const fee = +(body.fee_rupees ?? body.selling_price_rupees ?? body.fee);
+          target.fee_rupees = fee;
+          target.selling_price_paise = fee * 100;
+        }
+        if (body.description !== undefined) target.description = String(body.description).trim();
+        await persistToKV(env, 'centres', store.centres);
+        return jsonResponse({ ok: true, message: 'Course updated successfully!', course: target });
       }
 
       if (path === '/api/centre/wallet') {

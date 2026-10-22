@@ -282,55 +282,165 @@ const views = {
     };
   },
 
-  // 3. My Courses
+  // 3. My Courses & Fee Management
   async MyCourses() {
     const data = await api('/api/centre/courses');
     const courses = data.courses || [];
+    window._currentCourses = courses;
 
     V.innerHTML = `
-      <div style="margin-bottom:20px;">
-        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">3. My Courses &amp; Selling Fees</h2>
-        <p class="muted" style="margin:0;">Apna Selling Price khud set karega, System Fees change nahi hoti</p>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px;">
+        <div>
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">3. My Courses &amp; Fee Management (पाठ्यक्रम एवं फीस प्रबंधन)</h2>
+          <p class="muted" style="margin:0;">Naya course add karein, course ka naam badlein, duration aur fees edit karein, ya course delete karein</p>
+        </div>
+        <button class="btn gold" onclick="openAddCourseModal()" style="font-weight:700;">➕ Add New Course (नया कोर्स जोड़ें)</button>
       </div>
 
-      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px;">
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:18px;">
         ${courses.map(co => {
           const sysFee = Math.round((co.system_fee_paise || 50000) / 100);
-          const sellFee = Math.round((co.selling_price_paise || 800000) / 100);
+          const sellFee = co.fee_rupees || Math.round((co.selling_price_paise || 800000) / 100);
           const margin = sellFee - sysFee;
           return `
-            <div class="card" style="border-top: 4px solid var(--c-green-emerald); padding:20px; background:#fff;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                <span class="badge active" style="font-family:monospace; font-weight:800;">${esc(co.code)}</span>
-                <span style="font-size:0.8rem; color:#64748b;">⏱️ ${co.duration_months} Months</span>
-              </div>
-              <h3 style="margin:0 0 10px; font-size:1.2rem; color:#0f172a;">${esc(co.name)}</h3>
-
-              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:0.85rem;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                  <span class="muted">Council System Fee (Fixed):</span>
-                  <b style="color:#0f172a;">₹${sysFee.toLocaleString('en-IN')}</b>
+            <div class="card" style="border-top: 4px solid var(--c-green-emerald); padding:20px; background:#fff; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                  <span class="badge active" style="font-family:monospace; font-weight:800; font-size:0.9rem;">${esc(co.code)}</span>
+                  <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">⏱️ ${co.duration_months} Months</span>
                 </div>
-                <div style="display:flex; justify-content:space-between;">
-                  <span class="muted">Your Profit Margin:</span>
-                  <b style="color:#16a34a;">₹${margin.toLocaleString('en-IN')}</b>
+                <h3 style="margin:0 0 10px; font-size:1.25rem; color:#0f172a; line-height:1.3;">${esc(co.name)}</h3>
+
+                ${co.description ? `<p style="font-size:0.8rem; color:#64748b; margin:0 0 12px; line-height:1.4;">${esc(co.description)}</p>` : ''}
+
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:0.85rem;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span class="muted">Council System Fee (Fixed):</span>
+                    <b style="color:#0f172a;">₹${sysFee.toLocaleString('en-IN')}</b>
+                  </div>
+                  <div style="display:flex; justify-content:space-between;">
+                    <span class="muted">Your Net Profit:</span>
+                    <b style="color:#16a34a; font-weight:800;">₹${margin.toLocaleString('en-IN')}</b>
+                  </div>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                  <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Institute Course Fee (₹):</label>
+                  <div style="display:flex; gap:8px;">
+                    <input type="number" id="priceInput_${co.id}" value="${sellFee}" style="padding:6px 10px; font-weight:700; width:100%; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem; color:#064e3b;">
+                    <button class="btn sm gold" onclick="saveCoursePrice(${co.id})" style="white-space:nowrap; font-weight:700;">💾 Save Fee</button>
+                  </div>
                 </div>
               </div>
 
-              <div style="margin-bottom:12px;">
-                <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Institute Selling Price (₹):</label>
-                <div style="display:flex; gap:8px;">
-                  <input type="number" id="priceInput_${co.id}" value="${sellFee}" style="padding:6px 10px; font-weight:700; width:100%; border:1px solid #cbd5e1; border-radius:6px;">
-                  <button class="btn sm gold" onclick="saveCoursePrice(${co.id})" style="white-space:nowrap;">💾 Save</button>
-                </div>
+              <div style="border-top:1px dashed #e2e8f0; padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                <button class="btn sm alt" onclick="openEditCourseModal(${co.id})" style="font-weight:700; padding:4px 10px;">✏️ Edit Details</button>
+                <button class="btn sm danger" onclick="deleteCourse(${co.id}, '${esc(co.name)}')" style="font-weight:700; padding:4px 10px; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;">🗑️ Delete</button>
               </div>
-
-              <span style="font-size:0.78rem; color:#64748b;">👥 Active Enrolled: <b>${co.enrolled_count || 0} Students</b></span>
             </div>
           `;
         }).join('')}
       </div>
+
+      <!-- Add Course Modal -->
+      <div id="addCourseModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#fff; border-radius:14px; max-width:540px; width:100%; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #cbd5e1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <h3 style="margin:0; color:#064e3b; font-size:1.3rem;">➕ Add New Course to Centre</h3>
+            <button type="button" onclick="$('#addCourseModal').style.display='none'" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">&times;</button>
+          </div>
+          <form id="addCourseForm">
+            <div style="margin-bottom:12px;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Full Name (पाठ्यक्रम का नाम)*</label>
+              <input name="name" required placeholder="e.g. Diploma in Computer Applications (DCA)" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+              <div>
+                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Code (कोड)*</label>
+                <input name="code" required placeholder="e.g. DCA" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; text-transform:uppercase;">
+              </div>
+              <div>
+                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Duration (Months / अवधि)*</label>
+                <input type="number" name="duration_months" required min="1" max="48" value="6" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Fee (विद्यार्थी फीस - ₹)*</label>
+              <input type="number" name="fee_rupees" required min="500" value="6500" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; color:#064e3b;">
+            </div>
+            <div style="margin-bottom:16px;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Description / Eligibility (विवरण)</label>
+              <textarea name="description" rows="2" placeholder="e.g. 10th / 12th Pass, Computer Fundamentals, Office, Tally" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+              <button type="button" class="btn alt" onclick="$('#addCourseModal').style.display='none'">Cancel</button>
+              <button type="submit" class="btn gold" style="font-weight:700;">➕ Create Course</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Edit Course Modal -->
+      <div id="editCourseModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#fff; border-radius:14px; max-width:540px; width:100%; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #cbd5e1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <h3 style="margin:0; color:#064e3b; font-size:1.3rem;">✏️ Edit Course Details</h3>
+            <button type="button" onclick="$('#editCourseModal').style.display='none'" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">&times;</button>
+          </div>
+          <form id="editCourseForm">
+            <input type="hidden" name="course_id" id="editCourseId">
+            <div style="margin-bottom:12px;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Full Name (पाठ्यक्रम का नाम)*</label>
+              <input name="name" id="editCourseName" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+              <div>
+                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Code (कोड)*</label>
+                <input name="code" id="editCourseCode" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; text-transform:uppercase;">
+              </div>
+              <div>
+                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Duration (Months / अवधि)*</label>
+                <input type="number" name="duration_months" id="editCourseDuration" required min="1" max="48" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Institute Course Fee (फीस - ₹)*</label>
+              <input type="number" name="fee_rupees" id="editCourseFee" required min="500" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; color:#064e3b;">
+            </div>
+            <div style="margin-bottom:16px;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Description / Eligibility</label>
+              <textarea name="description" id="editCourseDesc" rows="2" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+              <button type="button" class="btn alt" onclick="$('#editCourseModal').style.display='none'">Cancel</button>
+              <button type="submit" class="btn gold" style="font-weight:700;">💾 Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
     `;
+
+    // Hook forms
+    $('#addCourseForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const body = form(e.target);
+        await api('/api/centre/courses', { method: 'POST', body });
+        toast('✓ Course added successfully to your centre offerings!');
+        views.MyCourses();
+      });
+    };
+
+    $('#editCourseForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const body = form(e.target);
+        const cid = body.course_id;
+        await api(`/api/centre/courses/${cid}`, { method: 'PUT', body });
+        toast('✓ Course details updated successfully!');
+        views.MyCourses();
+      });
+    };
   },
 
   // 4. Fees Collection
@@ -1723,7 +1833,7 @@ function printReceipt(studentId) {
   });
 }
 
-// Course Selling Price update
+// Course Selling Price update & Management Helpers
 async function saveCoursePrice(courseId) {
   const input = $('#priceInput_' + courseId);
   if (!input) return;
@@ -1737,6 +1847,34 @@ async function saveCoursePrice(courseId) {
     views.MyCourses();
   });
 }
+
+window.openAddCourseModal = function() {
+  const m = $('#addCourseModal');
+  if (m) m.style.display = 'flex';
+};
+
+window.openEditCourseModal = function(courseId) {
+  const courses = window._currentCourses || [];
+  const co = courses.find(x => x.id === courseId);
+  if (!co) return;
+  $('#editCourseId').value = co.id;
+  $('#editCourseName').value = co.name;
+  $('#editCourseCode').value = co.code;
+  $('#editCourseDuration').value = co.duration_months || 6;
+  $('#editCourseFee').value = co.fee_rupees || Math.round((co.selling_price_paise || 800000)/100);
+  $('#editCourseDesc').value = co.description || '';
+  const m = $('#editCourseModal');
+  if (m) m.style.display = 'flex';
+};
+
+window.deleteCourse = function(courseId, courseName) {
+  if (!confirm(`क्या आप सच में कोर्स '${courseName}' को अपने सेंटर से हटाना/डिलीट करना चाहते हैं?`)) return;
+  guard(async () => {
+    await api(`/api/centre/courses/${courseId}`, { method: 'DELETE' });
+    toast(`✓ Course '${courseName}' removed successfully!`);
+    views.MyCourses();
+  });
+};
 
 // Attendance helpers
 function setRowAtt(id, status) {
