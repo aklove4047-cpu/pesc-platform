@@ -56,6 +56,13 @@ const views = {
       ${table([
         ['Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.centre_code)}</b>`],
         ['Centre Name', (r) => `<b>${esc(r.name)}</b>`],
+        ['Login ID & Password', (r) => `
+          <div style="font-size:0.83rem; line-height:1.5;">
+            <div><b>ID:</b> <code style="font-weight:700; color:#064e3b; background:#f0fdf4; padding:2px 6px; border-radius:4px; border:1px solid #bbf7d0;">${esc(r.centre_code)}</code></div>
+            <div><b>Pass:</b> <code style="font-weight:700; color:#b91c1c; background:#fef2f2; padding:2px 6px; border-radius:4px; border:1px solid #fecaca;">${esc(r.login_password || 'owner123')}</code></div>
+            <button type="button" class="btn sm" onclick="navigator.clipboard.writeText('Centre ID: ${r.centre_code}\\nPassword: ${r.login_password || 'owner123'}\\nPortal: https://${r.slug}.pescouncil.in/portal'); alert('✓ Centre credentials copied to clipboard!');" style="padding:2px 8px; font-size:0.72rem; margin-top:3px; background:#e2e8f0; color:#0f172a; cursor:pointer; border:1px solid #cbd5e1;">📋 Copy ID &amp; Pass</button>
+          </div>
+        `],
         ['Official Portal', (r) => {
           const pSub = r.slug === 'navya' ? 'navyacomputer.pescouncil.in' : `${r.slug}.pescouncil.in`;
           return `<a href="https://${pSub}" target="_blank" style="color:#047857; font-family:monospace; font-weight:700; text-decoration:none;">${pSub} ↗</a>`;
@@ -65,6 +72,7 @@ const views = {
         ['Status', (r) => badge(r.status)],
         ['Actions', (r) => `
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn sm" data-a="view_centre_creds" data-id="${r.id}" data-code="${esc(r.centre_code)}" data-name="${esc(r.name)}" data-slug="${esc(r.slug)}" data-pass="${esc(r.login_password || 'owner123')}" style="background:#047857; color:#fff; font-weight:700;" title="View &amp; Manage Login Credentials">🔑 ID &amp; Pass</button>
             <button class="btn sm alt" data-a="edit_centre" data-id="${r.id}" title="Edit Centre Information">✏️ Edit</button>
             ${r.status === 'active' ? `<button class="btn sm danger" data-a="suspend" data-id="${r.id}">Suspend</button>` : r.status === 'suspended' ? `<button class="btn sm" data-a="unsuspend" data-id="${r.id}">Activate</button>` : ''}
             <button class="btn sm alt" data-a="courses" data-id="${r.id}">Courses</button>
@@ -758,11 +766,103 @@ V.addEventListener('click', (e) => {
         await views.Courses();
       });
       return;
+    } else if (a === 'view_centre_creds') {
+      const d = b.dataset;
+      const shareText = `*Purvanchal Education & Skill Council (PESC)*\n` +
+        `🏢 *Franchise Centre ERP Login Credentials*\n` +
+        `• *Centre Name:* ${d.name}\n` +
+        `• *Centre Code / Login ID:* ${d.code}\n` +
+        `• *Password:* ${d.pass || 'owner123'}\n` +
+        `• *Website:* https://${d.slug}.pescouncil.in\n` +
+        `• *ERP Portal URL:* https://${d.slug}.pescouncil.in/portal`;
+
+      showModal(`🔑 Centre Login Credentials: ${d.code}`, `
+        <div style="margin-bottom:16px;">
+          <div style="background:#f0fdf4; border:1.5px solid #a7f3d0; padding:16px; border-radius:10px; margin-bottom:16px;">
+            <h4 style="margin:0 0 10px; color:#064e3b; font-size:1.15rem;">🏢 ${esc(d.name)}</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.9rem;">
+              <div><b>Centre Code / Login ID:</b><br><code style="font-size:1.1rem; color:#064e3b; font-weight:800; background:#fff; padding:3px 8px; border-radius:4px; border:1px solid #cbd5e1; display:inline-block; margin-top:3px;">${esc(d.code)}</code></div>
+              <div><b>Login Password:</b><br><code style="font-size:1.1rem; color:#b91c1c; font-weight:800; background:#fef2f2; padding:3px 8px; border-radius:4px; border:1px solid #fecaca; display:inline-block; margin-top:3px;">${esc(d.pass || 'owner123')}</code></div>
+              <div style="grid-column:span 2;"><b>Portal Address:</b><br><a href="https://${d.slug}.pescouncil.in/portal" target="_blank" style="color:#0284c7; font-weight:700;">https://${d.slug}.pescouncil.in/portal ↗</a></div>
+            </div>
+            <div style="margin-top:14px;">
+              <button type="button" class="btn sm" id="btnCopyCentreCreds" style="background:#16a34a; color:#fff; font-weight:700;">📋 Copy for WhatsApp / SMS</button>
+            </div>
+          </div>
+
+          <form id="resetCentrePassForm" style="border:1px solid #e2e8f0; border-radius:10px; padding:16px; background:#fff;">
+            <h4 style="margin:0 0 10px; color:var(--navy);">⚡ Change / Set New Password for Centre</h4>
+            <div style="display:flex; gap:10px; align-items:flex-end;">
+              <div style="flex:1;">
+                <label>New Password (min 6 characters)</label>
+                <input name="password" id="newCentrePassInput" required minlength="6" value="${esc(d.pass || 'owner123')}" placeholder="Enter new password">
+              </div>
+              <button type="submit" class="btn sm gold" style="margin-bottom:2px;">Update Password</button>
+            </div>
+          </form>
+        </div>
+      `, async () => {});
+
+      const btnCopy = document.getElementById('btnCopyCentreCreds');
+      if (btnCopy) {
+        btnCopy.onclick = () => {
+          navigator.clipboard.writeText(shareText).then(() => {
+            toast('Credentials copied! Ready to paste on WhatsApp/SMS.');
+          });
+        };
+      }
+
+      const pf = document.getElementById('resetCentrePassForm');
+      if (pf) {
+        pf.onsubmit = async (e) => {
+          e.preventDefault();
+          const newPass = document.getElementById('newCentrePassInput').value.trim();
+          if (!newPass || newPass.length < 6) return alert('Password must be at least 6 characters');
+          await api(`/api/admin/centres/${id}/set-password`, { method: 'POST', body: { password: newPass } });
+          toast(`Password updated successfully to: ${newPass}`);
+          document.getElementById('adminModalOverlay').style.display = 'none';
+          await views.Centres();
+        };
+      }
+      return;
     } else if (a === 'approve') {
       const r = await api(`/api/admin/applications/${id}/approve`, { method: 'POST' }).catch((x) => {
         if (x.data && x.data.step) throw new Error(`Failed at ${x.data.step}: ${x.data.error}`);
         throw x;
       });
+
+      const credsText = `🎉 *Franchise Centre Approved & Provisioned!*\n\n` +
+        `• Centre Name: ${r.centre_name || 'Authorized Training Centre'}\n` +
+        `• Centre Code / Login ID: ${r.centre_code}\n` +
+        `• Login Password: ${r.password || 'owner123'}\n` +
+        `• Portal Website: https://${r.slug}.pescouncil.in\n` +
+        `• ERP Login URL: https://${r.slug}.pescouncil.in/portal`;
+
+      showModal(`🎉 Franchise Approved: ${r.centre_code}`, `
+        <div style="padding:10px 0;">
+          <div style="background:#ecfdf5; border:1.5px solid #a7f3d0; border-radius:10px; padding:16px; margin-bottom:16px;">
+            <h4 style="margin:0 0 8px; color:#064e3b; font-size:1.15rem;">✓ Centre Successfully Provisioned!</h4>
+            <p style="margin:0 0 12px; font-size:0.88rem; color:#047857;">Share these login credentials with the Franchise Director:</p>
+            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+              <tr><td style="padding:6px 0; color:#64748b; width:45%;">Centre Code / Login ID:</td><td style="padding:6px 0;"><code style="font-size:1.15rem; color:#064e3b; font-weight:800; background:#fff; padding:2px 8px; border:1px solid #bbf7d0; border-radius:4px;">${r.centre_code}</code></td></tr>
+              <tr><td style="padding:6px 0; color:#64748b;">Login Password:</td><td style="padding:6px 0;"><code style="font-size:1.15rem; color:#b91c1c; font-weight:800; background:#fef2f2; padding:2px 8px; border:1px solid #fecaca; border-radius:4px;">${r.password || 'owner123'}</code></td></tr>
+              <tr><td style="padding:6px 0; color:#64748b;">Subdomain Portal:</td><td style="padding:6px 0;"><a href="https://${r.slug}.pescouncil.in" target="_blank" style="color:#0284c7; font-weight:700;">https://${r.slug}.pescouncil.in ↗</a></td></tr>
+            </table>
+          </div>
+          <div style="display:flex; justify-content:space-between; gap:10px;">
+            <button type="button" class="btn sm" id="btnApproveCopyCreds" style="background:#16a34a; color:#fff; font-weight:700;">📋 Copy for WhatsApp</button>
+            <button type="button" class="btn sm gold" onclick="document.getElementById('adminModalOverlay').style.display='none'">Done</button>
+          </div>
+        </div>
+      `, async () => {});
+
+      setTimeout(() => {
+        const btn = document.getElementById('btnApproveCopyCreds');
+        if (btn) btn.onclick = () => {
+          navigator.clipboard.writeText(credsText).then(() => toast('Credentials copied to clipboard!'));
+        };
+      }, 100);
+
       toast('Centre provisioned successfully!');
     } else if (a === 'review') {
       await post(`/api/admin/applications/${id}/status`, { status: 'Under Review' });

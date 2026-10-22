@@ -737,7 +737,7 @@ export default {
           (x.email && x.email.toLowerCase() === em) ||
           (x.director_name && x.director_name.toLowerCase() === em)
         );
-        if (c && (pw === 'owner123' || pw === 'Centre@12345' || pw === 'centre123' || pw === 'admin123' || pw === '123456' || pw.toLowerCase() === c.centre_code.toLowerCase() || pw.toLowerCase() === c.slug.toLowerCase())) {
+        if (c && (pw === 'owner123' || pw === 'Centre@12345' || pw === 'centre123' || pw === 'admin123' || pw === '123456' || pw.toLowerCase() === c.centre_code.toLowerCase() || pw.toLowerCase() === c.slug.toLowerCase() || (c.login_password && pw === c.login_password))) {
           const userObj = { id: c.id, email: c.email || `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id, centre_code: c.centre_code, centre_slug: c.slug };
           return jsonResponse({ ok: true, user: userObj }, 200, {
             'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
@@ -817,7 +817,46 @@ export default {
       }
 
       if (path === '/api/admin/centres') {
-        return jsonResponse({ centres: store.centres });
+        const enriched = store.centres.map(c => {
+          const stus = store.students.filter(s => s.centre_id === c.id);
+          return {
+            ...c,
+            students: stus.length,
+            login_id: c.centre_code,
+            login_password: c.login_password || 'owner123'
+          };
+        });
+        return jsonResponse({ centres: enriched });
+      }
+
+      if (path.match(/\/api\/admin\/centres\/\d+\/credentials/)) {
+        const cId = +path.split('/')[4];
+        const targetC = store.centres.find(c => c.id === cId) || store.centres[0];
+        return jsonResponse({
+          ok: true,
+          credentials: {
+            centre_code: targetC.centre_code,
+            name: targetC.name,
+            director_name: targetC.director_name,
+            phone: targetC.phone,
+            password: targetC.login_password || 'owner123',
+            portal_url: `https://${targetC.slug}.pescouncil.in/portal`
+          }
+        });
+      }
+
+      if (path.match(/\/api\/admin\/centres\/\d+\/set-password/) && request.method === 'POST') {
+        try {
+          const cId = +path.split('/')[4];
+          const targetC = store.centres.find(c => c.id === cId);
+          if (!targetC) return jsonResponse({ error: 'Centre not found' }, 404);
+          const body = await request.json();
+          targetC.login_password = String(body.password || 'owner123').trim();
+          await persistToKV(env, 'centres', store.centres);
+          return jsonResponse({ ok: true, message: `Password updated successfully for ${targetC.centre_code}!` });
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
       }
 
       if (path === '/api/admin/courses') {
@@ -966,6 +1005,8 @@ export default {
           address: app.address,
           pin: app.pin,
           status: 'active',
+          login_id: newCode,
+          login_password: 'owner123',
           created_at: Date.now()
         };
         store.centres.push(newCentre);
@@ -985,7 +1026,15 @@ export default {
         await persistToKV(env, 'applications', store.applications);
         await persistToKV(env, 'users', store.users);
 
-        return jsonResponse({ ok: true, centre_code: newCode, slug: app.slug, subdomain: `${app.slug}.pescouncil.in` });
+        return jsonResponse({
+          ok: true,
+          centre_code: newCode,
+          slug: app.slug,
+          subdomain: `${app.slug}.pescouncil.in`,
+          centre_name: app.centre_name,
+          login_id: newCode,
+          password: 'owner123'
+        });
       }
 
       if (path === '/api/admin/students') {
@@ -1027,8 +1076,34 @@ export default {
 
     // --- Centre APIs ---
     if (path.startsWith('/api/centre/')) {
-      const targetSlug = url.searchParams.get('centre') || url.searchParams.get('slug') || request.headers.get('x-centre-slug') || (centreFromSlug ? centreFromSlug.slug : 'navya');
-      const c = resolveSlug(targetSlug) || store.centres[0];
+      let authCentre = null;
+      if (cookies.pesc_auth) {
+        try {
+          const u = JSON.parse(decodeURIComponent(cookies.pesc_auth));
+          if (u.role === 'centre_owner' || u.centre_id || u.centre_code) {
+            if (u.centre_id) authCentre = store.centres.find(x => x.id === u.centre_id);
+            if (!authCentre && u.centre_slug) authCentre = resolveSlug(u.centre_slug);
+            if (!authCentre && u.centre_code) authCentre = store.centres.find(x => x.centre_code && x.centre_code.toUpperCase() === u.centre_code.toUpperCase());
+          }
+        } catch (_) {}
+      }
+
+      const queryParamSlug = url.searchParams.get('centre') || url.searchParams.get('slug');
+      const headerSlug = request.headers.get('x-centre-slug');
+      let c = null;
+
+      if (centreFromSlug) {
+        c = centreFromSlug;
+      } else if (authCentre) {
+        if (queryParamSlug && queryParamSlug !== 'navya' && queryParamSlug !== authCentre.slug) {
+          c = resolveSlug(queryParamSlug) || authCentre;
+        } else {
+          c = authCentre;
+        }
+      } else {
+        const targetSlug = queryParamSlug || headerSlug;
+        c = (targetSlug ? resolveSlug(targetSlug) : null) || store.centres[0];
+      }
 
       if (path === '/api/centre/dashboard') {
         const stus = store.students.filter(s => s.centre_id === c.id);
@@ -1067,7 +1142,34 @@ export default {
       }
 
       if (path === '/api/centre/all-centres') {
-        return jsonResponse({ centres: store.centres });
+        return jsonResponse({
+          centres: store.centres,
+          active_id: c.id,
+          active_centre: c
+        });
+      }
+
+      if (path === '/api/centre/switch-centre' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const targetC = store.centres.find(x => x.id === +body.centre_id || x.slug === body.slug || x.centre_code === body.centre_code);
+          if (targetC) {
+            let u = {};
+            if (cookies.pesc_auth) {
+              try { u = JSON.parse(decodeURIComponent(cookies.pesc_auth)); } catch (_) {}
+            }
+            u.centre_id = targetC.id;
+            u.centre_code = targetC.centre_code;
+            u.centre_slug = targetC.slug;
+            u.role = u.role || 'centre_owner';
+            return jsonResponse({ ok: true, centre: targetC }, 200, {
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(u))}; Path=/; HttpOnly; SameSite=Lax`
+            });
+          }
+          return jsonResponse({ ok: false, error: 'Centre not found' }, 404);
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
       }
 
       if (path === '/api/centre/settings') {

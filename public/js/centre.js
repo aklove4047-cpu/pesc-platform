@@ -4,12 +4,12 @@
 const V = $('#view');
 const pathMatch = location.pathname.match(/\/c\/([a-z0-9-]+)/i);
 const urlParams = new URLSearchParams(location.search);
-const currentSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || 'navya';
+let currentSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || (typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_slug') : '') || '';
 
-// Intercept all /api/centre requests to ensure slug & header are always provided
+// Intercept /api/centre requests to pass active slug & header when established
 const origFetch = window.fetch;
 window.fetch = function(url, init = {}) {
-  if (typeof url === 'string' && url.startsWith('/api/centre')) {
+  if (typeof url === 'string' && url.startsWith('/api/centre') && currentSlug) {
     init.headers = init.headers || {};
     if (init.headers instanceof Headers) {
       if (!init.headers.has('x-centre-slug')) init.headers.set('x-centre-slug', currentSlug);
@@ -1702,10 +1702,37 @@ async function initCentreHeader() {
     ]);
 
     allCentresList = cData.centres || [];
-    const activeCentre = allCentresList.find(c => c.id === cData.active_id) || allCentresList[0];
+
+    // Prioritize active centre:
+    // 1. Authenticated user (centre_id, centre_slug, centre_code)
+    // 2. Server resolved active_centre or active_id
+    // 3. currentSlug matching centre.slug
+    // 4. First centre in list
+    const user = meData?.user;
+    let activeCentre = null;
+    if (user && (user.role === 'centre_owner' || user.centre_id || user.centre_slug || user.centre_code)) {
+      if (user.centre_id) activeCentre = allCentresList.find(c => c.id === user.centre_id);
+      if (!activeCentre && user.centre_slug) activeCentre = allCentresList.find(c => c.slug === user.centre_slug);
+      if (!activeCentre && user.centre_code) activeCentre = allCentresList.find(c => c.centre_code && c.centre_code.toUpperCase() === user.centre_code.toUpperCase());
+    }
+    if (!activeCentre && cData.active_centre) {
+      activeCentre = cData.active_centre;
+    }
+    if (!activeCentre && cData.active_id) {
+      activeCentre = allCentresList.find(c => c.id === cData.active_id);
+    }
+    if (!activeCentre && currentSlug) {
+      activeCentre = allCentresList.find(c => c.slug === currentSlug);
+    }
+    if (!activeCentre && allCentresList.length > 0) {
+      activeCentre = allCentresList[0];
+    }
+
     currentCentre = activeCentre;
 
     if (activeCentre) {
+      currentSlug = activeCentre.slug;
+      try { localStorage.setItem('pesc_active_centre_slug', activeCentre.slug); } catch (_) {}
       document.title = `${activeCentre.name} – Centre ERP Portal`;
       if ($('#headerCentreName')) $('#headerCentreName').textContent = activeCentre.name;
       if ($('#headerCentreCode')) $('#headerCentreCode').textContent = activeCentre.centre_code;
@@ -1723,10 +1750,13 @@ async function initCentreHeader() {
       sel.onchange = (e) => {
         const cid = +e.target.value;
         guard(async () => {
-          await api('/api/centre/switch-centre', {
+          const res = await api('/api/centre/switch-centre', {
             method: 'POST',
             body: { centre_id: cid }
           });
+          if (res?.centre?.slug) {
+            try { localStorage.setItem('pesc_active_centre_slug', res.centre.slug); } catch (_) {}
+          }
           toast('Switched to centre workspace!');
           window.location.reload();
         });
@@ -1763,6 +1793,7 @@ function initSignOutButton() {
       try {
         await api('/api/auth/logout', { method: 'POST' });
       } catch (_) {}
+      try { localStorage.removeItem('pesc_active_centre_slug'); } catch (_) {}
       toast('Signed out successfully');
       setTimeout(() => { window.location.href = '/portal'; }, 400);
     };
@@ -1846,10 +1877,15 @@ function initAuthForms() {
       notice.innerHTML = `<div style="background:#e0f2fe; color:#0369a1; padding:10px; border-radius:8px; font-weight:600; text-align:center;">Checking credentials...</div>`;
 
       try {
-        await api('/api/auth/login', {
+        const loginRes = await api('/api/auth/login', {
           method: 'POST',
           body: { email: ident, password }
         });
+
+        if (loginRes?.user?.centre_slug) {
+          currentSlug = loginRes.user.centre_slug;
+          try { localStorage.setItem('pesc_active_centre_slug', currentSlug); } catch (_) {}
+        }
 
         notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✓ Centre Login successful! Opening ERP Portal…</div>`;
         toast('Centre Login successful!');
@@ -1861,7 +1897,7 @@ function initAuthForms() {
           initSignOutButton();
           await initCentreHeader();
           switchModule('MyStudents');
-        }, 600);
+        }, 500);
       } catch (err) {
         notice.innerHTML = `<div style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✕ ${esc(err.message || 'Invalid Centre Code or Password')}</div>`;
       }
@@ -2008,6 +2044,11 @@ guard(async () => {
     if (!meRes || !meRes.user || !['centre_owner', 'centre_staff', 'super_admin', 'admin', 'coordinator'].includes(meRes.user.role)) {
       showCentreAuthScreen();
       return;
+    }
+
+    if (meRes.user.centre_slug) {
+      currentSlug = meRes.user.centre_slug;
+      try { localStorage.setItem('pesc_active_centre_slug', currentSlug); } catch (_) {}
     }
 
     // Authenticated user exists -> open ERP layout
