@@ -1096,6 +1096,71 @@ const views = {
             </div>
           </form>
         </div>
+
+        <!-- Centre Bank Account & UPI QR Settings for Student Fee Collection -->
+        <div class="card" style="background:#ffffff; border-radius:14px; padding:28px; border:2px solid #047857; margin-top:24px; box-shadow:0 4px 14px rgba(4, 120, 87, 0.08);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <span style="background:#ecfdf5; color:#047857; font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase;">Student Fee Collection</span>
+              <h3 style="margin:4px 0 0; color:#064e3b; font-size:1.25rem; display:flex; align-items:center; gap:8px;">
+                <span>💳</span> Centre UPI QR Code &amp; Bank Account Settings
+              </h3>
+            </div>
+            <span class="badge active">Direct to Owner Bank</span>
+          </div>
+          <p class="muted" style="font-size:0.86rem; margin:0 0 20px;">
+            Yahan apna UPI ID aur Bank Account details save karein. Student admission lene par direct aapke is QR Code aur Bank Account par course fees jama hogi aur student ko official transaction receipt milegi.
+          </p>
+
+          <form id="centrePaymentSettingsForm" class="row">
+            <div>
+              <label>UPI ID (Google Pay / PhonePe / Paytm / BHIM) *</label>
+              <input name="upi_id" id="setUpiId" value="${esc(c.upi_id || `${(c.phone || '9876543210').replace(/[^0-9]/g, '')}@paytm`)}" required placeholder="e.g. 9876543210@paytm or maurya@oksbi" style="font-family:monospace; font-weight:700; color:#047857;">
+            </div>
+
+            <div>
+              <label>Account Holder Full Name *</label>
+              <input name="account_holder" value="${esc(c.account_holder || c.director_name || c.name || '')}" required placeholder="Name as per Bank Account">
+            </div>
+
+            <div>
+              <label>Bank Name *</label>
+              <input name="bank_name" value="${esc(c.bank_name || 'State Bank of India')}" required placeholder="e.g. State Bank of India / Bank of Baroda">
+            </div>
+
+            <div>
+              <label>Bank Account Number *</label>
+              <input name="account_no" value="${esc(c.account_no || '38920192837')}" required placeholder="Enter Account Number" style="font-family:monospace; font-weight:700;">
+            </div>
+
+            <div>
+              <label>Bank IFSC Code *</label>
+              <input name="ifsc" value="${esc(c.ifsc || 'SBIN0001234')}" required placeholder="e.g. SBIN0001234" style="font-family:monospace; font-weight:700; text-transform:uppercase;">
+            </div>
+
+            <div>
+              <label>Custom QR Code Image URL (Optional)</label>
+              <input name="qr_code_url" value="${esc(c.qr_code_url || '')}" placeholder="Leave blank to use auto-generated UPI QR">
+            </div>
+
+            <div style="grid-column:span 2; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:14px; display:flex; align-items:center; gap:20px;">
+              <div style="text-align:center;">
+                <img id="liveQrPreview" src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=upi://pay?pa=${encodeURIComponent(c.upi_id || 'pescouncil@upi')}&cu=INR" alt="QR Preview" style="width:100px; height:100px; border-radius:6px; border:1px solid #cbd5e1; background:#fff;">
+                <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">Live Preview</div>
+              </div>
+              <div style="font-size:0.84rem; color:#334155; line-height:1.5;">
+                <b>✓ Instant Dynamic UPI QR:</b><br>
+                Aapke is UPI ID se aapki centre website par automatically UPI QR code ban jayega jise student scan karke DCA, ADCA, Tally aadi courses ki fees direct aapko pay kar sakte hain.
+              </div>
+            </div>
+
+            <div style="grid-column:span 2; display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
+              <button type="submit" class="btn gold" style="padding:12px 30px; font-weight:700; border-radius:6px;">
+                💳 Save Payment &amp; QR Settings
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     `;
 
@@ -1146,9 +1211,22 @@ const views = {
       e.preventDefault();
       guard(async () => {
         const payload = form(e.target);
-        await api('/api/centre/settings', { method: 'PUT', body: payload });
+        await api('/api/centre/settings', { method: 'POST', body: payload });
         toast('Centre profile updated successfully!');
         initCentreHeader();
+      });
+    };
+
+    // Save Payment Settings form
+    $('#centrePaymentSettingsForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const payload = form(e.target);
+        const res = await api('/api/centre/payment-settings', { method: 'POST', body: payload });
+        toast(res.message || 'Centre bank & QR settings saved successfully!');
+        if ($('#liveQrPreview')) {
+          $('#liveQrPreview').src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=upi://pay?pa=${encodeURIComponent(payload.upi_id)}&cu=INR`;
+        }
       });
     };
   }

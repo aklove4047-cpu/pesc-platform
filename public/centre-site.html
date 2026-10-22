@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title id="pageTitle">Navya Computer Institute – Franchise Centre of PES Council</title>
+  <title id="pageTitle">Authorized Computer Training Institute – Franchise Centre of PES Council</title>
   <meta name="google-site-verification" content="XRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/assets/css/style.css">
   <style>
@@ -18,12 +18,13 @@
       --c-green-light: #ecfdf5;
       --c-green-border: #a7f3d0;
       --c-gold: #d4af37;
+      --c-navy: #0f172a;
     }
 
     * { box-sizing: border-box; }
     body {
       background: #f8fafc;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       margin: 0;
       padding: 0;
       color: #1e293b;
@@ -46,7 +47,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 20px;
+      gap: 16px;
     }
     .c-brand {
       display: flex;
@@ -86,12 +87,12 @@
     .c-nav-menu {
       display: flex;
       align-items: center;
-      gap: 26px;
+      gap: 22px;
     }
     .c-nav-menu a {
       color: #334155;
       text-decoration: none;
-      font-size: 0.96rem;
+      font-size: 0.94rem;
       font-weight: 600;
       transition: color 0.2s;
       position: relative;
@@ -113,16 +114,16 @@
     .c-nav-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .c-btn-student-login {
       background: #ffffff;
       color: var(--c-green-primary);
       border: 1.5px solid var(--c-green-primary);
-      padding: 9px 20px;
+      padding: 8px 16px;
       border-radius: 8px;
       font-weight: 700;
-      font-size: 0.92rem;
+      font-size: 0.88rem;
       cursor: pointer;
       text-decoration: none;
       transition: all 0.2s;
@@ -140,15 +141,18 @@
       background: var(--c-green-emerald);
       color: #ffffff !important;
       border: none;
-      padding: 10px 22px;
+      padding: 9px 18px;
       border-radius: 8px;
       font-weight: 700;
-      font-size: 0.92rem;
+      font-size: 0.88rem;
       cursor: pointer;
       text-decoration: none;
       box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);
       transition: all 0.2s;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .c-btn-apply:hover {
       background: #065f46;
@@ -158,7 +162,7 @@
       background: #f8fafc;
       color: #0f172a !important;
       border: 1px solid #cbd5e1;
-      padding: 9px 14px;
+      padding: 8px 14px;
       border-radius: 8px;
       font-weight: 700;
       font-size: 0.85rem;
@@ -199,7 +203,7 @@
       z-index: 2;
     }
     .c-hero-left h2 {
-      font-size: 3.4rem;
+      font-size: 3.2rem;
       font-weight: 900;
       line-height: 1.05;
       margin: 0 0 16px;
@@ -210,7 +214,7 @@
       color: #ffffff;
     }
     .c-hero-left p {
-      font-size: 1.15rem;
+      font-size: 1.12rem;
       line-height: 1.6;
       color: #d1fae5;
       max-width: 520px;
@@ -218,16 +222,16 @@
     }
     .c-hero-actions {
       display: flex;
-      gap: 16px;
+      gap: 14px;
       flex-wrap: wrap;
-      margin-bottom: 40px;
+      margin-bottom: 36px;
     }
     .c-btn-hero-join {
       background: #ffffff;
       color: #064e3b;
       font-weight: 800;
-      font-size: 1.05rem;
-      padding: 13px 28px;
+      font-size: 1.02rem;
+      padding: 13px 26px;
       border-radius: 8px;
       text-decoration: none;
       border: none;
@@ -243,8 +247,8 @@
       background: rgba(2, 44, 34, 0.4);
       color: #ffffff;
       font-weight: 700;
-      font-size: 1.05rem;
-      padding: 12px 26px;
+      font-size: 1.02rem;
+      padding: 12px 24px;
       border-radius: 8px;
       text-decoration: none;
       border: 1.5px solid rgba(255, 255, 255, 0.5);
@@ -385,7 +389,7 @@
     }
     .c-course-fee b {
       color: #0f172a;
-      font-size: 1rem;
+      font-size: 1.05rem;
       font-weight: 800;
     }
     .c-btn-enroll {
@@ -394,16 +398,79 @@
       background: var(--c-green-emerald);
       color: #ffffff;
       border: none;
-      padding: 6px 12px;
+      padding: 7px 12px;
       border-radius: 6px;
       font-weight: 700;
-      font-size: 0.82rem;
+      font-size: 0.85rem;
       cursor: pointer;
       transition: background 0.2s;
     }
     .c-btn-enroll:hover {
       background: #065f46;
     }
+
+    /* Centre Fee Payment & QR Code Section */
+    .c-pay-section {
+      background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+      color: #ffffff;
+      border-radius: 16px;
+      padding: 40px;
+      margin: 50px auto;
+      max-width: 1240px;
+      box-shadow: 0 10px 30px rgba(2, 44, 34, 0.2);
+    }
+    .c-pay-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+      gap: 36px;
+      align-items: center;
+    }
+    .c-qr-box {
+      background: #ffffff;
+      color: #0f172a;
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    }
+    .c-qr-img {
+      width: 180px;
+      height: 180px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      display: block;
+      margin: 0 auto 12px;
+    }
+    .c-bank-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 14px;
+      padding: 28px;
+      backdrop-filter: blur(8px);
+    }
+    .c-bank-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.92rem;
+    }
+    .c-bank-row:last-child { border-bottom: none; }
+    .c-bank-row span.label { color: #a7f3d0; font-weight: 500; }
+    .c-bank-row span.val { font-weight: 700; color: #ffffff; font-family: monospace; font-size: 1.05rem; }
+    .c-btn-copy {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      margin-left: 8px;
+      transition: background 0.2s;
+    }
+    .c-btn-copy:hover { background: rgba(255, 255, 255, 0.3); }
 
     /* About Section & Director Profile */
     .c-about-grid {
@@ -465,7 +532,7 @@
       font-size: 0.95rem;
     }
 
-    /* Director Card matching Mockup */
+    /* Director Card */
     .c-side-cards {
       display: flex;
       flex-direction: column;
@@ -522,7 +589,7 @@
       padding: 10px;
     }
 
-    /* Footer matching Mockup */
+    /* Footer */
     .c-footer {
       background: #022c22;
       color: #e2e8f0;
@@ -569,7 +636,7 @@
       color: #94a3b8;
     }
 
-    /* Slide-in Student Login Drawer / Modal */
+    /* Modals */
     .c-modal-overlay {
       display: none;
       position: fixed;
@@ -579,20 +646,48 @@
       align-items: center;
       justify-content: center;
       padding: 16px;
+      overflow-y: auto;
     }
     .c-modal-box {
       background: #ffffff;
       border-radius: 14px;
-      max-width: 450px;
+      max-width: 480px;
       width: 100%;
       padding: 28px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.3);
       position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    /* Print styling for Official Fee Transaction Receipt */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printableReceiptBox, #printableReceiptBox * {
+        visibility: visible;
+      }
+      #printableReceiptBox {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+        background: #fff;
+        box-shadow: none;
+        border: 2px solid #064e3b !important;
+      }
+      .no-print {
+        display: none !important;
+      }
     }
 
     @media (max-width: 1024px) {
       .c-course-grid { grid-template-columns: repeat(3, 1fr); }
       .c-footer-grid { grid-template-columns: 1fr 1fr; }
+      .c-pay-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 768px) {
       .c-hero-wrap { grid-template-columns: 1fr; }
@@ -606,13 +701,13 @@
 </head>
 <body>
 
-  <!-- Top Navigation Header matching Mockup -->
+  <!-- Top Navigation Header -->
   <header class="c-header">
     <div class="c-header-inner">
       <a href="/" class="c-brand">
         <div class="c-brand-logo">🎓</div>
         <div class="c-brand-text">
-          <h1 id="brandName">Navya Computer Institute</h1>
+          <h1 id="brandName">Authorized Computer Institute</h1>
           <span>Franchise Centre of PES Council</span>
         </div>
       </a>
@@ -620,23 +715,24 @@
       <nav class="c-nav-menu">
         <a href="#home" class="active">Home</a>
         <a href="#courses">Courses</a>
-        <a href="#gallery">Gallery</a>
-        <a href="#about">Contact</a>
+        <a href="#pay-fees">Fee &amp; QR</a>
+        <a href="#about">About</a>
+        <a href="#verify">Verify</a>
       </nav>
 
       <div class="c-nav-actions">
-        <!-- Student Login Button (opens popup/drawer) -->
+        <!-- Student Login Button -->
         <button type="button" class="c-btn-student-login" id="btnStudentLogin">
-          Student Login
+          🎓 Student Login
         </button>
 
         <!-- Apply Admission Button -->
         <button type="button" class="c-btn-apply" id="btnOpenApply">
-          Apply Admission
+          📝 Apply Admission
         </button>
 
-        <!-- Centre Admin Portal Button for Centre Director (Requires Password) -->
-        <button type="button" id="btnCentreAdmin" class="c-btn-admin-portal" title="Centre Director ERP Panel (17 Modules)">
+        <!-- Centre Admin Portal Button for Centre Director -->
+        <button type="button" id="btnCentreAdmin" class="c-btn-admin-portal" title="Centre Director ERP Panel">
           🏢 Centre Login
         </button>
       </div>
@@ -644,7 +740,7 @@
   </header>
 
   <main id="home">
-    <!-- Hero Section matching Mockup -->
+    <!-- Hero Section -->
     <section class="c-hero">
       <div class="c-hero-wrap">
         <div class="c-hero-left">
@@ -653,11 +749,11 @@
             <span>2026-27</span>
           </h2>
           <p id="heroDesc">
-            Join Navya Computer Institute for professional computer courses. Build skills, get certified, and grow your career.
+            Join our authorized franchise centre for professional computer diploma and skill courses. Build in-demand IT skills, get certified, and kickstart your career.
           </p>
 
           <div class="c-hero-actions">
-            <button type="button" class="c-btn-hero-join" id="btnHeroJoin">Join Now →</button>
+            <button type="button" class="c-btn-hero-join" id="btnHeroJoin">Apply for Admission →</button>
             <a href="#verify" class="c-btn-hero-verify">Verify Certificate</a>
           </div>
 
@@ -668,11 +764,11 @@
             </div>
             <div class="c-trust-item">
               <span>🛡️</span>
-              <span>Centre Code: <b id="trustCode">SCOP</b></span>
+              <span>Centre Code: <b id="trustCode">PESC00001</b></span>
             </div>
             <div class="c-trust-item">
               <span>🌐</span>
-              <span id="trustDomain">scop.website.com</span>
+              <span id="trustDomain">centre.pescouncil.in</span>
             </div>
           </div>
         </div>
@@ -684,57 +780,121 @@
       </div>
     </section>
 
-    <!-- Our Popular Courses Section matching Mockup -->
+    <!-- Popular Courses Section -->
     <section class="c-section" id="courses">
       <div class="c-section-header">
-        <h3>Our Popular Courses</h3>
-        <p>Certified courses with affordable local fees for all students</p>
+        <h3>Our Popular Computer Courses</h3>
+        <p>Government recognized computer diploma &amp; certificate courses with affordable local fees</p>
       </div>
 
       <div class="c-course-grid" id="courseGrid">
-        <!-- 5 Cards Rendered Dynamically matching Mockup -->
+        <!-- 5 Cards Rendered Dynamically -->
       </div>
     </section>
 
-    <!-- About Our Centre & Director Section matching Mockup -->
+    <!-- Centre Fee Payment & QR Code Section -->
+    <section class="c-pay-section" id="pay-fees">
+      <div style="text-align:center; margin-bottom:30px;">
+        <span style="background:rgba(255,255,255,0.15); color:#a7f3d0; font-weight:700; font-size:0.82rem; padding:4px 14px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;">Official Payment Channels</span>
+        <h3 style="font-size:2.2rem; margin:10px 0 6px; font-weight:800;">Course Fee Payment &amp; Centre UPI QR</h3>
+        <p style="color:#d1fae5; margin:0; font-size:1rem;">All student admission and course fees are deposited directly to the authorized Centre Owner's bank account.</p>
+      </div>
+
+      <div class="c-pay-grid">
+        <!-- Left: Scan & Pay QR Code -->
+        <div class="c-qr-box">
+          <h4 style="margin:0 0 4px; font-size:1.15rem; color:#064e3b;">Scan &amp; Pay via Any UPI App</h4>
+          <p style="font-size:0.82rem; color:#64748b; margin:0 0 14px;">Google Pay · PhonePe · Paytm · BHIM</p>
+          <img id="centreQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=pescouncil@upi&pn=Centre&cu=INR" alt="UPI QR Code" class="c-qr-img">
+          <div style="font-size:0.88rem; font-weight:700; color:#0f172a; margin-bottom:4px;">
+            UPI ID: <span id="centreUpiDisplay" style="font-family:monospace; color:#047857;">pescouncil@upi</span>
+            <button class="c-btn-copy" id="btnCopyUpi" style="color:#064e3b; background:#e2e8f0; border-color:#cbd5e1;">Copy</button>
+          </div>
+          <span style="font-size:0.75rem; color:#64748b;">Instant verification &amp; official receipt generation</span>
+        </div>
+
+        <!-- Right: Centre Bank Details -->
+        <div class="c-bank-card">
+          <h4 style="margin:0 0 14px; font-size:1.25rem; color:#ffffff; display:flex; align-items:center; gap:8px;">
+            <span>🏦</span> Authorized Centre Bank Account
+          </h4>
+
+          <div class="c-bank-row">
+            <span class="label">Account Holder:</span>
+            <span class="val" id="bankHolder">Centre Director</span>
+          </div>
+          <div class="c-bank-row">
+            <span class="label">Bank Name:</span>
+            <span class="val" id="bankName">State Bank of India</span>
+          </div>
+          <div class="c-bank-row">
+            <span class="label">Account Number:</span>
+            <span class="val">
+              <span id="bankAcc">38920192837</span>
+              <button class="c-btn-copy" id="btnCopyAcc">Copy</button>
+            </span>
+          </div>
+          <div class="c-bank-row">
+            <span class="label">IFSC Code:</span>
+            <span class="val">
+              <span id="bankIfsc">SBIN0001234</span>
+              <button class="c-btn-copy" id="btnCopyIfsc">Copy</button>
+            </span>
+          </div>
+          <div class="c-bank-row">
+            <span class="label">Account Type:</span>
+            <span class="val">Current / Institute Account</span>
+          </div>
+
+          <div style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="c-btn-hero-join" id="btnPayNowApply" style="flex:1; text-align:center; padding:11px 20px;">
+              📝 Apply &amp; Submit Payment UTR →
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About Our Centre & Director Section -->
     <section class="c-section" id="about">
       <div class="c-about-grid">
         <div class="c-about-box">
           <h3>About Our Centre</h3>
           <p id="aboutStory">
-            Established in 2021, Navya Computer Institute is an authorized franchise centre of PES Council, dedicated to providing quality computer education and skill training to students in the region. We are committed to practical learning, experienced faculty, and career-focused training with modern labs and updated curriculum.
+            Established as an authorized franchise centre of Purvanchal Education &amp; Skill Council (PESC), we are dedicated to providing quality computer education and skill training with modern practical computer labs and career-focused curriculum.
           </p>
 
           <ul class="c-feature-list">
-            <li><span class="check">✓</span> 30+ Computer Lab Systems</li>
-            <li><span class="check">✓</span> Experienced &amp; Certified Faculty</li>
-            <li><span class="check">✓</span> Placement Assistance &amp; Certification</li>
+            <li><span class="check">✓</span> 30+ Modern Computer Lab Workstations</li>
+            <li><span class="check">✓</span> Certified &amp; Experienced IT Trainers</li>
+            <li><span class="check">✓</span> Job Oriented Practical Modules &amp; Projects</li>
+            <li><span class="check">✓</span> Government Recognized PES Council Certification</li>
           </ul>
 
           <div class="c-contact-card">
             <h4>Contact Details</h4>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
               <div>📞 <b>Phone:</b> <span id="contactPhone">+91 98765 43210</span></div>
-              <div>✉️ <b>Email:</b> <span id="contactEmail">info@scop.website.com</span></div>
-              <div style="grid-column:span 2;">📍 <b>Address:</b> <span id="contactAddress">Navya Computer Institute, Shivapura, Karnataka</span></div>
+              <div>✉️ <b>Email:</b> <span id="contactEmail">director@centre.pescouncil.in</span></div>
+              <div style="grid-column:span 2;">📍 <b>Address:</b> <span id="contactAddress">Authorized Study Centre, Uttar Pradesh</span></div>
             </div>
           </div>
         </div>
 
         <div class="c-side-cards">
-          <!-- Director Card matching Mockup -->
+          <!-- Director Card -->
           <div class="c-director-card">
             <img src="/assets/img/director.jpg" alt="Director" class="c-director-photo" id="directorPhoto">
-            <h4 id="directorName">Dr. Ramesh Kumar</h4>
-            <p id="directorTitle">Director, Navya Computer Institute</p>
+            <h4 id="directorName">Centre Director</h4>
+            <p id="directorTitle">Director, Authorized Computer Institute</p>
           </div>
 
           <!-- Location Map Pin Card -->
           <div class="c-map-card">
             <div class="c-map-preview">
               <div style="font-size:1.8rem; margin-bottom:2px;">📍</div>
-              <b id="mapCentreName" style="color:#064e3b; font-size:0.92rem;">Navya Computer Institute</b>
-              <span id="mapLocation" style="font-size:0.8rem; color:#64748b; margin-top:2px;">Shivapura, Karnataka</span>
+              <b id="mapCentreName" style="color:#064e3b; font-size:0.92rem;">Authorized Training Centre</b>
+              <span id="mapLocation" style="font-size:0.8rem; color:#64748b; margin-top:2px;">Uttar Pradesh</span>
             </div>
           </div>
         </div>
@@ -758,16 +918,16 @@
     </section>
   </main>
 
-  <!-- Footer matching Mockup -->
+  <!-- Footer -->
   <footer class="c-footer">
     <div class="c-footer-grid">
       <div class="c-footer-col">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
           <div style="width:36px; height:36px; border-radius:6px; background:#047857; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold;">🎓</div>
-          <b id="footerBrandName" style="color:#ffffff; font-size:1.1rem;">Navya Computer Institute</b>
+          <b id="footerBrandName" style="color:#ffffff; font-size:1.1rem;">Authorized Computer Institute</b>
         </div>
         <p style="font-size:0.85rem; color:#94a3b8; line-height:1.6; margin:0;">
-          Franchise Centre of PES Council. Dedicated to providing computer education and skill training with modern labs.
+          Franchise Centre of Purvanchal Education &amp; Skill Council (PESC). Dedicated to quality IT education, job-oriented technical training, and recognized certifications.
         </p>
       </div>
 
@@ -776,8 +936,8 @@
         <ul>
           <li><a href="#home">Home</a></li>
           <li><a href="#courses">Courses</a></li>
-          <li><a href="#about">Gallery</a></li>
-          <li><a href="#about">Contact</a></li>
+          <li><a href="#pay-fees">Fee &amp; QR Payment</a></li>
+          <li><a href="#about">About &amp; Contact</a></li>
           <li><a href="javascript:void(0)" onclick="$('#btnStudentLogin').click()" style="color:#a7f3d0; font-weight:700;">Student Login</a></li>
           <li><a href="javascript:void(0)" onclick="$('#btnOpenApply').click()" style="color:#fde047; font-weight:700;">Apply Admission</a></li>
         </ul>
@@ -786,13 +946,13 @@
       <div class="c-footer-col">
         <h4>Affiliation &amp; Registration</h4>
         <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 6px;">
-          <b>Centre Code:</b> <span id="footerCode" style="font-family:monospace; color:#a7f3d0;">SCOP</span>
+          <b>Centre Code:</b> <span id="footerCode" style="font-family:monospace; color:#a7f3d0;">PESC00001</span>
         </p>
         <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 6px;">
           <b>Affiliated to:</b> PES Council
         </p>
         <p style="font-size:0.88rem; color:#cbd5e1; margin:0 0 10px;">
-          <b>Website:</b> <span id="footerDomain" style="color:#a7f3d0;">scop.website.com</span>
+          <b>Website:</b> <span id="footerDomain" style="color:#a7f3d0;">centre.pescouncil.in</span>
         </p>
         <p>
           <a href="/portal" id="footerAdminLink" style="display:inline-block; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.8rem; text-decoration:none; font-weight:700;">
@@ -810,113 +970,80 @@
           <a href="#" style="color:#a7f3d0; text-decoration:none;">💬</a>
         </div>
         <p style="font-size:0.88rem; color:#a7f3d0; margin:0;">
-          ✉️ <span id="footerEmail">info@scop.website.com</span>
+          ✉️ <span id="footerEmail">director@centre.pescouncil.in</span>
         </p>
       </div>
     </div>
 
     <div class="c-footer-bottom">
-      <p id="copyrightText">© 2026 Navya Computer Institute. All Rights Reserved. | PES Council Affiliated | Centre Code: SCOP</p>
+      <p id="copyrightText">© 2026 Authorized Computer Institute. All Rights Reserved. | PES Council Affiliated</p>
     </div>
   </footer>
 
-  <!-- Student Login Popup Modal -->
+  <!-- 1. Student Login Popup Modal -->
   <div id="studentLoginModal" class="c-modal-overlay">
     <div class="c-modal-box">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <h3 style="margin:0; color:#064e3b; font-size:1.3rem;">🎓 Candidate Student Login</h3>
+        <h3 style="margin:0; color:#064e3b; font-size:1.3rem; display:flex; align-items:center; gap:8px;">
+          <span>🎓</span> Student &amp; Candidate Login
+        </h3>
         <button type="button" id="btnCloseStudentModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
       </div>
       <p class="muted" style="font-size:0.88rem; margin:0 0 16px;">
-        Enrolled students can log in to view results, admit cards, attendance, and certificates.
+        Enrolled candidates can log in to view admission details, fee receipts, syllabus, admit card, marksheet, and certificates.
       </p>
 
       <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.82rem;">
-        <b>⚡ Quick Demo Student:</b><br>
-        <span>Roll No: <code style="font-weight:700;">PESC00001-2026-00007</code></span><br>
+        <b>⚡ Quick Demo Student Credentials:</b><br>
+        <span>Roll / Enrolment No: <code style="font-weight:700;">PESC00001-2026-00007</code> (or <code>2026101</code>)</span><br>
         <span>Password: <code style="font-weight:700;">Student@123</code></span>
       </div>
 
       <form id="studentLoginForm">
         <div style="margin-bottom:12px;">
-          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Student Code / Roll Number</label>
-          <input name="email" id="modalStudentInput" required placeholder="e.g. PESC00001-2026-00007" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
+          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Student Code / Roll Number / Mobile *</label>
+          <input name="email" id="modalStudentInput" required value="PESC00001-2026-00007" placeholder="e.g. PESC00001-2026-00007" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-weight:600;">
         </div>
 
         <div style="margin-bottom:16px;">
-          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Password</label>
+          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Password *</label>
           <input name="password" id="modalStudentPw" type="password" required value="Student@123" placeholder="••••••••" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
         </div>
 
-        <button type="submit" class="btn" style="width:100%; background:#047857; color:#fff; font-weight:700; padding:12px; border-radius:8px; border:none; cursor:pointer;">
+        <button type="submit" class="btn" style="width:100%; background:#047857; color:#fff; font-weight:700; padding:12px; border-radius:8px; border:none; cursor:pointer; font-size:0.95rem;">
           Log In to Student Panel →
         </button>
+
+        <div style="text-align:center; margin-top:12px;">
+          <a href="/student" class="muted" style="font-size:0.82rem; text-decoration:none;">Direct Student Portal Link ↗</a>
+        </div>
       </form>
       <div id="modalLoginMsg" style="margin-top:12px;"></div>
     </div>
   </div>
 
-  <!-- Admission Inquiry Modal -->
-  <div id="admissionModal" class="c-modal-overlay">
-    <div class="c-modal-box" style="max-width:520px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">📝 Apply for Admission (2026-27)</h3>
-        <button type="button" id="btnCloseModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
-      </div>
-      <p class="muted" style="font-size:0.88rem; margin:0 0 16px;">Fill in your details below to apply for admission in session 2026-27:</p>
-      
-      <form id="inquiryForm">
-        <input type="hidden" name="centre_id" id="inqCentreId">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-          <div>
-            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Full Name *</label>
-            <input name="name" required placeholder="e.g. Rahul Sharma" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Mobile Number *</label>
-            <input name="mobile" pattern="[6-9][0-9]{9}" required placeholder="e.g. 9876543210" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
-          </div>
-        </div>
-
-        <div style="margin-bottom:12px;">
-          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Select Desired Course *</label>
-          <select name="course_id" id="inqCourseSelect" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
-            <option value="">Select a course…</option>
-          </select>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Previous Qualification</label>
-          <input name="message" placeholder="e.g. 10th / 12th / Graduate" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
-          <button type="button" class="btn alt" id="btnCancelModal" style="padding:9px 18px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">Cancel</button>
-          <button type="submit" class="c-btn-apply" style="padding:9px 22px;">Submit Application</button>
-        </div>
-      </form>
-      <div id="inqResult" style="margin-top:12px;"></div>
-    </div>
-  <!-- Centre Director Login Modal (Requires Password) -->
+  <!-- 2. Centre Director Login Modal (Requires Password) -->
   <div id="centreLoginModal" class="c-modal-overlay">
     <div class="c-modal-box">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">🏢 Centre Director Login</h3>
+        <h3 style="margin:0; color:#064e3b; font-size:1.35rem; display:flex; align-items:center; gap:8px;">
+          <span>🏢</span> Centre Director ERP Login
+        </h3>
         <button type="button" id="btnCloseCentreModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
       </div>
       <p class="muted" style="font-size:0.88rem; margin:0 0 16px;">
-        Sign in to manage student admissions, course fees, attendance, certificates, and marksheets.
+        Authorized Centre Director / Franchise Portal for student admissions, course fees, UPI QR, marksheets &amp; certifications.
       </p>
 
       <div style="background:#fefce8; border:1px solid #fef08a; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.82rem; color:#854d0e;">
         <b>🔑 Centre Login Credentials:</b><br>
-        <span>Centre Code / ID: <code style="font-weight:700;" id="demoCentreCode">PESC00001</code></span><br>
-        <span>Password: <code style="font-weight:700;">owner123</code></span>
+        <span>Centre Code: <code style="font-weight:700;" id="demoCentreCode">PESC00001</code></span><br>
+        <span>Password: <code style="font-weight:700;">owner123</code> (or <code>Centre@12345</code>)</span>
       </div>
 
       <form id="centreLoginForm">
         <div style="margin-bottom:12px;">
-          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Centre Code or Email *</label>
+          <label style="font-size:0.85rem; font-weight:700; margin-bottom:4px; display:block;">Centre Code or Registered Email *</label>
           <input name="email" id="modalCentreCode" required placeholder="e.g. PESC00001" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-weight:600;">
         </div>
 
@@ -925,145 +1052,345 @@
           <input name="password" id="modalCentrePw" type="password" required value="owner123" placeholder="••••••••" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
         </div>
 
-        <button type="submit" class="btn gold" style="width:100%; font-weight:700; padding:12px; border-radius:8px; border:none; cursor:pointer;">
+        <button type="submit" class="btn gold" style="width:100%; font-weight:700; padding:12px; border-radius:8px; border:none; cursor:pointer; font-size:0.95rem;">
           Log In to Centre ERP Portal →
         </button>
+
+        <div style="text-align:center; margin-top:12px;">
+          <a href="/portal" id="directPortalLink" class="muted" style="font-size:0.82rem; text-decoration:none;">Open Centre ERP Panel Directly ↗</a>
+        </div>
       </form>
       <div id="modalCentreMsg" style="margin-top:12px;"></div>
     </div>
   </div>
 
+  <!-- 3. Multi-Step Admission & Fee Payment Modal -->
+  <div id="admissionModal" class="c-modal-overlay">
+    <div class="c-modal-box" style="max-width:580px;">
+      
+      <!-- Wizard Step 1: Student Information -->
+      <div id="admissionStep1">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div>
+            <span style="font-size:0.75rem; color:#047857; font-weight:700; text-transform:uppercase;">Step 1 of 2</span>
+            <h3 style="margin:2px 0 0; color:#064e3b; font-size:1.35rem;">📝 Apply for Admission (2026-27)</h3>
+          </div>
+          <button type="button" class="btn-close-modal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
+        </div>
+        <p class="muted" style="font-size:0.86rem; margin:0 0 16px;">Fill candidate student details to register and proceed to fee payment:</p>
+
+        <form id="step1Form">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Full Name *</label>
+              <input name="name" required placeholder="e.g. Rahul Sharma" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Father's Name *</label>
+              <input name="father_name" required placeholder="e.g. Suresh Sharma" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Mobile Number *</label>
+              <input name="mobile" pattern="[6-9][0-9]{9}" required placeholder="10-digit Mobile" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Email Address</label>
+              <input name="email" type="email" placeholder="student@example.com" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Date of Birth</label>
+              <input name="dob" type="date" value="2004-05-15" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Gender</label>
+              <select name="gender" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Select Desired Course *</label>
+            <select name="course_id" id="inqCourseSelect" required style="width:100%; padding:9px 12px; border:1.5px solid #047857; border-radius:6px; font-weight:600; background:#f0fdf4;">
+              <option value="">Select a course…</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Residential Address</label>
+            <input name="address" placeholder="Village / Town, District, State" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+          </div>
+
+          <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:10px 14px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.88rem; color:#064e3b; font-weight:600;">Course Admission Fee:</span>
+            <b id="step1FeeDisplay" style="font-size:1.2rem; color:#047857;">₹6,500</b>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn alt btn-cancel-modal" style="padding:9px 18px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">Cancel</button>
+            <button type="submit" class="c-btn-apply" style="padding:10px 22px;">Proceed to Fee Payment →</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Wizard Step 2: Fee Payment to Centre Owner -->
+      <div id="admissionStep2" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div>
+            <span style="font-size:0.75rem; color:#047857; font-weight:700; text-transform:uppercase;">Step 2 of 2</span>
+            <h3 style="margin:2px 0 0; color:#064e3b; font-size:1.35rem;">💳 Pay Course Fee to Centre</h3>
+          </div>
+          <button type="button" class="btn-close-modal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <b id="step2CandidateName" style="color:#0f172a; font-size:0.95rem;">Candidate Name</b><br>
+            <span id="step2CourseName" style="font-size:0.8rem; color:#64748b;">Selected Course</span>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:0.78rem; color:#64748b;">Payable Amount</span><br>
+            <b id="step2FeeDisplay" style="font-size:1.3rem; color:#047857;">₹6,500</b>
+          </div>
+        </div>
+
+        <!-- Centre UPI QR Box -->
+        <div style="border:1.5px dashed #047857; border-radius:10px; padding:14px; text-align:center; background:#f0fdf4; margin-bottom:14px;">
+          <span style="font-size:0.82rem; font-weight:700; color:#064e3b;">SCAN QR WITH ANY UPI APP (PhonePe, GPay, Paytm)</span>
+          <img id="modalPayQrImg" src="" alt="Payment QR" style="width:160px; height:160px; margin:8px auto; display:block; border-radius:6px; border:1px solid #cbd5e1; background:#fff;">
+          <div style="font-size:0.85rem; font-weight:700; color:#0f172a;">
+            UPI ID: <span id="modalUpiId" style="font-family:monospace; color:#047857;">pescouncil@upi</span>
+            <button type="button" class="c-btn-copy" id="btnModalCopyUpi" style="color:#064e3b; background:#e2e8f0; border-color:#cbd5e1;">Copy</button>
+          </div>
+        </div>
+
+        <!-- Centre Bank Transfer Info -->
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; font-size:0.82rem; margin-bottom:16px; line-height:1.6;">
+          <div style="font-weight:700; color:#064e3b; margin-bottom:4px;">🏦 Or Transfer to Centre Bank Account:</div>
+          <div><b>A/C Holder:</b> <span id="modalBankHolder">Centre Director</span></div>
+          <div><b>Bank:</b> <span id="modalBankName">State Bank of India</span></div>
+          <div><b>A/C No:</b> <span id="modalBankAcc" style="font-family:monospace; font-weight:700;">38920192837</span> | <b>IFSC:</b> <span id="modalBankIfsc" style="font-family:monospace; font-weight:700;">SBIN0001234</span></div>
+        </div>
+
+        <form id="step2PayForm">
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Payment Method *</label>
+            <select name="payment_mode" id="payModeSelect" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="UPI Online (PhonePe / GPay / Paytm)">UPI Online (PhonePe / GPay / Paytm)</option>
+              <option value="Bank Transfer (IMPS / NEFT)">Bank Transfer (IMPS / NEFT)</option>
+              <option value="Cash Paid at Centre Desk">Cash Paid at Centre Desk</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">12-Digit UTR / Transaction Reference Number *</label>
+            <input name="utr_no" id="utrInput" required placeholder="e.g. 412890192839 (or CASH if paid at centre)" style="width:100%; padding:9px 12px; border:1.5px solid #047857; border-radius:6px; font-family:monospace; font-weight:600;">
+            <span style="font-size:0.75rem; color:#64748b;">Enter the 12-digit transaction ID from Google Pay / PhonePe / Paytm / Bank.</span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:10px;">
+            <button type="button" id="btnBackToStep1" class="btn alt" style="padding:9px 16px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">← Back</button>
+            <button type="submit" class="c-btn-apply" id="btnSubmitPayment" style="padding:10px 22px;">Confirm &amp; Generate Fee Receipt →</button>
+          </div>
+        </form>
+        <div id="payResultMsg" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- Wizard Step 3: Official Printable Fee Transaction Receipt -->
+      <div id="admissionStep3" style="display:none;">
+        <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div>
+            <span style="background:#dcfce7; color:#15803d; font-weight:700; font-size:0.75rem; padding:3px 10px; border-radius:20px;">✓ PAYMENT RECORDED &amp; ADMITTED</span>
+            <h3 style="margin:4px 0 0; color:#064e3b; font-size:1.3rem;">Official Fee Transaction Receipt</h3>
+          </div>
+          <button type="button" class="btn-close-modal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">✕</button>
+        </div>
+
+        <!-- Printable Document Container -->
+        <div id="printableReceiptBox" style="background:#ffffff; border:2px solid #064e3b; border-radius:10px; padding:20px; box-shadow:0 4px 14px rgba(0,0,0,0.06); font-family:'Inter', sans-serif;">
+          <!-- Council & Centre Header -->
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #064e3b; padding-bottom:12px; margin-bottom:14px;">
+            <div>
+              <b style="font-size:1.15rem; color:#064e3b; display:block;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</b>
+              <span style="font-size:0.8rem; color:#047857; font-weight:600;">Authorized Franchise Training Centre</span>
+              <div id="recCentreName" style="font-size:0.95rem; font-weight:800; color:#0f172a; margin-top:2px;">Navya Computer Institute</div>
+              <div id="recCentreCode" style="font-size:0.8rem; color:#64748b;">Centre Code: PESC00001</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="background:#064e3b; color:#fff; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:4px; display:inline-block;">FEE RECEIPT</div>
+              <div id="recReceiptNo" style="font-family:monospace; font-weight:700; color:#b91c1c; font-size:0.95rem; margin-top:4px;">REC-2026-98213</div>
+              <div id="recDateTime" style="font-size:0.75rem; color:#64748b;">22 Oct 2026</div>
+            </div>
+          </div>
+
+          <!-- Student & Course Details Table -->
+          <table style="width:100%; border-collapse:collapse; font-size:0.84rem; margin-bottom:14px;">
+            <tbody>
+              <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:6px 0; color:#64748b; width:40%;">Candidate Full Name:</td>
+                <td style="padding:6px 0; font-weight:700; color:#0f172a;" id="recStudentName">Rahul Sharma</td>
+              </tr>
+              <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:6px 0; color:#64748b;">Father's Name:</td>
+                <td style="padding:6px 0; font-weight:600; color:#0f172a;" id="recFatherName">Suresh Sharma</td>
+              </tr>
+              <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:6px 0; color:#64748b;">Student Code / Roll No:</td>
+                <td style="padding:6px 0; font-weight:800; color:#047857; font-family:monospace;" id="recRollNo">PESC00001-2026-00007</td>
+              </tr>
+              <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:6px 0; color:#64748b;">Registered Mobile / Email:</td>
+                <td style="padding:6px 0; font-weight:600; color:#0f172a;" id="recContact">9876543210</td>
+              </tr>
+              <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:6px 0; color:#64748b;">Course Enrolled:</td>
+                <td style="padding:6px 0; font-weight:700; color:#0f172a;" id="recCourse">DCA - Diploma in Computer Applications</td>
+              </tr>
+              <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:6px 0; color:#64748b;">Payment Method:</td>
+                <td style="padding:6px 0; font-weight:600; color:#0f172a;" id="recPayMode">UPI Online</td>
+              </tr>
+              <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:6px 0; color:#64748b;">Transaction UTR / Ref No:</td>
+                <td style="padding:6px 0; font-family:monospace; font-weight:700; color:#0f172a;" id="recUtrNo">412890192839</td>
+              </tr>
+              <tr style="background:#ecfdf5; font-size:0.95rem;">
+                <td style="padding:8px 6px; font-weight:700; color:#064e3b;">Total Course Fee Paid:</td>
+                <td style="padding:8px 6px; font-weight:900; color:#047857; font-size:1.15rem;" id="recAmountPaid">₹6,500</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Footer Stamp & Signatures -->
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid #cbd5e1; padding-top:12px;">
+            <div style="font-size:0.75rem; color:#64748b; line-height:1.4;">
+              <b>Verification Note:</b><br>
+              This is a computer generated official fee receipt.<br>
+              Student Portal Access Password: <code style="font-weight:700; color:#047857;">Student@123</code>
+            </div>
+            <div style="text-align:right;">
+              <div style="width:110px; border-bottom:1px solid #064e3b; margin-bottom:4px; margin-left:auto;"></div>
+              <span style="font-size:0.78rem; font-weight:700; color:#064e3b;">Authorized Centre Seal &amp; Sign</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receipt Action Buttons -->
+        <div class="no-print" style="margin-top:16px; display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap;">
+          <button type="button" class="btn" onclick="window.print()" style="background:#047857; color:#fff; font-weight:700; padding:10px 20px; border-radius:6px; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            🖨️ Print / Save PDF Receipt
+          </button>
+          <a href="/student" class="btn gold" style="font-weight:700; padding:10px 20px; border-radius:6px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+            🎓 Go to Student Portal →
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <script src="/assets/js/app.js"></script>
   <script>
+    // Global references and safe fallbacks
     let centreData = null;
+    let selectedCourseFee = 6500;
+    let selectedCourseName = 'DCA - Diploma in Computer Applications';
+    let applicationData = {};
 
-    // Load Centre Information dynamically
-    guard(async () => {
-      const pathParts = window.location.pathname.split('/').filter(Boolean);
-      let querySlug = new URLSearchParams(window.location.search).get('slug') || new URLSearchParams(window.location.search).get('centre');
-      if (pathParts[0] === 'c' && pathParts[1]) querySlug = pathParts[1];
-
-      const apiUrl = querySlug ? `/api/public/site?slug=${encodeURIComponent(querySlug)}` : '/api/public/site';
-      const d = await api(apiUrl);
-      centreData = d;
-      const c = d.centre;
-      const o = d.owner;
-
-      // Update Page Title and Brand
-      document.title = `${c.name} – Franchise Centre of PES Council`;
-      $('#brandName').textContent = c.name;
-      $('#footerBrandName').textContent = c.name;
-      $('#trustCode').textContent = c.code;
-      $('#footerCode').textContent = c.code;
-      const domainStr = `${c.slug}.pescouncil.in`;
-      $('#trustDomain').textContent = domainStr;
-      $('#footerDomain').textContent = domainStr;
-      $('#inqCentreId').value = c.id;
-
-      // Admin portal link with centre slug
-      const adminUrl = `/portal?centre=${encodeURIComponent(c.slug)}`;
-      if ($('#linkCentreAdmin')) $('#linkCentreAdmin').href = adminUrl;
-      if ($('#footerAdminLink')) $('#footerAdminLink').href = adminUrl;
-
-      // Hero
-      $('#heroDesc').textContent = `Join ${c.name} for professional computer courses. Build skills, get certified, and grow your career.`;
-
-      // About
-      $('#aboutStory').textContent = `Established in ${d.stats.established_year}, ${c.name} is an authorized franchise centre of PES Council, dedicated to providing quality computer education and skill training to students in the region. We are committed to practical learning, experienced faculty, and career-focused training with modern labs and updated curriculum.`;
-      $('#contactPhone').textContent = o.mobile || '+91 98765 43210';
-      $('#contactEmail').textContent = o.email || `info@${c.slug}.pescouncil.in`;
-      $('#contactAddress').textContent = c.address || `${c.district}, ${c.state}`;
-      $('#footerPhone').textContent = o.mobile || '+91 98765 43210';
-      $('#footerEmail').textContent = o.email || `info@${c.slug}.pescouncil.in`;
-
-      // Director & Map
-      $('#directorName').textContent = o.name || 'Dr. Ramesh Kumar';
-      $('#directorTitle').textContent = `Director, ${c.name}`;
-      $('#mapCentreName').textContent = c.name;
-      $('#mapLocation').textContent = `${c.district}, ${c.state}`;
-
-      // Copyright
-      $('#copyrightText').textContent = `© 2026 ${c.name}. All Rights Reserved. | PES Council Affiliated | Centre Code: ${c.code}`;
-
-      // Mockup-matching 5 popular courses
-      const mockupCourses = [
-        { code: 'DCA', name: 'Diploma in Computer Applications', duration: '6 Months', fee: '₹6,500', icon: '📄' },
-        { code: 'ADCA', name: 'Advanced Diploma in Computer Applications', duration: '12 Months', fee: '₹12,000', icon: '💻' },
-        { code: 'Tally', name: 'Tally with GST & Taxation', duration: '3 Months', fee: '₹4,000', icon: '🧮' },
-        { code: 'Typing', name: 'Tally with GST & Taxation', duration: '3 Months', fee: '₹4,000', icon: '⌨️' },
-        { code: 'Typing', name: 'English & Kannada Typing', duration: '2 Months', fee: '₹2,000', icon: '⌨️' },
-      ];
-
-      const grid = $('#courseGrid');
-      const select = $('#inqCourseSelect');
-
-      // Use courses from database if available, or mockup fallback
-      const coursesToDisplay = (d.courses && d.courses.length >= 3) ? d.courses.map((co, idx) => ({
-        id: co.id,
-        code: co.code,
-        name: co.name,
-        duration: `${co.duration_months} Months`,
-        fee: `₹${(co.local_fee_rupees || 4000).toLocaleString('en-IN')}`,
-        icon: co.code.includes('DCA') ? '📄' : co.code.includes('TALLY') ? '🧮' : co.code.includes('TYPE') ? '⌨️' : '💻'
-      })) : mockupCourses;
-
-      grid.innerHTML = coursesToDisplay.slice(0, 5).map(co => `
-        <div class="c-course-card">
-          <div class="c-course-icon">${co.icon}</div>
-          <h4>${esc(co.code)}</h4>
-          <span class="sub">${esc(co.name)}</span>
-          <div class="c-course-duration">Duration: ${esc(co.duration)}</div>
-          <div class="c-course-fee">
-            Local Fees: <b>${esc(co.fee)}</b>
-          </div>
-          <button class="c-btn-enroll" onclick="openApplyWithCourse('${esc(co.code)}')">Apply Now</button>
-        </div>
-      `).join('');
-
-      if (d.courses && d.courses.length > 0) {
-        select.innerHTML = `<option value="">Select a course…</option>` +
-          d.courses.map(co => `<option value="${co.id}">${esc(co.code)} - ${esc(co.name)} (${co.duration_months} Months)</option>`).join('');
-      } else {
-        select.innerHTML = `
-          <option value="">Select a course…</option>
-          <option value="1">DCA - Diploma in Computer Applications</option>
-          <option value="2">ADCA - Advanced Diploma in Computer Applications</option>
-          <option value="3">Tally Prime with GST & Taxation</option>
-          <option value="4">English & Regional Typing</option>
-        `;
-      }
-    });
-
-    // Student Login Modal Handlers
+    // 1. UNCONDITIONAL EVENT HANDLERS (Registered immediately so buttons always respond!)
     const studentModal = $('#studentLoginModal');
-    $('#btnStudentLogin').onclick = () => { studentModal.style.display = 'flex'; };
-    $('#btnCloseStudentModal').onclick = () => { studentModal.style.display = 'none'; $('#modalLoginMsg').innerHTML = ''; };
+    const centreModal = $('#centreLoginModal');
+    const admissionModal = $('#admissionModal');
 
-    // Student Login Submit
+    const openStudentModal = () => { studentModal.style.display = 'flex'; };
+    const closeStudentModal = () => { studentModal.style.display = 'none'; $('#modalLoginMsg').innerHTML = ''; };
+
+    const openCentreModal = () => {
+      if (centreData && centreData.centre) {
+        $('#modalCentreCode').value = centreData.centre.code || centreData.centre.centre_code;
+        $('#demoCentreCode').textContent = centreData.centre.code || centreData.centre.centre_code;
+        const slug = centreData.centre.slug || 'navya';
+        $('#directPortalLink').href = `/portal?centre=${encodeURIComponent(slug)}`;
+      }
+      centreModal.style.display = 'flex';
+    };
+    const closeCentreModal = () => { centreModal.style.display = 'none'; $('#modalCentreMsg').innerHTML = ''; };
+
+    const openAdmissionModal = (courseCode) => {
+      $('#admissionStep1').style.display = 'block';
+      $('#admissionStep2').style.display = 'none';
+      $('#admissionStep3').style.display = 'none';
+      if (courseCode && $('#inqCourseSelect')) {
+        const opts = Array.from($('#inqCourseSelect').options);
+        const match = opts.find(o => o.text.toUpperCase().includes(courseCode.toUpperCase()));
+        if (match) {
+          $('#inqCourseSelect').value = match.value;
+          updateSelectedCourseFee();
+        }
+      }
+      admissionModal.style.display = 'flex';
+    };
+    const closeAdmissionModal = () => {
+      admissionModal.style.display = 'none';
+      $('#payResultMsg').innerHTML = '';
+    };
+
+    // Attach Header & Action Buttons immediately
+    if ($('#btnStudentLogin')) $('#btnStudentLogin').onclick = openStudentModal;
+    if ($('#btnCloseStudentModal')) $('#btnCloseStudentModal').onclick = closeStudentModal;
+
+    if ($('#btnCentreAdmin')) $('#btnCentreAdmin').onclick = openCentreModal;
+    if ($('#footerAdminLink')) $('#footerAdminLink').onclick = (e) => { e.preventDefault(); openCentreModal(); };
+    if ($('#btnCloseCentreModal')) $('#btnCloseCentreModal').onclick = closeCentreModal;
+
+    if ($('#btnOpenApply')) $('#btnOpenApply').onclick = () => openAdmissionModal();
+    if ($('#btnHeroJoin')) $('#btnHeroJoin').onclick = () => openAdmissionModal();
+    if ($('#btnPayNowApply')) $('#btnPayNowApply').onclick = () => openAdmissionModal();
+
+    $$('.btn-close-modal').forEach(btn => btn.onclick = closeAdmissionModal);
+    $$('.btn-cancel-modal').forEach(btn => btn.onclick = closeAdmissionModal);
+
+    window.openApplyWithCourse = (courseCode) => {
+      openAdmissionModal(courseCode);
+    };
+
+    // Copy Helper
+    function setupCopy(btnId, targetText) {
+      const btn = $(btnId);
+      if (!btn) return;
+      btn.onclick = () => {
+        navigator.clipboard.writeText(typeof targetText === 'function' ? targetText() : targetText).then(() => {
+          const original = btn.textContent;
+          btn.textContent = '✓ Copied!';
+          setTimeout(() => { btn.textContent = original; }, 1800);
+        });
+      };
+    }
+    setupCopy('#btnCopyUpi', () => $('#centreUpiDisplay').textContent.trim());
+    setupCopy('#btnCopyAcc', () => $('#bankAcc').textContent.trim());
+    setupCopy('#btnCopyIfsc', () => $('#bankIfsc').textContent.trim());
+    setupCopy('#btnModalCopyUpi', () => $('#modalUpiId').textContent.trim());
+
+    // 2. Student Login Submit
     $('#studentLoginForm').onsubmit = (e) => {
       e.preventDefault();
       guard(async () => {
         const body = form(e.target);
         const res = await api('/api/auth/login', { method: 'POST', body });
-        $('#modalLoginMsg').innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-weight:700; text-align:center;">✓ Login successful! Redirecting…</div>`;
-        setTimeout(() => { location.href = '/student'; }, 1000);
+        $('#modalLoginMsg').innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-weight:700; text-align:center;">✓ Login successful! Redirecting to student panel…</div>`;
+        setTimeout(() => { location.href = '/student'; }, 900);
       });
     };
 
-    // Centre Admin Login Modal Handlers (Password Required)
-    const centreModal = $('#centreLoginModal');
-    const openCentreLogin = () => {
-      if (centreData && centreData.centre) {
-        $('#modalCentreCode').value = centreData.centre.code;
-        $('#demoCentreCode').textContent = centreData.centre.code;
-      }
-      centreModal.style.display = 'flex';
-    };
-    if ($('#btnCentreAdmin')) $('#btnCentreAdmin').onclick = openCentreLogin;
-    if ($('#footerAdminLink')) $('#footerAdminLink').onclick = (e) => { e.preventDefault(); openCentreLogin(); };
-    $('#btnCloseCentreModal').onclick = () => { centreModal.style.display = 'none'; $('#modalCentreMsg').innerHTML = ''; };
-
-    // Centre Admin Login Submit
+    // 3. Centre Admin Login Submit
     $('#centreLoginForm').onsubmit = (e) => {
       e.preventDefault();
       guard(async () => {
@@ -1075,32 +1402,93 @@
       });
     };
 
-    // Admission Modal Handlers
-    const admissionModal = $('#admissionModal');
-    const openModal = () => { admissionModal.style.display = 'flex'; };
-    const closeModal = () => { admissionModal.style.display = 'none'; $('#inqResult').innerHTML = ''; };
+    // Course select change fee calculator
+    function updateSelectedCourseFee() {
+      const sel = $('#inqCourseSelect');
+      const val = sel.value;
+      const text = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '';
+      selectedCourseName = text;
 
-    $('#btnOpenApply').onclick = openModal;
-    $('#btnHeroJoin').onclick = openModal;
-    $('#btnCloseModal').onclick = closeModal;
-    $('#btnCancelModal').onclick = closeModal;
+      if (text.includes('ADCA')) selectedCourseFee = 12000;
+      else if (text.includes('DCA')) selectedCourseFee = 6500;
+      else if (text.includes('Tally') || text.includes('TALLY')) selectedCourseFee = 4000;
+      else if (text.includes('Typing') || text.includes('TYPE')) selectedCourseFee = 2000;
+      else if (text.includes('CCC')) selectedCourseFee = 2500;
+      else if (text.includes('PGDCA')) selectedCourseFee = 16000;
+      else selectedCourseFee = 4000;
 
-    window.openApplyWithCourse = (courseCode) => {
-      openModal();
+      $('#step1FeeDisplay').textContent = `₹${selectedCourseFee.toLocaleString('en-IN')}`;
+    }
+    $('#inqCourseSelect').onchange = updateSelectedCourseFee;
+
+    // Admission Step 1 Submit -> Proceed to Step 2
+    $('#step1Form').onsubmit = (e) => {
+      e.preventDefault();
+      applicationData = form(e.target);
+      updateSelectedCourseFee();
+
+      $('#step2CandidateName').textContent = applicationData.name;
+      $('#step2CourseName').textContent = selectedCourseName;
+      $('#step2FeeDisplay').textContent = `₹${selectedCourseFee.toLocaleString('en-IN')}`;
+
+      // Update Step 2 dynamic UPI QR with Centre's UPI ID and the exact Fee amount
+      const upiId = (centreData && centreData.centre && centreData.centre.upi_id) ? centreData.centre.upi_id : 'pescouncil@upi';
+      const cName = (centreData && centreData.centre && centreData.centre.name) ? centreData.centre.name : 'Authorized Institute';
+      const qrData = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(cName)}&am=${selectedCourseFee}&cu=INR`;
+      $('#modalPayQrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrData)}`;
+
+      $('#admissionStep1').style.display = 'none';
+      $('#admissionStep2').style.display = 'block';
     };
 
-    // Admission Form Submit
-    $('#inquiryForm').onsubmit = (e) => {
+    // Step 2 Back Button
+    $('#btnBackToStep1').onclick = () => {
+      $('#admissionStep2').style.display = 'none';
+      $('#admissionStep1').style.display = 'block';
+    };
+
+    // Admission Step 2 Submit -> Pay & Generate Instant Official Receipt
+    $('#step2PayForm').onsubmit = (e) => {
       e.preventDefault();
       guard(async () => {
-        const body = form(e.target);
-        const res = await api('/api/public/admission-inquiry', { method: 'POST', body });
-        $('#inqResult').innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:12px; border-radius:8px; font-weight:600; text-align:center;">✓ ${esc(res.message)}</div>`;
-        setTimeout(() => { closeModal(); e.target.reset(); }, 2500);
+        const payData = form(e.target);
+        const submitPayload = {
+          ...applicationData,
+          amount_paid: selectedCourseFee,
+          payment_mode: payData.payment_mode,
+          utr_no: payData.utr_no,
+          slug: (centreData && centreData.centre) ? centreData.centre.slug : '',
+          centre_id: (centreData && centreData.centre) ? centreData.centre.id : 1
+        };
+
+        $('#btnSubmitPayment').disabled = true;
+        $('#btnSubmitPayment').textContent = 'Processing Admission…';
+
+        const res = await api('/api/public/admission-pay', { method: 'POST', body: submitPayload });
+        const rec = res.receipt || {};
+
+        // Populate Printable Receipt (Step 3)
+        $('#recCentreName').textContent = rec.centre_name || (centreData && centreData.centre ? centreData.centre.name : 'Authorized Training Centre');
+        $('#recCentreCode').textContent = `Centre Code: ${rec.centre_code || (centreData && centreData.centre ? centreData.centre.code : 'PESC00001')}`;
+        $('#recReceiptNo').textContent = rec.receipt_no || `REC-2026-${Math.floor(10000 + Math.random()*90000)}`;
+        $('#recDateTime').textContent = `${rec.date || new Date().toLocaleDateString('en-IN')} ${rec.time || ''}`;
+        $('#recStudentName').textContent = rec.name || applicationData.name;
+        $('#recFatherName').textContent = rec.father_name || applicationData.father_name;
+        $('#recRollNo').textContent = rec.student_code || rec.roll_no || 'PESC00001-2026-00007';
+        $('#recContact').textContent = `${rec.mobile || applicationData.mobile} / ${rec.email || applicationData.email || 'N/A'}`;
+        $('#recCourse').textContent = `${rec.course_code || ''} - ${rec.course_name || selectedCourseName}`;
+        $('#recPayMode').textContent = rec.payment_mode || payData.payment_mode;
+        $('#recUtrNo').textContent = rec.transaction_ref || payData.utr_no;
+        $('#recAmountPaid').textContent = `₹${(rec.fee_paid || selectedCourseFee).toLocaleString('en-IN')}`;
+
+        $('#admissionStep2').style.display = 'none';
+        $('#admissionStep3').style.display = 'block';
+        $('#btnSubmitPayment').disabled = false;
+        $('#btnSubmitPayment').textContent = 'Confirm & Generate Fee Receipt →';
       });
     };
 
-    // Verification Form Submit
+    // 4. Verification Form Submit
     $('#vf').onsubmit = (e) => {
       e.preventDefault();
       guard(async () => {
@@ -1132,6 +1520,133 @@
         }
       });
     };
+
+    // 5. Dynamic Data Hydration from Server API
+    guard(async () => {
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      let querySlug = new URLSearchParams(window.location.search).get('slug') || new URLSearchParams(window.location.search).get('centre');
+      if (pathParts[0] === 'c' && pathParts[1]) querySlug = pathParts[1];
+
+      // Check if server injected window.__CENTRE_DATA__ directly
+      if (window.__CENTRE_DATA__ && window.__CENTRE_DATA__.centre) {
+        hydrateCentre(window.__CENTRE_DATA__);
+      }
+
+      // Also call /api/public/site for live updates
+      const apiUrl = querySlug ? `/api/public/site?slug=${encodeURIComponent(querySlug)}` : '/api/public/site';
+      const d = await api(apiUrl);
+      if (d && d.centre) {
+        hydrateCentre(d);
+      }
+    });
+
+    function hydrateCentre(d) {
+      centreData = d;
+      const c = d.centre;
+      const o = d.owner || {};
+
+      document.title = `${c.name} – Official Franchise Portal (${c.code || c.centre_code})`;
+      $('#brandName').textContent = c.name;
+      $('#footerBrandName').textContent = c.name;
+      const codeVal = c.code || c.centre_code || 'PESC00001';
+      $('#trustCode').textContent = codeVal;
+      $('#footerCode').textContent = codeVal;
+      $('#demoCentreCode').textContent = codeVal;
+
+      const domainStr = `${c.slug}.pescouncil.in`;
+      $('#trustDomain').textContent = domainStr;
+      $('#footerDomain').textContent = domainStr;
+
+      const adminUrl = `/portal?centre=${encodeURIComponent(c.slug)}`;
+      if ($('#footerAdminLink')) $('#footerAdminLink').href = adminUrl;
+      if ($('#directPortalLink')) $('#directPortalLink').href = adminUrl;
+
+      $('#heroDesc').textContent = `Join ${c.name} for professional computer diploma and IT courses. Build practical skills, get certified, and kickstart your career.`;
+      $('#aboutStory').textContent = `Established as an authorized franchise centre of Purvanchal Education & Skill Council (PESC), ${c.name} is dedicated to providing quality computer education and skill training in ${c.district || 'Varanasi'}, ${c.state || 'Uttar Pradesh'}.`;
+
+      $('#contactPhone').textContent = o.mobile || c.phone || '+91 98765 43210';
+      $('#contactEmail').textContent = o.email || c.email || `director@${c.slug}.pescouncil.in`;
+      $('#contactAddress').textContent = c.address || `${c.district}, ${c.state}`;
+      $('#footerEmail').textContent = o.email || c.email || `director@${c.slug}.pescouncil.in`;
+
+      $('#directorName').textContent = o.name || c.director_name || 'Centre Director';
+      $('#directorTitle').textContent = `Director, ${c.name}`;
+      $('#mapCentreName').textContent = c.name;
+      $('#mapLocation').textContent = `${c.district || 'Varanasi'}, ${c.state || 'Uttar Pradesh'}`;
+      $('#copyrightText').textContent = `© 2026 ${c.name}. All Rights Reserved. | PES Council Affiliated | Centre Code: ${codeVal}`;
+
+      // Bank & UPI Details on Homepage & Modal
+      const upiId = c.upi_id || `${(c.phone || '9876543210').replace(/[^0-9]/g, '')}@paytm`;
+      const bankHolder = c.account_holder || o.name || c.director_name || c.name;
+      const bankName = c.bank_name || 'State Bank of India';
+      const bankAcc = c.account_no || '38920192837';
+      const bankIfsc = c.ifsc || 'SBIN0001234';
+
+      $('#centreUpiDisplay').textContent = upiId;
+      $('#bankHolder').textContent = bankHolder;
+      $('#bankName').textContent = bankName;
+      $('#bankAcc').textContent = bankAcc;
+      $('#bankIfsc').textContent = bankIfsc;
+
+      // Update Modal bank details
+      $('#modalUpiId').textContent = upiId;
+      $('#modalBankHolder').textContent = bankHolder;
+      $('#modalBankName').textContent = bankName;
+      $('#modalBankAcc').textContent = bankAcc;
+      $('#modalBankIfsc').textContent = bankIfsc;
+
+      // Dynamic QR Code Generation
+      const upiQrUrl = c.qr_code_url || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`upi://pay?pa=${upiId}&pn=${c.name}&cu=INR`)}`;
+      $('#centreQrImg').src = upiQrUrl;
+
+      // Render 5 Popular Courses
+      const mockupCourses = [
+        { code: 'DCA', name: 'Diploma in Computer Applications', duration: '6 Months', fee: '₹6,500', icon: '📄' },
+        { code: 'ADCA', name: 'Advanced Diploma in Computer Applications', duration: '12 Months', fee: '₹12,000', icon: '💻' },
+        { code: 'Tally', name: 'Tally Prime with GST & Taxation', duration: '3 Months', fee: '₹4,000', icon: '🧮' },
+        { code: 'Typing', name: 'English & Hindi Computer Typing', duration: '2 Months', fee: '₹2,000', icon: '⌨️' },
+        { code: 'CCC', name: 'Course on Computer Concepts', duration: '3 Months', fee: '₹2,500', icon: '🖥️' },
+      ];
+
+      const grid = $('#courseGrid');
+      const select = $('#inqCourseSelect');
+
+      const coursesToDisplay = (d.courses && d.courses.length >= 3) ? d.courses.map(co => ({
+        id: co.id,
+        code: co.code,
+        name: co.name,
+        duration: `${co.duration_months} Months`,
+        fee: `₹${(co.local_fee_rupees || 4000).toLocaleString('en-IN')}`,
+        icon: co.code.includes('DCA') ? '📄' : co.code.includes('TALLY') ? '🧮' : co.code.includes('TYPE') ? '⌨️' : '💻'
+      })) : mockupCourses;
+
+      grid.innerHTML = coursesToDisplay.slice(0, 5).map(co => `
+        <div class="c-course-card">
+          <div class="c-course-icon">${co.icon}</div>
+          <h4>${esc(co.code)}</h4>
+          <span class="sub">${esc(co.name)}</span>
+          <div class="c-course-duration">Duration: ${esc(co.duration)}</div>
+          <div class="c-course-fee">
+            Local Fees: <b>${esc(co.fee)}</b>
+          </div>
+          <button class="c-btn-enroll" onclick="openApplyWithCourse('${esc(co.code)}')">Apply Now</button>
+        </div>
+      `).join('');
+
+      if (d.courses && d.courses.length > 0) {
+        select.innerHTML = `<option value="">Select a course…</option>` +
+          d.courses.map(co => `<option value="${co.id}">${esc(co.code)} - ${esc(co.name)} (${co.duration_months} Months)</option>`).join('');
+      } else {
+        select.innerHTML = `
+          <option value="">Select a course…</option>
+          <option value="1">DCA - Diploma in Computer Applications (6 Months)</option>
+          <option value="2">ADCA - Advanced Diploma in Computer Applications (12 Months)</option>
+          <option value="3">Tally Prime with GST & Taxation (3 Months)</option>
+          <option value="4">English & Hindi Typing (2 Months)</option>
+          <option value="5">CCC - Course on Computer Concepts (3 Months)</option>
+        `;
+      }
+    }
   </script>
 </body>
 </html>

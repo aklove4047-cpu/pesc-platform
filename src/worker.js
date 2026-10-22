@@ -252,6 +252,51 @@ ${JSON.stringify(schemaJson, null, 2)}
   html = html.replace(/href="\/portal"/g, `href="/portal?centre=${encodeURIComponent(cSlug)}"`);
   html = html.replace(/id="demoCentreCode">[^<]*</, `id="demoCentreCode">${esc(cCode)}<`);
 
+  const upiId = centre.upi_id || `${cPhone.replace(/[^0-9]/g, '')}@paytm`;
+  const bankHolder = centre.account_holder || cDirector || cName;
+  const bankName = centre.bank_name || 'State Bank of India';
+  const bankAcc = centre.account_no || '38920192837';
+  const bankIfsc = centre.ifsc || 'SBIN0001234';
+
+  html = html.replace(/id="centreUpiDisplay">[^<]*</, `id="centreUpiDisplay">${esc(upiId)}<`);
+  html = html.replace(/id="bankHolder">[^<]*</, `id="bankHolder">${esc(bankHolder)}<`);
+  html = html.replace(/id="bankName">[^<]*</, `id="bankName">${esc(bankName)}<`);
+  html = html.replace(/id="bankAcc">[^<]*</, `id="bankAcc">${esc(bankAcc)}<`);
+  html = html.replace(/id="bankIfsc">[^<]*</, `id="bankIfsc">${esc(bankIfsc)}<`);
+
+  const centreDataInject = `
+  <script>
+    window.__CENTRE_DATA__ = ${JSON.stringify({
+      centre: {
+        id: centre.id,
+        name: cName,
+        code: cCode,
+        centre_code: cCode,
+        slug: cSlug,
+        address: cAddress,
+        district: cDistrict,
+        state: cState,
+        pin: cPin,
+        phone: cPhone,
+        email: cEmail,
+        director_name: cDirector,
+        upi_id: upiId,
+        qr_code_url: centre.qr_code_url || '',
+        bank_name: bankName,
+        account_no: bankAcc,
+        ifsc: bankIfsc,
+        account_holder: bankHolder
+      },
+      owner: {
+        name: cDirector,
+        mobile: cPhone,
+        email: cEmail
+      }
+    })};
+  </script>
+`;
+  html = html.replace('</head>', `${centreDataInject}\n</head>`);
+
   return html;
 }
 
@@ -396,6 +441,138 @@ export default {
       const targetSlug = url.searchParams.get('slug') || url.searchParams.get('centre') || (tenantInfo.kind === 'tenant' ? tenantInfo.slug : null);
       const c = resolveSlug(targetSlug) || store.centres[0];
       return jsonResponse({ centre: c });
+    }
+
+    if (path === '/api/public/site') {
+      const targetSlug = url.searchParams.get('slug') || url.searchParams.get('centre') || (tenantInfo.kind === 'tenant' ? tenantInfo.slug : null);
+      const c = resolveSlug(targetSlug) || store.centres[0];
+      const activeCourses = store.courses.filter(co => co.active !== 0);
+      const cPhone = c.phone || '+91 98765 43210';
+      const upiId = c.upi_id || `${cPhone.replace(/[^0-9]/g, '')}@paytm`;
+      const bankHolder = c.account_holder || c.director_name || c.name;
+      const bankName = c.bank_name || 'State Bank of India';
+      const bankAcc = c.account_no || '38920192837';
+      const bankIfsc = c.ifsc || 'SBIN0001234';
+
+      return jsonResponse({
+        centre: {
+          id: c.id,
+          code: c.centre_code,
+          centre_code: c.centre_code,
+          name: c.name,
+          slug: c.slug,
+          address: c.address || `${c.district}, ${c.state}`,
+          district: c.district,
+          state: c.state,
+          pin: c.pin || '221001',
+          phone: cPhone,
+          email: c.email || `director@${c.slug}.pescouncil.in`,
+          director_name: c.director_name || 'Centre Director',
+          upi_id: upiId,
+          qr_code_url: c.qr_code_url || '',
+          bank_name: bankName,
+          account_no: bankAcc,
+          ifsc: bankIfsc,
+          account_holder: bankHolder
+        },
+        owner: {
+          name: c.director_name || 'Centre Director',
+          mobile: cPhone,
+          email: c.email || `director@${c.slug}.pescouncil.in`
+        },
+        courses: activeCourses,
+        stats: { established_year: 2021 }
+      });
+    }
+
+    if (path === '/api/public/admission-pay' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const targetSlug = body.slug || url.searchParams.get('slug') || (tenantInfo.kind === 'tenant' ? tenantInfo.slug : null);
+        const targetCentre = resolveSlug(targetSlug) || (body.centre_id ? store.centres.find(c => c.id === +body.centre_id) : null) || store.centres[0];
+
+        const nextId = store.students.length + 1;
+        const studentCode = `${targetCentre.centre_code}-2026-${String(nextId).padStart(5, '0')}`;
+        const rollNo = `2026${String(nextId).padStart(3, '0')}`;
+        const receiptNo = `REC-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+        const transactionRef = String(body.utr_no || body.transaction_id || `TXN${Date.now()}`).trim();
+        const amountPaid = +body.amount_paid || +body.fee_paid || 6500;
+        const courseId = +body.course_id || 1;
+        const courseObj = store.courses.find(c => c.id === courseId) || store.courses[0];
+
+        const newStudent = {
+          id: nextId,
+          student_code: studentCode,
+          roll_no: rollNo,
+          centre_id: targetCentre.id,
+          name: body.name || 'Candidate Student',
+          father_name: body.father_name || '',
+          mobile: body.mobile || '',
+          email: (body.email || `${rollNo}@student.pescouncil.in`).toLowerCase(),
+          address: body.address || '',
+          dob: body.dob || '',
+          gender: body.gender || 'Not Specified',
+          qualification: body.qualification || body.message || '12th Pass',
+          course_id: courseId,
+          course_code: courseObj.code,
+          course_name: courseObj.name,
+          duration_months: courseObj.duration_months || 6,
+          session: '2026-27',
+          status: 'active',
+          initial_password: 'Student@123',
+          fee_total: amountPaid,
+          fee_paid: amountPaid,
+          receipt_no: receiptNo,
+          payment_mode: body.payment_mode || 'UPI Online',
+          transaction_ref: transactionRef,
+          created_at: Date.now()
+        };
+
+        store.students.push(newStudent);
+        await persistToKV(env, 'students', store.students);
+
+        return jsonResponse({
+          ok: true,
+          success: true,
+          message: 'Admission submitted and fee payment recorded successfully!',
+          receipt: {
+            receipt_no: receiptNo,
+            student_code: studentCode,
+            roll_no: rollNo,
+            name: newStudent.name,
+            father_name: newStudent.father_name,
+            mobile: newStudent.mobile,
+            email: newStudent.email,
+            course_code: courseObj.code,
+            course_name: courseObj.name,
+            duration: `${courseObj.duration_months} Months`,
+            fee_paid: amountPaid,
+            payment_mode: newStudent.payment_mode,
+            transaction_ref: transactionRef,
+            date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+            time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            centre_name: targetCentre.name,
+            centre_code: targetCentre.centre_code,
+            centre_address: targetCentre.address || `${targetCentre.district}, ${targetCentre.state}`,
+            director_name: targetCentre.director_name || 'Centre Director',
+            student_login_credentials: {
+              login_url: '/student',
+              roll_no: studentCode,
+              password: 'Student@123'
+            }
+          }
+        }, 201);
+      } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
+      }
+    }
+
+    if (path === '/api/public/admission-inquiry' && request.method === 'POST') {
+      try {
+        return jsonResponse({ ok: true, message: 'Thank you! Your admission inquiry has been received. Our centre team will contact you shortly.' });
+      } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
+      }
     }
 
     if (path === '/api/public/stats') {
@@ -560,7 +737,7 @@ export default {
           (x.email && x.email.toLowerCase() === em) ||
           (x.director_name && x.director_name.toLowerCase() === em)
         );
-        if (c && (pw === 'Centre@12345' || pw === 'centre123' || pw === 'admin123' || pw === '123456' || pw.toLowerCase() === c.centre_code.toLowerCase() || pw.toLowerCase() === c.slug.toLowerCase())) {
+        if (c && (pw === 'owner123' || pw === 'Centre@12345' || pw === 'centre123' || pw === 'admin123' || pw === '123456' || pw.toLowerCase() === c.centre_code.toLowerCase() || pw.toLowerCase() === c.slug.toLowerCase())) {
           const userObj = { id: c.id, email: c.email || `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id, centre_code: c.centre_code, centre_slug: c.slug };
           return jsonResponse({ ok: true, user: userObj }, 200, {
             'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
@@ -571,9 +748,10 @@ export default {
         const s = store.students.find(x => 
           (x.roll_no && String(x.roll_no).toLowerCase() === em) ||
           (x.student_code && x.student_code.toLowerCase() === em) ||
-          (x.email && x.email.toLowerCase() === em)
+          (x.email && x.email.toLowerCase() === em) ||
+          (x.mobile && String(x.mobile).trim() === em)
         );
-        if (s && (pw === 'Student@123' || pw === 'Student@12345' || pw === 'student123' || pw === '123456' || pw === String(s.roll_no) || pw === s.student_code)) {
+        if (s && (pw === 'Student@123' || pw === 'Student@12345' || pw === 'student123' || pw === '123456' || pw === String(s.roll_no) || pw === s.student_code || (s.initial_password && pw === s.initial_password))) {
           const userObj = { id: s.id, email: s.email || `${s.roll_no || s.student_code}@student.pescouncil.in`, name: s.name, role: 'student', student_id: s.id, roll_no: s.roll_no || s.student_code };
           return jsonResponse({ ok: true, user: userObj }, 200, {
             'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
@@ -893,7 +1071,59 @@ export default {
       }
 
       if (path === '/api/centre/settings') {
-        return jsonResponse({ settings: { theme: { primary: '#047857' }, certificates: { enabled: true } } });
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            if (body.name) c.name = body.name.trim();
+            if (body.district) c.district = body.district.trim();
+            if (body.state) c.state = body.state.trim();
+            if (body.address) c.address = body.address.trim();
+            if (body.pin) c.pin = body.pin.trim();
+            if (body.logo_url) c.logo_url = body.logo_url.trim();
+            if (body.upi_id) c.upi_id = body.upi_id.trim();
+            if (body.bank_name) c.bank_name = body.bank_name.trim();
+            if (body.account_no) c.account_no = body.account_no.trim();
+            if (body.ifsc) c.ifsc = body.ifsc.trim().toUpperCase();
+            if (body.account_holder) c.account_holder = body.account_holder.trim();
+            if (body.qr_code_url) c.qr_code_url = body.qr_code_url.trim();
+
+            await persistToKV(env, 'centres', store.centres);
+            return jsonResponse({ ok: true, message: 'Centre details & payment settings updated successfully!', centre: c });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+        return jsonResponse({ settings: { theme: { primary: '#047857' }, certificates: { enabled: true } }, centre: c });
+      }
+
+      if (path === '/api/centre/payment-settings') {
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            if (body.upi_id) c.upi_id = body.upi_id.trim();
+            if (body.bank_name) c.bank_name = body.bank_name.trim();
+            if (body.account_no) c.account_no = body.account_no.trim();
+            if (body.ifsc) c.ifsc = body.ifsc.trim().toUpperCase();
+            if (body.account_holder) c.account_holder = body.account_holder.trim();
+            if (body.qr_code_url) c.qr_code_url = body.qr_code_url.trim();
+
+            await persistToKV(env, 'centres', store.centres);
+            return jsonResponse({ ok: true, message: 'Centre bank details & UPI QR updated successfully!', centre: c });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+        return jsonResponse({
+          payment_settings: {
+            upi_id: c.upi_id || `${(c.phone || '9876543210').replace(/[^0-9]/g, '')}@paytm`,
+            bank_name: c.bank_name || 'State Bank of India',
+            account_no: c.account_no || '38920192837',
+            ifsc: c.ifsc || 'SBIN0001234',
+            account_holder: c.account_holder || c.director_name || c.name,
+            qr_code_url: c.qr_code_url || ''
+          },
+          centre: c
+        });
       }
 
       if (path.startsWith('/api/centre/attendance')) {
@@ -923,7 +1153,29 @@ export default {
       }
 
       if (path === '/api/centre/profile') {
-        return jsonResponse({ centre: c });
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            if (body.name) c.director_name = body.name.trim();
+            if (body.mobile) c.phone = body.mobile.trim();
+            if (body.email) c.email = body.email.trim().toLowerCase();
+            if (body.photo_url) c.photo_url = body.photo_url.trim();
+
+            await persistToKV(env, 'centres', store.centres);
+            return jsonResponse({ ok: true, message: 'Director profile updated successfully!', centre: c });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+        return jsonResponse({
+          centre: c,
+          user: {
+            name: c.director_name,
+            mobile: c.phone,
+            email: c.email,
+            photo_url: c.photo_url || ''
+          }
+        });
       }
     }
 
