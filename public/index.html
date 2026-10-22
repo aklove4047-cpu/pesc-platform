@@ -1037,6 +1037,22 @@
             <input name="district" required placeholder="e.g. Varanasi" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
           </div>
         </div>
+        <div style="margin-bottom:14px; background:#f0f9ff; border:1.5px dashed #0284c7; border-radius:8px; padding:12px;">
+          <label style="font-size:0.84rem; font-weight:700; color:#0369a1; display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <span>📸 Director Passport Photo * (अनिवार्य)</span>
+            <span style="font-size:0.72rem; color:#64748b; font-weight:normal;">Certificate me print hogi</span>
+          </label>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div id="applyPhotoPreviewBox" style="width:72px; height:88px; border:1.5px solid #cbd5e1; border-radius:6px; background:#fff; display:grid; place-items:center; overflow:hidden; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+              <span style="font-size:0.7rem; color:#94a3b8; text-align:center; padding:4px;">No Photo</span>
+            </div>
+            <div style="flex:1;">
+              <input type="file" id="applyDirectorPhotoFile" accept="image/*" required style="font-size:0.82rem; width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px; background:#fff;">
+              <input type="hidden" name="director_photo" id="applyDirectorPhotoBase64" required>
+              <div style="font-size:0.73rem; color:#475569; margin-top:4px;">Passport-size photo upload karein (JPG/PNG). Yeh photo affiliation certificate aur profile me automatically print hogi.</div>
+            </div>
+          </div>
+        </div>
         <div style="margin-bottom:16px;">
           <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Institute Address *</label>
           <input name="address" required placeholder="Full physical centre address" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
@@ -1170,6 +1186,49 @@
       }
     })();
 
+    // Director Passport Photo File to Base64 with Canvas Resizing
+    const photoInput = document.getElementById('applyDirectorPhotoFile');
+    const photoBase64 = document.getElementById('applyDirectorPhotoBase64');
+    const photoPreview = document.getElementById('applyPhotoPreviewBox');
+
+    if (photoInput) {
+      photoInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 500;
+            const MAX_HEIGHT = 600;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height = Math.round((height * MAX_WIDTH) / width);
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width = Math.round((width * MAX_HEIGHT) / height);
+                height = MAX_HEIGHT;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            photoBase64.value = dataUrl;
+            photoPreview.innerHTML = `<img src="${dataUrl}" style="width:100%; height:100%; object-fit:cover;" alt="Director Photo">`;
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
     // Handle Public Franchise Application Submission
     const appForm = document.getElementById('publicApplyForm');
     if (appForm) {
@@ -1177,9 +1236,17 @@
         e.preventDefault();
         const notice = document.getElementById('applyModalNotice');
         notice.style.display = 'block';
-        notice.innerHTML = '<div style="background:#e0f2fe; color:#0369a1; padding:8px; border-radius:6px; font-size:0.85rem; text-align:center;">Submitting application...</div>';
+
+        if (!photoBase64 || !photoBase64.value) {
+          notice.innerHTML = '<div style="background:#fee2e2; color:#b91c1c; padding:8px; border-radius:6px; font-size:0.85rem; text-align:center;">✕ Kripya Director ki passport-size photo upload karein (Certificate ke liye zaroori hai).</div>';
+          return;
+        }
+
+        notice.innerHTML = '<div style="background:#e0f2fe; color:#0369a1; padding:8px; border-radius:6px; font-size:0.85rem; text-align:center;">Submitting application with Director Photo...</div>';
 
         const data = Object.fromEntries(new FormData(appForm).entries());
+        data.director_photo = photoBase64.value;
+
         try {
           const res = await fetch('/api/public/apply', {
             method: 'POST',
@@ -1187,8 +1254,10 @@
             body: JSON.stringify(data)
           }).then(r => r.json());
 
-          notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-size:0.85rem; font-weight:700; text-align:center;">✓ Application Submitted Successfully!<br><span style="font-size:0.78rem; font-weight:normal;">Application No: ${res.application_no}. Once approved by Head Admin, your credentials will be delivered to ${escapeHtml(data.email)}.</span></div>`;
+          notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-size:0.85rem; font-weight:700; text-align:center;">✓ Franchise Application Submitted Successfully!<br><span style="font-size:0.78rem; font-weight:normal;">Application No: ${res.application_no}. Once approved by Head Admin, your credentials and official affiliation certificate will be delivered to ${escapeHtml(data.email)}.</span></div>`;
           appForm.reset();
+          if (photoBase64) photoBase64.value = '';
+          if (photoPreview) photoPreview.innerHTML = '<span style="font-size:0.7rem; color:#94a3b8; text-align:center; padding:4px;">No Photo</span>';
         } catch (err) {
           notice.innerHTML = `<div style="background:#fee2e2; color:#b91c1c; padding:8px; border-radius:6px; font-size:0.85rem; text-align:center;">✕ ${escapeHtml(err.message || 'Submission error')}</div>`;
         }

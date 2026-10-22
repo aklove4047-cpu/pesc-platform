@@ -23,7 +23,15 @@ const views = {
     const { applications } = await api('/api/admin/applications');
     V.innerHTML = '<h2>Franchise Applications Management</h2>' + table([
       ['No.', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.app_no)}</b>`],
-      ['Applicant', (r) => `<b>${esc(r.owner_name)}</b><br><span class="muted">${esc(r.email)} · ${esc(r.mobile)}</span>`],
+      ['Applicant & Photo', (r) => `
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${r.director_photo || r.photo_url ? `<img src="${r.director_photo || r.photo_url}" style="width:36px; height:44px; object-fit:cover; border-radius:4px; border:1px solid #cbd5e1; flex-shrink:0;" alt="Photo">` : ''}
+          <div>
+            <b>${esc(r.owner_name)}</b><br>
+            <span class="muted">${esc(r.email)} · ${esc(r.mobile)}</span>
+          </div>
+        </div>
+      `],
       ['Centre & Portal Website', (r) => `<b>${esc(r.centre_name)}</b><br><a href="https://${r.slug === 'navya' ? 'navyacomputer' : esc(r.slug)}.pescouncil.in" target="_blank" style="color:#047857; font-weight:700; text-decoration:none;">${r.slug === 'navya' ? 'navyacomputer' : esc(r.slug)}.pescouncil.in ↗</a> · <span class="muted">${esc(r.district)}</span>`],
       ['Status', (r) => badge(r.status)],
       ['Provisioning Status', (r) => r.job_id ? `${badge(r.job_status)}${r.job_error ? `<br><span class="muted">${esc(r.job_error)}</span>` : ''}<br>` + (r.log || []).map((l) => `<span class="muted">${l.ok ? '✓' : '✗'} ${esc(l.step)}: ${esc(l.detail)}</span>`).join('<br>') : '—'],
@@ -55,7 +63,15 @@ const views = {
       </div>
       ${table([
         ['Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.centre_code)}</b>`],
-        ['Centre Name', (r) => `<b>${esc(r.name)}</b>`],
+        ['Centre & Director', (r) => `
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${r.director_photo || r.photo_url ? `<img src="${r.director_photo || r.photo_url}" style="width:36px; height:44px; object-fit:cover; border-radius:4px; border:1px solid #cbd5e1; flex-shrink:0;" alt="Director Photo">` : ''}
+            <div>
+              <b>${esc(r.name)}</b><br>
+              <span class="muted" style="font-size:0.75rem;">Director: ${esc(r.director_name || '—')}</span>
+            </div>
+          </div>
+        `],
         ['Login ID & Password', (r) => `
           <div style="font-size:0.83rem; line-height:1.5;">
             <div><b>ID:</b> <code style="font-weight:700; color:#064e3b; background:#f0fdf4; padding:2px 6px; border-radius:4px; border:1px solid #bbf7d0;">${esc(r.centre_code)}</code></div>
@@ -74,7 +90,7 @@ const views = {
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <button class="btn sm" data-a="view_centre_creds" data-id="${r.id}" data-code="${esc(r.centre_code)}" data-name="${esc(r.name)}" data-slug="${esc(r.slug)}" data-pass="${esc(r.login_password || 'owner123')}" style="background:#047857; color:#fff; font-weight:700;" title="View &amp; Manage Login Credentials">🔑 ID &amp; Pass</button>
             <button class="btn sm" data-a="view_affiliation_cert" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.centre_code)}" style="background:#ca8a04; color:#fff; font-weight:700;" title="View Official Affiliation Certificate">📜 Affiliation Cert</button>
-            <button class="btn sm alt" data-a="edit_centre" data-id="${r.id}" title="Edit Centre Information">✏️ Edit</button>
+            <button class="btn sm" data-a="edit_affiliation_cert" data-id="${r.id}" style="background:#0284c7; color:#fff; font-weight:700;" title="Edit Certificate &amp; Centre Details">✏️ Edit Certificate</button>
             ${r.status === 'active' 
               ? `<button class="btn sm danger" data-a="terminate_franchise" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.centre_code)}" style="background:#dc2626; color:#fff; font-weight:700;" title="Terminate Centre Franchise">❌ Terminate Franchise</button>` 
               : `<button class="btn sm" data-a="activate_franchise" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.centre_code)}" style="background:#16a34a; color:#fff; font-weight:700;" title="Reactivate Centre Franchise">✅ Reactivate</button>`}
@@ -523,7 +539,7 @@ const show = (n) => {
   return guard(() => views[n]());
 };
 
-function showModal(title, bodyHtml, onSave) {
+function showModal(title, bodyHtml, onSave, maxWidth = '640px') {
   let m = document.getElementById('adminModalOverlay');
   if (!m) {
     m = document.createElement('div');
@@ -532,12 +548,12 @@ function showModal(title, bodyHtml, onSave) {
     document.body.appendChild(m);
   }
   m.innerHTML = `
-    <div style="background:#fff; border-radius:14px; max-width:640px; width:100%; box-shadow:var(--shadow-lg); border:1px solid #cbd5e1; overflow:hidden;">
+    <div style="background:#fff; border-radius:14px; max-width:${maxWidth}; width:100%; box-shadow:var(--shadow-lg); border:1px solid #cbd5e1; overflow:hidden;">
       <div style="background:var(--navy); color:#fff; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
         <h3 style="margin:0; font-size:1.15rem; color:#fff;">${title}</h3>
         <button id="modalCloseBtn" type="button" style="background:none; border:none; color:#fff; font-size:1.4rem; cursor:pointer; line-height:1;">&times;</button>
       </div>
-      <div style="padding:20px; max-height:calc(85vh - 120px); overflow-y:auto;">
+      <div style="padding:20px; max-height:calc(88vh - 80px); overflow-y:auto;">
         ${bodyHtml}
       </div>
     </div>
@@ -560,8 +576,9 @@ async function showAffiliationCertModal(cId) {
 
   showModal(`📜 Affiliation Certificate - ${cert.centre_code}`, `
     <div style="background:#f8fafc; padding:20px; text-align:center;">
-      <div style="margin-bottom:14px; text-align:right;">
-        <button type="button" onclick="window.print()" class="btn gold sm" style="font-weight:700;">🖨️ Print Official Certificate</button>
+      <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <button type="button" onclick="showEditAffiliationCertModal(${cId})" class="btn sm" style="font-weight:700; background:#0284c7; color:#fff; border:none; cursor:pointer; padding:7px 14px; border-radius:6px;">✏️ Edit Certificate Details</button>
+        <button type="button" onclick="window.print()" class="btn gold sm" style="font-weight:700; padding:7px 14px;">🖨️ Print Official Certificate</button>
       </div>
       <div style="border: 6px double #d4af37; outline: 2px solid #b45309; outline-offset: 4px; border-radius: 12px; padding: 32px 36px; background: radial-gradient(circle, #ffffff 60%, #fffdf0 100%); position:relative; box-shadow:0 10px 25px rgba(212,175,55,0.15); text-align:center;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #d4af37; padding-bottom: 14px; margin-bottom: 18px;">
@@ -587,10 +604,24 @@ async function showAffiliationCertModal(cId) {
           This is to officially certify that the educational institution named below has met the council's academic infrastructure, faculty, and operational standards and is hereby granted official status as an <b>Authorized Training Centre (ATC)</b>:
         </p>
 
-        <div style="margin:16px 0; padding:14px; background:#f0fdf4; border:2px solid #86efac; border-radius:8px; display:inline-block; min-width:65%;">
-          <h2 style="margin:0; font-size:1.5rem; color:#064e3b; font-weight:800; letter-spacing:0.5px;">${esc(cert.name)}</h2>
-          <div style="font-size:0.95rem; color:#0f172a; margin-top:4px; font-weight:600;">Director / Incharge: <span style="color:#0a2a5e;">${esc(cert.director_name)}</span></div>
-          <div style="font-size:0.88rem; color:#475569; margin-top:2px;">Address: ${esc(cert.address)}</div>
+        <div style="margin:16px 0; padding:16px 20px; background:#f0fdf4; border:2px solid #86efac; border-radius:8px; display:inline-block; min-width:70%;">
+          <div style="display:flex; align-items:center; justify-content:center; gap:20px; text-align:left; flex-wrap:wrap;">
+            ${cert.director_photo ? `
+              <div style="text-align:center; flex-shrink:0;">
+                <img src="${cert.director_photo}" style="width:85px; height:105px; object-fit:cover; border:2px solid #b45309; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.12); display:block; margin:0 auto 4px;" alt="Director Photo">
+                <div style="font-size:0.7rem; color:#78350f; font-weight:700; text-transform:uppercase;">Director Photo</div>
+              </div>
+            ` : `
+              <div style="width:85px; height:105px; border:2px dashed #94a3b8; border-radius:6px; display:grid; place-items:center; background:#f8fafc; color:#94a3b8; font-size:0.72rem; text-align:center; padding:4px; flex-shrink:0;">
+                No Photo<br><span style="font-size:0.65rem; color:#0284c7;">(Click Edit)</span>
+              </div>
+            `}
+            <div style="flex:1; min-width:240px;">
+              <h2 style="margin:0; font-size:1.45rem; color:#064e3b; font-weight:800; letter-spacing:0.5px;">${esc(cert.name)}</h2>
+              <div style="font-size:0.95rem; color:#0f172a; margin-top:4px; font-weight:600;">Director / Incharge: <span style="color:#0a2a5e;">${esc(cert.director_name)}</span></div>
+              <div style="font-size:0.86rem; color:#475569; margin-top:2px;">Address: ${esc(cert.address)}</div>
+            </div>
+          </div>
         </div>
 
         <div style="display:flex; justify-content:center; gap:16px; margin:14px 0; flex-wrap:wrap;">
@@ -629,7 +660,189 @@ async function showAffiliationCertModal(cId) {
         </div>
       </div>
     </div>
-  `);
+  `, null, '800px');
+}
+
+async function showEditAffiliationCertModal(cId) {
+  const res = await api(`/api/admin/centres/${cId}/affiliation-cert`);
+  const cert = res.certificate || {};
+
+  showModal(`✏️ Edit Centre & Affiliation Certificate - ${cert.centre_code}`, `
+    <form id="editAffiliationCertForm" style="display:flex; flex-direction:column; gap:14px;">
+      <div style="background:#fefce8; border:1px solid #fef08a; padding:10px 14px; border-radius:8px; font-size:0.84rem; color:#854d0e; line-height:1.5;">
+        💡 Change certificate details below. Changes save live to Council records, updating both the official Affiliation Certificate and Centre records immediately.
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Affiliation Certificate No. *</label>
+          <input name="cert_no" required value="${esc(cert.cert_no || '')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-family:monospace; font-weight:700;">
+        </div>
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Centre Code</label>
+          <input name="centre_code" readonly value="${esc(cert.centre_code || '')}" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; background:#f8fafc; border-radius:6px; font-family:monospace; font-weight:700; color:#64748b;">
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Centre / Institute Name *</label>
+        <input name="name" required value="${esc(cert.name || '')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Director / Incharge Name *</label>
+          <input name="director_name" required value="${esc(cert.director_name || '')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Franchise Status *</label>
+          <select name="status" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="active" ${cert.status === 'active' ? 'selected' : ''}>Active (मान्यता प्राप्त)</option>
+            <option value="terminated" ${cert.status === 'terminated' ? 'selected' : ''}>Terminated (निरस्त)</option>
+            <option value="suspended" ${cert.status === 'suspended' ? 'selected' : ''}>Suspended (निलंबित)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Director Photo Upload & Preview -->
+      <div style="background:#f0f9ff; border:1.5px dashed #0284c7; border-radius:8px; padding:12px;">
+        <label style="font-size:0.84rem; font-weight:700; color:#0369a1; display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <span>📸 Director Passport Photo (Certificate पर लगेगी)</span>
+          <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">Live Update</span>
+        </label>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div id="editCertPhotoPreview" style="width:72px; height:90px; border:1.5px solid #cbd5e1; border-radius:6px; background:#fff; display:grid; place-items:center; overflow:hidden; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            ${cert.director_photo ? `<img src="${cert.director_photo}" style="width:100%; height:100%; object-fit:cover;" alt="Photo">` : `<span style="font-size:0.7rem; color:#94a3b8; text-align:center;">No Photo</span>`}
+          </div>
+          <div style="flex:1;">
+            <input type="file" id="editCertPhotoFile" accept="image/*" style="font-size:0.8rem; width:100%; margin-bottom:6px; border:1px solid #cbd5e1; border-radius:6px; padding:4px; background:#fff;">
+            <input type="text" name="director_photo" id="editCertPhotoBase64" value="${esc(cert.director_photo || '')}" placeholder="Or paste Photo Image URL / Data URI" style="font-size:0.78rem; width:100%; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;">
+            <div style="font-size:0.73rem; color:#64748b; margin-top:3px;">Upload new photo or paste URL. Photo will immediately appear on certificate.</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Centre Physical Address *</label>
+        <input name="address" required value="${esc(cert.address || '')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">District *</label>
+          <input name="district" required value="${esc(cert.district || '')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">State *</label>
+          <input name="state" required value="${esc(cert.state || '')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">PIN Code</label>
+          <input name="pin" value="${esc(cert.pin || '221001')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Phone / Mobile</label>
+          <input name="phone" value="${esc(cert.phone || '')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Email Address</label>
+          <input name="email" type="email" value="${esc(cert.email || '')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Affiliation Issue Date *</label>
+          <input name="issue_date" required value="${esc(cert.issue_date || '01 April 2026')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+          <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Validity (Valid Thru) *</label>
+          <input name="valid_thru" required value="${esc(cert.valid_thru || '31 March 2029')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Affiliation Session / Period *</label>
+        <input name="session" required value="${esc(cert.session || '2026 - 2029 (3 Academic Years)')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+      </div>
+
+      <div>
+        <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Authorized Courses (Comma separated)</label>
+        <textarea name="authorized_courses" rows="2" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">${esc(cert.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking')}</textarea>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+        <button type="button" class="btn alt" onclick="document.getElementById('adminModalOverlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn" style="background:#0284c7; font-weight:800; padding:10px 20px;">💾 Save Certificate &amp; Centre Changes</button>
+      </div>
+    </form>
+  `, async (formData) => {
+    const data = Object.fromEntries(formData.entries());
+    const res = await api(`/api/admin/centres/${cId}/affiliation-cert`, {
+      method: 'PUT',
+      body: data
+    });
+    toast(`✓ Affiliation Certificate for ${data.name} updated successfully!`);
+    await showAffiliationCertModal(cId);
+    if (current === 'Centres') {
+      views.Centres();
+    }
+  }, '680px');
+
+  // Attach photo upload handler inside modal
+  setTimeout(() => {
+    const pFile = document.getElementById('editCertPhotoFile');
+    const pBase64 = document.getElementById('editCertPhotoBase64');
+    const pPrev = document.getElementById('editCertPhotoPreview');
+    if (pFile) {
+      pFile.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 500;
+            const MAX_HEIGHT = 600;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height = Math.round((height * MAX_WIDTH) / width);
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width = Math.round((width * MAX_HEIGHT) / height);
+                height = MAX_HEIGHT;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            pBase64.value = dataUrl;
+            pPrev.innerHTML = `<img src="${dataUrl}" style="width:100%; height:100%; object-fit:cover;" alt="Photo">`;
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    if (pBase64) {
+      pBase64.addEventListener('input', () => {
+        const val = pBase64.value.trim();
+        if (val) {
+          pPrev.innerHTML = `<img src="${val}" style="width:100%; height:100%; object-fit:cover;" alt="Photo" onerror="this.parentElement.innerHTML='<span style=\\'font-size:0.7rem; color:#ef4444;\\'>Invalid</span>'">`;
+        }
+      });
+    }
+  }, 60);
 }
 
 V.addEventListener('click', (e) => {
@@ -978,6 +1191,8 @@ V.addEventListener('click', (e) => {
       toast(`✓ Franchise for '${cName}' (${cCode}) reactivated successfully.`);
     } else if (a === 'view_affiliation_cert') {
       showAffiliationCertModal(id);
+    } else if (a === 'edit_affiliation_cert' || a === 'edit_centre') {
+      showEditAffiliationCertModal(id);
     } else if (a === 'courses') {
       const ids = ask('Course IDs, comma separated:\n' + V._courses.map((c) => `${c.id} = ${c.code} (${c.name})`).join('\n'));
       if (ids === null) return;

@@ -708,6 +708,8 @@ export default {
           app_no: appNo,
           owner_name: body.owner_name || 'Applicant',
           centre_name: body.centre_name || 'Vocational Training Centre',
+          director_photo: (body.director_photo || body.photo_url || '').trim(),
+          photo_url: (body.director_photo || body.photo_url || '').trim(),
           mobile: body.mobile,
           email: (body.email || '').toLowerCase(),
           address: body.address,
@@ -1014,27 +1016,118 @@ export default {
       if (path.match(/\/api\/admin\/centres\/\d+\/affiliation-cert/)) {
         const cId = +path.split('/')[4];
         const targetC = store.centres.find(c => c.id === cId) || store.centres[0];
+        if (!targetC) return jsonResponse({ error: 'Centre not found' }, 404);
+
+        if (request.method === 'PUT' || request.method === 'POST') {
+          try {
+            const body = await request.json();
+            if (body.cert_no !== undefined) targetC.affiliation_cert_no = String(body.cert_no).trim();
+            if (body.name !== undefined) targetC.name = String(body.name).trim();
+            if (body.director_name !== undefined) targetC.director_name = String(body.director_name).trim();
+            if (body.director_photo !== undefined || body.photo_url !== undefined) {
+              const dp = String(body.director_photo || body.photo_url || '').trim();
+              targetC.director_photo = dp;
+              targetC.photo_url = dp;
+            }
+            if (body.address !== undefined) targetC.address = String(body.address).trim();
+            if (body.district !== undefined) targetC.district = String(body.district).trim();
+            if (body.state !== undefined) targetC.state = String(body.state).trim();
+            if (body.pin !== undefined) targetC.pin = String(body.pin).trim();
+            if (body.phone !== undefined) targetC.phone = String(body.phone).trim();
+            if (body.email !== undefined) targetC.email = String(body.email).trim().toLowerCase();
+            if (body.issue_date !== undefined) targetC.affiliation_issue_date = String(body.issue_date).trim();
+            if (body.valid_thru !== undefined) targetC.affiliation_valid_thru = String(body.valid_thru).trim();
+            if (body.session !== undefined) targetC.affiliation_session = String(body.session).trim();
+            if (body.authorized_courses !== undefined) targetC.authorized_courses = String(body.authorized_courses).trim();
+            if (body.status !== undefined) targetC.status = String(body.status).trim();
+
+            await persistToKV(env, 'centres', store.centres);
+            return jsonResponse({
+              ok: true,
+              message: `Affiliation certificate for ${targetC.name} (${targetC.centre_code}) updated successfully!`,
+              certificate: {
+                cert_no: targetC.affiliation_cert_no || `PESC/ATC/2026/${targetC.centre_code}`,
+                centre_code: targetC.centre_code,
+                name: targetC.name,
+                director_name: targetC.director_name || 'Centre Director',
+                director_photo: targetC.director_photo || targetC.photo_url || '',
+                address: targetC.address || `${targetC.district}, ${targetC.state}`,
+                district: targetC.district,
+                state: targetC.state,
+                pin: targetC.pin || '221001',
+                phone: targetC.phone || '+91 98765 43210',
+                email: targetC.email || `director@${targetC.slug}.pescouncil.in`,
+                issue_date: targetC.affiliation_issue_date || '01 April 2026',
+                valid_thru: targetC.affiliation_valid_thru || '31 March 2029',
+                session: targetC.affiliation_session || '2026 - 2029 (3 Academic Years)',
+                status: targetC.status || 'active',
+                authorized_courses: targetC.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
+                qr_url: `https://pescouncil.in/verify?code=${targetC.centre_code}`
+              }
+            });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+
         return jsonResponse({
           ok: true,
           certificate: {
-            cert_no: `PESC/ATC/2026/${targetC.centre_code}`,
+            cert_no: targetC.affiliation_cert_no || `PESC/ATC/2026/${targetC.centre_code}`,
             centre_code: targetC.centre_code,
             name: targetC.name,
             director_name: targetC.director_name || 'Centre Director',
+            director_photo: targetC.director_photo || targetC.photo_url || '',
             address: targetC.address || `${targetC.district}, ${targetC.state}`,
             district: targetC.district,
             state: targetC.state,
             pin: targetC.pin || '221001',
             phone: targetC.phone || '+91 98765 43210',
             email: targetC.email || `director@${targetC.slug}.pescouncil.in`,
-            issue_date: '01 April 2026',
-            valid_thru: '31 March 2029',
-            session: '2026 - 2029 (3 Academic Years)',
+            issue_date: targetC.affiliation_issue_date || '01 April 2026',
+            valid_thru: targetC.affiliation_valid_thru || '31 March 2029',
+            session: targetC.affiliation_session || '2026 - 2029 (3 Academic Years)',
             status: targetC.status || 'active',
-            authorized_courses: 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
+            authorized_courses: targetC.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
             qr_url: `https://pescouncil.in/verify?code=${targetC.centre_code}`
           }
         });
+      }
+
+      if (path.match(/\/api\/admin\/centres\/\d+$/)) {
+        const cId = +path.split('/')[4];
+        const targetC = store.centres.find(c => c.id === cId);
+        if (!targetC) return jsonResponse({ error: 'Centre not found' }, 404);
+        if (request.method === 'PUT' || request.method === 'POST') {
+          try {
+            const body = await request.json();
+            if (body.name !== undefined) targetC.name = String(body.name).trim();
+            if (body.director_name !== undefined) targetC.director_name = String(body.director_name).trim();
+            if (body.director_photo !== undefined || body.photo_url !== undefined) {
+              const dp = String(body.director_photo || body.photo_url || '').trim();
+              targetC.director_photo = dp;
+              targetC.photo_url = dp;
+            }
+            if (body.address !== undefined) targetC.address = String(body.address).trim();
+            if (body.district !== undefined) targetC.district = String(body.district).trim();
+            if (body.state !== undefined) targetC.state = String(body.state).trim();
+            if (body.pin !== undefined) targetC.pin = String(body.pin).trim();
+            if (body.phone !== undefined) targetC.phone = String(body.phone).trim();
+            if (body.email !== undefined) targetC.email = String(body.email).trim().toLowerCase();
+            if (body.status !== undefined) targetC.status = String(body.status).trim();
+            if (body.affiliation_cert_no !== undefined) targetC.affiliation_cert_no = String(body.affiliation_cert_no).trim();
+            if (body.affiliation_issue_date !== undefined) targetC.affiliation_issue_date = String(body.affiliation_issue_date).trim();
+            if (body.affiliation_valid_thru !== undefined) targetC.affiliation_valid_thru = String(body.affiliation_valid_thru).trim();
+            if (body.affiliation_session !== undefined) targetC.affiliation_session = String(body.affiliation_session).trim();
+            if (body.authorized_courses !== undefined) targetC.authorized_courses = String(body.authorized_courses).trim();
+
+            await persistToKV(env, 'centres', store.centres);
+            return jsonResponse({ ok: true, message: 'Centre updated successfully!', centre: targetC });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+        return jsonResponse({ ok: true, centre: targetC });
       }
 
       if (path === '/api/admin/courses') {
@@ -1079,6 +1172,8 @@ export default {
             name: body.name || 'Authorized Training Centre',
             slug: slug,
             director_name: body.owner_name || 'Centre Director',
+            director_photo: (body.director_photo || body.photo_url || '').trim(),
+            photo_url: (body.director_photo || body.photo_url || '').trim(),
             email: (body.email || `director@${slug}.pescouncil.in`).toLowerCase(),
             phone: body.mobile || '+91 98765 43210',
             state: body.state || 'Uttar Pradesh',
@@ -1176,6 +1271,8 @@ export default {
           name: app.centre_name,
           slug: app.slug,
           director_name: app.owner_name,
+          director_photo: app.director_photo || app.photo_url || '',
+          photo_url: app.director_photo || app.photo_url || '',
           phone: app.mobile,
           email: app.email,
           state: app.state,
@@ -1533,21 +1630,22 @@ export default {
         return jsonResponse({
           ok: true,
           certificate: {
-            cert_no: `PESC/ATC/2026/${c.centre_code}`,
+            cert_no: c.affiliation_cert_no || `PESC/ATC/2026/${c.centre_code}`,
             centre_code: c.centre_code,
             name: c.name,
             director_name: c.director_name || 'Centre Director',
+            director_photo: c.director_photo || c.photo_url || '',
             address: c.address || `${c.district}, ${c.state}`,
             district: c.district,
             state: c.state,
             pin: c.pin || '221001',
             phone: c.phone || '+91 98765 43210',
             email: c.email || `director@${c.slug}.pescouncil.in`,
-            issue_date: '01 April 2026',
-            valid_thru: '31 March 2029',
-            session: '2026 - 2029 (3 Academic Years)',
+            issue_date: c.affiliation_issue_date || '01 April 2026',
+            valid_thru: c.affiliation_valid_thru || '31 March 2029',
+            session: c.affiliation_session || '2026 - 2029 (3 Academic Years)',
             status: c.status || 'active',
-            authorized_courses: 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
+            authorized_courses: c.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
             qr_url: `https://pescouncil.in/verify?code=${c.centre_code}`
           }
         });

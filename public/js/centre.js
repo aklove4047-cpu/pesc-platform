@@ -1459,10 +1459,20 @@ const views = {
             This is to officially certify that the educational institution named below has met the council's academic infrastructure, faculty, and operational standards and is hereby granted official status as an <b>Authorized Training Centre (ATC)</b> of Purvanchal Education &amp; Skill Council:
           </p>
 
-          <div style="margin:20px 0; padding:18px 24px; background:#f0fdf4; border:2px solid #86efac; border-radius:10px; display:inline-block; min-width:65%;">
-            <h2 style="margin:0; font-size:1.85rem; color:#064e3b; font-weight:800; letter-spacing:0.5px;">${esc(cert.name)}</h2>
-            <div style="font-size:1.1rem; color:#0f172a; margin-top:6px; font-weight:600;">Director / Incharge: <span style="color:#0a2a5e;">${esc(cert.director_name)}</span></div>
-            <div style="font-size:0.95rem; color:#475569; margin-top:4px;">Address: ${esc(cert.address)}</div>
+          <div style="margin:20px 0; padding:18px 24px; background:#f0fdf4; border:2px solid #86efac; border-radius:10px; display:inline-block; min-width:70%;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:24px; text-align:left; flex-wrap:wrap;">
+              ${cert.director_photo ? `
+                <div style="text-align:center; flex-shrink:0;">
+                  <img src="${cert.director_photo}" style="width:90px; height:110px; object-fit:cover; border:2px solid #b45309; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.12); display:block; margin:0 auto 4px;" alt="Director Photo">
+                  <div style="font-size:0.7rem; color:#78350f; font-weight:700; text-transform:uppercase;">Director Photo</div>
+                </div>
+              ` : ''}
+              <div style="flex:1; min-width:240px;">
+                <h2 style="margin:0; font-size:1.85rem; color:#064e3b; font-weight:800; letter-spacing:0.5px;">${esc(cert.name)}</h2>
+                <div style="font-size:1.1rem; color:#0f172a; margin-top:6px; font-weight:600;">Director / Incharge: <span style="color:#0a2a5e;">${esc(cert.director_name)}</span></div>
+                <div style="font-size:0.95rem; color:#475569; margin-top:4px;">Address: ${esc(cert.address)}</div>
+              </div>
+            </div>
           </div>
 
           <div style="display:flex; justify-content:center; gap:20px; margin:20px 0; flex-wrap:wrap;">
