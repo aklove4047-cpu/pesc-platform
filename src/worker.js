@@ -529,10 +529,16 @@ export default {
     // --- Admin APIs ---
     if (path.startsWith('/api/admin/')) {
       if (path === '/api/admin/stats') {
+        const activeCentres = store.centres.filter(c => c.status === 'active').length;
+        const validCerts = store.certificates.filter(c => c.status === 'Valid').length;
         return jsonResponse({
-          centres_total: store.centres.length,
-          centres_active: store.centres.filter(c => c.status === 'active').length,
+          centres: { active: activeCentres, suspended: 0, failed: 0 },
           applications_pending: store.applications.filter(a => a.status === 'Submitted').length,
+          students: store.students.length,
+          certificates: { pending: store.certificates.filter(c => c.status !== 'Valid').length, valid: validCerts },
+          wallet_total_paise: 50000000,
+          centres_total: store.centres.length,
+          centres_active: activeCentres,
           students_total: store.students.length,
           certificates_total: store.certificates.length,
           marksheets_total: store.marksheets.length
@@ -543,8 +549,32 @@ export default {
         return jsonResponse({ centres: store.centres });
       }
 
+      if (path === '/api/admin/courses') {
+        return jsonResponse({ courses: store.courses });
+      }
+
+      if (path === '/api/admin/coordinators') {
+        const coords = store.users.filter(u => u.role === 'coordinator');
+        if (!coords.length) {
+          coords.push({ id: 2, name: 'State Coordinator', email: 'coord@pescouncil.in', state: 'Uttar Pradesh' });
+        }
+        return jsonResponse({ coordinators: coords });
+      }
+
       if (path === '/api/admin/applications') {
         return jsonResponse({ applications: store.applications });
+      }
+
+      if (path === '/api/admin/wallets') {
+        return jsonResponse({ wallets: store.centres.map(c => ({ id: c.id, centre_code: c.centre_code, centre_name: c.name, balance_paise: 500000 })) });
+      }
+
+      if (path === '/api/admin/notices') {
+        return jsonResponse({ notices: [] });
+      }
+
+      if (path.startsWith('/api/admin/audit')) {
+        return jsonResponse({ logs: [] });
       }
 
       if (path.match(/\/api\/admin\/applications\/\d+\/approve/) && request.method === 'POST') {
@@ -586,6 +616,30 @@ export default {
       }
     }
 
+    // --- Certificates & Marksheets & Reports APIs ---
+    if (path === '/api/marksheets/pending') {
+      return jsonResponse({ marksheets: store.marksheets.filter(m => m.status === 'Submitted') });
+    }
+    if (path === '/api/certificates/pending') {
+      return jsonResponse({ certificates: store.certificates.filter(c => c.status === 'Submitted') });
+    }
+    if (path.startsWith('/api/reports/')) {
+      return jsonResponse({ rows: [], total: 0 });
+    }
+
+    // --- Coordinator APIs ---
+    if (path.startsWith('/api/coordinator/')) {
+      if (path === '/api/coordinator/dashboard') {
+        return jsonResponse({
+          coordinator: { id: 2, name: 'State Coordinator', state: 'Uttar Pradesh' },
+          stats: { centres: store.centres.length, students: store.students.length, certificates_pending: 0, marksheets_pending: 0 }
+        });
+      }
+      if (path === '/api/coordinator/centres') {
+        return jsonResponse({ centres: store.centres });
+      }
+    }
+
     // --- Centre APIs ---
     if (path.startsWith('/api/centre/')) {
       const targetSlug = url.searchParams.get('centre') || url.searchParams.get('slug') || request.headers.get('x-centre-slug') || (centreFromSlug ? centreFromSlug.slug : 'navya');
@@ -614,6 +668,44 @@ export default {
       if (path === '/api/centre/wallet') {
         return jsonResponse({ balance_paise: 500000, ledger: [] });
       }
+
+      if (path === '/api/centre/all-centres') {
+        return jsonResponse({ centres: store.centres });
+      }
+
+      if (path === '/api/centre/settings') {
+        return jsonResponse({ settings: { theme: { primary: '#047857' }, certificates: { enabled: true } } });
+      }
+
+      if (path.startsWith('/api/centre/attendance')) {
+        return jsonResponse({ attendance: [] });
+      }
+
+      if (path === '/api/centre/assignments') {
+        return jsonResponse({ assignments: [] });
+      }
+
+      if (path === '/api/centre/analytics') {
+        return jsonResponse({
+          stats: {
+            students: store.students.filter(s => s.centre_id === c.id).length,
+            revenue: 50000,
+            certificates: store.certificates.filter(x => x.centre_id === c.id).length
+          }
+        });
+      }
+
+      if (path === '/api/centre/events') {
+        return jsonResponse({ events: [] });
+      }
+
+      if (path === '/api/centre/materials') {
+        return jsonResponse({ materials: [] });
+      }
+
+      if (path === '/api/centre/profile') {
+        return jsonResponse({ centre: c });
+      }
     }
 
     // --- Student APIs ---
@@ -621,6 +713,33 @@ export default {
       const student = store.students[0];
       const cert = store.certificates.find(x => x.student_id === student.id);
       const mrk = store.marksheets.find(x => x.student_id === student.id);
+      const course = store.courses.find(x => x.id === student.course_id) || store.courses[0];
+      const centre = store.centres.find(x => x.id === student.centre_id) || store.centres[0];
+
+      if (path === '/api/student/profile') {
+        return jsonResponse({ student, course, centre });
+      }
+      if (path === '/api/student/marksheets') {
+        return jsonResponse({ marksheets: mrk ? [mrk] : store.marksheets.slice(0, 3) });
+      }
+      if (path === '/api/student/certificates') {
+        return jsonResponse({ certificates: cert ? [cert] : store.certificates.slice(0, 3) });
+      }
+      if (path === '/api/student/syllabus') {
+        return jsonResponse({ syllabus: [] });
+      }
+      if (path === '/api/student/admit-card') {
+        return jsonResponse({ admit_card: null });
+      }
+      if (path === '/api/student/fee-receipt') {
+        return jsonResponse({ receipts: [] });
+      }
+      if (path === '/api/student/id-card') {
+        return jsonResponse({ id_card: null });
+      }
+      if (path === '/api/student/tickets') {
+        return jsonResponse({ tickets: [] });
+      }
       return jsonResponse({ student, certificate: cert, marksheet: mrk });
     }
 
