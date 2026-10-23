@@ -601,7 +601,7 @@ function slugOf(hostHeader) {
     if (host.endsWith('.' + b)) {
       const sub = host.slice(0, -(b.length + 1));
       if (sub.includes('.')) return { kind: 'invalid' };
-      if (['www', 'admin', 'api', 'mail', 'support', 'verify', 'login', 'portal', 'app', 'static'].includes(sub)) return { kind: 'main' };
+      if (['www', 'admin', 'api', 'mail', 'support', 'verify', 'login', 'portal', 'student', 'coordinator', 'app', 'static'].includes(sub)) return { kind: 'main' };
       return { kind: 'tenant', slug: sub };
     }
   }
@@ -3092,7 +3092,48 @@ export default {
       return jsonResponse({ student: enrichedStudent, certificate: cert, marksheet: mrk });
     }
 
-    // 6. Default Fallback: Serve static assets from public directory
+    // 6. Clean route mapping for HTML pages without .html extension
+    const htmlRoutes = {
+      '/admin': '/admin.html',
+      '/portal': '/portal.html',
+      '/coordinator': '/coordinator.html',
+      '/student': '/student.html',
+      '/login': '/login.html',
+      '/verify': '/verify.html',
+      '/verify-marksheet': '/verify.html',
+      '/setup': '/setup.html',
+    };
+    if (htmlRoutes[path]) {
+      const newUrl = new URL(request.url);
+      newUrl.pathname = htmlRoutes[path];
+      return env.ASSETS.fetch(new Request(newUrl, request));
+    }
+
+    if (tenantInfo.kind === 'main') {
+      const sub = host.split('.')[0].toLowerCase();
+      if (sub === 'student' && (path === '/' || path === '')) {
+        const newUrl = new URL(request.url);
+        newUrl.pathname = '/student.html';
+        return env.ASSETS.fetch(new Request(newUrl, request));
+      }
+      if (sub === 'portal' && (path === '/' || path === '')) {
+        const newUrl = new URL(request.url);
+        newUrl.pathname = '/portal.html';
+        return env.ASSETS.fetch(new Request(newUrl, request));
+      }
+      if (sub === 'coordinator' && (path === '/' || path === '')) {
+        const newUrl = new URL(request.url);
+        newUrl.pathname = '/coordinator.html';
+        return env.ASSETS.fetch(new Request(newUrl, request));
+      }
+      if (sub === 'admin' && (path === '/' || path === '')) {
+        const newUrl = new URL(request.url);
+        newUrl.pathname = '/admin.html';
+        return env.ASSETS.fetch(new Request(newUrl, request));
+      }
+    }
+
+    // 7. Default Fallback: Serve static assets from public directory
     return env.ASSETS.fetch(request);
   }
 };
