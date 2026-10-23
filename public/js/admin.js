@@ -131,16 +131,34 @@ const views = {
         ['Course Code', (r) => `<b style="font-family:monospace; color:var(--navy); font-size:0.95rem;">${esc(r.code)}</b>`],
         ['Course Title', (r) => `<b>${esc(r.name)}</b>`],
         ['Duration', (r) => `${r.duration_months} Months`],
-        ['Single / Yearly Fee', (r) => `<b style="color:#064e3b; font-size:0.95rem;">₹${r.single_fee_rupees || Math.round((r.single_fee_paise || 20000)/100)}</b><br><span class="muted" style="font-size:0.75rem;">Per Cert/Marksheet</span>`],
-        ['Semester Fee', (r) => `<b style="color:#0284c7; font-size:0.95rem;">₹${r.semester_fee_rupees || Math.round((r.semester_fee_paise || 60000)/100)}</b><br><span class="muted" style="font-size:0.75rem;">Per Semester Exam</span>`],
+        ['Single / Yearly Fee', (r) => {
+          const sFee = r.single_fee_rupees || Math.round((r.single_fee_paise || 20000)/100);
+          return `
+            <div style="display:flex; align-items:center; gap:6px;">
+              <b style="color:#064e3b; font-size:1.05rem;">₹${sFee}</b>
+              <button type="button" class="btn sm alt" data-a="quick_edit_fee" data-id="${r.id}" data-type="single" data-code="${esc(r.code)}" data-val="${sFee}" style="padding:2px 7px; font-size:0.75rem; font-weight:800; border-radius:4px; cursor:pointer;" title="Change Single / Yearly Fee">✏️ Edit</button>
+            </div>
+            <span class="muted" style="font-size:0.75rem;">Per Cert/Marksheet</span>
+          `;
+        }],
+        ['Semester Fee', (r) => {
+          const semFee = r.semester_fee_rupees || Math.round((r.semester_fee_paise || 60000)/100);
+          return `
+            <div style="display:flex; align-items:center; gap:6px;">
+              <b style="color:#0284c7; font-size:1.05rem;">₹${semFee}</b>
+              <button type="button" class="btn sm alt" data-a="quick_edit_fee" data-id="${r.id}" data-type="semester" data-code="${esc(r.code)}" data-val="${semFee}" style="padding:2px 7px; font-size:0.75rem; font-weight:800; border-radius:4px; cursor:pointer;" title="Change Semester Fee">✏️ Edit</button>
+            </div>
+            <span class="muted" style="font-size:0.75rem;">Per Semester Exam</span>
+          `;
+        }],
         ['Yearly & Semester Subjects', (r) => `
-          <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#fde047; border:1px solid #d4af37; font-weight:700; font-size:0.8rem; padding:5px 11px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" onclick="openCourseCurriculumEditor(${r.id})">
+          <button type="button" class="btn sm" data-a="edit_curriculum" data-id="${r.id}" style="background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#fde047; border:1px solid #d4af37; font-weight:700; font-size:0.8rem; padding:6px 12px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" onclick="window.openCourseCurriculumEditor && window.openCourseCurriculumEditor(${r.id})">
             📚 Edit Subjects (Year &amp; Sem)
           </button>
         `],
         ['Status', (r) => r.active ? `<span class="badge Valid">Active</span>` : `<span class="badge Rejected">Inactive</span>`],
         ['Actions', (r) => `
-          <button class="btn sm alt" data-a="edit_course" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.code)}" data-dur="${r.duration_months}" data-fee="${Math.round(r.fee_paise/100)}" data-single-fee="${r.single_fee_rupees || Math.round((r.single_fee_paise||20000)/100)}" data-sem-fee="${r.semester_fee_rupees || Math.round((r.semester_fee_paise||60000)/100)}" data-marks="${r.total_marks || 100}" data-active="${r.active}">✏️ Edit</button>
+          <button class="btn sm alt" data-a="edit_course" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.code)}" data-dur="${r.duration_months}" data-fee="${Math.round(r.fee_paise/100)}" data-single-fee="${r.single_fee_rupees || Math.round((r.single_fee_paise||20000)/100)}" data-sem-fee="${r.semester_fee_rupees || Math.round((r.semester_fee_paise||60000)/100)}" data-marks="${r.total_marks || 100}" data-active="${r.active}">✏️ Edit Course &amp; Fees</button>
         `],
       ], courses)}
 
@@ -1058,6 +1076,27 @@ V.addEventListener('click', (e) => {
       toast('Student deleted successfully!');
       await views.Students();
       return;
+    } else if (a === 'edit_curriculum') {
+      await openCourseCurriculumEditor(+id);
+      return;
+    } else if (a === 'quick_edit_fee') {
+      const type = b.dataset.type;
+      const isSingle = type === 'single';
+      const label = isSingle ? 'Single / Yearly Marksheet & Certificate Fee' : 'Semester Examination Marksheet Fee';
+      const curVal = b.dataset.val || (isSingle ? '200' : '600');
+      const inputVal = prompt(`Enter new official ${label} (₹) for ${b.dataset.code || 'this course'}:`, curVal);
+      if (inputVal !== null && inputVal.trim() !== '') {
+        const num = +inputVal.trim();
+        if (isNaN(num) || num < 0) {
+          alert('Kripya valid fee number enter karein!');
+          return;
+        }
+        const payload = isSingle ? { single_fee_rupees: num } : { semester_fee_rupees: num };
+        await api(`/api/admin/courses/${id}`, { method: 'PUT', body: payload });
+        toast(`✅ Course ${isSingle ? 'Single/Yearly' : 'Semester'} fee updated to ₹${num}!`);
+        await views.Courses();
+      }
+      return;
     } else if (a === 'edit_course') {
       const d = b.dataset;
       const targetCourse = (window._adminCourses || []).find(x => x.id === +id) || {};
@@ -1071,7 +1110,15 @@ V.addEventListener('click', (e) => {
             <div><label>Course Code *</label><input name="code" value="${esc(d.code)}" required></div>
             <div><label>Course Title *</label><input name="name" value="${esc(d.name)}" required></div>
             <div><label>Duration (Months) *</label><input name="duration_months" type="number" min="1" value="${d.dur}" required></div>
-            <div><label>Course Fee (₹) *</label><input name="fee_rupees" type="number" min="0" value="${d.fee}" required></div>
+            <div><label>Course Training Fee (₹) *</label><input name="fee_rupees" type="number" min="0" value="${d.fee}" required></div>
+            <div>
+              <label style="color:#064e3b; font-weight:800;">📜 Single / Yearly Exam Fee (₹) *</label>
+              <input name="single_fee_rupees" type="number" min="0" value="${d.singleFee || 200}" required style="border:1.5px solid #059669; font-weight:800; color:#064e3b;">
+            </div>
+            <div>
+              <label style="color:#0284c7; font-weight:800;">📚 Semester Exam Fee (₹) *</label>
+              <input name="semester_fee_rupees" type="number" min="0" value="${d.semFee || 600}" required style="border:1.5px solid #0284c7; font-weight:800; color:#0284c7;">
+            </div>
             <div><label>Total Examination Marks</label><input name="total_marks" type="number" min="1" value="${d.marks || 100}"></div>
             <div>
               <label>Status</label>
@@ -1093,6 +1140,8 @@ V.addEventListener('click', (e) => {
       `, async (formData) => {
         const payload = Object.fromEntries(formData.entries());
         payload.active = payload.active === '1';
+        payload.single_fee_rupees = +payload.single_fee_rupees || 200;
+        payload.semester_fee_rupees = +payload.semester_fee_rupees || 600;
         if (payload.subjects_text !== undefined) {
           const lines = String(payload.subjects_text || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
           payload.subjects = lines.map((sName, idx) => ({
@@ -1501,6 +1550,7 @@ async function openCourseCurriculumEditor(courseId) {
   const modal = document.createElement('div');
   modal.id = 'curriculumEditorModal';
   modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; backdrop-filter:blur(4px);';
+  document.body.appendChild(modal);
 
   function renderView() {
     const termObj = curData[activeEval] || {};
@@ -1540,6 +1590,7 @@ async function openCourseCurriculumEditor(courseId) {
                 <span style="font-weight:700; color:#0369a1;">₹</span>
                 <input id="curSemFeeInput" type="number" min="0" value="${semFee}" style="width:85px; padding:4px 6px; font-weight:800; font-size:0.95rem; border:1px solid #cbd5e1; border-radius:4px; text-align:right;">
               </div>
+              <button type="button" id="btnQuickSaveFees" class="btn sm gold" style="font-weight:800; padding:7px 14px; cursor:pointer;" title="Click to update Single & Semester fee directly">💾 Save Fees (₹)</button>
             </div>
           </div>
 
@@ -1682,16 +1733,23 @@ async function openCourseCurriculumEditor(courseId) {
       </div>
     `;
 
-    $('#tabEvalSemester').onclick = () => {
-      syncEditedInputs();
-      activeEval = 'semester';
-      renderView();
-    };
-    $('#tabEvalYearly').onclick = () => {
-      syncEditedInputs();
-      activeEval = 'yearly';
-      renderView();
-    };
+    const tabSem = modal.querySelector('#tabEvalSemester');
+    if (tabSem) {
+      tabSem.onclick = () => {
+        syncEditedInputs();
+        activeEval = 'semester';
+        renderView();
+      };
+    }
+
+    const tabYr = modal.querySelector('#tabEvalYearly');
+    if (tabYr) {
+      tabYr.onclick = () => {
+        syncEditedInputs();
+        activeEval = 'yearly';
+        renderView();
+      };
+    }
 
     modal.querySelectorAll('.term-pill').forEach(btn => {
       btn.onclick = () => {
@@ -1701,114 +1759,168 @@ async function openCourseCurriculumEditor(courseId) {
       };
     });
 
-    $('#btnAddTermBtn').onclick = () => {
-      syncEditedInputs();
-      const count = Object.keys(curData[activeEval]).length + 1;
-      const defaultName = activeEval === 'semester' ? `Semester ${count}` : `${count}nd Year`;
-      const termName = prompt(`Enter new ${activeEval === 'semester' ? 'semester' : 'term'} name:`, defaultName);
-      if (termName && termName.trim()) {
-        const cleanT = termName.trim();
-        if (!curData[activeEval][cleanT]) {
-          curData[activeEval][cleanT] = [];
+    const btnAddTerm = modal.querySelector('#btnAddTermBtn');
+    if (btnAddTerm) {
+      btnAddTerm.onclick = () => {
+        syncEditedInputs();
+        const count = Object.keys(curData[activeEval] || {}).length + 1;
+        const defaultName = activeEval === 'semester' ? `Semester ${count}` : `${count}nd Year`;
+        const termName = prompt(`Enter new ${activeEval === 'semester' ? 'semester' : 'term'} name:`, defaultName);
+        if (termName && termName.trim()) {
+          const cleanT = termName.trim();
+          if (!curData[activeEval]) curData[activeEval] = {};
+          if (!curData[activeEval][cleanT]) {
+            curData[activeEval][cleanT] = [];
+          }
+          activeTerm = cleanT;
+          renderView();
         }
-        activeTerm = cleanT;
-        renderView();
-      }
-    };
+      };
+    }
 
-    $('#btnToggleBulk').onclick = () => {
-      const wrap = $('#bulkTextWrap');
-      wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
-    };
+    const btnTogBulk = modal.querySelector('#btnToggleBulk');
+    if (btnTogBulk) {
+      btnTogBulk.onclick = () => {
+        const wrap = modal.querySelector('#bulkTextWrap');
+        if (wrap) wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+      };
+    }
 
-    $('#btnApplyBulk').onclick = () => {
-      syncEditedInputs();
-      const txt = $('#bulkSubjectsText').value;
-      const lines = txt.split('\n').map(l => l.trim()).filter(Boolean);
-      if (!lines.length) return;
-      lines.forEach((line) => {
-        const currentCount = (curData[activeEval][activeTerm] || []).length;
-        curData[activeEval][activeTerm].push({
-          code: `${cCode}-${activeEval === 'semester' ? 'S' : 'Y'}${currentCount + 1}`,
-          name: line,
-          theory: 50,
-          practical: 50,
-          max_marks: 100
+    const btnAppBulk = modal.querySelector('#btnApplyBulk');
+    if (btnAppBulk) {
+      btnAppBulk.onclick = () => {
+        syncEditedInputs();
+        const txtEl = modal.querySelector('#bulkSubjectsText');
+        if (!txtEl) return;
+        const lines = txtEl.value.split('\n').map(l => l.trim()).filter(Boolean);
+        if (!lines.length) return;
+        if (!curData[activeEval]) curData[activeEval] = {};
+        if (!curData[activeEval][activeTerm]) curData[activeEval][activeTerm] = [];
+        lines.forEach((line) => {
+          const currentCount = curData[activeEval][activeTerm].length;
+          curData[activeEval][activeTerm].push({
+            code: `${cCode}-${activeEval === 'semester' ? 'S' : 'Y'}${currentCount + 1}`,
+            name: line,
+            theory: 50,
+            practical: 50,
+            max_marks: 100
+          });
         });
-      });
-      renderView();
-    };
+        renderView();
+      };
+    }
 
-    $('#btnAddSingleSubBtn').onclick = () => {
-      syncEditedInputs();
-      const name = $('#newSubNameInput').value.trim();
-      if (!name) {
-        alert('Kripya subject ka naam enter karein!');
-        return;
-      }
-      const code = $('#newSubCodeInput').value.trim() || `SUB${(curData[activeEval][activeTerm] || []).length + 1}`;
-      const th = +$('#newSubThInput').value || 50;
-      const pr = +$('#newSubPrInput').value || 50;
-      const tot = th + pr;
+    const btnAddSub = modal.querySelector('#btnAddSingleSubBtn');
+    if (btnAddSub) {
+      btnAddSub.onclick = () => {
+        syncEditedInputs();
+        const nameEl = modal.querySelector('#newSubNameInput');
+        const codeEl = modal.querySelector('#newSubCodeInput');
+        const thEl = modal.querySelector('#newSubThInput');
+        const prEl = modal.querySelector('#newSubPrInput');
+        const name = (nameEl && nameEl.value.trim()) || '';
+        if (!name) {
+          alert('Kripya subject ka naam enter karein!');
+          return;
+        }
+        if (!curData[activeEval]) curData[activeEval] = {};
+        if (!curData[activeEval][activeTerm]) curData[activeEval][activeTerm] = [];
+        const code = (codeEl && codeEl.value.trim()) || `SUB${curData[activeEval][activeTerm].length + 1}`;
+        const th = (thEl && +thEl.value) || 50;
+        const pr = (prEl && +prEl.value) || 50;
+        const tot = th + pr;
 
-      if (!curData[activeEval][activeTerm]) curData[activeEval][activeTerm] = [];
-      curData[activeEval][activeTerm].push({
-        code,
-        name,
-        theory: th,
-        practical: pr,
-        max_marks: tot
-      });
-      renderView();
-    };
+        curData[activeEval][activeTerm].push({
+          code,
+          name,
+          theory: th,
+          practical: pr,
+          max_marks: tot
+        });
+        renderView();
+      };
+    }
 
     modal.querySelectorAll('.btn-del-sub').forEach(btn => {
       btn.onclick = () => {
         syncEditedInputs();
         const idx = +btn.dataset.idx;
-        curData[activeEval][activeTerm].splice(idx, 1);
+        if (curData[activeEval] && curData[activeEval][activeTerm]) {
+          curData[activeEval][activeTerm].splice(idx, 1);
+        }
         renderView();
       };
     });
 
-    $('#btnSaveCurriculumAll').onclick = async () => {
-      syncEditedInputs();
-      const saveBtn = $('#btnSaveCurriculumAll');
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving…';
-
-      const sFee = +$('#curSingleFeeInput').value || 200;
-      const semFeeVal = +$('#curSemFeeInput').value || 600;
-
-      try {
-        await api(`/api/admin/courses/${courseId}/curriculum`, {
-          method: 'POST',
-          body: {
-            curriculum: curData,
-            single_fee_rupees: sFee,
-            semester_fee_rupees: semFeeVal
-          }
-        });
-        toast(`Curriculum & exam fees saved successfully for ${cCode}!`);
-        modal.remove();
-        if (typeof views !== 'undefined' && views.Courses) {
-          await views.Courses();
+    const btnQuickSave = modal.querySelector('#btnQuickSaveFees');
+    if (btnQuickSave) {
+      btnQuickSave.onclick = async () => {
+        const sFeeInput = modal.querySelector('#curSingleFeeInput');
+        const semFeeInput = modal.querySelector('#curSemFeeInput');
+        const sFee = (sFeeInput && +sFeeInput.value) || 200;
+        const semFeeVal = (semFeeInput && +semFeeInput.value) || 600;
+        btnQuickSave.disabled = true;
+        btnQuickSave.textContent = 'Saving...';
+        try {
+          await api(`/api/admin/courses/${courseId}`, {
+            method: 'PUT',
+            body: { single_fee_rupees: sFee, semester_fee_rupees: semFeeVal }
+          });
+          toast(`✅ Fees saved: Single ₹${sFee} / Semester ₹${semFeeVal}!`);
+          singleFee = sFee;
+          semFee = semFeeVal;
+          if (typeof views !== 'undefined' && views.Courses) await views.Courses();
+        } catch (err) {
+          alert('Fee update failed: ' + (err.message || err));
+        } finally {
+          btnQuickSave.disabled = false;
+          btnQuickSave.textContent = '💾 Save Fees (₹)';
         }
-      } catch (err) {
-        alert('Save failed: ' + (err.message || err));
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Save All Curriculum & Fees';
-      }
-    };
+      };
+    }
+
+    const saveAllBtn = modal.querySelector('#btnSaveCurriculumAll');
+    if (saveAllBtn) {
+      saveAllBtn.onclick = async () => {
+        syncEditedInputs();
+        saveAllBtn.disabled = true;
+        saveAllBtn.textContent = 'Saving…';
+
+        const sFeeInput = modal.querySelector('#curSingleFeeInput');
+        const semFeeInput = modal.querySelector('#curSemFeeInput');
+        const sFee = (sFeeInput && +sFeeInput.value) || 200;
+        const semFeeVal = (semFeeInput && +semFeeInput.value) || 600;
+
+        try {
+          await api(`/api/admin/courses/${courseId}/curriculum`, {
+            method: 'POST',
+            body: {
+              curriculum: curData,
+              single_fee_rupees: sFee,
+              semester_fee_rupees: semFeeVal
+            }
+          });
+          toast(`Curriculum & exam fees saved successfully for ${cCode}!`);
+          modal.remove();
+          if (typeof views !== 'undefined' && views.Courses) {
+            await views.Courses();
+          }
+        } catch (err) {
+          alert('Save failed: ' + (err.message || err));
+          saveAllBtn.disabled = false;
+          saveAllBtn.textContent = '💾 Save All Curriculum & Fees';
+        }
+      };
+    }
   }
 
   function syncEditedInputs() {
-    const sFeeInput = $('#curSingleFeeInput');
+    const sFeeInput = modal.querySelector('#curSingleFeeInput');
     if (sFeeInput) singleFee = +sFeeInput.value || singleFee;
-    const semFeeInput = $('#curSemFeeInput');
+    const semFeeInput = modal.querySelector('#curSemFeeInput');
     if (semFeeInput) semFee = +semFeeInput.value || semFee;
 
-    const termSubs = curData[activeEval][activeTerm] || [];
+    const termSubs = (curData[activeEval] && curData[activeEval][activeTerm]) || [];
     modal.querySelectorAll('.sub-edit-code').forEach(el => {
       const idx = +el.dataset.idx;
       if (termSubs[idx]) termSubs[idx].code = el.value.trim();
@@ -1834,13 +1946,15 @@ async function openCourseCurriculumEditor(courseId) {
   }
 
   renderView();
-  document.body.appendChild(modal);
 }
+
+window.openCourseCurriculumEditor = openCourseCurriculumEditor;
 
 // Backward compatibility alias
 function showCourseSubjectsModal(courseId) {
   openCourseCurriculumEditor(courseId);
 }
+window.showCourseSubjectsModal = showCourseSubjectsModal;
 
 async function openAdminMarksheetIssueModal(studentId, studentName) {
   const existing = document.getElementById('marksheetDirectModal');
