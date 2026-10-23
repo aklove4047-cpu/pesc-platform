@@ -344,6 +344,17 @@ router.delete('/students/:id', (req, res) => {
   res.json({ ok: true, message: 'Student deleted successfully' });
 });
 
+router.post('/students/clear-all', (req, res) => {
+  db.transaction(() => {
+    db.prepare('DELETE FROM marksheets').run();
+    db.prepare('DELETE FROM certificates').run();
+    db.prepare("DELETE FROM users WHERE role='student'").run();
+    db.prepare('DELETE FROM students').run();
+  })();
+  audit(req, 'student.clear_all', 'student', 0, 'ok', 'Cleared all students, marksheets and certificates');
+  res.json({ ok: true, message: 'All students cleared successfully' });
+});
+
 // View student credentials (for Head Office Admin)
 router.get('/students/:id/credentials', (req, res) => {
   const sid = +req.params.id;

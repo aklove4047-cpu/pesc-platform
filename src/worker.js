@@ -471,11 +471,13 @@ let kvLoaded = false;
 async function syncFromKV(env) {
   if (!env || !env.PESC_KV || kvLoaded) return;
   try {
-    const [c, a, s, u] = await Promise.all([
+    const [c, a, s, u, certs, mrks] = await Promise.all([
       env.PESC_KV.get('centres', 'json'),
       env.PESC_KV.get('applications', 'json'),
       env.PESC_KV.get('students', 'json'),
       env.PESC_KV.get('users', 'json'),
+      env.PESC_KV.get('certificates', 'json'),
+      env.PESC_KV.get('marksheets', 'json'),
     ]);
     if (Array.isArray(c) && c.length) {
       c.forEach(item => {
@@ -491,12 +493,14 @@ async function syncFromKV(env) {
         }
       });
     }
-    if (Array.isArray(s) && s.length) {
-      s.forEach(item => {
-        if (!store.students.some(x => x.id === item.id || x.student_code === item.student_code)) {
-          store.students.push(item);
-        }
-      });
+    if (Array.isArray(s)) {
+      store.students = s;
+    }
+    if (Array.isArray(certs)) {
+      store.certificates = certs;
+    }
+    if (Array.isArray(mrks)) {
+      store.marksheets = mrks;
     }
     if (Array.isArray(u) && u.length) {
       u.forEach(item => {
@@ -2218,6 +2222,38 @@ export default {
         return jsonResponse({ students: store.students });
       }
 
+      if (path === '/api/admin/students/clear-all' && request.method === 'POST') {
+        store.students = [];
+        store.certificates = [];
+        store.marksheets = [];
+        store.users = store.users.filter(u => u.role !== 'student');
+        await Promise.all([
+          persistToKV(env, 'students', []),
+          persistToKV(env, 'certificates', []),
+          persistToKV(env, 'marksheets', []),
+          persistToKV(env, 'users', store.users)
+        ]);
+        return jsonResponse({ ok: true, message: 'All students, certificates, and marksheets cleared successfully!' });
+      }
+
+      if (path.match(/\/api\/admin\/students\/\d+$/) && request.method === 'DELETE') {
+        const sId = +path.split('/')[4];
+        const student = store.students.find(s => s.id === sId);
+        store.students = store.students.filter(s => s.id !== sId);
+        store.certificates = store.certificates.filter(c => c.student_id !== sId);
+        store.marksheets = store.marksheets.filter(m => m.student_id !== sId);
+        if (student && student.user_id) {
+          store.users = store.users.filter(u => u.id !== student.user_id);
+        }
+        await Promise.all([
+          persistToKV(env, 'students', store.students),
+          persistToKV(env, 'certificates', store.certificates),
+          persistToKV(env, 'marksheets', store.marksheets),
+          persistToKV(env, 'users', store.users)
+        ]);
+        return jsonResponse({ ok: true, message: 'Student deleted successfully!' });
+      }
+
       if (path === '/api/admin/certificates') {
         return jsonResponse({ certificates: store.certificates });
       }
@@ -2877,6 +2913,13 @@ export default {
       } catch (e) {}
 
       const student = currentStudent;
+      if (!student) {
+        if (path === '/api/student/marksheets') return jsonResponse({ marksheets: [] });
+        if (path === '/api/student/certificates') return jsonResponse({ certificates: [] });
+        if (path === '/api/student/tickets') return jsonResponse({ tickets: [] });
+        return jsonResponse({ error: 'No student found or not logged in' }, 404);
+      }
+
       const cert = store.certificates.find(x => x.student_id === student.id);
       const mrk = store.marksheets.find(x => x.student_id === student.id);
       const course = store.courses.find(x => x.id === student.course_id) || store.courses[0];
@@ -2903,7 +2946,8 @@ export default {
         return jsonResponse({ student: enrichedStudent, course, centre });
       }
       if (path === '/api/student/marksheets') {
-        const enrichedMrk = (mrk ? [mrk] : store.marksheets.slice(0, 3)).map(m => {
+        const studentMarksheets = store.marksheets.filter(x => x.student_id === student.id);
+        const enrichedMrk = studentMarksheets.map(m => {
           const cTarget = store.centres.find(x => x.id === m.centre_id) || centre;
           let subList = m.subjects;
           if (typeof subList === 'string') {
@@ -2934,7 +2978,8 @@ export default {
         return jsonResponse({ marksheets: enrichedMrk });
       }
       if (path === '/api/student/certificates') {
-        const enrichedCert = (cert ? [cert] : store.certificates.slice(0, 3)).map(cItem => {
+        const studentCerts = store.certificates.filter(x => x.student_id === student.id);
+        const enrichedCert = studentCerts.map(cItem => {
           const cTarget = store.centres.find(x => x.id === cItem.centre_id) || centre;
           return {
             ...cItem,

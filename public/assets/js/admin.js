@@ -705,6 +705,7 @@ const views = {
             </select>
           </div>
           <span class="badge active">${students.length} Students</span>
+          <button type="button" class="btn sm danger" id="btnClearAllStudents" style="background:#dc2626; color:#fff; font-weight:700; border:none; padding:6px 14px; border-radius:6px; cursor:pointer;" title="Clear all enrolled students">🗑️ Clear All Students</button>
         </div>
       </div>
       ${table([
@@ -756,6 +757,15 @@ const views = {
       cSel.onchange = (e) => {
         V._activeCentreFilter = e.target.value;
         views.Students();
+      };
+    }
+    const btnClear = $('#btnClearAllStudents');
+    if (btnClear) {
+      btnClear.onclick = async () => {
+        if (!confirm('Are you sure you want to permanently delete ALL students, marksheets, and certificates across centres?')) return;
+        await api('/api/admin/students/clear-all', { method: 'POST' });
+        toast('All students, marksheets, and certificates cleared successfully!');
+        await views.Students();
       };
     }
   },
