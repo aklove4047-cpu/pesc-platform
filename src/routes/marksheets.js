@@ -199,16 +199,17 @@ router.get('/:id/pdf', requireAuth, h(async (req, res) => {
   doc.rect(19, 19, W - 38, H - 38).lineWidth(0.8).stroke('#d4af37');
 
   // Header Banner
-  doc.rect(20, 20, W - 40, 85).fill('#0a2a5e');
+  doc.rect(20, 20, W - 40, 92).fill('#0a2a5e');
   doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold')
     .text('PURVANCHAL EDUCATION AND SKILL COUNCIL', 20, 26, { align: 'center', width: W - 40 });
   doc.fontSize(9.5).font('Helvetica-Bold')
     .fillColor('#fcd34d')
-    .text('RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD', 20, 45, { align: 'center', width: W - 40 });
-  doc.fontSize(7.8).font('Helvetica')
+    .text('RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD', 20, 44, { align: 'center', width: W - 40 });
+  doc.fontSize(7.5).font('Helvetica-Bold')
     .fillColor('#e0e7ff')
-    .text('REGISTERED UNDER INDIAN TRUST ACT  ||  NITI AAYOG (NGO DARPAN), GOVT. OF INDIA', 20, 59, { align: 'center', width: W - 40 })
-    .text('AN ISO 9001:2015 CERTIFIED COUNCIL  ||  MSME REGISTERED ORGANISATION  ||  https://pescouncil.in', 20, 72, { align: 'center', width: W - 40 });
+    .text('REGISTERED UNDER INDIAN TRUST ACT  ||  NITI AAYOG (NGO DARPAN), GOVT. OF INDIA', 20, 58, { align: 'center', width: W - 40 })
+    .text('AN ISO 9001:2015 CERTIFIED COUNCIL  ||  MSME REGISTERED ORGANISATION', 20, 70, { align: 'center', width: W - 40 })
+    .text('REGD. NO. (COUNCIL): TRUST/2025/5/IV/299  ||  https://pescouncil.in', 20, 82, { align: 'center', width: W - 40 });
 
   // Document Title Bar
   const isSem = m.evaluation_type === 'semester';
@@ -335,8 +336,10 @@ router.get('/:id/pdf', requireAuth, h(async (req, res) => {
   doc.moveTo(W - 170, footerY + 60).lineTo(W - 40, footerY + 60).lineWidth(0.8).stroke('#334155');
   doc.fontSize(9).font('Helvetica-Bold').fillColor('#0a2a5e')
     .text('Controller of Examinations', W - 180, footerY + 65, { align: 'center', width: 150 });
-  doc.fontSize(7).font('Helvetica').fillColor('#64748b')
-    .text('Purvanchal Education & Skill Council', W - 180, footerY + 78, { align: 'center', width: 150 });
+  // Official contact footer bar
+  doc.moveTo(20, H - 28).lineTo(W - 20, H - 28).lineWidth(0.8).stroke('#cbd5e1');
+  doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#0a2a5e')
+    .text('| 7380435797 | mauryachotu385@gmail.com | Head Office Shahgarh, Azamgarh UP 276001', 20, H - 22, { align: 'center', width: W - 40 });
 
   doc.end();
 }));

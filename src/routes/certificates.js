@@ -56,17 +56,40 @@ router.get('/:id/pdf', requireAuth, h(async (req, res) => {
   const certTitle = isSem ? 'Certificate of Semester Completion' : 'Certificate of Course Completion';
   const termDesc = isSem ? `has completed ${c.term || 'Semester'} for the course` : 'has completed the course';
   doc.rect(20, 20, W - 40, H - 40).lineWidth(4).stroke('#0a2a5e');
-  doc.fillColor('#0a2a5e').fontSize(22).font('Helvetica-Bold').text('PURVANCHAL EDUCATION AND SKILL COUNCIL', 0, 42, { align: 'center' });
-  doc.fillColor('#b45309').fontSize(11).font('Helvetica-Bold').text('RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD', 0, 68, { align: 'center' });
-  doc.fillColor('#334155').fontSize(8.5).font('Helvetica').text('REGISTERED UNDER INDIAN TRUST ACT  ||  NITI AAYOG (NGO DARPAN), GOVT. OF INDIA', 0, 84, { align: 'center' });
-  doc.fontSize(8.5).text('AN ISO 9001:2015 CERTIFIED COUNCIL  ||  MSME REGISTERED ORGANISATION  ||  https://pescouncil.in', 0, 98, { align: 'center' });
-  doc.fontSize(28).font('Helvetica-Bold').fillColor('#0a2a5e').text(certTitle, 0, 130, { align: 'center' });
-  doc.fillColor('#333').fontSize(15).font('Helvetica').text('This is to certify that', 0, 185, { align: 'center' });
-  doc.fillColor('#0a2a5e').fontSize(28).font('Helvetica-Bold').text(c.student_name, 0, 215, { align: 'center' });
-  doc.fillColor('#333').fontSize(15).font('Helvetica').text(`${termDesc} "${c.course_name}" at ${c.centre_name}`, 60, 270, { align: 'center', width: W - 120 });
-  doc.fontSize(11).font('Helvetica').text(`Certificate No: ${c.cert_no} | Pattern: ${isSem ? (c.term || 'Semester') : 'Annual'}`, 60, H - 150).text(`Issue date: ${new Date(c.issued_at).toISOString().slice(0, 10)}`, 60, H - 132);
-  doc.fontSize(8.5).fillColor('#666').text('Official Verification: https://pescouncil.in  |  Scan QR to verify authenticity', 60, H - 100, { width: 420 });
-  doc.image(qr, W - 190, H - 190, { width: 110 });
+  doc.fillColor('#0a48a3').fontSize(16).font('Helvetica-Bold').text('PURVANCHAL EDUCATION AND SKILL COUNCIL', 0, 32, { align: 'center' });
+  doc.fillColor('#047857').fontSize(13).font('Helvetica-Bold').text('PURVANCHAL EDUCATION AND SKILL COUNCIL', 0, 50, { align: 'center' });
+  doc.fillColor('#000000').fontSize(9.5).font('Helvetica-Bold').text('RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD', 0, 68, { align: 'center' });
+  doc.fontSize(7.5).font('Helvetica-Bold').text('REGISTERED UNDER INDIAN TRUST ACT  ||  NITI AAYOG (NGO DARPAN), GOVT. OF INDIA', 0, 81, { align: 'center' });
+  doc.text('AN ISO 9001:2015 CERTIFIED COUNCIL  ||  MSME REGISTERED ORGANISATION', 0, 93, { align: 'center' });
+  doc.text('https://pescouncil.in', 0, 105, { align: 'center' });
+
+  // Double divider
+  doc.moveTo(35, 118).lineTo(W - 35, 118).lineWidth(1.5).stroke('#000000');
+  doc.moveTo(35, 120.5).lineTo(W - 35, 120.5).lineWidth(0.8).stroke('#000000');
+
+  // Metadata row
+  doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000000')
+    .text('REGD. NO. (COUNCIL): TRUST/2025/5/IV/299', 40, 126);
+  doc.text(`Ref No: PESC-CERT-${c.id}`, W - 220, 126, { align: 'right', width: 180 });
+  doc.text(`Student Reg. No: ${c.student_code || 'PESC-' + c.id}`, 40, 138);
+  doc.text(`Date of Issue: ${new Date(c.issued_at || Date.now()).toLocaleDateString('en-GB')}`, W - 220, 138, { align: 'right', width: 180 });
+  doc.text(`Roll Number: ${c.student_code || 'PESC-' + c.id}`, 40, 150);
+
+  doc.fontSize(22).font('Helvetica-Bold').fillColor('#0a2a5e').text(certTitle, 0, 172, { align: 'center' });
+  doc.fillColor('#333').fontSize(13).font('Helvetica').text('THIS IS TO CERTIFY THAT MR. / MRS.', 0, 205, { align: 'center' });
+  doc.fillColor('#0a2a5e').fontSize(24).font('Helvetica-Bold').text(c.student_name, 0, 225, { align: 'center' });
+  doc.fillColor('#333').fontSize(13).font('Helvetica').text(`${termDesc} "${c.course_name}" AT OUR AUTHORIZED STUDY CENTRE`, 60, 260, { align: 'center', width: W - 120 });
+  doc.fillColor('#047857').fontSize(15).font('Helvetica-Bold').text(c.centre_name, 60, 282, { align: 'center', width: W - 120 });
+  doc.fillColor('#333').fontSize(11).font('Helvetica').text(`HE / SHE HAS BEEN AWARDED WITH THE CERTIFICATE / DIPLOMA OF SAID JOB ROLE`, 60, 308, { align: 'center', width: W - 120 });
+
+  doc.fontSize(9.5).font('Helvetica').fillColor('#000000').text(`Certificate No: ${c.cert_no} | Pattern: ${isSem ? (c.term || 'Semester') : 'Annual'}`, 60, H - 125);
+  doc.image(qr, W - 170, H - 165, { width: 90 });
+  doc.fontSize(7.5).fillColor('#444').text('Scan to Verify at pescouncil.in', W - 180, H - 70, { width: 110, align: 'center' });
+
+  // Official contact footer bar
+  doc.moveTo(35, H - 52).lineTo(W - 35, H - 52).lineWidth(1).stroke('#000000');
+  doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000000')
+    .text('| 7380435797 | mauryachotu385@gmail.com | Head Office Shahgarh, Azamgarh UP 276001', 0, H - 44, { align: 'center', width: W });
   doc.end();
 }));
 module.exports = router;

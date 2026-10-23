@@ -869,11 +869,13 @@ export default {
         director_name: dName,
         director_photo: dPhoto,
         validity: 'Lifetime Validity / Session 2026-27',
-        session: student.session || '2026-27',
         run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
         registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
+        council_reg_no: 'TRUST/2025/5/IV/299',
+        council_phone: '7380435797',
+        council_email: 'mauryachotu385@gmail.com',
+        head_office: 'Head Office Shahgarh, Azamgarh UP 276001',
         coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
-        head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi',
         issued_on: new Date(cert.issued_at || cert.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
       });
     }
@@ -922,8 +924,11 @@ export default {
         validity: 'Lifetime Validity / Session 2026-27',
         run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
         registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
+        council_reg_no: 'TRUST/2025/5/IV/299',
+        council_phone: '7380435797',
+        council_email: 'mauryachotu385@gmail.com',
+        head_office: 'Head Office Shahgarh, Azamgarh UP 276001',
         coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
-        head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi',
         total_obtained: mrk.total_obtained,
         total_max: mrk.total_max,
         percentage: mrk.percentage,
@@ -2339,8 +2344,11 @@ export default {
             validity: 'Lifetime Validity / Session 2026-27',
             run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
             registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
-            coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
-            head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi'
+            council_reg_no: 'TRUST/2025/5/IV/299',
+            council_phone: '7380435797',
+            council_email: 'mauryachotu385@gmail.com',
+            head_office: 'Head Office Shahgarh, Azamgarh UP 276001',
+            coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone'
           };
         });
         return jsonResponse({ marksheets: enrichedMrk });
@@ -2359,8 +2367,11 @@ export default {
             validity: 'Lifetime Validity / Session 2026-27',
             run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
             registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
-            coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
-            head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi'
+            council_reg_no: 'TRUST/2025/5/IV/299',
+            council_phone: '7380435797',
+            council_email: 'mauryachotu385@gmail.com',
+            head_office: 'Head Office Shahgarh, Azamgarh UP 276001',
+            coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone'
           };
         });
         return jsonResponse({ certificates: enrichedCert });
