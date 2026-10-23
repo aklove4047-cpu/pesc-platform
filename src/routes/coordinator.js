@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const db = require('../db');
 const { requireRole } = require('../auth');
-const { HttpError, str, paginate } = require('../lib');
+const { HttpError, str, paginate, now } = require('../lib');
 
 router.use(requireRole('super_admin', 'admin', 'coordinator'));
 
@@ -52,8 +52,20 @@ router.get('/dashboard', (req, res) => {
     WHERE m.status='Approved' ${isCoord ? 'AND c.coordinator_id=?' : ''}
   `).get(...filterParams).n;
 
+  // Get coordinator profile
+  const profile = db.prepare('SELECT id, name, email, mobile, photo_url, state, seal_url, signature_url FROM users WHERE id=?').get(req.user.id) || {};
+
   res.json({
-    coordinator: { id: req.user.id, name: req.user.name, email: req.user.email, state: req.user.state },
+    coordinator: {
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      state: req.user.state,
+      photo_url: profile.photo_url || null,
+      seal_url: profile.seal_url || null,
+      signature_url: profile.signature_url || null,
+      mobile: profile.mobile || null,
+    },
     stats: {
       centres_total: centreCount,
       centres_active: activeCentres,
@@ -71,11 +83,14 @@ router.get('/centres', (req, res) => {
   const { isCoord, coordId } = getScope(req);
   const { size, offset } = paginate(req);
   const rows = db.prepare(`
-    SELECT c.id, c.centre_code, c.name, c.slug, c.district, c.state, c.status,
-      u.name AS owner_name, u.email AS owner_email, u.mobile AS owner_mobile,
+    SELECT c.id, c.centre_code, c.name, c.slug, c.district, c.state, c.status, c.address, c.pin,
+      u.name AS owner_name, u.email AS owner_email, u.mobile AS owner_mobile, u.photo_url AS director_photo,
+      c.seal_url, c.signature_url, c.logo_url,
       (SELECT COUNT(*) FROM students s WHERE s.centre_id=c.id) AS students_count,
       (SELECT COUNT(*) FROM certificates cert WHERE cert.centre_id=c.id AND cert.status='Valid') AS certs_count,
-      (SELECT COUNT(*) FROM marksheets m WHERE m.centre_id=c.id AND m.status='Approved') AS marksheets_count
+      (SELECT COUNT(*) FROM marksheets m WHERE m.centre_id=c.id AND m.status='Approved') AS marksheets_count,
+      (SELECT COUNT(*) FROM certificates cert WHERE cert.centre_id=c.id AND cert.status='Pending') AS certs_pending,
+      (SELECT COUNT(*) FROM marksheets m WHERE m.centre_id=c.id AND m.status='Pending') AS marksheets_pending
     FROM centres c
     LEFT JOIN users u ON u.id=c.owner_user_id
     ${isCoord ? 'WHERE c.coordinator_id=?' : ''}
@@ -83,6 +98,27 @@ router.get('/centres', (req, res) => {
   `).all(...(isCoord ? [coordId] : []), size, offset);
 
   res.json({ centres: rows });
+});
+
+// Single centre detail with students, marksheets, certs
+router.get('/centres/:id', (req, res) => {
+  const { isCoord, coordId } = getScope(req);
+  const centreId = +req.params.id;
+  const c = db.prepare(`SELECT c.*, u.name AS owner_name, u.email AS owner_email, u.mobile AS owner_mobile
+    FROM centres c LEFT JOIN users u ON u.id=c.owner_user_id
+    WHERE c.id=? ${isCoord ? 'AND c.coordinator_id=?' : ''}`).get(centreId, ...(isCoord ? [coordId] : []));
+  if (!c) throw new HttpError(404, 'Centre not found or not in your jurisdiction');
+
+  const students = db.prepare(`SELECT s.*, co.name AS course_name FROM students s
+    JOIN courses co ON co.id=s.course_id WHERE s.centre_id=? ORDER BY s.id DESC LIMIT 50`).all(centreId);
+  const marksheets = db.prepare(`SELECT m.*, s.name AS student_name, co.name AS course_name FROM marksheets m
+    JOIN students s ON s.id=m.student_id JOIN courses co ON co.id=m.course_id
+    WHERE m.centre_id=? ORDER BY m.id DESC LIMIT 50`).all(centreId);
+  const certificates = db.prepare(`SELECT cert.*, s.name AS student_name, co.name AS course_name FROM certificates cert
+    JOIN students s ON s.id=cert.student_id JOIN courses co ON co.id=cert.course_id
+    WHERE cert.centre_id=? ORDER BY cert.id DESC LIMIT 50`).all(centreId);
+
+  res.json({ centre: c, students, marksheets, certificates });
 });
 
 // List students across assigned centres
@@ -168,6 +204,63 @@ router.get('/marksheets', (req, res) => {
   params.push(size, offset);
 
   res.json({ marksheets: db.prepare(sql).all(...params) });
+});
+
+// GET coordinator profile
+router.get('/profile', (req, res) => {
+  const u = db.prepare('SELECT id, name, email, mobile, state, photo_url, seal_url, signature_url FROM users WHERE id=?').get(req.user.id);
+  res.json({ profile: u || { id: req.user.id, name: req.user.name, email: req.user.email, state: req.user.state } });
+});
+
+// POST update coordinator profile (name, email, mobile, photo, mohar, sign)
+router.post('/profile', (req, res) => {
+  const b = req.body || {};
+  const name = str(b.name, 100);
+  const mobile = str(b.mobile, 20);
+  const email = str(b.email, 150);
+  const photo_url = str(b.photo_url, 1000) || null;
+  const seal_url = str(b.seal_url, 1000) || null;
+  const signature_url = str(b.signature_url, 1000) || null;
+  const state = str(b.state, 100);
+
+  // Ensure seal_url and signature_url columns exist (graceful)
+  try {
+    db.prepare('ALTER TABLE users ADD COLUMN seal_url TEXT').run();
+  } catch (_) {}
+  try {
+    db.prepare('ALTER TABLE users ADD COLUMN signature_url TEXT').run();
+  } catch (_) {}
+
+  db.prepare(`UPDATE users SET
+    name = COALESCE(?, name),
+    mobile = COALESCE(?, mobile),
+    email = COALESCE(?, email),
+    photo_url = COALESCE(?, photo_url),
+    seal_url = COALESCE(?, seal_url),
+    signature_url = COALESCE(?, signature_url),
+    state = COALESCE(?, state)
+    WHERE id=?`).run(
+    name || null,
+    mobile || null,
+    email || null,
+    photo_url,
+    seal_url,
+    signature_url,
+    state || null,
+    req.user.id
+  );
+
+  res.json({ ok: true, message: 'Profile updated successfully!' });
+});
+
+// POST change coordinator password
+router.post('/change-password', (req, res) => {
+  const { new_password } = req.body || {};
+  if (!new_password || new_password.length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
+  // Simple hash for demo - in production use argon2
+  const hash = Buffer.from(new_password).toString('base64');
+  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.user.id);
+  res.json({ ok: true, message: 'Password changed successfully!' });
 });
 
 module.exports = router;

@@ -59,9 +59,28 @@ const STEPS = [
   ['ping_search_engines', async (a) => {
     try {
       const sitemap = encodeURIComponent('https://pescouncil.in/sitemap.xml');
+      const subDomain = `${a.slug}.${cfg.BASE_DOMAIN}`;
+      const subDomainUrl = `https://${subDomain}`;
+      const subSitemap = encodeURIComponent(`${subDomainUrl}/sitemap.xml`);
+
       fetch(`https://www.google.com/ping?sitemap=${sitemap}`).catch(() => {});
       fetch(`https://www.bing.com/ping?sitemap=${sitemap}`).catch(() => {});
-      return 'Google and Bing queued for indexing';
+      fetch(`https://www.google.com/ping?sitemap=${subSitemap}`).catch(() => {});
+      fetch(`https://www.bing.com/ping?sitemap=${subSitemap}`).catch(() => {});
+
+      // IndexNow API for instant search engine indexing (Bing, Yandex, Naver, Seznam)
+      fetch('https://api.indexnow.org/indexnow', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          host: subDomain,
+          key: 'pescouncil2026instantindex',
+          keyLocation: `https://${subDomain}/pescouncil2026instantindex.txt`,
+          urlList: [subDomainUrl, `${subDomainUrl}/`, `${subDomainUrl}/#courses`, `${subDomainUrl}/#about`]
+        })
+      }).catch(() => {});
+
+      return 'Google, Bing & IndexNow submitted for instant indexing';
     } catch (_) {
       return 'ping skipped';
     }

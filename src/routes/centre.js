@@ -143,6 +143,10 @@ router.post('/students', h(async (req, res) => {
   if (!name) throw new HttpError(400, 'Student name is required');
   if (!course_id) throw new HttpError(400, 'Course selection is required');
 
+  const courseAssigned = db.prepare('SELECT 1 FROM centre_courses WHERE centre_id=? AND course_id=?').get(cid(req), course_id);
+  if (!courseAssigned) throw new HttpError(400, 'Course is not assigned to this centre');
+
+
   const defaultPw = 'Student@123';
   const hash = await argon2.hash(defaultPw);
   const code = nextStudentCode(cid(req));
@@ -177,6 +181,18 @@ router.put('/students/:id', (req, res) => {
   if (!r.changes) throw new HttpError(404, 'Student not found');
   res.json({ ok: true });
 });
+
+router.post('/students/:id/account', h(async (req, res) => {
+  const s = db.prepare('SELECT * FROM students WHERE id=? AND centre_id=?').get(+req.params.id, cid(req));
+  if (!s) throw new HttpError(404, 'Student not found in this centre');
+  const password = str(req.body.password, 100);
+  if (!password || password.length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
+  const hash = await argon2.hash(password);
+  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, s.user_id);
+  db.prepare('UPDATE students SET initial_password=? WHERE id=?').run(password, s.id);
+  res.json({ ok: true, login_id: s.student_code });
+}));
+
 
 // 3. My Courses - Centre apna selling price khud set karega
 router.get('/courses', (req, res) => {
@@ -249,14 +265,15 @@ router.post('/certificates', (req, res) => {
   const s = db.prepare('SELECT * FROM students WHERE id=? AND centre_id=?').get(+req.body.student_id, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
   const existing = db.prepare("SELECT id FROM certificates WHERE student_id=? AND course_id=? AND status IN ('Pending','Valid')").get(s.id, s.course_id);
-  if (existing) return res.json({ id: existing.id, message: 'Certificate already applied' });
+  if (existing) throw new HttpError(409, 'Certificate already issued or pending for this student');
 
-  const certNo = `PESC/${new Date().getFullYear()}/${String(s.id).padStart(6, '0')}`;
+
   const token = crypto.randomBytes(16).toString('hex');
-  const r = db.prepare("INSERT INTO certificates(cert_no, token, student_id, centre_id, course_id, status, requested_by, issued_at, created_at) VALUES(?,?,?,?,?,'Valid',?,?,?)")
-    .run(certNo, token, s.id, cid(req), s.course_id, req.user.id, now(), now());
-  res.status(201).json({ id: r.lastInsertRowid, cert_no: certNo, token });
+  const r = db.prepare("INSERT INTO certificates(token, student_id, centre_id, course_id, status, requested_by, created_at) VALUES(?,?,?,?,'Pending',?,?)")
+    .run(token, s.id, cid(req), s.course_id, req.user.id, now());
+  res.status(201).json({ id: r.lastInsertRowid, status: 'Pending', token });
 });
+
 
 // 8. Mohar + Signature Upload & Centre Profile Settings
 router.get('/settings', (req, res) => {
@@ -449,8 +466,9 @@ router.post('/wallet/recharge', (req, res) => {
   const ref = 'WAL-' + Date.now().toString().slice(-6);
   db.prepare("INSERT INTO payment_transactions(centre_id, provider_ref, amount_paise, status, created_at) VALUES(?,?,?,'pending',?)")
     .run(cid(req), ref, rupees * 100, now());
-  res.json({ ok: true, provider_ref: ref, amount_paise: rupees * 100 });
+  res.status(201).json({ ok: true, provider_ref: ref, amount_paise: rupees * 100 });
 });
+
 
 // Inquiry & 1-Click Enrollment
 router.get('/inquiries', (req, res) => {

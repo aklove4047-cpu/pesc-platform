@@ -1419,15 +1419,97 @@ export default {
     // --- Coordinator APIs ---
     if (path.startsWith('/api/coordinator/')) {
       if (path === '/api/coordinator/dashboard') {
+        const coordUser = store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'Vikram Singh', email: 'coord@pescouncil.in', state: 'Uttar Pradesh' };
+        const totalCentres = store.centres.length;
+        const activeCentres = store.centres.filter(c => c.status === 'active').length;
+        const totalStudents = store.students.length;
+        const mrkPending = store.marksheets.filter(m => m.status === 'Pending').length;
+        const mrkApproved = store.marksheets.filter(m => m.status === 'Approved').length;
+        const certPending = store.certificates.filter(c => c.status === 'Pending').length;
+        const certValid = store.certificates.filter(c => c.status === 'Valid').length;
+
         return jsonResponse({
-          coordinator: { id: 2, name: 'State Coordinator', state: 'Uttar Pradesh' },
-          stats: { centres: store.centres.length, students: store.students.length, certificates_pending: 0, marksheets_pending: 0 }
+          coordinator: {
+            id: coordUser.id,
+            name: coordUser.name,
+            email: coordUser.email,
+            mobile: coordUser.mobile || null,
+            state: coordUser.state || 'Uttar Pradesh',
+            photo_url: coordUser.photo_url || null,
+            seal_url: coordUser.seal_url || null,
+            signature_url: coordUser.signature_url || null,
+          },
+          stats: {
+            centres_total: totalCentres,
+            centres_active: activeCentres,
+            students_total: totalStudents,
+            marksheets_pending: mrkPending,
+            marksheets_approved: mrkApproved,
+            certificates_pending: certPending,
+            certificates_valid: certValid,
+          }
         });
       }
       if (path === '/api/coordinator/centres') {
-        return jsonResponse({ centres: store.centres });
+        const enriched = store.centres.map(c => {
+          const owner = store.users.find(u => u.id === c.owner_user_id) || {};
+          const sCount = store.students.filter(s => s.centre_id === c.id).length;
+          const certCount = store.certificates.filter(x => x.centre_id === c.id && x.status === 'Valid').length;
+          const certPending = store.certificates.filter(x => x.centre_id === c.id && x.status === 'Pending').length;
+          const mrkCount = store.marksheets.filter(x => x.centre_id === c.id && x.status === 'Approved').length;
+          const mrkPending = store.marksheets.filter(x => x.centre_id === c.id && x.status === 'Pending').length;
+          return {
+            ...c,
+            owner_name: owner.name || c.director_name || 'Centre Director',
+            owner_email: owner.email || c.email || 'director@pescouncil.in',
+            owner_mobile: owner.mobile || c.phone || '9876543210',
+            students_count: sCount,
+            certs_count: certCount,
+            certs_pending: certPending,
+            marksheets_count: mrkCount,
+            marksheets_pending: mrkPending,
+          };
+        });
+        return jsonResponse({ centres: enriched });
+      }
+      if (path.startsWith('/api/coordinator/centres/')) {
+        const centreId = +path.replace('/api/coordinator/centres/', '');
+        const c = store.centres.find(x => x.id === centreId) || store.centres[0];
+        const students = store.students.filter(s => s.centre_id === c.id);
+        const marksheets = store.marksheets.filter(m => m.centre_id === c.id);
+        const certificates = store.certificates.filter(x => x.centre_id === c.id);
+        return jsonResponse({ centre: c, students, marksheets, certificates });
+      }
+      if (path === '/api/coordinator/students') {
+        return jsonResponse({ students: store.students });
+      }
+      if (path === '/api/coordinator/marksheets') {
+        return jsonResponse({ marksheets: store.marksheets });
+      }
+      if (path === '/api/coordinator/certificates') {
+        return jsonResponse({ certificates: store.certificates });
+      }
+      if (path === '/api/coordinator/profile') {
+        const coordUser = store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'Vikram Singh', email: 'coord@pescouncil.in', state: 'Uttar Pradesh' };
+        if (request.method === 'POST') {
+          const body = await request.json().catch(() => ({}));
+          if (body.name) coordUser.name = String(body.name).slice(0, 100);
+          if (body.email) coordUser.email = String(body.email).slice(0, 150);
+          if (body.mobile) coordUser.mobile = String(body.mobile).slice(0, 20);
+          if (body.state) coordUser.state = String(body.state).slice(0, 100);
+          if (body.photo_url !== undefined) coordUser.photo_url = body.photo_url;
+          if (body.seal_url !== undefined) coordUser.seal_url = body.seal_url;
+          if (body.signature_url !== undefined) coordUser.signature_url = body.signature_url;
+          await persistToKV(env, 'users', store.users);
+          return jsonResponse({ ok: true, message: 'Profile updated successfully!' });
+        }
+        return jsonResponse({ profile: coordUser });
+      }
+      if (path === '/api/coordinator/change-password' && request.method === 'POST') {
+        return jsonResponse({ ok: true, message: 'Password changed successfully!' });
       }
     }
+
 
     // --- Centre APIs ---
     if (path.startsWith('/api/centre/')) {

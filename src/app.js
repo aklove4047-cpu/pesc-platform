@@ -19,7 +19,7 @@ app.disable('x-powered-by');
 app.use(helmet());
 app.get('/healthz', healthz);
 app.use('/api/webhooks', require('./routes/webhooks'));
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(tenant);
 app.use(loadUser);
@@ -213,10 +213,12 @@ app.get('/c/:slug', (req, res) => {
   return res.status(404).sendFile(path.join(PUB, 'index.html'));
 });
 
-// Google Search Console Site Verification File Endpoint
-app.get('/googleXRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo.html', (req, res) => {
-  res.type('html').send('google-site-verification: googleXRebtybr9Utqm8Nj50Kvj5g5v5XBtjFsFZsJ1Oyvdyo.html');
+// Google Search Console Site Verification File Endpoint (dynamic matching for any google*.html verification file)
+app.get(/^\/google[a-zA-Z0-9_\-]+\.html$/, (req, res) => {
+  const filename = req.path.replace(/^\//, '');
+  res.type('html').send(`google-site-verification: ${filename}`);
 });
+
 
 // Dynamic XML Sitemap for Google, Bing & Search Engine Indexing
 app.get('/sitemap.xml', (req, res) => {
@@ -303,6 +305,12 @@ Sitemap: https://pescouncil.in/sitemap.xml
 `
   );
 });
+
+// IndexNow Key Verification Endpoint for Instant Search Engine Crawling
+app.get('/pescouncil2026instantindex.txt', (req, res) => {
+  res.type('text/plain').send('pescouncil2026instantindex');
+});
+
 
 app.get(['/c/:slug/admin', '/c/:slug/portal', '/c/:slug/erp'], (req, res) => {
   return res.redirect(`/portal?centre=${encodeURIComponent(req.params.slug)}`);
