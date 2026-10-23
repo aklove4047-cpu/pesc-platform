@@ -23,8 +23,43 @@ async function needRole(roles) {
   try { const d = await api('/api/auth/me'); if (!roles.includes(d.user.role)) { location = '/login'; return null; } return d; } catch { location = '/login'; return null; }
 }
 async function guard(fn) { try { return await fn(); } catch (e) { toast(e.message, false); } }
+const tabIcons = {
+  Dashboard: '📊',
+  Applications: '📝',
+  Centres: '🏢',
+  Courses: '📚',
+  Coordinators: '👔',
+  Reports: '📈',
+  Students: '🎓',
+  Notices: '📢',
+  'Audit Logs': '🛡️',
+  Wallets: '💳',
+  Certificates: '📜',
+  Marksheets: '📊',
+  'Assigned Centres': '🏫',
+  'Students Registry': '👨‍🎓',
+  'Marksheet Approvals': '📋',
+  'Certificate Approvals': '🏅',
+  'Appointment Certificate': '📜',
+  'My Profile': '👤',
+  Profile: '👤',
+  Overview: '📊',
+  'Admission Desk': '📝',
+  'Wallet / Recharge': '💳',
+  'Official Documents': '📜',
+  'Change Password': '🔒',
+};
+
 function tabs(el, names, onPick) {
-  el.innerHTML = names.map((n, i) => `<button data-tab="${esc(n)}" class="${i ? '' : 'on'}">${esc(n)}</button>`).join('');
-  el.addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (!b) return; $$('button', el).forEach((x) => x.classList.toggle('on', x === b)); onPick(b.dataset.tab); });
+  el.innerHTML = names.map((n, i) => {
+    const ico = tabIcons[n] ? `${tabIcons[n]} ` : '';
+    return `<button data-tab="${esc(n)}" class="${i ? '' : 'on'}">${ico}${esc(n)}</button>`;
+  }).join('');
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tab]');
+    if (!b) return;
+    $$('button', el).forEach((x) => x.classList.toggle('on', x === b));
+    onPick(b.dataset.tab);
+  });
   onPick(names[0]);
 }
