@@ -124,31 +124,23 @@ const views = {
     const { courses } = await api('/api/admin/courses');
     window._adminCourses = courses;
     V.innerHTML = `
-      <h2>Affiliated Courses Catalog</h2>
+      <h2>Affiliated Courses Catalog &amp; Curriculum Management</h2>
+      <p class="muted">Manage accredited vocational courses, configure distinct yearly &amp; semester curriculum subjects, and set official examination/certificate fees</p>
       ${table([
         ['ID', (r) => r.id],
-        ['Course Code', (r) => `<b style="font-family:monospace;">${esc(r.code)}</b>`],
+        ['Course Code', (r) => `<b style="font-family:monospace; color:var(--navy); font-size:0.95rem;">${esc(r.code)}</b>`],
         ['Course Title', (r) => `<b>${esc(r.name)}</b>`],
         ['Duration', (r) => `${r.duration_months} Months`],
-        ['Total Marks', (r) => r.total_marks || 100],
-        ['Course Fee', (r) => inr(r.fee_paise)],
-        ['Course Subjects', (r) => {
-          let subs = [];
-          try { subs = typeof r.subjects === 'string' ? JSON.parse(r.subjects || '[]') : (r.subjects || []); } catch (_) {}
-          const count = subs.length;
-          const names = subs.map(s => s.name || s).join(', ');
-          return `
-            <div style="max-width:260px;">
-              <button type="button" class="btn sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:700; font-size:0.8rem; padding:3px 9px; border-radius:6px;" onclick="showCourseSubjectsModal(${r.id})">
-                📚 ${count} Subjects (विषय)
-              </button>
-              ${count ? `<div class="muted" style="font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px;" title="${esc(names)}">${esc(names)}</div>` : '<div class="muted" style="font-size:0.75rem;">No subjects added</div>'}
-            </div>
-          `;
-        }],
+        ['Single / Yearly Fee', (r) => `<b style="color:#064e3b; font-size:0.95rem;">₹${r.single_fee_rupees || Math.round((r.single_fee_paise || 20000)/100)}</b><br><span class="muted" style="font-size:0.75rem;">Per Cert/Marksheet</span>`],
+        ['Semester Fee', (r) => `<b style="color:#0284c7; font-size:0.95rem;">₹${r.semester_fee_rupees || Math.round((r.semester_fee_paise || 60000)/100)}</b><br><span class="muted" style="font-size:0.75rem;">Per Semester Exam</span>`],
+        ['Yearly & Semester Subjects', (r) => `
+          <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#fde047; border:1px solid #d4af37; font-weight:700; font-size:0.8rem; padding:5px 11px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" onclick="openCourseCurriculumEditor(${r.id})">
+            📚 Edit Subjects (Year &amp; Sem)
+          </button>
+        `],
         ['Status', (r) => r.active ? `<span class="badge Valid">Active</span>` : `<span class="badge Rejected">Inactive</span>`],
         ['Actions', (r) => `
-          <button class="btn sm alt" data-a="edit_course" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.code)}" data-dur="${r.duration_months}" data-fee="${Math.round(r.fee_paise/100)}" data-marks="${r.total_marks || 100}" data-active="${r.active}">✏️ Edit</button>
+          <button class="btn sm alt" data-a="edit_course" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.code)}" data-dur="${r.duration_months}" data-fee="${Math.round(r.fee_paise/100)}" data-single-fee="${r.single_fee_rupees || Math.round((r.single_fee_paise||20000)/100)}" data-sem-fee="${r.semester_fee_rupees || Math.round((r.semester_fee_paise||60000)/100)}" data-marks="${r.total_marks || 100}" data-active="${r.active}">✏️ Edit</button>
         `],
       ], courses)}
 
@@ -157,12 +149,14 @@ const views = {
         <div><label>Course Code (e.g. DCA, PGDCA) *</label><input name="code" required maxlength="20"></div>
         <div><label>Course Name *</label><input name="name" required maxlength="120"></div>
         <div><label>Duration in Months *</label><input name="duration_months" type="number" min="1" required></div>
-        <div><label>Course Fee (₹) *</label><input name="fee_rupees" type="number" min="0" required></div>
+        <div><label>Course Training Fee (₹) *</label><input name="fee_rupees" type="number" min="0" required></div>
+        <div><label>Single / Yearly Exam Fee (₹) *</label><input name="single_fee_rupees" type="number" min="0" value="200" required></div>
+        <div><label>Semester Exam Fee (₹) *</label><input name="semester_fee_rupees" type="number" min="0" value="600" required></div>
         <div><label>Total Marks *</label><input name="total_marks" type="number" min="50" value="100" required></div>
         <div style="grid-column: 1 / -1; width:100%;">
-          <label style="font-weight:700; display:block; margin-bottom:4px;">Course Subjects (पाठ्यक्रम के विषय) – Enter subjects separated by comma or new lines:</label>
-          <textarea name="subjects_text" rows="3" placeholder="e.g. IT Fundamentals, Office Automation, Tally Prime GST, Project Lab Viva" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:8px 12px; font-size:0.9rem;"></textarea>
-          <small class="muted">Each subject will automatically be configured with standard evaluation marks.</small>
+          <label style="font-weight:700; display:block; margin-bottom:4px;">Initial Subjects (Optional) – Enter subjects separated by comma or new lines:</label>
+          <textarea name="subjects_text" rows="2" placeholder="e.g. IT Fundamentals, Office Automation, Project Viva" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:8px 12px; font-size:0.9rem;"></textarea>
+          <small class="muted">After creating the course, you can configure detailed semester-wise and yearly-wise subjects using the 'Edit Subjects' button.</small>
         </div>
         <div style="align-self:end;"><button class="btn gold" style="font-weight:700;">➕ Create Course</button></div>
       </form>
@@ -1449,59 +1443,403 @@ function showAdminCoordCertModal(cert) {
   document.body.appendChild(modal);
 }
 
-function showCourseSubjectsModal(courseId) {
-  const c = (window._adminCourses || []).find(x => x.id === courseId);
-  if (!c) return;
-  let subs = [];
-  try { subs = typeof c.subjects === 'string' ? JSON.parse(c.subjects || '[]') : (c.subjects || []); } catch (_) {}
-  
-  const existing = document.getElementById('subjectsModal');
+async function openCourseCurriculumEditor(courseId) {
+  const existing = document.getElementById('curriculumEditorModal');
   if (existing) existing.remove();
 
-  const modal = document.createElement('div');
-  modal.id = 'subjectsModal';
-  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;';
-  modal.innerHTML = `
-    <div style="background:#fff; border-radius:12px; max-width:640px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
-        <h3 style="margin:0; color:#0a2a5e;">📚 Course Subjects: ${esc(c.code)} - ${esc(c.name)}</h3>
-        <button type="button" onclick="document.getElementById('subjectsModal').remove()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-      </div>
-      <p class="muted" style="margin-top:0; font-size:0.88rem;">Total Duration: <b>${c.duration_months} Months</b> | Total Marks: <b>${c.total_marks || 100}</b></p>
-      
-      ${subs.length ? `
-        <table style="width:100%; border-collapse:collapse; font-size:0.88rem; margin-bottom:18px;">
-          <thead>
-            <tr style="background:#f8fafc; border-bottom:2px solid #cbd5e1;">
-              <th style="padding:8px; text-align:left;">#</th>
-              <th style="padding:8px; text-align:left;">Code</th>
-              <th style="padding:8px; text-align:left;">Subject Title</th>
-              <th style="padding:8px; text-align:center;">Max Th.</th>
-              <th style="padding:8px; text-align:center;">Max Pr.</th>
-              <th style="padding:8px; text-align:center;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${subs.map((s, idx) => `
-              <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:8px;">${idx + 1}</td>
-                <td style="padding:8px;"><b style="font-family:monospace; color:#0284c7;">${esc(s.code || `SUB${idx+1}`)}</b></td>
-                <td style="padding:8px; font-weight:600;">${esc(s.name || s)}</td>
-                <td style="padding:8px; text-align:center;">${s.max_theory || 70}</td>
-                <td style="padding:8px; text-align:center;">${s.max_practical || 30}</td>
-                <td style="padding:8px; text-align:center; font-weight:700; color:#0a2a5e;">${s.total_max || 100}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      ` : '<p class="muted" style="padding:20px; text-align:center; background:#f8fafc; border-radius:8px;">No subjects configured for this course yet.</p>'}
+  let course = (window._adminCourses || []).find(x => x.id === courseId);
+  let res = null;
+  try {
+    res = await api(`/api/admin/courses/${courseId}/curriculum`);
+  } catch (_) {}
 
-      <div style="display:flex; justify-content:flex-end;">
-        <button class="btn alt sm" onclick="document.getElementById('subjectsModal').remove()">Close</button>
+  const cCode = (res && res.code) || (course ? course.code : 'COURSE');
+  const cName = (res && res.name) || (course ? course.name : 'Vocational Course');
+  let singleFee = res ? res.single_fee_rupees : Math.round(((course && course.single_fee_paise) || 20000) / 100);
+  let semFee = res ? res.semester_fee_rupees : Math.round(((course && course.semester_fee_paise) || 60000) / 100);
+
+  let curData = (res && res.curriculum) || {};
+  if (typeof curData === 'string') {
+    try { curData = JSON.parse(curData); } catch (_) { curData = {}; }
+  }
+  if (!curData.yearly) curData.yearly = {};
+  if (!curData.semester) curData.semester = {};
+
+  if (!Object.keys(curData.yearly).length) {
+    curData.yearly = {
+      'Annual Examination': [
+        { code: `${cCode}-Y101`, name: 'Theory & Core Fundamentals', theory: 45, practical: 45, max_marks: 100 },
+        { code: `${cCode}-Y102`, name: 'Applied Professional Skills & Technology', theory: 44, practical: 46, max_marks: 100 },
+        { code: `${cCode}-Y103`, name: 'Industry Practicum & Viva-Voce', theory: 48, practical: 48, max_marks: 100 }
+      ],
+      '1st Year': [
+        { code: `${cCode}-Y101`, name: 'Theory & Core Fundamentals', theory: 45, practical: 45, max_marks: 100 },
+        { code: `${cCode}-Y102`, name: 'Applied Professional Skills & Technology', theory: 44, practical: 46, max_marks: 100 }
+      ],
+      '2nd Year': [
+        { code: `${cCode}-Y201`, name: 'Advanced Applications & Specialization', theory: 45, practical: 45, max_marks: 100 },
+        { code: `${cCode}-Y202`, name: 'Comprehensive Project & Grand Viva', theory: 48, practical: 48, max_marks: 100 }
+      ]
+    };
+  }
+  if (!Object.keys(curData.semester).length) {
+    curData.semester = {
+      'Semester 1': [
+        { code: `${cCode}-S101`, name: 'Subject 1: Fundamentals & Theory', theory: 45, practical: 45, max_marks: 100 },
+        { code: `${cCode}-S102`, name: 'Subject 2: Applied Laboratory Work & Viva', theory: 46, practical: 46, max_marks: 100 }
+      ],
+      'Semester 2': [
+        { code: `${cCode}-S201`, name: 'Subject 1: Advanced Topics & Software', theory: 45, practical: 45, max_marks: 100 },
+        { code: `${cCode}-S202`, name: 'Subject 2: Project Workshop & Defense', theory: 48, practical: 48, max_marks: 100 }
+      ]
+    };
+  }
+
+  let activeEval = 'semester';
+  let activeTerm = Object.keys(curData.semester)[0] || 'Semester 1';
+
+  const modal = document.createElement('div');
+  modal.id = 'curriculumEditorModal';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; backdrop-filter:blur(4px);';
+
+  function renderView() {
+    const termObj = curData[activeEval] || {};
+    const terms = Object.keys(termObj);
+    if (!termObj[activeTerm] && terms.length) {
+      activeTerm = terms[0];
+    }
+    const currentSubjects = termObj[activeTerm] || [];
+
+    modal.innerHTML = `
+      <div style="background:#ffffff; border-radius:14px; max-width:900px; width:100%; box-shadow:0 25px 50px rgba(0,0,0,0.25); max-height:92vh; display:flex; flex-direction:column; overflow:hidden; border:2px solid #cbd5e1;">
+        <!-- Modal Header -->
+        <div style="background:linear-gradient(135deg, #071a33, #0a2a5e); color:#ffffff; padding:18px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #d4af37;">
+          <div>
+            <h3 style="margin:0; font-size:1.3rem; color:#fde047;">📚 Course Curriculum &amp; Examination Subjects Editor</h3>
+            <span style="font-size:0.88rem; color:#cbd5e1;">Course: <b>${esc(cCode)}</b> - <b>${esc(cName)}</b> (Head Office Master Control)</span>
+          </div>
+          <button type="button" onclick="document.getElementById('curriculumEditorModal').remove()" style="background:none; border:none; color:#fde047; font-size:1.8rem; cursor:pointer; line-height:1;">&times;</button>
+        </div>
+
+        <!-- Body Area -->
+        <div style="padding:22px; overflow-y:auto; flex:1;">
+          <!-- 1. Examination Fee Configuration Row -->
+          <div style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:10px; padding:16px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+            <div>
+              <b style="color:#0a2a5e; font-size:1rem; display:block; margin-bottom:2px;">💰 Council Examination &amp; Certificate Fees Structure:</b>
+              <span class="muted" style="font-size:0.82rem;">Set official fees for Single (Annual) vs Semester marksheets &amp; certificates</span>
+            </div>
+            <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+              <div style="background:#ffffff; border:1px solid #94a3b8; border-radius:8px; padding:6px 12px; display:flex; align-items:center; gap:8px;">
+                <label style="font-size:0.82rem; font-weight:700; color:#064e3b; margin:0;">📅 Single / Yearly Fee:</label>
+                <span style="font-weight:700; color:#064e3b;">₹</span>
+                <input id="curSingleFeeInput" type="number" min="0" value="${singleFee}" style="width:85px; padding:4px 6px; font-weight:800; font-size:0.95rem; border:1px solid #cbd5e1; border-radius:4px; text-align:right;">
+              </div>
+              <div style="background:#ffffff; border:1px solid #94a3b8; border-radius:8px; padding:6px 12px; display:flex; align-items:center; gap:8px;">
+                <label style="font-size:0.82rem; font-weight:700; color:#0369a1; margin:0;">📚 Semester Fee:</label>
+                <span style="font-weight:700; color:#0369a1;">₹</span>
+                <input id="curSemFeeInput" type="number" min="0" value="${semFee}" style="width:85px; padding:4px 6px; font-weight:800; font-size:0.95rem; border:1px solid #cbd5e1; border-radius:4px; text-align:right;">
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Main Evaluation Pattern Toggle (Semester vs Yearly) -->
+          <div style="display:flex; gap:12px; margin-bottom:18px; border-bottom:2px solid #e2e8f0; padding-bottom:12px;">
+            <button type="button" id="tabEvalSemester" class="btn sm" style="font-weight:800; padding:10px 22px; font-size:0.95rem; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; ${activeEval === 'semester' ? 'background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; border:2px solid #0369a1; box-shadow:0 4px 12px rgba(2,132,199,0.3);' : 'background:#ffffff; color:#475569; border:1px solid #cbd5e1;'}">
+              📚 Semester-Wise Curriculum (सेमेस्टर विषय)
+            </button>
+            <button type="button" id="tabEvalYearly" class="btn sm" style="font-weight:800; padding:10px 22px; font-size:0.95rem; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; ${activeEval === 'yearly' ? 'background:linear-gradient(135deg, #059669, #047857); color:#ffffff; border:2px solid #047857; box-shadow:0 4px 12px rgba(5,150,105,0.3);' : 'background:#ffffff; color:#475569; border:1px solid #cbd5e1;'}">
+              📅 Yearly / Annual Curriculum (वार्षिक विषय)
+            </button>
+          </div>
+
+          <!-- 3. Term Tabs Selector (e.g. Semester 1, Semester 2, etc.) -->
+          <div style="background:#f1f5f9; padding:10px 14px; border-radius:10px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <span style="font-weight:700; font-size:0.85rem; color:#475569; margin-right:4px;">Select Term / Stage:</span>
+              ${terms.map(t => {
+                const subCount = (curData[activeEval][t] || []).length;
+                const isSelected = t === activeTerm;
+                return `
+                  <button type="button" class="btn sm term-pill" data-term="${esc(t)}" style="padding:6px 14px; border-radius:6px; font-weight:700; font-size:0.85rem; cursor:pointer; ${isSelected ? 'background:#0a2a5e; color:#ffffff; border:1px solid #0a2a5e;' : 'background:#ffffff; color:#334155; border:1px solid #cbd5e1;'}">
+                    ${esc(t)} <span style="background:${isSelected ? '#d4af37' : '#e2e8f0'}; color:${isSelected ? '#071a33' : '#475569'}; border-radius:10px; padding:1px 7px; font-size:0.75rem; margin-left:4px;">${subCount}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+            <button type="button" id="btnAddTermBtn" class="btn sm alt" style="font-weight:700; border:1px dashed #0284c7; color:#0284c7; background:#ffffff;">
+              ➕ Add ${activeEval === 'semester' ? 'Semester' : 'Year / Term'}
+            </button>
+          </div>
+
+          <!-- 4. Table of Current Subjects for Active Term -->
+          <div style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:10px; padding:16px 20px; margin-bottom:22px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h4 style="margin:0; color:#0a2a5e; font-size:1.1rem;">
+                  Subjects for <span style="color:#0284c7;">${esc(activeTerm)}</span> (${currentSubjects.length} विषय)
+                </h4>
+                <span class="muted" style="font-size:0.8rem;">Yahi subjects student ke ${activeTerm} marksheet aur certificate me print honge</span>
+              </div>
+              <button type="button" id="btnToggleBulk" class="btn sm alt" style="font-size:0.8rem;">📝 Batch Add via Text</button>
+            </div>
+
+            <!-- Optional Bulk Text Paste Area -->
+            <div id="bulkTextWrap" style="display:none; background:#f8fafc; border:1px dashed #94a3b8; border-radius:8px; padding:12px; margin-bottom:16px;">
+              <label style="font-weight:700; font-size:0.82rem; display:block; margin-bottom:4px;">Paste Multiple Subjects (one subject title per line):</label>
+              <textarea id="bulkSubjectsText" rows="3" placeholder="Subject Name 1&#10;Subject Name 2&#10;Subject Name 3" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:8px 10px; font-size:0.88rem; box-sizing:border-box;"></textarea>
+              <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+                <button type="button" id="btnApplyBulk" class="btn sm gold" style="font-weight:700;">Add Pasted Subjects</button>
+              </div>
+            </div>
+
+            ${currentSubjects.length ? `
+              <table style="width:100%; border-collapse:collapse; font-size:0.88rem; margin-bottom:14px;">
+                <thead>
+                  <tr style="background:#f8fafc; border-bottom:2px solid #cbd5e1; color:#475569;">
+                    <th style="padding:8px 10px; text-align:left; width:35px;">#</th>
+                    <th style="padding:8px 10px; text-align:left; width:120px;">Code</th>
+                    <th style="padding:8px 10px; text-align:left;">Subject Title (विषय नाम)</th>
+                    <th style="padding:8px 10px; text-align:center; width:90px;">Max Th.</th>
+                    <th style="padding:8px 10px; text-align:center; width:90px;">Max Pr.</th>
+                    <th style="padding:8px 10px; text-align:center; width:90px;">Total</th>
+                    <th style="padding:8px 10px; text-align:center; width:60px;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${currentSubjects.map((s, idx) => {
+                    const sCode = s.code || `SUB${idx+1}`;
+                    const sName = s.name || s;
+                    const th = +s.theory || 50;
+                    const pr = +s.practical || 50;
+                    const tot = +s.max_marks || (th + pr);
+                    return `
+                      <tr style="border-bottom:1px solid #f1f5f9;">
+                        <td style="padding:8px 10px; color:#64748b; font-weight:700;">${idx + 1}</td>
+                        <td style="padding:8px 10px;">
+                          <input class="sub-edit-code" data-idx="${idx}" value="${esc(sCode)}" style="width:100%; padding:4px 6px; font-family:monospace; font-weight:700; color:#0369a1; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem;">
+                        </td>
+                        <td style="padding:8px 10px;">
+                          <input class="sub-edit-name" data-idx="${idx}" value="${esc(sName)}" style="width:100%; padding:4px 8px; font-weight:600; border:1px solid #cbd5e1; border-radius:4px; font-size:0.88rem;">
+                        </td>
+                        <td style="padding:8px 10px; text-align:center;">
+                          <input class="sub-edit-th" data-idx="${idx}" type="number" min="0" value="${th}" style="width:65px; text-align:center; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-weight:600; color:#0369a1;">
+                        </td>
+                        <td style="padding:8px 10px; text-align:center;">
+                          <input class="sub-edit-pr" data-idx="${idx}" type="number" min="0" value="${pr}" style="width:65px; text-align:center; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-weight:600; color:#047857;">
+                        </td>
+                        <td style="padding:8px 10px; text-align:center; font-weight:800; color:#0a2a5e;">
+                          ${tot}
+                        </td>
+                        <td style="padding:8px 10px; text-align:center;">
+                          <button type="button" class="btn-del-sub" data-idx="${idx}" style="background:none; border:none; cursor:pointer; font-size:1.1rem;" title="Delete Subject">🗑️</button>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            ` : `
+              <div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:24px; text-align:center; color:#64748b; margin-bottom:14px;">
+                Abhi <b>${esc(activeTerm)}</b> me koi subject add nahi hai. Niche form se subject add karein.
+              </div>
+            `}
+
+            <!-- Add Single Subject Row Form -->
+            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px 16px;">
+              <b style="font-size:0.85rem; color:#0a2a5e; display:block; margin-bottom:8px;">➕ Add Single Subject to ${esc(activeTerm)}:</b>
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <div style="width:130px;">
+                  <input id="newSubCodeInput" placeholder="Code (e.g. S${currentSubjects.length + 1})" value="${cCode}-${activeEval === 'semester' ? 'S' + (activeTerm.match(/\d+/) ? activeTerm.match(/\d+/)[0] : '1') : 'Y1'}0${currentSubjects.length + 1}" style="width:100%; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-family:monospace; font-weight:700; font-size:0.85rem;">
+                </div>
+                <div style="flex:1; min-width:220px;">
+                  <input id="newSubNameInput" placeholder="Subject Name (e.g. Relational Database & SQL)" style="width:100%; padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; font-weight:600;">
+                </div>
+                <div style="width:85px;">
+                  <input id="newSubThInput" type="number" min="0" value="50" placeholder="Theory" title="Theory Max Marks" style="width:100%; padding:6px 6px; text-align:center; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+                </div>
+                <div style="width:85px;">
+                  <input id="newSubPrInput" type="number" min="0" value="50" placeholder="Practical" title="Practical Max Marks" style="width:100%; padding:6px 6px; text-align:center; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+                </div>
+                <div>
+                  <button type="button" id="btnAddSingleSubBtn" class="btn gold sm" style="font-weight:700; padding:7px 16px;">➕ Add Subject</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer Actions -->
+        <div style="background:#f8fafc; border-top:1.5px solid #cbd5e1; padding:14px 24px; display:flex; justify-content:space-between; align-items:center;">
+          <button type="button" class="btn alt sm" onclick="document.getElementById('curriculumEditorModal').remove()">Cancel / Close</button>
+          <div style="display:flex; gap:12px; align-items:center;">
+            <span id="saveStatusNote" class="muted" style="font-size:0.82rem;"></span>
+            <button type="button" id="btnSaveCurriculumAll" class="btn gold" style="font-weight:800; padding:10px 24px; font-size:0.95rem; box-shadow:0 4px 14px rgba(212,175,55,0.4);">
+              💾 Save All Curriculum &amp; Fees (सुरक्षित करें)
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-  `;
+    `;
+
+    $('#tabEvalSemester').onclick = () => {
+      syncEditedInputs();
+      activeEval = 'semester';
+      renderView();
+    };
+    $('#tabEvalYearly').onclick = () => {
+      syncEditedInputs();
+      activeEval = 'yearly';
+      renderView();
+    };
+
+    modal.querySelectorAll('.term-pill').forEach(btn => {
+      btn.onclick = () => {
+        syncEditedInputs();
+        activeTerm = btn.dataset.term;
+        renderView();
+      };
+    });
+
+    $('#btnAddTermBtn').onclick = () => {
+      syncEditedInputs();
+      const count = Object.keys(curData[activeEval]).length + 1;
+      const defaultName = activeEval === 'semester' ? `Semester ${count}` : `${count}nd Year`;
+      const termName = prompt(`Enter new ${activeEval === 'semester' ? 'semester' : 'term'} name:`, defaultName);
+      if (termName && termName.trim()) {
+        const cleanT = termName.trim();
+        if (!curData[activeEval][cleanT]) {
+          curData[activeEval][cleanT] = [];
+        }
+        activeTerm = cleanT;
+        renderView();
+      }
+    };
+
+    $('#btnToggleBulk').onclick = () => {
+      const wrap = $('#bulkTextWrap');
+      wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+    };
+
+    $('#btnApplyBulk').onclick = () => {
+      syncEditedInputs();
+      const txt = $('#bulkSubjectsText').value;
+      const lines = txt.split('\n').map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return;
+      lines.forEach((line) => {
+        const currentCount = (curData[activeEval][activeTerm] || []).length;
+        curData[activeEval][activeTerm].push({
+          code: `${cCode}-${activeEval === 'semester' ? 'S' : 'Y'}${currentCount + 1}`,
+          name: line,
+          theory: 50,
+          practical: 50,
+          max_marks: 100
+        });
+      });
+      renderView();
+    };
+
+    $('#btnAddSingleSubBtn').onclick = () => {
+      syncEditedInputs();
+      const name = $('#newSubNameInput').value.trim();
+      if (!name) {
+        alert('Kripya subject ka naam enter karein!');
+        return;
+      }
+      const code = $('#newSubCodeInput').value.trim() || `SUB${(curData[activeEval][activeTerm] || []).length + 1}`;
+      const th = +$('#newSubThInput').value || 50;
+      const pr = +$('#newSubPrInput').value || 50;
+      const tot = th + pr;
+
+      if (!curData[activeEval][activeTerm]) curData[activeEval][activeTerm] = [];
+      curData[activeEval][activeTerm].push({
+        code,
+        name,
+        theory: th,
+        practical: pr,
+        max_marks: tot
+      });
+      renderView();
+    };
+
+    modal.querySelectorAll('.btn-del-sub').forEach(btn => {
+      btn.onclick = () => {
+        syncEditedInputs();
+        const idx = +btn.dataset.idx;
+        curData[activeEval][activeTerm].splice(idx, 1);
+        renderView();
+      };
+    });
+
+    $('#btnSaveCurriculumAll').onclick = async () => {
+      syncEditedInputs();
+      const saveBtn = $('#btnSaveCurriculumAll');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      const sFee = +$('#curSingleFeeInput').value || 200;
+      const semFeeVal = +$('#curSemFeeInput').value || 600;
+
+      try {
+        await api(`/api/admin/courses/${courseId}/curriculum`, {
+          method: 'POST',
+          body: {
+            curriculum: curData,
+            single_fee_rupees: sFee,
+            semester_fee_rupees: semFeeVal
+          }
+        });
+        toast(`Curriculum & exam fees saved successfully for ${cCode}!`);
+        modal.remove();
+        if (typeof views !== 'undefined' && views.Courses) {
+          await views.Courses();
+        }
+      } catch (err) {
+        alert('Save failed: ' + (err.message || err));
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Save All Curriculum & Fees';
+      }
+    };
+  }
+
+  function syncEditedInputs() {
+    const sFeeInput = $('#curSingleFeeInput');
+    if (sFeeInput) singleFee = +sFeeInput.value || singleFee;
+    const semFeeInput = $('#curSemFeeInput');
+    if (semFeeInput) semFee = +semFeeInput.value || semFee;
+
+    const termSubs = curData[activeEval][activeTerm] || [];
+    modal.querySelectorAll('.sub-edit-code').forEach(el => {
+      const idx = +el.dataset.idx;
+      if (termSubs[idx]) termSubs[idx].code = el.value.trim();
+    });
+    modal.querySelectorAll('.sub-edit-name').forEach(el => {
+      const idx = +el.dataset.idx;
+      if (termSubs[idx]) termSubs[idx].name = el.value.trim();
+    });
+    modal.querySelectorAll('.sub-edit-th').forEach(el => {
+      const idx = +el.dataset.idx;
+      if (termSubs[idx]) {
+        termSubs[idx].theory = +el.value || 0;
+        termSubs[idx].max_marks = termSubs[idx].theory + (+termSubs[idx].practical || 0);
+      }
+    });
+    modal.querySelectorAll('.sub-edit-pr').forEach(el => {
+      const idx = +el.dataset.idx;
+      if (termSubs[idx]) {
+        termSubs[idx].practical = +el.value || 0;
+        termSubs[idx].max_marks = (+termSubs[idx].theory || 0) + termSubs[idx].practical;
+      }
+    });
+  }
+
+  renderView();
   document.body.appendChild(modal);
+}
+
+// Backward compatibility alias
+function showCourseSubjectsModal(courseId) {
+  openCourseCurriculumEditor(courseId);
 }
 
 async function openAdminMarksheetIssueModal(studentId, studentName) {

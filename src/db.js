@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS counters(name TEXT PRIMARY KEY, value INTEGER NOT NUL
 CREATE TABLE IF NOT EXISTS courses(
   id INTEGER PRIMARY KEY, code TEXT UNIQUE NOT NULL, name TEXT NOT NULL, duration_months INTEGER NOT NULL,
   fee_paise INTEGER NOT NULL DEFAULT 0, total_marks INTEGER NOT NULL DEFAULT 100, pass_marks INTEGER NOT NULL DEFAULT 33,
+  single_fee_paise INTEGER NOT NULL DEFAULT 20000, semester_fee_paise INTEGER NOT NULL DEFAULT 60000, curriculum TEXT DEFAULT '{}',
   subjects TEXT DEFAULT '[]', active INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS centre_courses(centre_id INTEGER NOT NULL REFERENCES centres(id), course_id INTEGER NOT NULL REFERENCES courses(id), PRIMARY KEY(centre_id, course_id));
 CREATE TABLE IF NOT EXISTS students(
@@ -328,6 +329,14 @@ try {
   }
 } catch (_) {}
 
-
+try {
+  rawDb.exec('ALTER TABLE courses ADD COLUMN single_fee_paise INTEGER NOT NULL DEFAULT 20000');
+} catch (_) {}
+try {
+  rawDb.exec('ALTER TABLE courses ADD COLUMN semester_fee_paise INTEGER NOT NULL DEFAULT 60000');
+} catch (_) {}
+try {
+  rawDb.exec('ALTER TABLE courses ADD COLUMN curriculum TEXT DEFAULT "{}"');
+} catch (_) {}
 
 module.exports = db;

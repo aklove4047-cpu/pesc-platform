@@ -361,9 +361,32 @@ const COURSE_CURRICULUM_DATA = {
 };
 
 function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
-  const norm = String(courseNameOrCode || '').toUpperCase();
+  const norm = String(courseNameOrCode || '').toUpperCase().trim();
   const pattern = (evalPattern === 'semester') ? 'semester' : 'yearly';
   const term = String(termName || (pattern === 'semester' ? 'Semester 1' : 'Annual Examination')).trim();
+
+  // 1. Check if course in store.courses has custom curriculum saved by Head Office
+  const co = (store.courses || []).find(c => 
+    (c.code && (norm === c.code.toUpperCase() || norm.includes(c.code.toUpperCase()) || c.code.toUpperCase().includes(norm))) ||
+    (c.name && (norm === c.name.toUpperCase() || norm.includes(c.name.toUpperCase()) || c.name.toUpperCase().includes(norm)))
+  );
+  if (co && co.curriculum) {
+    let cur = null;
+    try { cur = typeof co.curriculum === 'string' ? JSON.parse(co.curriculum) : co.curriculum; } catch (_) {}
+    if (cur && cur[pattern]) {
+      if (cur[pattern][term] && Array.isArray(cur[pattern][term]) && cur[pattern][term].length) {
+        return cur[pattern][term];
+      }
+      const keys = Object.keys(cur[pattern]);
+      const match = keys.find(k => term.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(term.toLowerCase()));
+      if (match && cur[pattern][match] && Array.isArray(cur[pattern][match]) && cur[pattern][match].length) {
+        return cur[pattern][match];
+      }
+      if (keys.length && cur[pattern][keys[0]] && Array.isArray(cur[pattern][keys[0]]) && cur[pattern][keys[0]].length) {
+        return cur[pattern][keys[0]];
+      }
+    }
+  }
 
   let key = Object.keys(COURSE_CURRICULUM_DATA).find(k => norm === k || norm.includes(k) || (COURSE_CURRICULUM_DATA[k].name && norm.includes(COURSE_CURRICULUM_DATA[k].name.toUpperCase())));
   if (!key) {
@@ -1675,12 +1698,15 @@ export default {
         if (request.method === 'POST') {
           try {
             const body = await request.json();
-            const nextId = store.courses.length + 1;
+            const nextId = store.courses.length ? Math.max(...store.courses.map(c => c.id)) + 1 : 1;
             const code = String(body.code || '').trim().toUpperCase();
             const name = String(body.name || '').trim();
             const dur = +body.duration_months || 6;
             const fee = Math.round((+body.fee_rupees || 5500) * 100);
             const totalMarks = +body.total_marks || 100;
+            const singleFee = body.single_fee_rupees !== undefined ? Math.round(+body.single_fee_rupees * 100) : (+body.single_fee_paise || 20000);
+            const semFee = body.semester_fee_rupees !== undefined ? Math.round(+body.semester_fee_rupees * 100) : (+body.semester_fee_paise || 60000);
+            const curriculum = body.curriculum ? (typeof body.curriculum === 'string' ? body.curriculum : JSON.stringify(body.curriculum)) : (COURSE_CURRICULUM_DATA[code] ? JSON.stringify(COURSE_CURRICULUM_DATA[code]) : '{}');
             let subjects = body.subjects;
             if (typeof subjects === 'object') subjects = JSON.stringify(subjects);
             else if (!subjects) subjects = '[]';
@@ -1692,6 +1718,9 @@ export default {
               fee_paise: fee,
               total_marks: totalMarks,
               pass_marks: 33,
+              single_fee_paise: singleFee,
+              semester_fee_paise: semFee,
+              curriculum,
               subjects,
               active: 1
             };
@@ -1702,7 +1731,65 @@ export default {
             return jsonResponse({ error: err.message }, 400);
           }
         }
-        return jsonResponse({ courses: store.courses });
+        return jsonResponse({
+          courses: store.courses.map(c => ({
+            ...c,
+            single_fee_paise: c.single_fee_paise || 20000,
+            semester_fee_paise: c.semester_fee_paise || 60000,
+            single_fee_rupees: Math.round((c.single_fee_paise || 20000) / 100),
+            semester_fee_rupees: Math.round((c.semester_fee_paise || 60000) / 100),
+            curriculum: c.curriculum || (COURSE_CURRICULUM_DATA[c.code] ? JSON.stringify(COURSE_CURRICULUM_DATA[c.code]) : '{}')
+          }))
+        });
+      }
+
+      if (path.match(/\/api\/admin\/courses\/\d+\/curriculum$/)) {
+        const cId = +path.split('/')[4];
+        const target = store.courses.find(c => c.id === cId);
+        if (!target) return jsonResponse({ error: 'Course not found' }, 404);
+
+        if (request.method === 'GET') {
+          let cur = target.curriculum;
+          try { cur = typeof cur === 'string' ? JSON.parse(cur) : cur; } catch (_) {}
+          if (!cur || !Object.keys(cur).length) {
+            cur = COURSE_CURRICULUM_DATA[target.code] || { yearly: { 'Annual Examination': [] }, semester: { 'Semester 1': [] } };
+          }
+          return jsonResponse({
+            ok: true,
+            course_id: target.id,
+            code: target.code,
+            name: target.name,
+            single_fee_rupees: Math.round((target.single_fee_paise || 20000) / 100),
+            semester_fee_rupees: Math.round((target.semester_fee_paise || 60000) / 100),
+            curriculum: cur
+          });
+        }
+
+        if (request.method === 'POST' || request.method === 'PUT') {
+          try {
+            const body = await request.json();
+            if (body.curriculum) {
+              target.curriculum = typeof body.curriculum === 'string' ? body.curriculum : JSON.stringify(body.curriculum);
+              if (typeof body.curriculum === 'object') {
+                COURSE_CURRICULUM_DATA[target.code] = body.curriculum;
+              }
+            }
+            if (body.single_fee_rupees !== undefined) {
+              target.single_fee_paise = Math.round(+body.single_fee_rupees * 100);
+            } else if (body.single_fee_paise !== undefined) {
+              target.single_fee_paise = +body.single_fee_paise;
+            }
+            if (body.semester_fee_rupees !== undefined) {
+              target.semester_fee_paise = Math.round(+body.semester_fee_rupees * 100);
+            } else if (body.semester_fee_paise !== undefined) {
+              target.semester_fee_paise = +body.semester_fee_paise;
+            }
+            await persistToKV(env, 'courses', store.courses);
+            return jsonResponse({ ok: true, message: 'Curriculum & exam fees saved successfully!', course: target });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
       }
 
       if (path.match(/\/api\/admin\/courses\/\d+$/) && (request.method === 'PUT' || request.method === 'POST')) {
@@ -1717,7 +1804,14 @@ export default {
           if (body.fee_rupees !== undefined) target.fee_paise = Math.round(+body.fee_rupees * 100);
           else if (body.fee_paise !== undefined) target.fee_paise = +body.fee_paise;
           if (body.total_marks !== undefined) target.total_marks = +body.total_marks;
+          if (body.single_fee_rupees !== undefined) target.single_fee_paise = Math.round(+body.single_fee_rupees * 100);
+          else if (body.single_fee_paise !== undefined) target.single_fee_paise = +body.single_fee_paise;
+          if (body.semester_fee_rupees !== undefined) target.semester_fee_paise = Math.round(+body.semester_fee_rupees * 100);
+          else if (body.semester_fee_paise !== undefined) target.semester_fee_paise = +body.semester_fee_paise;
           if (body.active !== undefined) target.active = body.active ? 1 : 0;
+          if (body.curriculum !== undefined) {
+            target.curriculum = typeof body.curriculum === 'string' ? body.curriculum : JSON.stringify(body.curriculum);
+          }
           if (body.subjects !== undefined) {
             target.subjects = typeof body.subjects === 'object' ? JSON.stringify(body.subjects) : String(body.subjects);
           }
@@ -2426,6 +2520,11 @@ export default {
             name: co.name,
             duration_months: co.duration_months || 6,
             total_marks: co.total_marks || 100,
+            single_fee_paise: co.single_fee_paise || 20000,
+            semester_fee_paise: co.semester_fee_paise || 60000,
+            single_fee_rupees: Math.round((co.single_fee_paise || 20000) / 100),
+            semester_fee_rupees: Math.round((co.semester_fee_paise || 60000) / 100),
+            curriculum: co.curriculum || (COURSE_CURRICULUM_DATA[co.code] ? JSON.stringify(COURSE_CURRICULUM_DATA[co.code]) : '{}'),
             subjects: co.subjects || '[]',
             system_fee_paise: sysFeePaise,
             selling_price_paise: sellFeePaise,

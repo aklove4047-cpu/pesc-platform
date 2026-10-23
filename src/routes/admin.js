@@ -137,10 +137,13 @@ router.post('/courses', (req, res) => {
   const b = req.body, code = str(b.code, 20).toUpperCase(), name = str(b.name, 120);
   const dur = +b.duration_months, fee = Math.round(+b.fee_rupees * 100);
   const totalMarks = +b.total_marks || 100;
+  const singleFee = b.single_fee_rupees !== undefined ? Math.round(+b.single_fee_rupees * 100) : (+b.single_fee_paise || 20000);
+  const semFee = b.semester_fee_rupees !== undefined ? Math.round(+b.semester_fee_rupees * 100) : (+b.semester_fee_paise || 60000);
+  const curriculum = b.curriculum ? (typeof b.curriculum === 'string' ? b.curriculum : JSON.stringify(b.curriculum)) : '{}';
   const subjects = b.subjects ? (typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects)) : '[]';
   if (!/^[A-Z0-9-]{2,20}$/.test(code) || !name || !(dur > 0) || !(fee >= 0)) throw new HttpError(400, 'Invalid course data');
   try {
-    const r = db.prepare('INSERT INTO courses(code,name,duration_months,fee_paise,total_marks,subjects) VALUES(?,?,?,?,?,?)').run(code, name, dur, fee, totalMarks, subjects);
+    const r = db.prepare('INSERT INTO courses(code,name,duration_months,fee_paise,total_marks,single_fee_paise,semester_fee_paise,curriculum,subjects) VALUES(?,?,?,?,?,?,?,?,?)').run(code, name, dur, fee, totalMarks, singleFee, semFee, curriculum, subjects);
     audit(req, 'course.create', 'course', r.lastInsertRowid);
     res.status(201).json({ id: r.lastInsertRowid });
   }
@@ -158,14 +161,34 @@ router.put('/courses/:id', (req, res) => {
   const dur = b.duration_months ? +b.duration_months : c.duration_months;
   const fee = b.fee_rupees !== undefined ? Math.round(+b.fee_rupees * 100) : (b.fee_paise !== undefined ? +b.fee_paise : c.fee_paise);
   const totalMarks = b.total_marks ? +b.total_marks : (c.total_marks || 100);
+  const singleFee = b.single_fee_rupees !== undefined ? Math.round(+b.single_fee_rupees * 100) : (b.single_fee_paise !== undefined ? +b.single_fee_paise : (c.single_fee_paise || 20000));
+  const semFee = b.semester_fee_rupees !== undefined ? Math.round(+b.semester_fee_rupees * 100) : (b.semester_fee_paise !== undefined ? +b.semester_fee_paise : (c.semester_fee_paise || 60000));
   const active = b.active !== undefined ? (b.active ? 1 : 0) : c.active;
+  const curriculum = b.curriculum !== undefined ? (typeof b.curriculum === 'string' ? b.curriculum : JSON.stringify(b.curriculum)) : (c.curriculum || '{}');
   const subjects = b.subjects !== undefined ? (typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects)) : c.subjects;
 
-  db.prepare('UPDATE courses SET code=?, name=?, duration_months=?, fee_paise=?, total_marks=?, subjects=?, active=? WHERE id=?')
-    .run(code, name, dur, fee, totalMarks, subjects, active, cid);
+  db.prepare('UPDATE courses SET code=?, name=?, duration_months=?, fee_paise=?, total_marks=?, single_fee_paise=?, semester_fee_paise=?, curriculum=?, subjects=?, active=? WHERE id=?')
+    .run(code, name, dur, fee, totalMarks, singleFee, semFee, curriculum, subjects, active, cid);
 
   audit(req, 'course.update', 'course', cid, 'ok', `Updated ${code} - ${name}`);
   res.json({ ok: true, message: 'Course updated successfully' });
+});
+
+router.put('/courses/:id/curriculum', (req, res) => {
+  const cid = +req.params.id;
+  const c = db.prepare('SELECT * FROM courses WHERE id=?').get(cid);
+  if (!c) throw new HttpError(404, 'Course not found');
+
+  const b = req.body;
+  const curriculum = b.curriculum ? (typeof b.curriculum === 'string' ? b.curriculum : JSON.stringify(b.curriculum)) : (c.curriculum || '{}');
+  const singleFee = b.single_fee_rupees !== undefined ? Math.round(+b.single_fee_rupees * 100) : (b.single_fee_paise !== undefined ? +b.single_fee_paise : (c.single_fee_paise || 20000));
+  const semFee = b.semester_fee_rupees !== undefined ? Math.round(+b.semester_fee_rupees * 100) : (b.semester_fee_paise !== undefined ? +b.semester_fee_paise : (c.semester_fee_paise || 60000));
+
+  db.prepare('UPDATE courses SET curriculum=?, single_fee_paise=?, semester_fee_paise=? WHERE id=?')
+    .run(curriculum, singleFee, semFee, cid);
+
+  audit(req, 'course.curriculum_update', 'course', cid, 'ok', `Updated curriculum for ${c.code}`);
+  res.json({ ok: true, message: 'Curriculum & exam fees saved successfully' });
 });
 
 // Coordinators are created by super admin only; they receive a setup link, never a password.

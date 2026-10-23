@@ -697,8 +697,16 @@ const views = {
                 <!-- Fees Breakdown -->
                 <div style="background:#fafafa; border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.86rem;">
                   <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                    <span class="muted" style="display:flex; align-items:center; gap:4px;">🔒 Council Fee (Fixed by Head Office):</span>
+                    <span class="muted" style="display:flex; align-items:center; gap:4px;">🔒 Council Base Fee:</span>
                     <b style="color:#0f172a;">₹${sysFee.toLocaleString('en-IN')}</b>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.82rem; background:#f0fdf4; padding:3px 8px; border-radius:5px;">
+                    <span style="color:#166534; font-weight:700;">📜 Single/Yearly Marksheet &amp; Cert:</span>
+                    <b style="color:#166534;">₹${co.single_fee_rupees || Math.round((co.single_fee_paise || 20000)/100)}</b>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.82rem; background:#eff6ff; padding:3px 8px; border-radius:5px;">
+                    <span style="color:#1e40af; font-weight:700;">📚 Semester Marksheet &amp; Cert:</span>
+                    <b style="color:#1e40af;">₹${co.semester_fee_rupees || Math.round((co.semester_fee_paise || 60000)/100)}</b>
                   </div>
                   <div style="display:flex; justify-content:space-between; border-top:1px dashed #e2e8f0; padding-top:6px;">
                     <span class="muted">Your Centre Net Margin:</span>
@@ -830,8 +838,12 @@ const views = {
 
   // 5. Certificate Printing (3 Options: Council Only / Institute Only / Both Dual)
   async CertificatePrinting() {
-    const sData = await api('/api/centre/students');
+    const [sData, cData] = await Promise.all([
+      api('/api/centre/students'),
+      api('/api/centre/courses').catch(() => ({ courses: [] }))
+    ]);
     const students = sData.students || [];
+    if (cData && cData.courses) window._currentCourses = cData.courses;
 
     V.innerHTML = `
       <div style="margin-bottom:20px;">
@@ -884,6 +896,9 @@ const views = {
           </div>
         </div>
 
+        <!-- Prescribed Council Fee Notice for Single vs Semester -->
+        <div id="certFeeNotice" style="margin-bottom:16px;"></div>
+
         <!-- High-Res Printable Certificate Frame -->
         <div id="certPreviewContainer" class="printable-area" style="background:#ffffff; border:12px double #d4af37; padding:40px; border-radius:10px; max-width:880px; margin:0 auto; box-shadow:0 8px 30px rgba(0,0,0,0.08); text-align:center; position:relative;">
           <!-- Dynamically filled by updateCertPreview() -->
@@ -897,8 +912,12 @@ const views = {
 
   // 6. Marksheet Printing (Yearly + Semester-Wise)
   async MarksheetPrinting() {
-    const sData = await api('/api/centre/students');
+    const [sData, cData] = await Promise.all([
+      api('/api/centre/students'),
+      api('/api/centre/courses').catch(() => ({ courses: [] }))
+    ]);
     const students = sData.students || [];
+    if (cData && cData.courses) window._currentCourses = cData.courses;
 
     V.innerHTML = `
       <div style="margin-bottom:20px;">
@@ -940,6 +959,9 @@ const views = {
             <button class="btn sm" style="background:#064e3b; color:#fff; padding:10px 20px; font-weight:700;" onclick="window.print()">🖨️ Print Marksheet</button>
           </div>
         </div>
+
+        <!-- Prescribed Council Fee Notice for Single vs Semester -->
+        <div id="mrkFeeNotice" style="margin-bottom:16px;"></div>
 
         <div id="mrkPreviewContainer" class="printable-area" style="background:#ffffff; border:2px solid #0f172a; padding:30px; border-radius:8px; max-width:850px; margin:0 auto; box-shadow:0 8px 30px rgba(0,0,0,0.06);">
           <!-- Filled by updateMrkPreview() -->
@@ -2216,6 +2238,39 @@ function updateCertPreview() {
   const certTerm = ($('#certTermSelect') && $('#certTermSelect').value) || (certEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
   const isSemester = certEvalPattern === 'semester';
 
+  const courses = window._currentCourses || [];
+  const foundCourse = courses.find(c => {
+    const cCode = String(c.code || '').toUpperCase().trim();
+    const cName = String(c.name || '').toUpperCase().trim();
+    const target = String(course || '').toUpperCase().trim();
+    return cCode === target || cName === target || (cCode && target.includes(cCode)) || (cName && target.includes(cName));
+  });
+  const singleFee = foundCourse ? (foundCourse.single_fee_rupees || Math.round((foundCourse.single_fee_paise || 20000)/100)) : 200;
+  const semFee = foundCourse ? (foundCourse.semester_fee_rupees || Math.round((foundCourse.semester_fee_paise || 60000)/100)) : 600;
+  const currentFee = isSemester ? semFee : singleFee;
+
+  const feeNoticeEl = $('#certFeeNotice');
+  if (feeNoticeEl) {
+    feeNoticeEl.innerHTML = `
+      <div style="background:${isSemester ? '#eff6ff' : '#f0fdf4'}; border:1px solid ${isSemester ? '#bfdbfe' : '#bbf7d0'}; border-radius:10px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">${isSemester ? '📚' : '📜'}</span>
+          <div>
+            <b style="color:${isSemester ? '#1e40af' : '#166534'}; font-size:0.95rem; display:block;">
+              ${isSemester ? 'Semester Certificate Fee (सेमेस्टर प्रमाणपत्र शुल्क)' : 'Single / Annual Certificate Fee (वार्षिक/सिंगल प्रमाणपत्र शुल्क)'}
+            </b>
+            <span style="font-size:0.78rem; color:#64748b;">Council Prescribed Fee for ${esc(course || 'Course')}</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <span style="background:${isSemester ? '#1d4ed8' : '#15803d'}; color:#ffffff; font-weight:800; font-size:1.15rem; padding:4px 16px; border-radius:20px; letter-spacing:0.5px; display:inline-block;">
+            ₹${currentFee}
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
   const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
   const cCode = currentCentre ? (currentCentre.centre_code || 'PESC00001') : 'PESC00001';
   const cDistrict = currentCentre ? (currentCentre.district || 'Azamgarh') : 'Azamgarh';
@@ -2639,10 +2694,42 @@ const COURSE_CURRICULUM_DATA = {
 };
 
 function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
-  const norm = String(courseNameOrCode || '').toUpperCase();
+  const norm = String(courseNameOrCode || '').toUpperCase().trim();
   const pattern = (evalPattern === 'semester') ? 'semester' : 'yearly';
   const term = String(termName || (pattern === 'semester' ? 'Semester 1' : 'Annual Examination')).trim();
 
+  // 1. Check if course was configured by Head Office with custom curriculum
+  const courses = window._currentCourses || [];
+  const foundCourse = courses.find(c => {
+    const cCode = String(c.code || '').toUpperCase().trim();
+    const cName = String(c.name || '').toUpperCase().trim();
+    return cCode === norm || cName === norm || (cCode && norm.includes(cCode)) || (cName && norm.includes(cName));
+  });
+
+  if (foundCourse && foundCourse.curriculum) {
+    let curr = foundCourse.curriculum;
+    if (typeof curr === 'string') {
+      try { curr = JSON.parse(curr); } catch(e) { curr = null; }
+    }
+    if (curr && typeof curr === 'object') {
+      const patObj = curr[pattern];
+      if (patObj && typeof patObj === 'object') {
+        if (Array.isArray(patObj[term]) && patObj[term].length > 0) {
+          return patObj[term];
+        }
+        const tKeys = Object.keys(patObj);
+        const matchKey = tKeys.find(k => k.toLowerCase() === term.toLowerCase() || term.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(term.toLowerCase()));
+        if (matchKey && Array.isArray(patObj[matchKey]) && patObj[matchKey].length > 0) {
+          return patObj[matchKey];
+        }
+        if (tKeys.length > 0 && Array.isArray(patObj[tKeys[0]]) && patObj[tKeys[0]].length > 0) {
+          return patObj[tKeys[0]];
+        }
+      }
+    }
+  }
+
+  // 2. Check static COURSE_CURRICULUM_DATA fallback
   let key = Object.keys(COURSE_CURRICULUM_DATA).find(k => norm === k || norm.includes(k) || (COURSE_CURRICULUM_DATA[k].name && norm.includes(COURSE_CURRICULUM_DATA[k].name.toUpperCase())));
   if (!key) {
     if (norm.includes('NURSERY') || norm.includes('NTT') || norm.includes('TEACHER')) key = 'NTT';
@@ -2714,6 +2801,39 @@ function updateMrkPreview() {
 
   const mrkTerm = ($('#mrkTermSelect') && $('#mrkTermSelect').value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
   const isSemester = mrkEvalPattern === 'semester';
+
+  const courses = window._currentCourses || [];
+  const foundCourse = courses.find(c => {
+    const cCode = String(c.code || '').toUpperCase().trim();
+    const cName = String(c.name || '').toUpperCase().trim();
+    const target = String(course || '').toUpperCase().trim();
+    return cCode === target || cName === target || (cCode && target.includes(cCode)) || (cName && target.includes(cName));
+  });
+  const singleFee = foundCourse ? (foundCourse.single_fee_rupees || Math.round((foundCourse.single_fee_paise || 20000)/100)) : 200;
+  const semFee = foundCourse ? (foundCourse.semester_fee_rupees || Math.round((foundCourse.semester_fee_paise || 60000)/100)) : 600;
+  const currentFee = isSemester ? semFee : singleFee;
+
+  const feeNoticeEl = $('#mrkFeeNotice');
+  if (feeNoticeEl) {
+    feeNoticeEl.innerHTML = `
+      <div style="background:${isSemester ? '#eff6ff' : '#f0fdf4'}; border:1px solid ${isSemester ? '#bfdbfe' : '#bbf7d0'}; border-radius:10px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">${isSemester ? '📚' : '📜'}</span>
+          <div>
+            <b style="color:${isSemester ? '#1e40af' : '#166534'}; font-size:0.95rem; display:block;">
+              ${isSemester ? 'Semester Marksheet Fee (सेमेस्टर अंकतालिका शुल्क)' : 'Single / Annual Marksheet Fee (वार्षिक/सिंगल अंकतालिका शुल्क)'}
+            </b>
+            <span style="font-size:0.78rem; color:#64748b;">Council Prescribed Fee for ${esc(course || 'Course')}</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <span style="background:${isSemester ? '#1d4ed8' : '#15803d'}; color:#ffffff; font-weight:800; font-size:1.15rem; padding:4px 16px; border-radius:20px; letter-spacing:0.5px; display:inline-block;">
+            ₹${currentFee}
+          </span>
+        </div>
+      </div>
+    `;
+  }
 
   const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
   const cCode = currentCentre ? (currentCentre.centre_code || 'PESC00001') : 'PESC00001';
@@ -2995,16 +3115,21 @@ window.showCentreCourseSubjects = function(courseId) {
 
   if (title) title.innerHTML = `📚 Syllabus: ${esc(co.name)} (${esc(co.code)})`;
 
-  const yearlySubs = getCourseCurriculumSubjects(co.code || co.name, 'yearly', 'Annual Examination');
-  const sem1Subs = getCourseCurriculumSubjects(co.code || co.name, 'semester', 'Semester 1');
-  const sem2Subs = getCourseCurriculumSubjects(co.code || co.name, 'semester', 'Semester 2');
+  const singleFee = co.single_fee_rupees || Math.round((co.single_fee_paise || 20000)/100);
+  const semFee = co.semester_fee_rupees || Math.round((co.semester_fee_paise || 60000)/100);
+
+  let curr = co.curriculum;
+  if (typeof curr === 'string') {
+    try { curr = JSON.parse(curr); } catch(e) { curr = null; }
+  }
 
   function renderSubTable(list, heading, badgeColor) {
+    if (!list || !list.length) return '';
     return `
       <div style="margin-top:14px; margin-bottom:16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <b style="color:${badgeColor}; font-size:0.92rem;">${heading}</b>
-          <span style="font-size:0.75rem; background:#f1f5f9; padding:2px 8px; border-radius:4px; font-weight:700;">${list.length} Subjects · Total ${list.reduce((acc, x) => acc + (x.max_marks || 100), 0)} Marks</span>
+          <span style="font-size:0.75rem; background:#f1f5f9; padding:2px 8px; border-radius:4px; font-weight:700;">${list.length} Subjects · Total ${list.reduce((acc, x) => acc + (+x.max_marks || 100), 0)} Marks</span>
         </div>
         <table style="width:100%; border-collapse:collapse; font-size:0.83rem;">
           <thead>
@@ -3032,19 +3157,52 @@ window.showCentreCourseSubjects = function(courseId) {
     `;
   }
 
+  let yearlyHtml = '';
+  if (curr && curr.yearly && Object.keys(curr.yearly).length > 0) {
+    yearlyHtml = Object.entries(curr.yearly).map(([tName, subs]) => renderSubTable(subs, `📅 ${tName} (वार्षिक पाठ्यक्रम)`, '#064e3b')).join('');
+  } else {
+    const yearlySubs = getCourseCurriculumSubjects(co.code || co.name, 'yearly', 'Annual Examination');
+    yearlyHtml = renderSubTable(yearlySubs, '📅 Consolidated Annual / Yearly Examination Curriculum', '#064e3b');
+  }
+
+  let semesterHtml = '';
+  if (curr && curr.semester && Object.keys(curr.semester).length > 0) {
+    semesterHtml = Object.entries(curr.semester).map(([tName, subs], idx) => renderSubTable(subs, `📚 ${tName} Curriculum`, idx % 2 === 0 ? '#0369a1' : '#b45309')).join('');
+  } else {
+    const sem1Subs = getCourseCurriculumSubjects(co.code || co.name, 'semester', 'Semester 1');
+    const sem2Subs = getCourseCurriculumSubjects(co.code || co.name, 'semester', 'Semester 2');
+    semesterHtml = renderSubTable(sem1Subs, '📚 Semester - 1 Curriculum (प्रथम सेमेस्टर)', '#0369a1') +
+                   renderSubTable(sem2Subs, '📚 Semester - 2 Curriculum (द्वितीय सेमेस्टर)', '#b45309');
+  }
+
   content.innerHTML = `
+    <!-- Council Prescribed Fee Structure Badge -->
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <b style="color:#0f172a; font-size:0.9rem; display:block;">हेड ऑफिस निर्धारित अंकतालिका व प्रमाणपत्र शुल्क:</b>
+        <span style="font-size:0.75rem; color:#64748b;">(Course Prescribed Examination Council Fees)</span>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <span style="background:#dcfce7; color:#166534; font-size:0.82rem; font-weight:800; padding:4px 12px; border-radius:20px; border:1px solid #86efac;">
+          📜 Single / Yearly: ₹${singleFee}
+        </span>
+        <span style="background:#dbeafe; color:#1e40af; font-size:0.82rem; font-weight:800; padding:4px 12px; border-radius:20px; border:1px solid #93c5fd;">
+          📚 Semester Exam: ₹${semFee}
+        </span>
+      </div>
+    </div>
+
     <div style="display:flex; gap:8px; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
       <button type="button" class="btn sm gold active" id="btnSyllabusYearly" onclick="switchSyllabusView('yearly')">📅 Yearly / Annual Syllabus</button>
       <button type="button" class="btn sm alt" id="btnSyllabusSemester" onclick="switchSyllabusView('semester')">📚 Semester-Wise Syllabus</button>
     </div>
 
     <div id="syllabusYearlyView">
-      ${renderSubTable(yearlySubs, '📅 Consolidated Annual / Yearly Examination Curriculum', '#064e3b')}
+      ${yearlyHtml || '<p class="muted">No yearly subjects configured.</p>'}
     </div>
 
     <div id="syllabusSemesterView" style="display:none;">
-      ${renderSubTable(sem1Subs, '📚 Semester - 1 Curriculum (प्रथम सेमेस्टर)', '#0369a1')}
-      ${renderSubTable(sem2Subs, '📚 Semester - 2 Curriculum (द्वितीय सेमेस्टर)', '#b45309')}
+      ${semesterHtml || '<p class="muted">No semester subjects configured.</p>'}
     </div>
   `;
 

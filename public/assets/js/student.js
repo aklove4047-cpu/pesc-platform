@@ -968,7 +968,22 @@ guard(async () => {
         try { subjects = JSON.parse(subjects); } catch(e) { subjects = []; }
       }
       if (!subjects || !subjects.length) {
-        subjects = getCourseCurriculumSubjects(m.course_name || m.course_code, m.evaluation_type, m.term);
+        if (m.curriculum) {
+          let curr = m.curriculum;
+          if (typeof curr === 'string') {
+            try { curr = JSON.parse(curr); } catch(_) {}
+          }
+          if (curr && typeof curr === 'object') {
+            const pat = m.evaluation_type === 'semester' ? 'semester' : 'yearly';
+            const term = m.term || (pat === 'semester' ? 'Semester 1' : 'Annual Examination');
+            if (curr[pat] && curr[pat][term] && curr[pat][term].length) {
+              subjects = curr[pat][term];
+            }
+          }
+        }
+        if (!subjects || !subjects.length) {
+          subjects = getCourseCurriculumSubjects(m.course_name || m.course_code, m.evaluation_type, m.term);
+        }
       }
 
       let subjectsHtml = '';
