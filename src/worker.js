@@ -3092,43 +3092,27 @@ export default {
       return jsonResponse({ student: enrichedStudent, certificate: cert, marksheet: mrk });
     }
 
-    // 6. Clean route mapping for HTML pages without .html extension
-    const htmlRoutes = {
-      '/admin': '/admin.html',
-      '/portal': '/portal.html',
-      '/coordinator': '/coordinator.html',
-      '/student': '/student.html',
-      '/login': '/login.html',
-      '/verify': '/verify.html',
-      '/verify-marksheet': '/verify.html',
-      '/setup': '/setup.html',
-    };
-    if (htmlRoutes[path]) {
-      const newUrl = new URL(request.url);
-      newUrl.pathname = htmlRoutes[path];
-      return env.ASSETS.fetch(new Request(newUrl, request));
-    }
 
     if (tenantInfo.kind === 'main') {
       const sub = host.split('.')[0].toLowerCase();
       if (sub === 'student' && (path === '/' || path === '')) {
         const newUrl = new URL(request.url);
-        newUrl.pathname = '/student.html';
+        newUrl.pathname = '/student';
         return env.ASSETS.fetch(new Request(newUrl, request));
       }
       if (sub === 'portal' && (path === '/' || path === '')) {
         const newUrl = new URL(request.url);
-        newUrl.pathname = '/portal.html';
+        newUrl.pathname = '/portal';
         return env.ASSETS.fetch(new Request(newUrl, request));
       }
       if (sub === 'coordinator' && (path === '/' || path === '')) {
         const newUrl = new URL(request.url);
-        newUrl.pathname = '/coordinator.html';
+        newUrl.pathname = '/coordinator';
         return env.ASSETS.fetch(new Request(newUrl, request));
       }
       if (sub === 'admin' && (path === '/' || path === '')) {
         const newUrl = new URL(request.url);
-        newUrl.pathname = '/admin.html';
+        newUrl.pathname = '/admin';
         return env.ASSETS.fetch(new Request(newUrl, request));
       }
     }
