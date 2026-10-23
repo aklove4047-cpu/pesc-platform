@@ -34,6 +34,13 @@
     /* stat card click cursor */
     .stat[onclick] { cursor:pointer; transition:transform 0.15s; }
     .stat[onclick]:hover { transform:translateY(-2px); }
+
+    @media print {
+      nav, .nav, .tabs, #tabs, .no-print, button { display: none !important; }
+      body, main { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+      .coord-cert-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+      #printCertArea { box-shadow: none !important; border: 6px double #d4af37 !important; page-break-inside: avoid; }
+    }
   </style>
 </head>
 <body>

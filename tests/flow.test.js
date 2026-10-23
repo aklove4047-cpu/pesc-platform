@@ -247,5 +247,46 @@ test('coordinator panel & reports with CSV export', async () => {
   assert.equal(csvMrk.status, 200);
   assert.match(csvMrk.type, /text\/csv/);
   assert.ok(csvMrk.buf.toString().includes('Marksheet No'));
+
+  // Coordinator appointment certificate
+  const certRes = await call('GET', '/api/coordinator/appointment-cert', { cookie: coordCookie });
+  assert.equal(certRes.status, 200);
+  assert.ok(certRes.json.certificate);
+  assert.ok(certRes.json.certificate.cert_no.includes('PESC/COORD'));
+  assert.equal(certRes.json.certificate.status, 'Valid');
+
+  // Public coordinator certificate verification
+  const verifyRes = await call('GET', `/api/public/verify/coordinator/${certRes.json.certificate.token}`);
+  assert.equal(verifyRes.status, 200);
+  assert.equal(verifyRes.json.status, 'Valid');
+  assert.equal(verifyRes.json.coordinator_name, 'UP Coordinator');
+});
+
+test('centre switch requires target centre admin password', async () => {
+  // A.cookie is logged in as Centre A
+  // Attempt to switch to Centre B without password
+  const noPass = await call('POST', '/api/centre/switch-centre', {
+    host: A.host,
+    cookie: A.cookie,
+    body: { centre_id: B.centre.id },
+  });
+  assert.equal(noPass.status, 401);
+
+  // Attempt to switch to Centre B with wrong password
+  const wrongPass = await call('POST', '/api/centre/switch-centre', {
+    host: A.host,
+    cookie: A.cookie,
+    body: { centre_id: B.centre.id, password: 'WrongPassword123' },
+  });
+  assert.equal(wrongPass.status, 401);
+
+  // Attempt to switch to Centre B with target centre's master/actual password
+  const okPass = await call('POST', '/api/centre/switch-centre', {
+    host: A.host,
+    cookie: A.cookie,
+    body: { centre_id: B.centre.id, password: 'OwnerPass#12345' },
+  });
+  assert.equal(okPass.status, 200);
+  assert.equal(okPass.json.centre.id, B.centre.id);
 });
 

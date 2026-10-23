@@ -2722,16 +2722,12 @@ async function initCentreHeader() {
 
       sel.onchange = (e) => {
         const cid = +e.target.value;
-        guard(async () => {
-          const res = await api('/api/centre/switch-centre', {
-            method: 'POST',
-            body: { centre_id: cid }
-          });
-          if (res?.centre?.slug) {
-            try { localStorage.setItem('pesc_active_centre_slug', res.centre.slug); } catch (_) {}
-          }
-          toast('Switched to centre workspace!');
-          window.location.reload();
+        if (cid === (activeCentre?.id)) return;
+        const targetCentre = allCentresList.find(c => c.id === cid);
+        if (!targetCentre) return;
+
+        showSwitchCentrePasswordModal(targetCentre, () => {
+          sel.value = activeCentre?.id;
         });
       };
     }
@@ -2739,6 +2735,93 @@ async function initCentreHeader() {
     console.error('Error init centre header:', err);
   }
 }
+
+// Modal: Password Verification Required to Switch Centre
+function showSwitchCentrePasswordModal(targetCentre, onCancel) {
+  const existing = document.getElementById('switchCentreModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'switchCentreModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.65);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(5px);padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#ffffff;border-radius:16px;padding:26px 28px;max-width:440px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.3);border:1.5px solid #e2e8f0;animation:popIn 0.2s ease;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div style="width:46px;height:46px;border-radius:12px;background:#fef2f2;border:1.5px solid #fecaca;color:#dc2626;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🔒</div>
+        <div>
+          <h3 style="margin:0;font-size:1.18rem;color:#0f172a;font-weight:800;">Switch Centre Security</h3>
+          <p style="margin:2px 0 0;font-size:0.8rem;color:#64748b;">Admin Password Required</p>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+        <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:700;">Target Centre:</div>
+        <div style="font-weight:800;color:#0a2a5e;font-size:1rem;margin-top:2px;">${esc(targetCentre.name)}</div>
+        <div style="font-size:0.82rem;color:#0284c7;font-family:monospace;margin-top:2px;">Code: ${esc(targetCentre.centre_code)}</div>
+      </div>
+
+      <p style="font-size:0.84rem;color:#475569;margin:0 0 12px;line-height:1.5;">
+        सुरक्षा कारणों से, बिना इस सेंटर के पासवर्ड के दूसरा सेंटर नहीं खोला जा सकता। कृपया <b>${esc(targetCentre.name)}</b> का एडमिन पासवर्ड दर्ज करें:
+      </p>
+
+      <form id="switchCentrePasswordForm">
+        <label style="display:block;font-size:0.82rem;font-weight:700;color:#334155;margin-bottom:6px;">Target Centre Password *</label>
+        <input type="password" id="switchCentrePasswordInput" required autofocus placeholder="Enter centre admin password" style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;margin-bottom:8px;">
+        <div id="switchCentreErrorMsg" style="display:none;color:#dc2626;font-size:0.84rem;margin-bottom:12px;font-weight:600;padding:6px 10px;background:#fef2f2;border-radius:6px;border:1px solid #fecaca;"></div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+          <button type="button" id="btnCancelSwitchCentre" class="btn alt sm" style="padding:9px 18px;border-radius:6px;">✕ Cancel</button>
+          <button type="submit" id="btnConfirmSwitchCentre" class="btn sm" style="background:#0a2a5e;color:#fff;font-weight:700;padding:9px 22px;border-radius:6px;">🔓 Verify &amp; Switch</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const input = modal.querySelector('#switchCentrePasswordInput');
+  setTimeout(() => input?.focus(), 50);
+
+  const closeModal = () => {
+    modal.remove();
+    if (typeof onCancel === 'function') onCancel();
+  };
+
+  modal.querySelector('#btnCancelSwitchCentre').onclick = closeModal;
+
+  modal.querySelector('#switchCentrePasswordForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = modal.querySelector('#btnConfirmSwitchCentre');
+    const errDiv = modal.querySelector('#switchCentreErrorMsg');
+    const pw = input.value.trim();
+    if (!pw) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Verifying…';
+    errDiv.style.display = 'none';
+
+    try {
+      const res = await api('/api/centre/switch-centre', {
+        method: 'POST',
+        body: { centre_id: targetCentre.id, password: pw }
+      });
+      if (res?.centre?.slug) {
+        try { localStorage.setItem('pesc_active_centre_slug', res.centre.slug); } catch (_) {}
+      }
+      toast('✅ Password verified! Switched to ' + targetCentre.name);
+      modal.remove();
+      window.location.reload();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = '🔓 Verify & Switch';
+      errDiv.textContent = '❌ ' + (err.message || 'Galat Password! Is centre ka password galat hai.');
+      errDiv.style.display = 'block';
+      input.value = '';
+      input.focus();
+    }
+  };
+}
+
 
 // Authentication & Dashboard Visibility Controls
 function showCentreAuthScreen() {

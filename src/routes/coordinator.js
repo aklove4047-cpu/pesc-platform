@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const db = require('../db');
+const cfg = require('../config');
 const { requireRole } = require('../auth');
-const { HttpError, str, paginate, now } = require('../lib');
+const { HttpError, str, paginate, now, getOrCreateCoordinatorCert } = require('../lib');
 
 router.use(requireRole('super_admin', 'admin', 'coordinator'));
 
@@ -261,6 +262,26 @@ router.post('/change-password', (req, res) => {
   const hash = Buffer.from(new_password).toString('base64');
   db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.user.id);
   res.json({ ok: true, message: 'Password changed successfully!' });
+});
+
+// GET coordinator appointment certificate
+router.get('/appointment-cert', (req, res) => {
+  const u = db.prepare('SELECT id, name, email, mobile, state, photo_url, seal_url, signature_url, created_at FROM users WHERE id=?').get(req.user.id);
+  if (!u) throw new HttpError(404, 'Coordinator not found');
+  const cert = getOrCreateCoordinatorCert(u.id, u);
+  res.json({
+    certificate: {
+      ...cert,
+      name: u.name,
+      email: u.email,
+      mobile: u.mobile,
+      photo_url: u.photo_url,
+      seal_url: u.seal_url,
+      signature_url: u.signature_url,
+      state: u.state || cert.state || 'All Assigned Territories',
+      verification_url: `${cfg.PUBLIC_URL}/verify/coordinator/${cert.token}`,
+    }
+  });
 });
 
 module.exports = router;

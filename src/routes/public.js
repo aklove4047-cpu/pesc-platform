@@ -207,4 +207,30 @@ router.get('/verify/marksheet/:token', (req, res) => {
   res.json(verifyMarksheetView(row));
 });
 
+// Coordinator Certificate Verification view
+function verifyCoordCertView(row) {
+  if (!row || row.status !== 'Valid') return { status: 'Not Found' };
+  let status = row.status;
+  if (row.valid_until && row.valid_until < now()) status = 'Expired';
+  return {
+    status,
+    type: 'Regional / State Coordinator Appointment Certificate',
+    certificate_no: row.cert_no,
+    coordinator_name: row.name,
+    jurisdiction_state: row.state,
+    photo_url: row.photo_url || null,
+    issued_on: new Date(row.issued_at).toISOString().slice(0, 10),
+    valid_until: row.valid_until ? new Date(row.valid_until).toISOString().slice(0, 10) : 'Permanent',
+    council: 'Pariksha Evam Shiksha Council',
+  };
+}
+
+const SEL_COORD = `SELECT cc.*, u.name, u.photo_url, u.email FROM coordinator_certificates cc JOIN users u ON u.id=cc.user_id`;
+
+router.get('/verify/coordinator/:token', (req, res) => {
+  const token = str(req.params.token, 80);
+  const row = db.prepare(`${SEL_COORD} WHERE cc.token=? OR cc.cert_no=?`).get(token, token);
+  res.json(verifyCoordCertView(row));
+});
+
 module.exports = router;

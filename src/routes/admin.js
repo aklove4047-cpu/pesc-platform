@@ -4,7 +4,7 @@ const provisioning = require('../provisioning');
 const notify = require('../notify');
 const cfg = require('../config');
 const { requireRole } = require('../auth');
-const { HttpError, now, sha, rand, str, h, audit, paginate } = require('../lib');
+const { HttpError, now, sha, rand, str, h, audit, paginate, getOrCreateCoordinatorCert } = require('../lib');
 
 router.use(requireRole('super_admin', 'admin'));
 
@@ -170,9 +170,54 @@ router.post('/coordinators', requireRole('super_admin'), (req, res) => {
   const token = rand(32);
   db.prepare('INSERT INTO setup_tokens(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(token), r.lastInsertRowid, now() + 48 * 3600e3);
   notify.queue('email', email, 'password_reset', { url: `${cfg.PUBLIC_URL}/setup?token=${token}` });
-  audit(req, 'coordinator.create', 'user', r.lastInsertRowid); res.status(201).json({ id: r.lastInsertRowid });
+  // Automatically issue appointment certificate upon coordinator creation
+  const cert = getOrCreateCoordinatorCert(r.lastInsertRowid, { id: r.lastInsertRowid, name, email, state });
+  audit(req, 'coordinator.create', 'user', r.lastInsertRowid);
+  res.status(201).json({ id: r.lastInsertRowid, cert_no: cert ? cert.cert_no : null });
 });
-router.get('/coordinators', (req, res) => res.json({ coordinators: db.prepare("SELECT id,name,email,state,status FROM users WHERE role='coordinator'").all() }));
+
+router.get('/coordinators', (req, res) => {
+  const rows = db.prepare(`
+    SELECT u.id, u.name, u.email, u.mobile, u.state, u.status, u.photo_url, u.created_at,
+           cc.cert_no, cc.status AS cert_status, cc.token AS cert_token, cc.issued_at AS cert_issued_at
+    FROM users u
+    LEFT JOIN coordinator_certificates cc ON cc.user_id = u.id
+    WHERE u.role='coordinator'
+    ORDER BY u.id DESC
+  `).all();
+  for (const r of rows) {
+    if (!r.cert_no) {
+      const c = getOrCreateCoordinatorCert(r.id, r);
+      if (c) {
+        r.cert_no = c.cert_no;
+        r.cert_status = c.status;
+        r.cert_token = c.token;
+        r.cert_issued_at = c.issued_at;
+      }
+    }
+  }
+  res.json({ coordinators: rows });
+});
+
+router.get('/coordinators/:id/cert', (req, res) => {
+  const cid = +req.params.id;
+  const u = db.prepare('SELECT id, name, email, mobile, state, photo_url, seal_url, signature_url, created_at FROM users WHERE id=? AND role="coordinator"').get(cid);
+  if (!u) throw new HttpError(404, 'Coordinator not found');
+  const cert = getOrCreateCoordinatorCert(u.id, u);
+  res.json({
+    certificate: {
+      ...cert,
+      name: u.name,
+      email: u.email,
+      mobile: u.mobile,
+      photo_url: u.photo_url,
+      seal_url: u.seal_url,
+      signature_url: u.signature_url,
+      state: u.state || cert.state || 'All Assigned Territories',
+      verification_url: `${cfg.PUBLIC_URL}/verify/coordinator/${cert.token}`,
+    }
+  });
+});
 
 router.get('/audit', (req, res) => {
   const { size, offset } = paginate(req);

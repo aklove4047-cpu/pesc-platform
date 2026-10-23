@@ -119,6 +119,17 @@ CREATE TABLE IF NOT EXISTS certificates(
   status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending','Rejected','Valid','Cancelled','Revoked')),
   issued_at INTEGER, expires_at INTEGER, requested_by INTEGER, decided_by INTEGER, reason TEXT, created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS ix_cert_centre ON certificates(centre_id, status);
+CREATE TABLE IF NOT EXISTS coordinator_certificates(
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  cert_no TEXT UNIQUE NOT NULL,
+  token TEXT UNIQUE NOT NULL,
+  state TEXT,
+  status TEXT NOT NULL DEFAULT 'Valid' CHECK(status IN ('Valid','Revoked')),
+  issued_at INTEGER NOT NULL,
+  valid_until INTEGER,
+  created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_coord_cert_user ON coordinator_certificates(user_id);
 
 CREATE TABLE IF NOT EXISTS marksheets(
   id INTEGER PRIMARY KEY,
@@ -254,6 +265,20 @@ try { rawDb.exec("ALTER TABLE users ADD COLUMN signature_url TEXT;"); } catch (_
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN director_name TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN phone TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN email TEXT;"); } catch (_) {}
+try {
+  rawDb.exec(`CREATE TABLE IF NOT EXISTS coordinator_certificates(
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    cert_no TEXT UNIQUE NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    state TEXT,
+    status TEXT NOT NULL DEFAULT 'Valid' CHECK(status IN ('Valid','Revoked')),
+    issued_at INTEGER NOT NULL,
+    valid_until INTEGER,
+    created_at INTEGER NOT NULL);
+  CREATE INDEX IF NOT EXISTS ix_coord_cert_user ON coordinator_certificates(user_id);`);
+} catch (_) {}
+
 
 
 module.exports = db;

@@ -81,4 +81,43 @@ function nextCertificateNo() {
   return `${prefix}${String(finalNum).padStart(6, '0')}`;
 }
 
-module.exports = { HttpError, now, sha, rand, str, h, next, nextCentreCode, nextStudentCode, nextMarksheetNo, nextCertificateNo, audit, paginate };
+function nextCoordinatorCertNo(state = '') {
+  const year = new Date().getFullYear();
+  const stCode = (state || 'IN').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'HQ';
+  const prefix = `PESC/COORD/${stCode}/${year}/`;
+  const maxRow = db.prepare("SELECT cert_no FROM coordinator_certificates WHERE cert_no LIKE ? ORDER BY id DESC LIMIT 1").get(prefix + '%');
+  let maxExisting = 0;
+  if (maxRow && maxRow.cert_no) {
+    const parts = maxRow.cert_no.split('/');
+    const numPart = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(numPart)) maxExisting = numPart;
+  }
+  const counterVal = next('coord_cert:' + year);
+  const finalNum = Math.max(maxExisting + 1, counterVal);
+  db.prepare("INSERT INTO counters(name,value) VALUES(?,?) ON CONFLICT(name) DO UPDATE SET value=MAX(value, excluded.value)").run('coord_cert:' + year, finalNum);
+  return `${prefix}${String(finalNum).padStart(4, '0')}`;
+}
+
+function getOrCreateCoordinatorCert(userId, userObj = null) {
+  let cert = db.prepare('SELECT * FROM coordinator_certificates WHERE user_id=?').get(userId);
+  if (!cert) {
+    const u = userObj || db.prepare('SELECT * FROM users WHERE id=?').get(userId);
+    if (!u) return null;
+    const certNo = nextCoordinatorCertNo(u.state);
+    const token = rand(24);
+    const issueTime = u.created_at || now();
+    const validUntil = issueTime + (3 * 365 * 864e5);
+    try {
+      db.prepare(`
+        INSERT INTO coordinator_certificates(user_id, cert_no, token, state, status, issued_at, valid_until, created_at)
+        VALUES(?,?,?,?,?,?,?,?)
+      `).run(u.id, certNo, token, u.state || 'All State', 'Valid', issueTime, validUntil, now());
+      cert = db.prepare('SELECT * FROM coordinator_certificates WHERE user_id=?').get(userId);
+    } catch (_) {
+      cert = db.prepare('SELECT * FROM coordinator_certificates WHERE user_id=?').get(userId);
+    }
+  }
+  return cert;
+}
+
+module.exports = { HttpError, now, sha, rand, str, h, next, nextCentreCode, nextStudentCode, nextMarksheetNo, nextCertificateNo, nextCoordinatorCertNo, getOrCreateCoordinatorCert, audit, paginate };
