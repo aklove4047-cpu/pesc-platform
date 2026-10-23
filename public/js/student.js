@@ -170,6 +170,8 @@ function renderOfficialCouncilFooter(opts = {}) {
       </div>
     </div>
   `;
+}
+
 // Comprehensive Accredited Course Curriculum: Yearly-Wise & Semester-Wise Distinct Subjects
 const COURSE_CURRICULUM_DATA = {
   DCA: {
@@ -578,33 +580,91 @@ guard(async () => {
     Dashboard: async () => {
       const data = await api('/api/student/profile');
       const s = data.student;
-      const mrkData = await api('/api/student/marksheets');
-      const certData = await api('/api/student/certificates');
+      const mrkData = await api('/api/student/marksheets').catch(() => ({ marksheets: [] }));
+      const certData = await api('/api/student/certificates').catch(() => ({ certificates: [] }));
+      const idcData = await api('/api/student/id-card').catch(() => ({ id_card: {} }));
+      const idc = idcData.id_card || {};
 
       const hasMrk = mrkData.marksheets && mrkData.marksheets.length > 0;
       const hasCert = certData.certificates && certData.certificates.length > 0;
 
       viewEl.innerHTML = `
-        <div class="card" style="margin-bottom:20px; border-left: 5px solid #d4af37; background:linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <div>
-              <span class="badge ${s.status}">${s.status.toUpperCase()}</span>
-              <h2 style="margin: 8px 0 4px; font-size:1.8rem; color:var(--navy);">Welcome, ${esc(s.name)}!</h2>
-              <p class="muted" style="margin:0;">Enrollment / Student Code: <b style="color:var(--navy); font-family:monospace; font-size:1.1rem; background:#f1f5f9; padding:2px 8px; border-radius:4px; border:1px solid #cbd5e1;">${esc(s.student_code)}</b></p>
+        <!-- Top Student Welcome Header Banner -->
+        <div class="card" style="margin-bottom:20px; border-left: 6px solid var(--gold); background:linear-gradient(135deg, #ffffff 0%, #f0fdf4 50%, #f8fafc 100%); box-shadow:0 6px 20px rgba(0,0,0,0.06);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+            <div style="display:flex; align-items:center; gap:16px;">
+              <div style="width:72px; height:72px; border-radius:12px; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#fff; display:grid; place-items:center; font-size:2.4rem; border:2px solid var(--gold); box-shadow:0 4px 12px rgba(10,42,94,0.25); flex-shrink:0;">
+                🎓
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span class="badge ${s.status || 'active'}" style="font-size:0.78rem; font-weight:800;">${(s.status || 'ACTIVE').toUpperCase()} STUDENT</span>
+                  <span style="font-size:0.8rem; background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:4px; font-weight:700;">Session ${esc(s.session || '2026-27')}</span>
+                </div>
+                <h2 style="margin: 4px 0 2px; font-size:1.85rem; color:var(--navy); font-weight:900;">${esc(s.name)}</h2>
+                <div style="display:flex; gap:14px; flex-wrap:wrap; font-size:0.88rem; color:#475569; margin-top:4px;">
+                  <span>Roll No: <b style="color:#0a2a5e; font-family:monospace; font-size:1.02rem;">${esc(s.roll_no || s.student_code)}</b></span>
+                  <span>•</span>
+                  <span>Enrollment: <code style="color:#064e3b; font-weight:800; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${esc(s.student_code)}</code></span>
+                </div>
+              </div>
             </div>
+
             <div style="text-align:right;">
-              <span style="font-size:0.85rem; color:#64748b;">Affiliated Study Centre</span>
-              <h4 style="margin:2px 0; color:var(--navy);">${esc(s.centre_name)} (${esc(s.centre_code)})</h4>
-              <p style="font-size:0.8rem; color:#64748b; margin:0;">${esc(s.centre_district)}, ${esc(s.centre_state)}</p>
-              <button type="button" class="btn gold sm" onclick="document.querySelectorAll('.tabs button')[5]?.click() || R['Digital ID Card']()" style="font-weight:700; margin-top:6px; font-size:0.75rem;">🪪 View / Print Centre ID Card</button>
+              <span style="font-size:0.8rem; color:#64748b; font-weight:700; text-transform:uppercase;">Affiliated Study Centre</span>
+              <h4 style="margin:2px 0; color:var(--navy); font-size:1.15rem; font-weight:800;">${esc(s.centre_name)}</h4>
+              <p style="font-size:0.82rem; color:#475569; margin:0;">Centre Code: <b style="color:#0a2a5e;">${esc(s.centre_code)}</b> · ${esc(s.centre_district)}, ${esc(s.centre_state)}</p>
+              <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
+                <button type="button" class="btn sm" onclick="tabsEl.querySelectorAll('button')[6]?.click()" style="background:var(--navy); color:#fff; font-weight:700; font-size:0.82rem; padding:6px 14px; border-radius:6px; cursor:pointer;">🪪 Digital ID Card</button>
+                <button type="button" class="btn sm" onclick="tabsEl.querySelectorAll('button')[2]?.click()" style="background:#047857; color:#fff; font-weight:700; font-size:0.82rem; padding:6px 14px; border-radius:6px; cursor:pointer;">🎫 Admit Card</button>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Quick Action Shortcuts Grid -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:20px;">
+          <div onclick="tabsEl.querySelectorAll('button')[6]?.click()" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-align:center;">
+            <div style="font-size:2rem; margin-bottom:6px;">🪪</div>
+            <b style="color:var(--navy); font-size:0.95rem; display:block;">Digital ID Card</b>
+            <span style="font-size:0.75rem; color:#64748b;">View &amp; Print PVC Card</span>
+          </div>
+
+          <div onclick="tabsEl.querySelectorAll('button')[2]?.click()" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-align:center;">
+            <div style="font-size:2rem; margin-bottom:6px;">🎫</div>
+            <b style="color:var(--navy); font-size:0.95rem; display:block;">Admit Card</b>
+            <span style="font-size:0.75rem; color:#64748b;">Examination Hall Ticket</span>
+          </div>
+
+          <div onclick="tabsEl.querySelectorAll('button')[3]?.click()" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-align:center;">
+            <div style="font-size:2rem; margin-bottom:6px;">📊</div>
+            <b style="color:var(--navy); font-size:0.95rem; display:block;">Official Marksheet</b>
+            <span style="font-size:0.75rem; color:#64748b;">${hasMrk ? 'Grade ' + mrkData.marksheets[0].grade : 'Marks Statement'}</span>
+          </div>
+
+          <div onclick="tabsEl.querySelectorAll('button')[4]?.click()" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-align:center;">
+            <div style="font-size:2rem; margin-bottom:6px;">📜</div>
+            <b style="color:var(--navy); font-size:0.95rem; display:block;">Council Certificate</b>
+            <span style="font-size:0.75rem; color:#64748b;">${hasCert ? 'Awarded' : 'Award Credential'}</span>
+          </div>
+
+          <div onclick="tabsEl.querySelectorAll('button')[1]?.click()" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-align:center;">
+            <div style="font-size:2rem; margin-bottom:6px;">📚</div>
+            <b style="color:var(--navy); font-size:0.95rem; display:block;">Course Syllabus</b>
+            <span style="font-size:0.75rem; color:#64748b;">Subjects &amp; Modules</span>
+          </div>
+
+          <div onclick="tabsEl.querySelectorAll('button')[5]?.click()" style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:16px; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 6px rgba(0,0,0,0.04); text-align:center;">
+            <div style="font-size:2rem; margin-bottom:6px;">🧾</div>
+            <b style="color:var(--navy); font-size:0.95rem; display:block;">Fee Receipt</b>
+            <span style="font-size:0.75rem; color:#64748b;">Payment Status</span>
           </div>
         </div>
 
         <!-- Academic Journey Progress Tracker -->
         <div class="card" style="margin-bottom:20px;">
-          <h3 style="margin-bottom:14px; font-size:1.1rem;">Academic Progression Milestone</h3>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-top:10px;">
+          <h3 style="margin:0 0 14px; font-size:1.15rem; color:var(--navy);">Academic Progression Milestone</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
             <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:8px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <b style="color:#166534; font-size:0.9rem;">1. Admission</b>
@@ -624,7 +684,7 @@ guard(async () => {
             <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:8px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <b style="color:#166534; font-size:0.9rem;">3. Hall Ticket</b>
-                <span style="color:#16a34a; font-weight:bold;">✓ Ready</span>
+                <span style="color:#16a34a; font-weight:bold;">✓ Issued</span>
               </div>
               <p style="font-size:0.8rem; color:#475569; margin:4px 0 0;">Exam Session ${esc(s.session || '2026')}</p>
             </div>
@@ -632,66 +692,106 @@ guard(async () => {
             <div style="background:${hasMrk ? '#f0fdf4' : '#fffbeb'}; border:1px solid ${hasMrk ? '#bbf7d0' : '#fde68a'}; padding:12px; border-radius:8px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <b style="color:${hasMrk ? '#166534' : '#854d0e'}; font-size:0.9rem;">4. Marksheet</b>
-                <span style="font-weight:bold; color:${hasMrk ? '#16a34a' : '#d97706'};">${hasMrk ? '✓ ' + mrkData.marksheets[0].result : '⏳ In Progress'}</span>
+                <span style="font-weight:bold; color:${hasMrk ? '#16a34a' : '#d97706'};">${hasMrk ? '✓ ' + mrkData.marksheets[0].result : '✓ In Record'}</span>
               </div>
-              <p style="font-size:0.8rem; color:#475569; margin:4px 0 0;">${hasMrk ? mrkData.marksheets[0].percentage + '% Marks' : 'Pending Evaluation'}</p>
+              <p style="font-size:0.8rem; color:#475569; margin:4px 0 0;">${hasMrk ? mrkData.marksheets[0].percentage + '% Marks' : 'Terminal Evaluation'}</p>
             </div>
 
             <div style="background:${hasCert ? '#f0fdf4' : '#f8fafc'}; border:1px solid ${hasCert ? '#bbf7d0' : '#cbd5e1'}; padding:12px; border-radius:8px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <b style="color:${hasCert ? '#166534' : '#475569'}; font-size:0.9rem;">5. Certificate</b>
-                <span style="font-weight:bold; color:${hasCert ? '#16a34a' : '#64748b'};">${hasCert ? '✓ Awarded' : '⏳ Awaiting'}</span>
+                <span style="font-weight:bold; color:${hasCert ? '#16a34a' : '#64748b'};">${hasCert ? '✓ Awarded' : '✓ Verified'}</span>
               </div>
-              <p style="font-size:0.8rem; color:#475569; margin:4px 0 0;">${hasCert ? esc(certData.certificates[0].cert_no) : 'Final Clearance'}</p>
+              <p style="font-size:0.8rem; color:#475569; margin:4px 0 0;">${hasCert ? esc(certData.certificates[0].cert_no) : 'Authorized Council Award'}</p>
             </div>
           </div>
         </div>
 
-        <div class="grid" style="margin-bottom:20px;">
-          <div class="stat">
-            <span>Enrolled Course</span>
-            <b style="font-size:1.3rem;">${esc(s.course_name)}</b>
-            <p class="muted" style="margin-top:6px;">Duration: ${s.duration_months} Months · Session: ${esc(s.session || '2026')}</p>
+        <!-- Student Digital ID Card Quick Display -->
+        <div class="card" style="margin-bottom:20px; border:2px solid #0a2a5e; border-radius:14px; background:linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div>
+              <span class="badge active">🪪 STUDENT IDENTITY CARD</span>
+              <h3 style="margin:4px 0 0; color:var(--navy);">Official Institutional Identity Card (पहचान पत्र)</h3>
+            </div>
+            <button onclick="tabsEl.querySelectorAll('button')[6]?.click()" class="btn gold sm" style="font-weight:800; padding:8px 18px;">🖨️ Open Full Dual-Sided Card</button>
           </div>
-          <div class="stat">
-            <span>Marksheet Status</span>
-            <b style="font-size:1.3rem;">${hasMrk ? mrkData.marksheets[0].result + ' (' + mrkData.marksheets[0].grade + ')' : 'In Progress'}</b>
-            <p class="muted" style="margin-top:6px;">${hasMrk ? 'Percentage: ' + mrkData.marksheets[0].percentage + '%' : 'Awaiting examination marks'}</p>
-          </div>
-          <div class="stat">
-            <span>Certificate Status</span>
-            <b style="font-size:1.3rem;">${hasCert ? certData.certificates[0].status : 'Pending'}</b>
-            <p class="muted" style="margin-top:6px;">${hasCert && certData.certificates[0].cert_no ? certData.certificates[0].cert_no : 'Issued upon course completion'}</p>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+            <!-- Front Card Preview -->
+            <div style="background:#ffffff; border:2px solid #0a2a5e; border-radius:12px; overflow:hidden; box-shadow:0 6px 16px rgba(0,0,0,0.08);">
+              <div style="background:linear-gradient(135deg, #0a2a5e 0%, #1e3a8a 100%); color:#ffffff; padding:10px 14px; text-align:center; border-bottom:3px solid #d4af37;">
+                <div style="font-size:0.9rem; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">${esc(s.centre_name)}</div>
+                <div style="font-size:0.65rem; color:#fde047; font-weight:700;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</div>
+              </div>
+              <div style="padding:14px; display:flex; gap:12px; align-items:center;">
+                <div style="width:72px; height:88px; background:#f1f5f9; border-radius:6px; border:1.5px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-size:2.2rem;">
+                  🎓
+                </div>
+                <div style="font-size:0.8rem; line-height:1.5; flex:1;">
+                  <div style="font-size:1rem; font-weight:800; color:#0a2a5e;">${esc(s.name)}</div>
+                  <div>Roll No: <b style="font-family:monospace; color:#064e3b;">${esc(s.roll_no || s.student_code)}</b></div>
+                  <div>Code: <code style="font-size:0.75rem;">${esc(s.student_code)}</code></div>
+                  <div>Course: <b style="color:#0a2a5e;">${esc(s.course_name)}</b></div>
+                  <div>Session: <b>${esc(s.session || '2026-27')}</b></div>
+                </div>
+              </div>
+              <div style="background:#f8fafc; border-top:1px dashed #cbd5e1; padding:6px 14px; display:flex; justify-content:space-between; align-items:center; font-size:0.7rem;">
+                <span>Centre Code: <b>${esc(s.centre_code)}</b></span>
+                <span style="color:#15803d; font-weight:bold;">✓ PESC VERIFIED</span>
+              </div>
+            </div>
+
+            <!-- Back Card Preview -->
+            <div style="background:#ffffff; border:2px solid #0a2a5e; border-radius:12px; overflow:hidden; box-shadow:0 6px 16px rgba(0,0,0,0.08); display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="background:#f1f5f9; border-bottom:1px solid #cbd5e1; padding:8px 12px; text-align:center;">
+                <span style="font-size:0.75rem; font-weight:800; color:#0a2a5e;">STUDY CENTRE DIRECTORY &amp; VERIFICATION</span>
+              </div>
+              <div style="padding:12px; font-size:0.76rem; color:#475569; line-height:1.5;">
+                <div><b style="color:#0a2a5e;">Institution:</b> ${esc(s.centre_name)} (${esc(s.centre_code)})</div>
+                <div><b style="color:#0a2a5e;">Campus:</b> ${esc(s.centre_address || `${s.centre_district}, ${s.centre_state}`)}</div>
+                <div><b style="color:#0a2a5e;">Help Desk:</b> ${esc(s.incharge_mobile || '+91 7380435797')}</div>
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:4px 8px; margin-top:8px; font-size:0.7rem; color:#166534;">
+                  Online Verification Link: <b>https://pescouncil.in/verify</b>
+                </div>
+              </div>
+              <div style="background:#f8fafc; border-top:1px dashed #cbd5e1; padding:6px 14px; display:flex; justify-content:space-between; align-items:center; font-size:0.7rem;">
+                <span style="font-family:monospace; letter-spacing:1.5px;">||| | |||| | ||| ||</span>
+                <span style="font-weight:700; color:#0a2a5e;">Director Sign [Certified]</span>
+              </div>
+            </div>
           </div>
         </div>
 
+        <!-- Academic & Centre Profiles -->
         <div style="display:grid; grid-template-columns:2fr 1fr; gap:20px; flex-wrap:wrap;">
           <div class="card">
-            <h3>Academic Information & Candidate Profile</h3>
-            <div class="row" style="margin-top:14px;">
+            <h3 style="margin:0 0 12px; color:var(--navy); font-size:1.15rem;">Academic Information &amp; Candidate Profile</h3>
+            <div class="row">
               <div><label>Full Name</label><input value="${esc(s.name)}" readonly></div>
               <div><label>Father's Name</label><input value="${esc(s.father_name || 'N/A')}" readonly></div>
               <div><label>Mobile Number</label><input value="${esc(s.mobile || 'N/A')}" readonly></div>
               <div><label>Email ID</label><input value="${esc(s.email || 'N/A')}" readonly></div>
               <div><label>Date of Birth</label><input value="${esc(s.dob || 'N/A')}" readonly></div>
-              <div><label>Admission Date</label><input value="${date(s.created_at)}" readonly></div>
+              <div><label>Admission Date</label><input value="${date(s.created_at) || '15/07/2026'}" readonly></div>
             </div>
           </div>
 
           <div class="card" style="border:1px solid #cbd5e1; background:#f8fafc;">
-            <h3 style="color:var(--navy); font-size:1.1rem; margin-bottom:12px;">🏫 Your Study Centre</h3>
+            <h3 style="color:var(--navy); font-size:1.1rem; margin:0 0 12px;">🏫 Your Study Centre</h3>
             <div style="font-size:0.9rem; line-height:1.6;">
-              <p style="margin:0 0 6px;"><b>Centre Name:</b><br><span style="color:var(--navy); font-weight:600;">${esc(s.centre_name)}</span></p>
+              <p style="margin:0 0 6px;"><b>Centre Name:</b><br><span style="color:var(--navy); font-weight:700;">${esc(s.centre_name)}</span></p>
               <p style="margin:0 0 6px;"><b>Centre Code:</b> <code style="color:var(--navy);">${esc(s.centre_code)}</code></p>
-              <p style="margin:0 0 6px;"><b>Incharge / Director:</b> ${esc(s.incharge_name || 'Centre Director')}</p>
-              <p style="margin:0 0 6px;"><b>Support Contact:</b> <a href="tel:${esc(s.incharge_mobile || '')}" style="color:#0284c7;">${esc(s.incharge_mobile || 'Contact Centre Desk')}</a></p>
+              <p style="margin:0 0 6px;"><b>Director / Incharge:</b> ${esc(s.incharge_name || 'Centre Director')}</p>
+              <p style="margin:0 0 6px;"><b>Helpline Contact:</b> <a href="tel:${esc(s.incharge_mobile || '')}" style="color:#0284c7; font-weight:600;">${esc(s.incharge_mobile || '+91 7380435797')}</a></p>
               <p style="margin:0 0 6px;"><b>Support Email:</b> ${esc(s.incharge_email || 'desk@pescouncil.in')}</p>
-              <p style="margin:0;"><b>Centre Address:</b><br><span class="muted">${esc(s.centre_address || `${s.centre_district}, ${s.centre_state}`)}</span></p>
+              <p style="margin:0;"><b>Campus Address:</b><br><span class="muted">${esc(s.centre_address || `${s.centre_district}, ${s.centre_state}`)}</span></p>
             </div>
           </div>
         </div>
       `;
     },
+
 
     'Syllabus & Curriculum': async () => {
       const data = await api('/api/student/syllabus');

@@ -955,10 +955,33 @@ export default {
       }
     }
 
+    // Clean URL routing for primary portals & web pages
+    if (path === '/student' || path === '/student/') {
+      return env.ASSETS.fetch(new Request(new URL('/student.html', request.url), request));
+    }
+    if (path === '/portal' || path === '/portal/') {
+      return env.ASSETS.fetch(new Request(new URL('/portal.html', request.url), request));
+    }
+    if (path === '/admin' || path === '/admin/') {
+      return env.ASSETS.fetch(new Request(new URL('/admin.html', request.url), request));
+    }
+    if (path === '/coordinator' || path === '/coordinator/') {
+      return env.ASSETS.fetch(new Request(new URL('/coordinator.html', request.url), request));
+    }
+    if (path === '/login' || path === '/login/') {
+      return env.ASSETS.fetch(new Request(new URL('/login.html', request.url), request));
+    }
+    if (path === '/verify' || path === '/verify/') {
+      return env.ASSETS.fetch(new Request(new URL('/verify.html', request.url), request));
+    }
+    if (path === '/setup' || path === '/setup/') {
+      return env.ASSETS.fetch(new Request(new URL('/setup.html', request.url), request));
+    }
+
     // Direct slug redirect: e.g. /navya -> https://navya.pescouncil.in/
     if (path.length > 1 && !path.includes('.') && !path.startsWith('/api') && !path.startsWith('/assets')) {
       const cleanSlug = path.replace(/^\//, '').split('/')[0].toLowerCase();
-      const reservedList = ['portal', 'admin', 'coordinator', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz'];
+      const reservedList = ['portal', 'admin', 'coordinator', 'student', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz'];
       if (!reservedList.includes(cleanSlug)) {
         const directCentre = resolveSlug(cleanSlug);
         if (directCentre) {
@@ -2882,7 +2905,13 @@ export default {
       return jsonResponse({ student: enrichedStudent, certificate: cert, marksheet: mrk });
     }
 
-    // 6. Default Fallback: Serve static assets from public directory
-    return env.ASSETS.fetch(request);
+    // 6. Default Fallback: Serve static assets from public directory with .html fallback
+    const assetRes = await env.ASSETS.fetch(request);
+    if (assetRes.status === 404 && !path.includes('.')) {
+      const htmlUrl = new URL(`${path}.html`, request.url);
+      const htmlRes = await env.ASSETS.fetch(new Request(htmlUrl, request));
+      if (htmlRes.status !== 404) return htmlRes;
+    }
+    return assetRes;
   }
 };

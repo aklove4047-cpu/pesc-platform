@@ -48,6 +48,13 @@ const tabIcons = {
   'Wallet / Recharge': '💳',
   'Official Documents': '📜',
   'Change Password': '🔒',
+  'Digital ID Card': '🪪',
+  'Syllabus & Curriculum': '📚',
+  'Admit Card / Hall Ticket': '🎫',
+  'My Marksheet': '📊',
+  'My Certificate': '📜',
+  'Fee & Admission Receipt': '🧾',
+  'Helpdesk & Support': '💬',
 };
 
 function tabs(el, names, onPick) {
