@@ -2309,6 +2309,394 @@ function setMrkEvalPattern(pat) {
   updateMrkPreview();
 }
 
+// Comprehensive Accredited Course Curriculum: Yearly-Wise & Semester-Wise Distinct Subjects
+const COURSE_CURRICULUM_DATA = {
+  DCA: {
+    name: 'Diploma in Computer Applications',
+    yearly: {
+      'Annual Examination': [
+        { code: 'DCA-Y101', name: 'Information Technology, OS & Windows', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DCA-Y102', name: 'Office Automation Tools (Word, Excel, PPT)', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DCA-Y103', name: 'Database Management Systems & MS Access', max_marks: 100, theory: 43, practical: 47 },
+        { code: 'DCA-Y104', name: 'Financial Accounting & Tally Prime with GST', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DCA-Y105', name: 'Internet, Cyber Security & Web Applications', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DCA-Y106', name: 'Annual Project Lab Assessment & Viva-Voce', max_marks: 100, theory: 46, practical: 46 },
+      ],
+      '1st Year': [
+        { code: 'DCA-Y101', name: 'Information Technology, OS & Windows', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DCA-Y102', name: 'Office Automation Tools (Word, Excel, PPT)', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DCA-Y103', name: 'Database Management Systems & MS Access', max_marks: 100, theory: 43, practical: 47 },
+        { code: 'DCA-Y104', name: 'Financial Accounting & Tally Prime with GST', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DCA-Y105', name: 'Internet, Cyber Security & Web Applications', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DCA-Y106', name: 'Annual Project Lab Assessment & Viva-Voce', max_marks: 100, theory: 46, practical: 46 },
+      ],
+      '2nd Year': [
+        { code: 'DCA-Y201', name: 'Advanced Spreadsheets & Database Modeling', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DCA-Y202', name: 'Advanced Tally Prime GST & Payroll Taxation', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DCA-Y203', name: 'Web Designing & Desktop Publishing Basics', max_marks: 100, theory: 46, practical: 44 },
+        { code: 'DCA-Y204', name: 'Year-2 Comprehensive Industry Project & Viva', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Final Year': [
+        { code: 'DCA-Y201', name: 'Advanced Spreadsheets & Database Modeling', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DCA-Y202', name: 'Advanced Tally Prime GST & Payroll Taxation', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DCA-Y203', name: 'Web Designing & Desktop Publishing Basics', max_marks: 100, theory: 46, practical: 44 },
+        { code: 'DCA-Y204', name: 'Year-2 Comprehensive Industry Project & Viva', max_marks: 100, theory: 47, practical: 47 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'DCA-S101', name: 'Computer Fundamentals & OS (Windows/Linux)', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DCA-S102', name: 'Office Automation Tools (MS Word & PowerPoint)', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'DCA-S103', name: 'Electronic Spreadsheets & Data Analysis (MS Excel)', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'DCA-S104', name: 'Practical Lab - I & IT Viva-Voce', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'DCA-S201', name: 'Financial Accounting & Tally Prime with GST', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'DCA-S202', name: 'Database Management Systems (MS Access / SQL)', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'DCA-S203', name: 'Web Fundamentals, HTML, CSS & Cyber Security', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'DCA-S204', name: 'Software Project Demonstration & Viva-Voce', max_marks: 100, theory: 48, practical: 47 },
+      ],
+      'Semester 3': [
+        { code: 'DCA-S301', name: 'Advanced Database Architecture & SQL Reports', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'DCA-S302', name: 'Desktop Publishing & Graphics Fundamentals', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DCA-S303', name: 'Business Accounting & Statutory Payroll', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DCA-S304', name: 'Applied Laboratory Work - III', max_marks: 100, theory: 47, practical: 48 },
+      ],
+      'Semester 4': [
+        { code: 'DCA-S401', name: 'Web Application Design & Client Scripting', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'DCA-S402', name: 'IT Infrastructure & Network Troubleshooting', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DCA-S403', name: 'Major Project Implementation & Defense Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  },
+  ADCA: {
+    name: 'Advanced Diploma in Computer Applications',
+    yearly: {
+      'Annual Examination': [
+        { code: 'ADCA-Y101', name: 'Computer Fundamentals & Programming in C/Python', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'ADCA-Y102', name: 'Advanced MS Office Suite & Database Systems', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'ADCA-Y103', name: 'Financial Accounting with Tally Prime & GST', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'ADCA-Y104', name: 'Web Designing Fundamentals (HTML5, CSS3, JS)', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'ADCA-Y105', name: 'Graphic Designing (CorelDraw, Photoshop)', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'ADCA-Y106', name: 'Software Project Implementation & Viva-Voce', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      '1st Year': [
+        { code: 'ADCA-Y101', name: 'IT Concepts, Computer Organization & Windows', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'ADCA-Y102', name: 'Complete Office Suite & Advanced Spreadsheets', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'ADCA-Y103', name: 'Financial Accounting with Tally Prime & Taxation', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'ADCA-Y104', name: 'Programming Principles & C / Python Basics', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'ADCA-Y105', name: 'Lab Practical - Year 1 & Technical Viva', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      '2nd Year': [
+        { code: 'ADCA-Y201', name: 'Advanced Python & Object Oriented Systems', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'ADCA-Y202', name: 'Relational Database Systems & SQL Server', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'ADCA-Y203', name: 'Full-Stack Web Development & Frameworks', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'ADCA-Y204', name: 'Computer Hardware, Networking & Cyber Security', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'ADCA-Y205', name: 'Major Industry Capstone Project & Grand Viva', max_marks: 100, theory: 48, practical: 48 },
+      ],
+      'Final Year': [
+        { code: 'ADCA-Y201', name: 'Advanced Python & Object Oriented Systems', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'ADCA-Y202', name: 'Relational Database Systems & SQL Server', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'ADCA-Y203', name: 'Full-Stack Web Development & Frameworks', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'ADCA-Y204', name: 'Computer Hardware, Networking & Cyber Security', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'ADCA-Y205', name: 'Major Industry Capstone Project & Grand Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'ADCA-S101', name: 'Computer Fundamentals & Operating Systems', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'ADCA-S102', name: 'Office Automation Suite (Word, Excel, PowerPoint)', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'ADCA-S103', name: 'Problem Solving & Programming Logic in C', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'ADCA-S104', name: 'Computer Lab - I & Technical Viva', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'ADCA-S201', name: 'Financial Accounting with Tally Prime & GST', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'ADCA-S202', name: 'Relational Database Systems & MS Access', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'ADCA-S203', name: 'Python Programming Fundamentals', max_marks: 100, theory: 46, practical: 46 },
+        { code: 'ADCA-S204', name: 'Programming Lab - II & Project Viva', max_marks: 100, theory: 48, practical: 47 },
+      ],
+      'Semester 3': [
+        { code: 'ADCA-S301', name: 'Web Designing (HTML5, CSS3, JavaScript)', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'ADCA-S302', name: 'Graphic Designing (CorelDraw & Adobe Photoshop)', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'ADCA-S303', name: 'Desktop Publishing & Pre-press Typography', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'ADCA-S304', name: 'Multimedia Design Lab - III', max_marks: 100, theory: 47, practical: 48 },
+      ],
+      'Semester 4': [
+        { code: 'ADCA-S401', name: 'Advanced Web Applications & Backend API Design', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'ADCA-S402', name: 'Hardware Networking, LAN Setup & Cyber Security', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'ADCA-S403', name: 'Capstone Software Project Implementation', max_marks: 100, theory: 47, practical: 47 },
+        { code: 'ADCA-S404', name: 'Comprehensive Grand Viva-Voce', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  },
+  TALLY: {
+    name: 'Tally with GST',
+    yearly: {
+      'Annual Examination': [
+        { code: 'TAL-Y101', name: 'Basic Accounting Principles & Inventory Management', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'TAL-Y102', name: 'Tally Prime Operations & Financial Vouchers', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'TAL-Y103', name: 'Goods & Services Tax (GST) Computations & E-Way', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'TAL-Y104', name: 'Payroll, TDS Compliance & Audit Reports', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'TAL-Y105', name: 'Annual Balance Sheet Finalization & Viva', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      '1st Year': [
+        { code: 'TAL-Y101', name: 'Basic Accounting Principles & Inventory Management', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'TAL-Y102', name: 'Tally Prime Operations & Financial Vouchers', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'TAL-Y103', name: 'Goods & Services Tax (GST) Computations & E-Way', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'TAL-Y104', name: 'Payroll, TDS Compliance & Audit Reports', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'TAL-Y105', name: 'Annual Balance Sheet Finalization & Viva', max_marks: 100, theory: 47, practical: 47 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'TAL-S101', name: 'Principles of Accounting & Double Entry System', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'TAL-S102', name: 'Tally Prime Environment, Masters & Ledger Creation', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'TAL-S103', name: 'Inventory & Stock Valuation in Tally Prime', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'TAL-S104', name: 'Practical Accounting Lab - I & Viva-Voce', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'TAL-S201', name: 'Goods & Services Tax (GST) Invoicing & Returns', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'TAL-S202', name: 'Payroll Administration, PF, ESI & TDS Compliance', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'TAL-S203', name: 'Banking Reconciliation & Financial Statements', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'TAL-S204', name: 'Commercial Accounting Project & Audit Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  },
+  CCC: {
+    name: 'Course on Computer Concepts',
+    yearly: {
+      'Annual Examination': [
+        { code: 'CCC-Y101', name: 'Introduction to Computer & Operating Systems', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'CCC-Y102', name: 'Word Processing & Electronic Spreadsheets', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'CCC-Y103', name: 'Presentation Systems & Internet / Web Technologies', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'CCC-Y104', name: 'Digital Financial Services & Cyber Security Basics', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'CCC-Y105', name: 'Practical Lab Assessment & Viva-Voce', max_marks: 100, theory: 47, practical: 47 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'CCC-S101', name: 'Digital Literacy, GUI & Operating Systems', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'CCC-S102', name: 'Word Processing Fundamentals & Document Creation', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'CCC-S103', name: 'Basic Computer Lab - I & Viva-Voce', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'CCC-S201', name: 'Electronic Spreadsheets & Visual Presentations', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'CCC-S202', name: 'Internet Services, Digital Banking & Cyber Safety', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'CCC-S203', name: 'Digital Skills Project & Practical Assessment', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  },
+  PGDCA: {
+    name: 'Post Graduate Diploma in Computer Applications',
+    yearly: {
+      'Annual Examination': [
+        { code: 'PGD-Y101', name: 'Fundamentals of IT & Modern Operating Systems', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'PGD-Y102', name: 'Object Oriented Programming (C++ & Java/Python)', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'PGD-Y103', name: 'Relational Database Management Systems (SQL Server)', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'PGD-Y104', name: 'Web Application Development & Network Security', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'PGD-Y105', name: 'Software Engineering & System Architecture', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'PGD-Y106', name: 'Capstone Project Development & Viva-Voce', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'PGD-S101', name: 'IT Infrastructure & Modern Operating Systems', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'PGD-S102', name: 'Data Structures & Programming Logic in C/Python', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'PGD-S103', name: 'Relational Database Management Systems & SQL', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'PGD-S104', name: 'Advanced Software Lab - I & Viva-Voce', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'PGD-S201', name: 'Object Oriented Programming with Java', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'PGD-S202', name: 'Full-Stack Web Development & Cloud Architecture', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'PGD-S203', name: 'Cyber Security, Cryptography & Information Ethics', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'PGD-S204', name: 'Enterprise Capstone Project & Defense Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  },
+  DTP: {
+    name: 'Desktop Publishing & Graphic Designing',
+    yearly: {
+      'Annual Examination': [
+        { code: 'DTP-Y101', name: 'Design Principles & Page Layout Concepts', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DTP-Y102', name: 'Adobe Photoshop & Digital Image Processing', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DTP-Y103', name: 'CorelDraw & Vector Illustration Design', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'DTP-Y104', name: 'Adobe InDesign & Pre-press Printing Technology', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'DTP-Y105', name: 'Professional Printing Portfolio & Viva-Voce', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'DTP-S101', name: 'Digital Typography & Graphic Layout Basics', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'DTP-S102', name: 'Adobe Photoshop Creative Suite & Photo Editing', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'DTP-S103', name: 'Raster Graphics Design Lab - I & Viva', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'DTP-S201', name: 'CorelDraw Vector Art, Banner & Logo Design', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'DTP-S202', name: 'Adobe InDesign & Book Publication Pre-Press', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'DTP-S203', name: 'Print Production Technology & Exhibition Portfolio', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  },
+  NTT: {
+    name: 'Nursery Teacher Training',
+    yearly: {
+      'Annual Examination': [
+        { code: 'NTT-Y101', name: 'Child Psychology & Child Development', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'NTT-Y102', name: 'Early Childhood Care & Education (ECCE)', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'NTT-Y103', name: 'Pre-School Organization, Health & Nutrition', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'NTT-Y104', name: 'Educational Rhymes, Story Telling & Music', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'NTT-Y105', name: 'Teaching Learning Materials (TLM) & Arts Crafts', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'NTT-Y106', name: 'Micro-Teaching Practical & Classroom Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'NTT-S101', name: 'Child Development & Psychology Fundamentals', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'NTT-S102', name: 'Nutrition, Health & Hygiene for Pre-Primary', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'NTT-S103', name: 'Early Education Curriculum & Rhyme Workshop', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'NTT-S104', name: 'Practical Activity Lab - I & Viva-Voce', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'NTT-S201', name: 'Modern Teaching Methods (Montessori & Play-Way)', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'NTT-S202', name: 'School Administration & Community Engagement', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'NTT-S203', name: 'TLM Creation, Creative Crafts & Exhibition', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'NTT-S204', name: 'School Internship & Teaching Demonstration Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  },
+  HARDWARE: {
+    name: 'Diploma in Computer Hardware & Networking',
+    yearly: {
+      'Annual Examination': [
+        { code: 'CHN-Y101', name: 'Computer Hardware Architecture & Components', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'CHN-Y102', name: 'OS Installation, BIOS & Device Configuration', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'CHN-Y103', name: 'Computer Networks, Cabling & IP Addressing', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'CHN-Y104', name: 'Network Devices, Routers & Cyber Defense', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'CHN-Y105', name: 'Hardware Lab Practical & Diagnostic Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'CHN-S101', name: 'PC Assembly, Power Supply & Storage Maintenance', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'CHN-S102', name: 'BIOS Setup, Drivers & OS Troubleshooting', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'CHN-S103', name: 'Hardware Assembly Lab - I & Technical Viva', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'CHN-S201', name: 'Local Area Networks (LAN) & Network Devices', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'CHN-S202', name: 'Wireless Routers, WiFi & Internet Gateways', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'CHN-S203', name: 'Network Troubleshooting & Field Project Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  },
+  YOGA: {
+    name: 'Diploma in Yoga & Naturopathy Education',
+    yearly: {
+      'Annual Examination': [
+        { code: 'YOG-Y101', name: 'Foundations of Yoga Philosophy & History', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'YOG-Y102', name: 'Human Anatomy & Physiology for Yoga', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'YOG-Y103', name: 'Principles of Naturopathy & Diet Therapy', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'YOG-Y104', name: 'Yogic Asanas, Pranayama & Shatkarma Techniques', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'YOG-Y105', name: 'Practical Asana Demonstration & Viva-Voce', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'YOG-S101', name: 'Classical Yoga Texts & Principles of Health', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'YOG-S102', name: 'Basic Anatomy, Respiratory System & Postures', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'YOG-S103', name: 'Practical Yoga Sadhana - I (Sukshma Vyayama)', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'YOG-S201', name: 'Naturopathy, Hydrotherapy & Natural Healing', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'YOG-S202', name: 'Pranayama, Meditation & Stress Management', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'YOG-S203', name: 'Therapeutic Yoga Practice & Clinical Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  },
+  FASHION: {
+    name: 'Diploma in Fashion Designing & Garment Fabrication',
+    yearly: {
+      'Annual Examination': [
+        { code: 'FAS-Y101', name: 'Fundamentals of Fashion Design & Illustration', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'FAS-Y102', name: 'Textile Science, Fabric Selection & Fiber Analysis', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'FAS-Y103', name: 'Pattern Making, Grading & Garment Construction', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'FAS-Y104', name: 'Computer Aided Fashion Design (CAD) & Merchandising', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'FAS-Y105', name: 'Garment Collection Exhibition & Viva-Voce', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'FAS-S101', name: 'Fashion Sketching & Design Concepts', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'FAS-S102', name: 'Basic Textile Studies & Sewing Techniques', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'FAS-S103', name: 'Pattern Drafting Workshop - I & Viva', max_marks: 100, theory: 47, practical: 47 },
+      ],
+      'Semester 2': [
+        { code: 'FAS-S201', name: 'Advanced Garment Fabrication & Draping', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'FAS-S202', name: 'Digital Fashion CAD & Apparel Marketing', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'FAS-S203', name: 'Final Garment Collection & Portfolio Viva', max_marks: 100, theory: 48, practical: 48 },
+      ]
+    }
+  }
+};
+
+function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
+  const norm = String(courseNameOrCode || '').toUpperCase();
+  const pattern = (evalPattern === 'semester') ? 'semester' : 'yearly';
+  const term = String(termName || (pattern === 'semester' ? 'Semester 1' : 'Annual Examination')).trim();
+
+  let key = Object.keys(COURSE_CURRICULUM_DATA).find(k => norm === k || norm.includes(k) || (COURSE_CURRICULUM_DATA[k].name && norm.includes(COURSE_CURRICULUM_DATA[k].name.toUpperCase())));
+  if (!key) {
+    if (norm.includes('NURSERY') || norm.includes('NTT') || norm.includes('TEACHER')) key = 'NTT';
+    else if (norm.includes('ADVANCED') || norm.includes('ADCA')) key = 'ADCA';
+    else if (norm.includes('DCA')) key = 'DCA';
+    else if (norm.includes('TALLY')) key = 'TALLY';
+    else if (norm.includes('CCC')) key = 'CCC';
+    else if (norm.includes('PGDCA')) key = 'PGDCA';
+    else if (norm.includes('DTP') || norm.includes('PUBLISHING')) key = 'DTP';
+    else if (norm.includes('HARDWARE') || norm.includes('NETWORKING')) key = 'HARDWARE';
+    else if (norm.includes('YOGA')) key = 'YOGA';
+    else if (norm.includes('FASHION')) key = 'FASHION';
+  }
+
+  if (key && COURSE_CURRICULUM_DATA[key]) {
+    const courseObj = COURSE_CURRICULUM_DATA[key];
+    const patObj = courseObj[pattern] || {};
+
+    if (patObj[term]) return patObj[term];
+
+    if (pattern === 'semester') {
+      if (term.includes('2') || term.toLowerCase().includes('second')) return patObj['Semester 2'] || Object.values(patObj)[1] || patObj['Semester 1'];
+      if (term.includes('3') || term.toLowerCase().includes('third')) return patObj['Semester 3'] || Object.values(patObj)[2] || patObj['Semester 1'];
+      if (term.includes('4') || term.toLowerCase().includes('fourth')) return patObj['Semester 4'] || Object.values(patObj)[3] || patObj['Semester 1'];
+      return patObj['Semester 1'] || Object.values(patObj)[0];
+    } else {
+      if (term.includes('2nd') || term.toLowerCase().includes('second')) return patObj['2nd Year'] || patObj['Annual Examination'];
+      if (term.includes('Final') || term.toLowerCase().includes('final')) return patObj['Final Year'] || patObj['2nd Year'] || patObj['Annual Examination'];
+      if (term.includes('1st') || term.toLowerCase().includes('first')) return patObj['1st Year'] || patObj['Annual Examination'];
+      return patObj['Annual Examination'] || Object.values(patObj)[0];
+    }
+  }
+
+  const cLabel = courseNameOrCode || 'Vocational';
+  if (pattern === 'semester') {
+    const semNum = term.match(/\d+/) ? term.match(/\d+/)[0] : '1';
+    return [
+      { code: `SEM${semNum}-01`, name: `${cLabel} Theory & Fundamentals (Sem-${semNum})`, max_marks: 100, theory: 45, practical: 45 },
+      { code: `SEM${semNum}-02`, name: `${cLabel} Systems, Tools & Methodology (Sem-${semNum})`, max_marks: 100, theory: 44, practical: 46 },
+      { code: `SEM${semNum}-03`, name: `${cLabel} Applied Practical Workshop - ${semNum}`, max_marks: 100, theory: 46, practical: 45 },
+      { code: `SEM${semNum}-04`, name: `${cLabel} Term Assessment & Viva-Voce (Sem-${semNum})`, max_marks: 100, theory: 47, practical: 47 },
+    ];
+  } else {
+    const yearLabel = term.includes('1') ? 'Year 1' : term.includes('2') ? 'Year 2' : 'Annual';
+    return [
+      { code: `Y-${yearLabel}-01`, name: `${cLabel} Core Foundations & Theory (${yearLabel})`, max_marks: 100, theory: 45, practical: 45 },
+      { code: `Y-${yearLabel}-02`, name: `${cLabel} Applied Technology & Software Operations`, max_marks: 100, theory: 44, practical: 46 },
+      { code: `Y-${yearLabel}-03`, name: `${cLabel} Industry Standards & Professional Practice`, max_marks: 100, theory: 45, practical: 46 },
+      { code: `Y-${yearLabel}-04`, name: `${cLabel} Comprehensive Lab Practical Assessment`, max_marks: 100, theory: 46, practical: 45 },
+      { code: `Y-${yearLabel}-05`, name: `${cLabel} Project Demonstration & Viva-Voce`, max_marks: 100, theory: 48, practical: 48 },
+    ];
+  }
+}
+
 // Backward compatibility alias for single/semester buttons if needed
 function setMrkFormat(fmt) {
   setMrkEvalPattern(fmt === 'single' ? 'yearly' : 'semester');
@@ -2340,25 +2728,8 @@ function updateMrkPreview() {
     ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
     : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
 
-  // Find course subjects dynamically
-  const courses = window._currentCourses || [];
-  const matchedCourse = courses.find(c => c.name === course || c.code === course || (course && c.name && course.includes(c.name))) || courses[0];
-  let subjects = [];
-  if (matchedCourse && matchedCourse.subjects) {
-    try {
-      subjects = typeof matchedCourse.subjects === 'string' ? JSON.parse(matchedCourse.subjects) : matchedCourse.subjects;
-    } catch(e) { subjects = []; }
-  }
-
-  if (!subjects || !subjects.length) {
-    subjects = [
-      { name: 'Computer Fundamentals & OS', max_marks: 100, theory: 44, practical: 44 },
-      { name: 'Office Automation Tools (Word, Excel, PPT)', max_marks: 100, theory: 42, practical: 45 },
-      { name: 'Financial Accounting & Tally Prime GST', max_marks: 100, theory: 43, practical: 46 },
-      { name: 'Desktop Publishing & Graphics', max_marks: 100, theory: 41, practical: 44 },
-      { name: 'Project Assignment & Viva-Voce', max_marks: 100, theory: 45, practical: 45 }
-    ];
-  }
+  // Retrieve distinct subjects for Yearly-Wise vs Semester-Wise evaluation
+  const subjects = getCourseCurriculumSubjects(course, mrkEvalPattern, mrkTerm);
 
   let totalMax = 0, totalObt = 0;
   const rows = subjects.map((s, idx) => {
@@ -2616,10 +2987,6 @@ window.showCentreCourseSubjects = function(courseId) {
   const courses = window._currentCourses || [];
   const co = courses.find(x => x.id === courseId);
   if (!co) return;
-  let subjects = [];
-  try {
-    subjects = typeof co.subjects === 'string' ? JSON.parse(co.subjects) : (co.subjects || []);
-  } catch(e) { subjects = []; }
 
   const modal = $('#centreCourseSubjectsModal');
   const title = $('#centreCourseSubjectsTitle');
@@ -2628,42 +2995,77 @@ window.showCentreCourseSubjects = function(courseId) {
 
   if (title) title.innerHTML = `📚 Syllabus: ${esc(co.name)} (${esc(co.code)})`;
 
-  if (!subjects.length) {
-    content.innerHTML = `
-      <div style="text-align:center; padding:30px 10px; color:#64748b;">
-        <p style="margin:0 0 6px; font-weight:700;">No custom subjects defined yet.</p>
-        <span style="font-size:0.82rem;">This course follows the standard Purvanchal Education &amp; Skill Council national curriculum.</span>
-      </div>
-    `;
-  } else {
-    content.innerHTML = `
-      <div style="margin-bottom:12px; font-size:0.86rem; color:#475569;">
-        Total Subjects: <b>${subjects.length}</b> · Duration: <b>${co.duration_months} Months</b> · Total Marks: <b>${co.total_marks || 500}</b>
-      </div>
-      <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-        <thead>
-          <tr style="background:#f1f5f9; text-align:left;">
-            <th style="padding:8px 10px; border:1px solid #cbd5e1;">#</th>
-            <th style="padding:8px 10px; border:1px solid #cbd5e1;">Subject Name (विषय)</th>
-            <th style="padding:8px 10px; border:1px solid #cbd5e1; text-align:center;">Max Marks</th>
-            <th style="padding:8px 10px; border:1px solid #cbd5e1; text-align:center;">Theory</th>
-            <th style="padding:8px 10px; border:1px solid #cbd5e1; text-align:center;">Practical</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${subjects.map((s, idx) => `
-            <tr style="background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-              <td style="padding:7px 10px; border:1px solid #cbd5e1; font-weight:700; color:#64748b;">${idx + 1}</td>
-              <td style="padding:7px 10px; border:1px solid #cbd5e1; font-weight:700; color:#0f172a;">${esc(s.name || s)}</td>
-              <td style="padding:7px 10px; border:1px solid #cbd5e1; text-align:center;">${s.max_marks || 100}</td>
-              <td style="padding:7px 10px; border:1px solid #cbd5e1; text-align:center; color:#0369a1;">${s.theory || 50}</td>
-              <td style="padding:7px 10px; border:1px solid #cbd5e1; text-align:center; color:#047857;">${s.practical || 50}</td>
+  const yearlySubs = getCourseCurriculumSubjects(co.code || co.name, 'yearly', 'Annual Examination');
+  const sem1Subs = getCourseCurriculumSubjects(co.code || co.name, 'semester', 'Semester 1');
+  const sem2Subs = getCourseCurriculumSubjects(co.code || co.name, 'semester', 'Semester 2');
+
+  function renderSubTable(list, heading, badgeColor) {
+    return `
+      <div style="margin-top:14px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <b style="color:${badgeColor}; font-size:0.92rem;">${heading}</b>
+          <span style="font-size:0.75rem; background:#f1f5f9; padding:2px 8px; border-radius:4px; font-weight:700;">${list.length} Subjects · Total ${list.reduce((acc, x) => acc + (x.max_marks || 100), 0)} Marks</span>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.83rem;">
+          <thead>
+            <tr style="background:#f1f5f9; text-align:left;">
+              <th style="padding:6px 8px; border:1px solid #cbd5e1; width:80px;">Code</th>
+              <th style="padding:6px 8px; border:1px solid #cbd5e1;">Subject Name (विषय)</th>
+              <th style="padding:6px 8px; border:1px solid #cbd5e1; text-align:center; width:65px;">Max</th>
+              <th style="padding:6px 8px; border:1px solid #cbd5e1; text-align:center; width:60px;">Theory</th>
+              <th style="padding:6px 8px; border:1px solid #cbd5e1; text-align:center; width:60px;">Practical</th>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${list.map((s, idx) => `
+              <tr style="background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                <td style="padding:6px 8px; border:1px solid #cbd5e1; font-family:monospace; font-weight:700; color:#0a2a5e;">${esc(s.code || `SUB${idx+1}`)}</td>
+                <td style="padding:6px 8px; border:1px solid #cbd5e1; font-weight:700; color:#0f172a;">${esc(s.name || s)}</td>
+                <td style="padding:6px 8px; border:1px solid #cbd5e1; text-align:center;">${s.max_marks || 100}</td>
+                <td style="padding:6px 8px; border:1px solid #cbd5e1; text-align:center; color:#0369a1;">${s.theory || 70}</td>
+                <td style="padding:6px 8px; border:1px solid #cbd5e1; text-align:center; color:#047857;">${s.practical || 30}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
     `;
   }
+
+  content.innerHTML = `
+    <div style="display:flex; gap:8px; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+      <button type="button" class="btn sm gold active" id="btnSyllabusYearly" onclick="switchSyllabusView('yearly')">📅 Yearly / Annual Syllabus</button>
+      <button type="button" class="btn sm alt" id="btnSyllabusSemester" onclick="switchSyllabusView('semester')">📚 Semester-Wise Syllabus</button>
+    </div>
+
+    <div id="syllabusYearlyView">
+      ${renderSubTable(yearlySubs, '📅 Consolidated Annual / Yearly Examination Curriculum', '#064e3b')}
+    </div>
+
+    <div id="syllabusSemesterView" style="display:none;">
+      ${renderSubTable(sem1Subs, '📚 Semester - 1 Curriculum (प्रथम सेमेस्टर)', '#0369a1')}
+      ${renderSubTable(sem2Subs, '📚 Semester - 2 Curriculum (द्वितीय सेमेस्टर)', '#b45309')}
+    </div>
+  `;
+
+  window.switchSyllabusView = function(view) {
+    const yV = $('#syllabusYearlyView');
+    const sV = $('#syllabusSemesterView');
+    const bY = $('#btnSyllabusYearly');
+    const bS = $('#btnSyllabusSemester');
+    if (view === 'yearly') {
+      if (yV) yV.style.display = 'block';
+      if (sV) sV.style.display = 'none';
+      if (bY) bY.className = 'btn sm gold active';
+      if (bS) bS.className = 'btn sm alt';
+    } else {
+      if (yV) yV.style.display = 'none';
+      if (sV) sV.style.display = 'block';
+      if (bY) bY.className = 'btn sm alt';
+      if (bS) bS.className = 'btn sm gold active';
+    }
+  };
+
   modal.style.display = 'flex';
 };
 
