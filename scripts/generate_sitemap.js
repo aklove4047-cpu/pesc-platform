@@ -23,35 +23,24 @@ let xml = `<?xml version="1.0" encoding="UTF-8"?>
 
 for (const c of centres) {
   xml += `  <url>
-    <loc>https://pescouncil.in/c/${c.slug}</loc>
-    <lastmod>${dateStr}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
     <loc>https://${c.slug}.pescouncil.in/</loc>
     <lastmod>${dateStr}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <changefreq>always</changefreq>
+    <priority>1.0</priority>
   </url>
 `;
   if (!c.slug.endsWith('computer')) {
     xml += `  <url>
-    <loc>https://pescouncil.in/c/${c.slug}computer</loc>
-    <lastmod>${dateStr}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
     <loc>https://${c.slug}computer.pescouncil.in/</loc>
     <lastmod>${dateStr}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <changefreq>always</changefreq>
+    <priority>1.0</priority>
   </url>
 `;
   }
 }
 xml += `</urlset>\n`;
+
 
 const sitemapPath = path.join(__dirname, '..', 'public', 'sitemap.xml');
 fs.writeFileSync(sitemapPath, xml, 'utf8');

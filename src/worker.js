@@ -176,9 +176,10 @@ function renderCentreSite(templateHtml, centre, host) {
   const metaDesc = `Official website of ${exactInstituteName} (Centre Code: ${cCode}), recognized franchise centre of Purvanchal Education & Skill Council (PESC). Government-recognized computer diploma & certificate courses: ADCA, DCA, CCC, Tally Prime, PGDCA in ${cDistrict}, ${cState}. Admission Open 2026-27. Address: ${cAddress}. Director: ${cDirector}. Helpline: ${cPhone}.`;
   const metaKeywords = `${exactInstituteName}, ${exactInstituteName.toLowerCase()}, ${exactInstituteName} website, ${slugCapital} Computer Institute, ${cName} ${cDistrict}, ${cSlug}.pescouncil.in, best computer institute in ${cDistrict}, top computer academy ${cDistrict}, PES Council affiliated centre ${cDistrict}, ADCA DCA CCC diploma ${cDistrict}`;
 
-  const isSubdomain = host && host.startsWith(`${cSlug}.`);
-  const canonicalUrl = isSubdomain ? `https://${cSlug}.pescouncil.in/` : `https://pescouncil.in/c/${cSlug}`;
-  const altUrl = isSubdomain ? `https://pescouncil.in/c/${cSlug}` : `https://${cSlug}.pescouncil.in/`;
+  // Subdomain is the official authoritative canonical URL for Google Search Index
+  const canonicalUrl = `https://${cSlug}.pescouncil.in/`;
+  const altUrl = `https://${cSlug}.pescouncil.in/`;
+
 
   const schemaJson = {
     "@context": "https://schema.org",
@@ -491,8 +492,7 @@ export default {
 
         store.centres.filter(c => c.status === 'active').forEach(c => {
           xml += `
-  <url><loc>https://${c.slug}.pescouncil.in/</loc><lastmod>${dateStr}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
-  <url><loc>https://pescouncil.in/c/${c.slug}</loc><lastmod>${dateStr}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>`;
+  <url><loc>https://${c.slug}.pescouncil.in/</loc><lastmod>${dateStr}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>`;
         });
       }
       xml += `\n</urlset>`;
@@ -516,13 +516,30 @@ export default {
       });
     }
 
-    // 4. Centre Path Routing: /c/:slug
+    // 4. Centre Path 301 Permanent Redirect: /c/:slug -> https://slug.pescouncil.in/
+    // (Tells Google to completely de-index /c/ and rank the subdomain at #1 instead)
     if (path.startsWith('/c/')) {
-      const slug = path.split('/')[2];
+      const parts = path.split('/').filter(Boolean);
+      const slug = parts[1];
       const centre = resolveSlug(slug);
       if (centre) {
-        const renderedHtml = renderCentreSite(centreSiteTemplate, centre, host);
-        return new Response(renderedHtml, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+        const subPath = parts.slice(2).join('/');
+        const dest = `https://${centre.slug}.pescouncil.in/${subPath ? subPath : ''}${url.search}`;
+        return Response.redirect(dest, 301);
+      }
+    }
+
+    // Direct slug redirect: e.g. /navya -> https://navya.pescouncil.in/
+    if (path.length > 1 && !path.includes('.') && !path.startsWith('/api') && !path.startsWith('/assets')) {
+      const cleanSlug = path.replace(/^\//, '').split('/')[0].toLowerCase();
+      const reservedList = ['portal', 'admin', 'coordinator', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz'];
+      if (!reservedList.includes(cleanSlug)) {
+        const directCentre = resolveSlug(cleanSlug);
+        if (directCentre) {
+          const restPath = path.replace(new RegExp(`^\\/${cleanSlug}`), '');
+          const dest = `https://${directCentre.slug}.pescouncil.in${restPath || '/'}${url.search}`;
+          return Response.redirect(dest, 301);
+        }
       }
     }
 

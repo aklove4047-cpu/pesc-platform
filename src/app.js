@@ -74,10 +74,10 @@ function renderCentreSite(centre, req) {
   // Extensive Target Keywords for Google Search
   const metaKeywords = `${cName}, ${slugCapital} Computer Institute, ${slugCapital} Computer Centre, ${cName} ${cDistrict}, ${cName} admission, ${cName} result, ${cName} fees, best computer institute in ${cDistrict}, top computer academy ${cDistrict}, ${cSlug}.pescouncil.in, PES Council affiliated centre ${cDistrict}, ADCA DCA CCC diploma ${cDistrict}, computer coaching center in ${cDistrict} ${cState}`;
 
-  const host = (req && req.headers ? (req.headers['x-forwarded-host'] || req.headers['host']) : '') || '';
-  const isSubdomain = host.startsWith(`${cSlug}.`);
-  const canonicalUrl = isSubdomain ? `https://${cSlug}.pescouncil.in/` : `https://pescouncil.in/c/${cSlug}`;
-  const altUrl = isSubdomain ? `https://pescouncil.in/c/${cSlug}` : `https://${cSlug}.pescouncil.in/`;
+  // Subdomain is the official authoritative canonical URL for Google Search Index
+  const canonicalUrl = `https://${cSlug}.${cfg.BASE_DOMAIN}/`;
+  const altUrl = `https://${cSlug}.${cfg.BASE_DOMAIN}/`;
+
 
   // Structured Data (Schema.org JSON-LD for Google Rich Snippets)
   const schemaJson = {
@@ -208,9 +208,21 @@ app.get('/c/:slug', (req, res) => {
   const slug = req.params.slug.toLowerCase().trim();
   const centre = resolveSlug(slug);
   if (centre) {
-    return res.type('html').send(renderCentreSite(centre, req));
+    return res.redirect(301, `https://${centre.slug}.${cfg.BASE_DOMAIN}/`);
   }
   return res.status(404).sendFile(path.join(PUB, 'index.html'));
+});
+
+// Direct slug redirect: e.g. /navya -> https://navya.pescouncil.in/
+app.get('/:slug([a-zA-Z0-9_-]+)', (req, res, next) => {
+  const slug = req.params.slug.toLowerCase().trim();
+  const reserved = ['portal', 'admin', 'coordinator', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz', 'assets', 'api', 'courses'];
+  if (reserved.includes(slug)) return next();
+  const centre = resolveSlug(slug);
+  if (centre) {
+    return res.redirect(301, `https://${centre.slug}.${cfg.BASE_DOMAIN}/`);
+  }
+  next();
 });
 
 // Google Search Console Site Verification File Endpoint (dynamic matching for any google*.html verification file)
@@ -220,7 +232,7 @@ app.get(/^\/google[a-zA-Z0-9_\-]+\.html$/, (req, res) => {
 });
 
 
-// Dynamic XML Sitemap for Google, Bing & Search Engine Indexing
+// Dynamic XML Sitemap for Google, Bing & Search Engine Indexing (100% Subdomain URLs for #1 Google Rank)
 app.get('/sitemap.xml', (req, res) => {
   const centres = db.prepare("SELECT slug, centre_code, name, created_at FROM centres WHERE status='active' ORDER BY id ASC").all();
   const dateStr = new Date().toISOString().split('T')[0];
@@ -255,34 +267,23 @@ app.get('/sitemap.xml', (req, res) => {
   for (const c of centres) {
     const lastMod = c.created_at ? new Date(c.created_at).toISOString().split('T')[0] : dateStr;
     xml += `
-  <!-- ${esc(c.name)} (${esc(c.centre_code)}) -->
-  <url>
-    <loc>https://pescouncil.in/c/${c.slug}</loc>
-    <lastmod>${lastMod}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
+  <!-- ${esc(c.name)} (${esc(c.centre_code)}) Subdomain -->
   <url>
     <loc>https://${c.slug}.pescouncil.in/</loc>
     <lastmod>${lastMod}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <changefreq>always</changefreq>
+    <priority>1.0</priority>
   </url>`;
     if (!c.slug.endsWith('computer')) {
       xml += `
   <url>
-    <loc>https://pescouncil.in/c/${c.slug}computer</loc>
-    <lastmod>${lastMod}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
     <loc>https://${c.slug}computer.pescouncil.in/</loc>
     <lastmod>${lastMod}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <changefreq>always</changefreq>
+    <priority>1.0</priority>
   </url>`;
     }
+
   }
 
   xml += `\n</urlset>`;
