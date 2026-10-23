@@ -1,6 +1,14 @@
 const V = $('#view');
 const ask = (msg) => { const r = prompt(msg); return r && r.trim() ? r.trim() : null; };
 
+function imgToBase64(file) {
+  return new Promise((resolve) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.readAsDataURL(file);
+  });
+}
+
 const views = {
   async Dashboard() {
     const s = await api('/api/admin/stats');
@@ -17,6 +25,270 @@ const views = {
         <div class="stat"><span>Council Wallet Balances</span><b>${inr(s.wallet_total_paise)}</b></div>
       </div>
     `;
+  },
+
+  async Profile() {
+    const res = await api('/api/admin/profile');
+    const p = res.profile || {};
+
+    V.innerHTML = `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:22px; max-width:1100px;">
+
+        <!-- Executive Authority Header Card -->
+        <div class="card" style="grid-column:1/-1; background:linear-gradient(135deg, #071a33 0%, #0d284f 50%, #153e77 100%); color:#ffffff; border:1.5px solid rgba(212,175,55,0.5); box-shadow:0 10px 30px rgba(0,0,0,0.25); border-radius:14px; padding:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
+            <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+              <div style="position:relative;">
+                ${p.photo_url
+                  ? `<img id="adminPhotoPreview" src="${esc(p.photo_url)}" style="width:110px; height:110px; border-radius:50%; object-fit:cover; border:3px solid #fde047; box-shadow:0 4px 15px rgba(0,0,0,0.4);" onerror="this.outerHTML='<div id=\\'adminPhotoPreview\\' style=\\'width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:3.5rem;border:3px solid #fde047;\\'>🏛️</div>'">`
+                  : `<div id="adminPhotoPreview" style="width:110px; height:110px; border-radius:50%; background:rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; font-size:3.5rem; border:3px solid #fde047;">🏛️</div>`
+                }
+                <div style="position:absolute; bottom:0; right:0; background:#d4af37; color:#071a33; border-radius:50%; width:30px; height:30px; display:grid; place-items:center; font-size:0.9rem; font-weight:900; border:2px solid #071a33;">★</div>
+              </div>
+              <div>
+                <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(212,175,55,0.2); border:1px solid rgba(212,175,55,0.5); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:800; color:#fde047; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                  🛡️ National Executive Council Authority · Code: ${esc(p.badge_id || 'PESC-HQ-001')}
+                </div>
+                <h2 style="margin:0 0 6px; color:#ffffff; font-size:1.6rem; font-weight:800;">${esc(p.name || 'Head Office Administrator')}</h2>
+                <p style="margin:0 0 4px; color:#cbd5e1; font-size:0.95rem;">
+                  <b>${esc(p.designation || 'Executive Director & Controller of Examinations')}</b>
+                </p>
+                <p style="margin:0; color:#94a3b8; font-size:0.85rem;">
+                  ✉️ ${esc(p.email || 'admin@pescouncil.in')} · 📞 ${esc(p.mobile || '+91 94152 00000')} · 📍 ${esc(p.head_office || 'Purvanchal Education & Skill Council, Head Office, UP')}
+                </p>
+              </div>
+            </div>
+            <div>
+              <button type="button" id="btnOpenIdCardModal" class="btn" style="background:linear-gradient(135deg, #d4af37 0%, #f59e0b 100%); color:#071a33; font-weight:800; border:1px solid #fef08a; padding:12px 22px; border-radius:10px; box-shadow:0 4px 15px rgba(212,175,55,0.4); cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+                🪪 View &amp; Print Authority ID Card
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Personal & Administrative Details -->
+        <div class="card" style="background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; padding:22px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+          <h3 style="margin:0 0 18px; color:var(--navy); display:flex; align-items:center; gap:8px; font-size:1.15rem;">
+            👤 Administrative Information
+          </h3>
+          <form id="adminProfileForm">
+            <div style="margin-bottom:14px;">
+              <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">Full Name / Officer In-Charge</label>
+              <input class="inp" id="pName" value="${esc(p.name || '')}" placeholder="Full name of Admin / Director" required style="width:100%;">
+            </div>
+            <div style="margin-bottom:14px;">
+              <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">Official Email Address</label>
+              <input class="inp" id="pEmail" type="email" value="${esc(p.email || '')}" placeholder="admin@pescouncil.in" required style="width:100%;">
+            </div>
+            <div style="margin-bottom:14px;">
+              <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">Direct Mobile / Helpline Number</label>
+              <input class="inp" id="pMobile" value="${esc(p.mobile || '')}" placeholder="+91 94152 00000" style="width:100%;">
+            </div>
+            <div style="margin-bottom:14px;">
+              <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">Executive Designation</label>
+              <input class="inp" id="pDesignation" value="${esc(p.designation || 'Executive Director & Controller of Examinations')}" placeholder="e.g. Executive Director & Controller of Examinations" style="width:100%;">
+            </div>
+            <div style="margin-bottom:14px;">
+              <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">Head Office Jurisdiction &amp; Address</label>
+              <input class="inp" id="pOffice" value="${esc(p.head_office || 'Purvanchal Education & Skill Council, Head Office, Gorakhpur / Lucknow, UP')}" placeholder="Council National Secretariat Address" style="width:100%;">
+            </div>
+            <div style="margin-bottom:18px;">
+              <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">State / Territory Jurisdiction</label>
+              <input class="inp" id="pState" value="${esc(p.state || 'National Headquarters (India)')}" placeholder="e.g. National Headquarters (India)" style="width:100%;">
+            </div>
+            <button class="btn" type="submit" id="btnSaveAdminProfile" style="background:#0a2a5e; color:#fff; font-weight:700; padding:10px 20px; border-radius:8px;">
+              💾 Save Administrative Profile
+            </button>
+          </form>
+        </div>
+
+        <!-- Photo & Official Council Assets -->
+        <div class="card" style="background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; padding:22px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+          <h3 style="margin:0 0 18px; color:var(--navy); display:flex; align-items:center; gap:8px; font-size:1.15rem;">
+            🏛️ Official Seals, Mohar &amp; Digital Signatures
+          </h3>
+
+          <!-- Photo -->
+          <div style="margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
+            <label class="label" style="font-weight:700; color:#334155;">Executive Officer Photo (for ID Card &amp; Council Portal)</label>
+            <div style="display:flex; align-items:center; gap:14px; margin-top:8px; flex-wrap:wrap;">
+              <div id="adminPhotoBox" style="width:75px; height:75px; border-radius:50%; background:#f8fafc; border:2px dashed #cbd5e1; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                ${p.photo_url ? `<img src="${esc(p.photo_url)}" style="width:100%; height:100%; object-fit:cover;" id="adminPhotoImg">` : '<span style="font-size:2rem;">👤</span>'}
+              </div>
+              <div>
+                <input type="file" id="adminFilePhoto" accept="image/*" style="display:none;">
+                <input type="hidden" id="adminUrlPhoto" value="${esc(p.photo_url || '')}">
+                <button type="button" class="btn sm alt" onclick="$('#adminFilePhoto').click()">📤 Upload Photo</button>
+                <p class="muted" style="font-size:0.78rem; margin:4px 0 0;">PNG/JPG, max 2MB. Appears on Head Office ID Badge.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Council Mohar -->
+          <div style="margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
+            <label class="label" style="font-weight:700; color:#334155;">Council Round Mohar (Official Seal)</label>
+            <div style="margin-top:8px;">
+              <div id="adminMoharBox" style="height:70px; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:8px;">
+                ${p.seal_url ? `<img src="${esc(p.seal_url)}" style="max-height:65px;" id="adminMoharImg">` : '<span class="muted" style="font-size:0.85rem;">No council seal uploaded (Default council stamp will be used)</span>'}
+              </div>
+              <input type="file" id="adminFileMohar" accept="image/*" style="display:none;">
+              <input type="hidden" id="adminUrlMohar" value="${esc(p.seal_url || '')}">
+              <button type="button" class="btn sm alt" onclick="$('#adminFileMohar').click()">📤 Upload Council Seal</button>
+              <p class="muted" style="font-size:0.78rem; margin:4px 0 0;">Round Council stamp for student marksheets &amp; certificates.</p>
+            </div>
+          </div>
+
+          <!-- Controller Signature -->
+          <div style="margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
+            <label class="label" style="font-weight:700; color:#334155;">Controller of Examinations Signature (Hastaakshar)</label>
+            <div style="margin-top:8px;">
+              <div id="adminSignBox" style="height:60px; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:8px;">
+                ${p.signature_url ? `<img src="${esc(p.signature_url)}" style="max-height:55px;" id="adminSignImg">` : '<span class="muted" style="font-size:0.85rem;">No controller signature uploaded</span>'}
+              </div>
+              <input type="file" id="adminFileSign" accept="image/*" style="display:none;">
+              <input type="hidden" id="adminUrlSign" value="${esc(p.signature_url || '')}">
+              <button type="button" class="btn sm alt" onclick="$('#adminFileSign').click()">📤 Upload Signature</button>
+              <p class="muted" style="font-size:0.78rem; margin:4px 0 0;">Official signature printed on student marksheets &amp; credentials.</p>
+            </div>
+          </div>
+
+          <!-- Chairman / Registrar Signature -->
+          <div style="margin-bottom:20px;">
+            <label class="label" style="font-weight:700; color:#334155;">Chairman / Registrar Signature</label>
+            <div style="margin-top:8px;">
+              <div id="adminChairSignBox" style="height:60px; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:8px;">
+                ${p.chairman_signature_url ? `<img src="${esc(p.chairman_signature_url)}" style="max-height:55px;" id="adminChairSignImg">` : '<span class="muted" style="font-size:0.85rem;">No chairman signature uploaded</span>'}
+              </div>
+              <input type="file" id="adminFileChairSign" accept="image/*" style="display:none;">
+              <input type="hidden" id="adminUrlChairSign" value="${esc(p.chairman_signature_url || '')}">
+              <button type="button" class="btn sm alt" onclick="$('#adminFileChairSign').click()">📤 Upload Chairman Signature</button>
+              <p class="muted" style="font-size:0.78rem; margin:4px 0 0;">Printed on centre affiliation decrees &amp; council diplomas.</p>
+            </div>
+          </div>
+
+          <button class="btn" id="btnSaveAdminAssets" style="background:#0a2a5e; color:#fff; font-weight:700; padding:10px 20px; border-radius:8px;">
+            💾 Save Photo, Seals &amp; Signatures
+          </button>
+        </div>
+
+        <!-- Change Password Card -->
+        <div class="card" style="grid-column:1/-1; background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; padding:22px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+          <h3 style="margin:0 0 16px; color:var(--navy); display:flex; align-items:center; gap:8px; font-size:1.15rem;">
+            🔒 Security &amp; Admin Password
+          </h3>
+          <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:16px; max-width:760px; align-items:flex-end;">
+            <div>
+              <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">New Password</label>
+              <input class="inp" id="adminNewPw" type="password" placeholder="At least 6 characters" style="width:100%;">
+            </div>
+            <div>
+              <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">Confirm Password</label>
+              <input class="inp" id="adminConfPw" type="password" placeholder="Repeat new password" style="width:100%;">
+            </div>
+            <div>
+              <button class="btn" id="btnAdminChgPw" style="background:#047857; color:#fff; font-weight:700; padding:10px 20px; border-radius:8px; white-space:nowrap;">
+                🔑 Update Password
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    // Bind Image File Uploaders
+    const bindAdminFile = (fileId, urlId, previewId, isCircle) => {
+      const fi = $(`#${fileId}`);
+      if (!fi) return;
+      fi.onchange = async () => {
+        const f = fi.files[0];
+        if (!f) return;
+        if (f.size > 2 * 1024 * 1024) { toast('Image must be under 2MB', false); return; }
+        const b64 = await imgToBase64(f);
+        const urlInp = $(`#${urlId}`);
+        if (urlInp) urlInp.value = b64;
+        const box = $(`#${previewId}`);
+        if (box) {
+          box.innerHTML = `<img src="${b64}" style="width:100%;height:100%;object-fit:${isCircle ? 'cover' : 'contain'};">`;
+        }
+        if (fileId === 'adminFilePhoto') {
+          const pv = $('#adminPhotoPreview');
+          if (pv) pv.innerHTML = `<img src="${b64}" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid #fde047;">`;
+        }
+        toast('Image loaded successfully ✓');
+      };
+    };
+
+    bindAdminFile('adminFilePhoto', 'adminUrlPhoto', 'adminPhotoBox', true);
+    bindAdminFile('adminFileMohar', 'adminUrlMohar', 'adminMoharBox', false);
+    bindAdminFile('adminFileSign', 'adminUrlSign', 'adminSignBox', false);
+    bindAdminFile('adminFileChairSign', 'adminUrlChairSign', 'adminChairSignBox', false);
+
+    // Save Profile Form
+    $('#adminProfileForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = $('#btnSaveAdminProfile');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      await guard(async () => {
+        const name = $('#pName').value.trim();
+        const email = $('#pEmail').value.trim();
+        const mobile = $('#pMobile').value.trim();
+        const designation = $('#pDesignation').value.trim();
+        const head_office = $('#pOffice').value.trim();
+        const state = $('#pState').value.trim();
+        await api('/api/admin/profile', {
+          method: 'POST',
+          body: { name, email, mobile, designation, head_office, state }
+        });
+        toast('✅ Admin Profile updated successfully!');
+        if ($('#who')) $('#who').textContent = name || 'Super Admin';
+      });
+      btn.disabled = false;
+      btn.textContent = '💾 Save Administrative Profile';
+    };
+
+    // Save Assets
+    $('#btnSaveAdminAssets').onclick = async () => {
+      const btn = $('#btnSaveAdminAssets');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      await guard(async () => {
+        const photo_url = $('#adminUrlPhoto').value || null;
+        const seal_url = $('#adminUrlMohar').value || null;
+        const signature_url = $('#adminUrlSign').value || null;
+        const chairman_signature_url = $('#adminUrlChairSign').value || null;
+        await api('/api/admin/profile', {
+          method: 'POST',
+          body: { photo_url, seal_url, signature_url, chairman_signature_url }
+        });
+        toast('✅ Photo, Seals & Signatures saved successfully!');
+      });
+      btn.disabled = false;
+      btn.textContent = '💾 Save Photo, Seals & Signatures';
+    };
+
+    // Change Password
+    $('#btnAdminChgPw').onclick = async () => {
+      const np = $('#adminNewPw').value;
+      const cp = $('#adminConfPw').value;
+      if (!np || np.length < 6) { toast('Password must be at least 6 characters', false); return; }
+      if (np !== cp) { toast('Passwords do not match', false); return; }
+      await guard(async () => {
+        await api('/api/admin/change-password', {
+          method: 'POST',
+          body: { new_password: np }
+        });
+        toast('🔑 Admin password updated successfully!');
+        $('#adminNewPw').value = '';
+        $('#adminConfPw').value = '';
+      });
+    };
+
+    // View ID Card Modal
+    $('#btnOpenIdCardModal').onclick = () => {
+      showAdminIdCardModal(p);
+    };
   },
 
   async Applications() {
@@ -615,6 +887,59 @@ function showModal(title, bodyHtml, onSave, maxWidth = '640px') {
       m.style.display = 'none';
     };
   }
+}
+
+function showAdminIdCardModal(p) {
+  showModal('🪪 Head Office Executive Authority Card', `
+    <div style="background:#f8fafc; padding:20px; text-align:center;">
+      <div style="margin-bottom:14px; display:flex; justify-content:flex-end;">
+        <button type="button" onclick="window.print()" class="btn gold sm" style="font-weight:700; padding:8px 18px;">🖨️ Print ID Card</button>
+      </div>
+      <div id="adminPrintableCard" style="max-width:440px; margin:0 auto; background:linear-gradient(135deg, #071a33 0%, #0d284f 55%, #153e77 100%); color:#ffffff; border-radius:14px; border:2.5px solid #d4af37; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,0.35); text-align:left; position:relative; overflow:hidden;">
+        <!-- Council Seal Background Watermark -->
+        <div style="position:absolute; right:-20px; bottom:-20px; font-size:12rem; opacity:0.06; pointer-events:none; font-weight:900; color:#d4af37;">P</div>
+
+        <!-- Top Header -->
+        <div style="display:flex; align-items:center; gap:12px; border-bottom:1.5px solid rgba(212,175,55,0.4); padding-bottom:12px; margin-bottom:16px;">
+          <div style="width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg, #d4af37, #f59e0b); color:#071a33; font-size:1.5rem; font-weight:900; display:grid; place-items:center; border:2px solid #ffffff; flex-shrink:0;">P</div>
+          <div>
+            <div style="font-size:0.95rem; font-weight:900; color:#ffffff; letter-spacing:0.5px; line-height:1.2;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</div>
+            <div style="font-size:0.75rem; color:#fde047; font-weight:700;">पूर्वांचल शिक्षा एवं कौशल परिषद · HEAD OFFICE AUTHORITY</div>
+          </div>
+        </div>
+
+        <!-- Body with Photo & Details -->
+        <div style="display:flex; gap:16px; margin-bottom:14px; align-items:center;">
+          <div style="width:90px; height:110px; border-radius:8px; border:2px solid #d4af37; background:rgba(255,255,255,0.1); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+            ${p.photo_url ? `<img src="${esc(p.photo_url)}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:3rem;">👤</span>'}
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:1.15rem; font-weight:800; color:#ffffff; margin-bottom:2px;">${esc(p.name || 'Head Office Administrator')}</div>
+            <div style="font-size:0.82rem; font-weight:700; color:#fde047; margin-bottom:6px;">${esc(p.designation || 'Executive Director & Controller of Examinations')}</div>
+            <div style="font-size:0.75rem; color:#cbd5e1; line-height:1.4;">
+              <div><b>ID:</b> <span style="font-family:monospace; color:#fef08a;">${esc(p.badge_id || 'PESC-HQ-001')}</span></div>
+              <div><b>Role:</b> Central Governing Authority</div>
+              <div><b>Validity:</b> Permanent / Authorized</div>
+              <div><b>Mobile:</b> ${esc(p.mobile || '+91 94152 00000')}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer with Verification QR & Mohar -->
+        <div style="border-top:1.5px solid rgba(212,175,55,0.4); padding-top:10px; display:flex; justify-content:space-between; align-items:flex-end;">
+          <div style="font-size:0.68rem; color:#94a3b8; max-width:240px;">
+            <div>Govt. Regd. | NITI Aayog Verified | ISO 9001:2015</div>
+            <div style="color:#cbd5e1; margin-top:2px;">Official Head Office: Gorakhpur / Lucknow, UP</div>
+          </div>
+          <div style="text-align:right;">
+            ${p.signature_url ? `<img src="${esc(p.signature_url)}" style="max-height:32px; display:block; margin:0 0 2px auto;">` : '<div style="font-family:cursive; font-size:0.85rem; color:#fde047;">Authorized Signatory</div>'}
+            <div style="font-size:0.68rem; color:#d4af37; font-weight:700;">Controller of Examinations</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `, null, '520px');
 }
 
 async function showAffiliationCertModal(cId) {
@@ -2284,7 +2609,18 @@ V.addEventListener('submit', (e) => {
 (async () => {
   const me = await needRole(['super_admin', 'admin']);
   if (!me) return;
-  $('#who').textContent = me.user.name;
+  const whoEl = $('#who');
+  if (whoEl) {
+    whoEl.textContent = me.user.name;
+    whoEl.style.cursor = 'pointer';
+    whoEl.title = 'Click to open Admin Profile';
+    whoEl.onclick = (e) => {
+      e.preventDefault();
+      const btn = $(`button[data-tab="Profile"]`, $('#tabs'));
+      if (btn) btn.click();
+      else show('Profile');
+    };
+  }
   $('#out').onclick = async (e) => {
     e.preventDefault();
     await api('/api/auth/logout', { method: 'POST' });

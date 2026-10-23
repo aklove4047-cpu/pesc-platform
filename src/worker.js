@@ -2225,6 +2225,72 @@ export default {
       if (path === '/api/admin/marksheets') {
         return jsonResponse({ marksheets: store.marksheets });
       }
+
+      if (path === '/api/admin/profile') {
+        let adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin');
+        if (!adminUser) {
+          adminUser = {
+            id: 1,
+            name: 'Dr. R. K. Verma',
+            email: 'admin@pescouncil.in',
+            mobile: '+91 94152 00000',
+            role: 'super_admin',
+            designation: 'Executive Director & Controller of Examinations',
+            head_office: 'Purvanchal Education & Skill Council, Head Office, Gorakhpur / Lucknow, UP',
+            state: 'National Headquarters (India)',
+            badge_id: 'PESC-HQ-001',
+            status: 'active',
+            photo_url: null,
+            seal_url: null,
+            signature_url: null,
+            chairman_signature_url: null
+          };
+          store.users.unshift(adminUser);
+        } else {
+          if (!adminUser.designation) adminUser.designation = 'Executive Director & Controller of Examinations';
+          if (!adminUser.head_office) adminUser.head_office = 'Purvanchal Education & Skill Council, Head Office, Gorakhpur / Lucknow, UP';
+          if (!adminUser.badge_id) adminUser.badge_id = 'PESC-HQ-001';
+          if (!adminUser.mobile) adminUser.mobile = '+91 94152 00000';
+          if (!adminUser.state) adminUser.state = 'National Headquarters (India)';
+        }
+
+        if (request.method === 'POST' || request.method === 'PUT') {
+          const body = await request.json().catch(() => ({}));
+          if (body.name) adminUser.name = String(body.name).slice(0, 100);
+          if (body.email) adminUser.email = String(body.email).slice(0, 150);
+          if (body.mobile !== undefined) adminUser.mobile = String(body.mobile).slice(0, 20);
+          if (body.designation !== undefined) adminUser.designation = String(body.designation).slice(0, 150);
+          if (body.head_office !== undefined) adminUser.head_office = String(body.head_office).slice(0, 255);
+          if (body.state !== undefined) adminUser.state = String(body.state).slice(0, 100);
+          if (body.photo_url !== undefined) adminUser.photo_url = body.photo_url;
+          if (body.seal_url !== undefined) adminUser.seal_url = body.seal_url;
+          if (body.signature_url !== undefined) adminUser.signature_url = body.signature_url;
+          if (body.chairman_signature_url !== undefined) adminUser.chairman_signature_url = body.chairman_signature_url;
+          await persistToKV(env, 'users', store.users);
+          return jsonResponse({ ok: true, message: 'Admin profile updated successfully!', profile: adminUser });
+        }
+
+        return jsonResponse({
+          profile: {
+            ...adminUser,
+            verification_url: `https://${host}/verify`
+          }
+        });
+      }
+
+      if (path === '/api/admin/change-password' && request.method === 'POST') {
+        const body = await request.json().catch(() => ({}));
+        const newPw = body.new_password;
+        if (!newPw || newPw.length < 6) {
+          return jsonResponse({ error: 'Password must be at least 6 characters' }, 400);
+        }
+        const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin');
+        if (adminUser) {
+          adminUser.password_plain = newPw;
+          await persistToKV(env, 'users', store.users);
+        }
+        return jsonResponse({ ok: true, message: 'Admin password changed successfully!' });
+      }
     }
 
     // --- Certificates & Marksheets & Reports APIs ---

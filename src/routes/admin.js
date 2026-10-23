@@ -688,4 +688,45 @@ router.put('/marksheets/:id', (req, res) => {
   res.json({ ok: true, percentage, grade, result });
 });
 
+// Admin Profile Endpoints
+router.get('/profile', (req, res) => {
+  let u = db.prepare('SELECT id, name, email, mobile, role, state, photo_url, created_at FROM users WHERE id=?').get(req.user.id);
+  if (!u) u = req.user;
+  res.json({
+    profile: {
+      ...u,
+      designation: 'Executive Director & Controller of Examinations',
+      head_office: 'Purvanchal Education & Skill Council, Head Office, Gorakhpur / Lucknow, UP',
+      badge_id: 'PESC-HQ-001',
+      state: u.state || 'National Headquarters (India)',
+      seal_url: null,
+      signature_url: null
+    }
+  });
+});
+
+router.post('/profile', (req, res) => {
+  const b = req.body;
+  const name = str(b.name, 100);
+  const email = str(b.email, 150);
+  const mobile = str(b.mobile, 20);
+  const photo_url = b.photo_url || null;
+  try {
+    db.prepare('UPDATE users SET name=COALESCE(?, name), email=COALESCE(?, email), mobile=COALESCE(?, mobile), photo_url=COALESCE(?, photo_url) WHERE id=?')
+      .run(name, email, mobile, photo_url, req.user.id);
+  } catch (_) {}
+  audit(req, 'admin.profile_update', 'user', req.user.id, 'ok');
+  res.json({ ok: true, message: 'Admin profile updated successfully!' });
+});
+
+router.post('/change-password', (req, res) => {
+  const np = str(req.body.new_password, 100);
+  if (!np || np.length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
+  const bcrypt = require('bcryptjs');
+  const hashed = bcrypt.hashSync(np, 10);
+  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hashed, req.user.id);
+  audit(req, 'admin.password_change', 'user', req.user.id, 'ok');
+  res.json({ ok: true, message: 'Password changed successfully!' });
+});
+
 module.exports = router;
