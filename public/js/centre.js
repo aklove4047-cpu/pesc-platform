@@ -465,158 +465,110 @@ const views = {
     window._currentCourses = courses;
 
     V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px;">
-        <div>
-          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">3. My Courses &amp; Fee Management (पाठ्यक्रम एवं फीस प्रबंधन)</h2>
-          <p class="muted" style="margin:0;">Naya course add karein, course ka naam badlein, duration aur fees edit karein, ya course delete karein</p>
-        </div>
-        <button class="btn gold" onclick="openAddCourseModal()" style="font-weight:700;">➕ Add New Course (नया कोर्स जोड़ें)</button>
+      <div style="margin-bottom:20px;">
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">3. My Courses &amp; Fee Management (पाठ्यक्रम एवं फीस प्रबंधन)</h2>
+        <p class="muted" style="margin:0;">हेड ऑफिस द्वारा अधिकृत कोर्सेज की सूची, विषय एवं अपने सेंटर के छात्रों हेतु फीस निर्धारण</p>
       </div>
 
-      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:18px;">
+      <!-- Lock Notice Alert -->
+      <div style="background:#eff6ff; border:1px solid #bfdbfe; border-left:5px solid #2563eb; border-radius:10px; padding:14px 18px; margin-bottom:22px; display:flex; align-items:flex-start; gap:14px; box-shadow:0 2px 6px rgba(37,99,235,0.06);">
+        <span style="font-size:1.8rem; line-height:1;">🔒</span>
+        <div style="flex:1;">
+          <b style="color:#1e40af; font-size:0.96rem; display:block; margin-bottom:3px;">हेड ऑफिस अधिकृत पाठ्यक्रम (Head Office Authorized Courses)</b>
+          <p style="margin:0; font-size:0.85rem; color:#1e3a8a; line-height:1.5;">
+            कोर्स का नाम, कोड, अवधि, विषय (Subjects) एवं काउंसिल शुल्क सीधे <b>हेड ऑफिस</b> द्वारा निर्धारित व सुरक्षित हैं। सेंटर संचालक इनमें कोई फेरबदल नहीं कर सकते। आप केवल अपने विद्यार्थियों के लिए अपनी <b>इंस्टीट्यूट फीस (Institute Student Fee)</b> को कस्टमाइज कर सकते हैं।
+          </p>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:20px;">
         ${courses.map(co => {
           const sysFee = Math.round((co.system_fee_paise || 50000) / 100);
           const sellFee = co.fee_rupees || Math.round((co.selling_price_paise || 800000) / 100);
           const margin = sellFee - sysFee;
+          let subjects = [];
+          try {
+            subjects = typeof co.subjects === 'string' ? JSON.parse(co.subjects) : (co.subjects || []);
+          } catch(e) { subjects = []; }
+
           return `
-            <div class="card" style="border-top: 4px solid var(--c-green-emerald); padding:20px; background:#fff; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+            <div class="card" style="border-top: 4px solid var(--c-green-emerald); padding:22px; background:#fff; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 14px rgba(0,0,0,0.06); border-radius:12px;">
               <div>
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                  <span class="badge active" style="font-family:monospace; font-weight:800; font-size:0.9rem;">${esc(co.code)}</span>
-                  <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">⏱️ ${co.duration_months} Months</span>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px;">
+                  <span class="badge active" style="font-family:monospace; font-weight:800; font-size:0.92rem;">${esc(co.code)}</span>
+                  <div style="display:flex; gap:6px;">
+                    <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">⏱️ ${co.duration_months} Months</span>
+                    <span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">🎯 Marks: ${co.total_marks || 500}</span>
+                  </div>
                 </div>
-                <h3 style="margin:0 0 10px; font-size:1.25rem; color:#0f172a; line-height:1.3;">${esc(co.name)}</h3>
 
-                ${co.description ? `<p style="font-size:0.8rem; color:#64748b; margin:0 0 12px; line-height:1.4;">${esc(co.description)}</p>` : ''}
+                <h3 style="margin:0 0 10px; font-size:1.25rem; color:#0f172a; line-height:1.35; font-weight:800;">${esc(co.name)}</h3>
 
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:0.85rem;">
-                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                    <span class="muted">Council System Fee (Fixed):</span>
+                ${co.description ? `<p style="font-size:0.82rem; color:#64748b; margin:0 0 12px; line-height:1.4;">${esc(co.description)}</p>` : ''}
+
+                <!-- Course Subjects Section -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; margin-bottom:14px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:0.8rem; font-weight:800; color:#064e3b; text-transform:uppercase; letter-spacing:0.5px;">📚 Course Subjects (विषय - ${subjects.length}):</span>
+                    <button class="btn sm alt" onclick="showCentreCourseSubjects(${co.id})" style="font-size:0.72rem; padding:2px 8px; font-weight:700;">View Syllabus</button>
+                  </div>
+                  <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                    ${subjects.length > 0
+                      ? subjects.slice(0, 3).map(s => `<span style="background:#ffffff; border:1px solid #cbd5e1; border-radius:4px; padding:2px 6px; font-size:0.74rem; color:#334155; font-weight:600;">📖 ${esc(s.name || s)}</span>`).join('') + (subjects.length > 3 ? `<span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:0.72rem; color:#64748b; font-weight:700;">+${subjects.length - 3} more</span>` : '')
+                      : `<span style="font-size:0.75rem; color:#94a3b8; font-style:italic;">Standard Council Syllabus Included</span>`
+                    }
+                  </div>
+                </div>
+
+                <!-- Fees Breakdown -->
+                <div style="background:#fafafa; border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.86rem;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span class="muted" style="display:flex; align-items:center; gap:4px;">🔒 Council Fee (Fixed by Head Office):</span>
                     <b style="color:#0f172a;">₹${sysFee.toLocaleString('en-IN')}</b>
                   </div>
-                  <div style="display:flex; justify-content:space-between;">
-                    <span class="muted">Your Net Profit:</span>
+                  <div style="display:flex; justify-content:space-between; border-top:1px dashed #e2e8f0; padding-top:6px;">
+                    <span class="muted">Your Centre Net Margin:</span>
                     <b style="color:#16a34a; font-weight:800;">₹${margin.toLocaleString('en-IN')}</b>
                   </div>
                 </div>
 
-                <div style="margin-bottom:14px;">
-                  <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Institute Course Fee (₹):</label>
+                <!-- Editable Student Fee -->
+                <div style="margin-bottom:6px;">
+                  <label style="font-size:0.82rem; font-weight:800; display:block; margin-bottom:4px; color:#0f172a;">
+                    Institute Student Fee (विद्यार्थी फीस - ₹):
+                    <span style="font-size:0.75rem; font-weight:normal; color:#64748b;">(छात्र से ली जाने वाली आपकी फीस)</span>
+                  </label>
                   <div style="display:flex; gap:8px;">
-                    <input type="number" id="priceInput_${co.id}" value="${sellFee}" style="padding:6px 10px; font-weight:700; width:100%; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem; color:#064e3b;">
-                    <button class="btn sm gold" onclick="saveCoursePrice(${co.id})" style="white-space:nowrap; font-weight:700;">💾 Save Fee</button>
+                    <input type="number" id="priceInput_${co.id}" value="${sellFee}" style="padding:8px 12px; font-weight:800; width:100%; border:1.5px solid #059669; border-radius:6px; font-size:1.05rem; color:#064e3b; background:#f0fdf4;">
+                    <button class="btn sm gold" onclick="saveCoursePrice(${co.id})" style="white-space:nowrap; font-weight:800; padding:8px 14px;">💾 Save Fee</button>
                   </div>
                 </div>
               </div>
 
-              <div style="border-top:1px dashed #e2e8f0; padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
-                <button class="btn sm alt" onclick="openEditCourseModal(${co.id})" style="font-weight:700; padding:4px 10px;">✏️ Edit Details</button>
-                <button class="btn sm danger" onclick="deleteCourse(${co.id}, '${esc(co.name)}')" style="font-weight:700; padding:4px 10px; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;">🗑️ Delete</button>
+              <div style="border-top:1px solid #f1f5f9; padding-top:10px; margin-top:12px; font-size:0.75rem; color:#64748b; text-align:center;">
+                ✅ Head Office Certified Curriculum · Editable Centre Margin
               </div>
             </div>
           `;
         }).join('')}
       </div>
 
-      <!-- Add Course Modal -->
-      <div id="addCourseModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
-        <div style="background:#fff; border-radius:14px; max-width:540px; width:100%; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #cbd5e1;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
-            <h3 style="margin:0; color:#064e3b; font-size:1.3rem;">➕ Add New Course to Centre</h3>
-            <button type="button" onclick="$('#addCourseModal').style.display='none'" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">&times;</button>
+      <!-- Course Subjects Modal -->
+      <div id="centreCourseSubjectsModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#fff; border-radius:14px; max-width:560px; width:100%; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #cbd5e1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+            <h3 id="centreCourseSubjectsTitle" style="margin:0; color:#064e3b; font-size:1.25rem;">📚 Course Syllabus &amp; Subjects</h3>
+            <button type="button" onclick="$('#centreCourseSubjectsModal').style.display='none'" style="background:none; border:none; font-size:1.6rem; cursor:pointer; color:#64748b;">&times;</button>
           </div>
-          <form id="addCourseForm">
-            <div style="margin-bottom:12px;">
-              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Full Name (पाठ्यक्रम का नाम)*</label>
-              <input name="name" required placeholder="e.g. Diploma in Computer Applications (DCA)" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-              <div>
-                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Code (कोड)*</label>
-                <input name="code" required placeholder="e.g. DCA" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; text-transform:uppercase;">
-              </div>
-              <div>
-                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Duration (Months / अवधि)*</label>
-                <input type="number" name="duration_months" required min="1" max="48" value="6" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
-              </div>
-            </div>
-            <div style="margin-bottom:12px;">
-              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Fee (विद्यार्थी फीस - ₹)*</label>
-              <input type="number" name="fee_rupees" required min="500" value="6500" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; color:#064e3b;">
-            </div>
-            <div style="margin-bottom:16px;">
-              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Description / Eligibility (विवरण)</label>
-              <textarea name="description" rows="2" placeholder="e.g. 10th / 12th Pass, Computer Fundamentals, Office, Tally" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></textarea>
-            </div>
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-              <button type="button" class="btn alt" onclick="$('#addCourseModal').style.display='none'">Cancel</button>
-              <button type="submit" class="btn gold" style="font-weight:700;">➕ Create Course</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <!-- Edit Course Modal -->
-      <div id="editCourseModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
-        <div style="background:#fff; border-radius:14px; max-width:540px; width:100%; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #cbd5e1;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
-            <h3 style="margin:0; color:#064e3b; font-size:1.3rem;">✏️ Edit Course Details</h3>
-            <button type="button" onclick="$('#editCourseModal').style.display='none'" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">&times;</button>
+          <div id="centreCourseSubjectsContent" style="max-height:380px; overflow-y:auto; padding-right:4px;">
+            <!-- Loaded dynamically -->
           </div>
-          <form id="editCourseForm">
-            <input type="hidden" name="course_id" id="editCourseId">
-            <div style="margin-bottom:12px;">
-              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Full Name (पाठ्यक्रम का नाम)*</label>
-              <input name="name" id="editCourseName" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-              <div>
-                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Course Code (कोड)*</label>
-                <input name="code" id="editCourseCode" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; text-transform:uppercase;">
-              </div>
-              <div>
-                <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Duration (Months / अवधि)*</label>
-                <input type="number" name="duration_months" id="editCourseDuration" required min="1" max="48" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
-              </div>
-            </div>
-            <div style="margin-bottom:12px;">
-              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Institute Course Fee (फीस - ₹)*</label>
-              <input type="number" name="fee_rupees" id="editCourseFee" required min="500" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; color:#064e3b;">
-            </div>
-            <div style="margin-bottom:16px;">
-              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Description / Eligibility</label>
-              <textarea name="description" id="editCourseDesc" rows="2" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></textarea>
-            </div>
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-              <button type="button" class="btn alt" onclick="$('#editCourseModal').style.display='none'">Cancel</button>
-              <button type="submit" class="btn gold" style="font-weight:700;">💾 Save Changes</button>
-            </div>
-          </form>
+          <div style="display:flex; justify-content:flex-end; margin-top:18px; border-top:1px solid #e2e8f0; padding-top:12px;">
+            <button class="btn gold sm" onclick="$('#centreCourseSubjectsModal').style.display='none'" style="font-weight:700;">Close</button>
+          </div>
         </div>
       </div>
     `;
-
-    // Hook forms
-    $('#addCourseForm').onsubmit = (e) => {
-      e.preventDefault();
-      guard(async () => {
-        const body = form(e.target);
-        await api('/api/centre/courses', { method: 'POST', body });
-        toast('✓ Course added successfully to your centre offerings!');
-        views.MyCourses();
-      });
-    };
-
-    $('#editCourseForm').onsubmit = (e) => {
-      e.preventDefault();
-      guard(async () => {
-        const body = form(e.target);
-        const cid = body.course_id;
-        await api(`/api/centre/courses/${cid}`, { method: 'PUT', body });
-        toast('✓ Course details updated successfully!');
-        views.MyCourses();
-      });
-    };
   },
 
   // 4. Fees Collection
@@ -709,25 +661,47 @@ const views = {
 
     V.innerHTML = `
       <div style="margin-bottom:20px;">
-        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">5. Certificate Printing (3 Print Formats)</h2>
-        <p class="muted" style="margin:0;">Option 1: Council Only | Option 2: Institute Only | Option 3: Both Dual Collaboration</p>
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">5. Certificate Printing (वार्षिक एवं सेमेस्टर प्रमाणपत्र प्रिंट)</h2>
+        <p class="muted" style="margin:0;">वार्षिक (Yearly/Annual) अथवा सेमेस्टर (Semester-Wise) आधारित अधिकृत प्रमाणपत्र प्रिंट करें</p>
       </div>
 
-      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; margin-bottom:24px;">
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
         <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:20px;">
+          <!-- Select Enrolled Candidate -->
           <div style="flex:1; min-width:240px;">
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Enrolled Candidate:</label>
-            <select id="certStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Enrolled Candidate (छात्र चुनें):</label>
+            <select id="certStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
               ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
             </select>
           </div>
 
+          <!-- Evaluation Pattern (Yearly vs Semester) -->
           <div>
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Certificate Layout Format:</label>
-            <div style="display:flex; gap:8px;">
-              <button class="btn gold sm active" id="btnFmtCouncil" onclick="setCertFormat('council')">Option 1: Council Only</button>
-              <button class="btn alt sm" id="btnFmtInstitute" onclick="setCertFormat('institute')">Option 2: Institute Only</button>
-              <button class="btn alt sm" id="btnFmtDual" onclick="setCertFormat('dual')">Option 3: Both Dual</button>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Evaluation Pattern (प्रणाली):</label>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn gold sm active" id="btnCertEvalYearly" onclick="setCertEvalPattern('yearly')">📅 Yearly / Annual (वार्षिक)</button>
+              <button type="button" class="btn alt sm" id="btnCertEvalSemester" onclick="setCertEvalPattern('semester')">📚 Semester-Wise (सेमेस्टर)</button>
+            </div>
+          </div>
+
+          <!-- Term Select -->
+          <div id="certTermWrap" style="min-width:180px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Term / Examination (परीक्षा सत्र):</label>
+            <select id="certTermSelect" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:700; color:#064e3b;" onchange="updateCertPreview()">
+              <option value="Annual Examination">Annual Examination (वार्षिक परीक्षा)</option>
+              <option value="1st Year">1st Year (प्रथम वर्ष)</option>
+              <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
+              <option value="Final Year">Final Year (अंतिम वर्ष)</option>
+            </select>
+          </div>
+
+          <!-- Layout Option -->
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Design Format:</label>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn gold sm active" id="btnFmtCouncil" onclick="setCertFormat('council')">Council Only</button>
+              <button type="button" class="btn alt sm" id="btnFmtInstitute" onclick="setCertFormat('institute')">Institute Only</button>
+              <button type="button" class="btn alt sm" id="btnFmtDual" onclick="setCertFormat('dual')">Both Dual</button>
             </div>
           </div>
 
@@ -747,32 +721,45 @@ const views = {
     updateCertPreview();
   },
 
-  // 6. Marksheet Printing (Single + Semester wise)
+  // 6. Marksheet Printing (Yearly + Semester-Wise)
   async MarksheetPrinting() {
     const sData = await api('/api/centre/students');
     const students = sData.students || [];
 
     V.innerHTML = `
       <div style="margin-bottom:20px;">
-        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">6. Marksheet Printing (Single + Semester-Wise)</h2>
-        <p class="muted" style="margin:0;">Print Consolidated Single Marksheet OR Detailed Semester-Wise Marksheet</p>
+        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">6. Marksheet Printing (वार्षिक एवं सेमेस्टर अंकतालिका प्रिंट)</h2>
+        <p class="muted" style="margin:0;">वार्षिक परीक्षा (Yearly Statement) अथवा विस्तृत सेमेस्टर परीक्षा (Semester-Wise Statement) अंकतालिका प्रिंट करें</p>
       </div>
 
-      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px;">
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
         <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:20px;">
+          <!-- Select Candidate -->
           <div style="flex:1; min-width:240px;">
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate:</label>
-            <select id="mrkStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate (छात्र चुनें):</label>
+            <select id="mrkStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
               ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
             </select>
           </div>
 
+          <!-- Marksheet Pattern: Yearly vs Semester -->
           <div>
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Format:</label>
-            <div style="display:flex; gap:8px;">
-              <button class="btn gold sm active" id="btnMrkSingle" onclick="setMrkFormat('single')">Single Consolidated</button>
-              <button class="btn alt sm" id="btnMrkSemester" onclick="setMrkFormat('semester')">Semester-Wise</button>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Evaluation Type (परीक्षा प्रकार):</label>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn gold sm active" id="btnMrkEvalYearly" onclick="setMrkEvalPattern('yearly')">📅 Yearly / Annual (वार्षिक आधारित)</button>
+              <button type="button" class="btn alt sm" id="btnMrkEvalSemester" onclick="setMrkEvalPattern('semester')">📚 Semester-Wise (सेमेस्टर आधारित)</button>
             </div>
+          </div>
+
+          <!-- Term Select -->
+          <div id="mrkTermWrap" style="min-width:200px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Term / Examination (परीक्षा सत्र):</label>
+            <select id="mrkTermSelect" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:700; color:#064e3b;" onchange="updateMrkPreview()">
+              <option value="Annual Examination">Annual Examination (वार्षिक परीक्षा)</option>
+              <option value="1st Year">1st Year (प्रथम वर्ष)</option>
+              <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
+              <option value="Final Year">Final Year (अंतिम वर्ष)</option>
+            </select>
           </div>
 
           <div style="align-self:end;">
@@ -1998,11 +1985,45 @@ window.printReceipt = function(id) {
 
 // Certificate Preview Renderers
 let certFormat = 'council';
+let certEvalPattern = 'yearly';
+
 function setCertFormat(fmt) {
   certFormat = fmt;
-  $('#btnFmtCouncil').className = fmt === 'council' ? 'btn gold sm active' : 'btn alt sm';
-  $('#btnFmtInstitute').className = fmt === 'institute' ? 'btn gold sm active' : 'btn alt sm';
-  $('#btnFmtDual').className = fmt === 'dual' ? 'btn gold sm active' : 'btn alt sm';
+  const bCouncil = $('#btnFmtCouncil');
+  const bInst = $('#btnFmtInstitute');
+  const bDual = $('#btnFmtDual');
+  if (bCouncil) bCouncil.className = fmt === 'council' ? 'btn gold sm active' : 'btn alt sm';
+  if (bInst) bInst.className = fmt === 'institute' ? 'btn gold sm active' : 'btn alt sm';
+  if (bDual) bDual.className = fmt === 'dual' ? 'btn gold sm active' : 'btn alt sm';
+  updateCertPreview();
+}
+
+function setCertEvalPattern(pat) {
+  certEvalPattern = pat;
+  const bYearly = $('#btnCertEvalYearly');
+  const bSem = $('#btnCertEvalSemester');
+  if (bYearly) bYearly.className = pat === 'yearly' ? 'btn gold sm active' : 'btn alt sm';
+  if (bSem) bSem.className = pat === 'semester' ? 'btn gold sm active' : 'btn alt sm';
+
+  const termSel = $('#certTermSelect');
+  if (termSel) {
+    if (pat === 'yearly') {
+      termSel.innerHTML = `
+        <option value="Annual Examination">Annual Examination (वार्षिक परीक्षा)</option>
+        <option value="1st Year">1st Year (प्रथम वर्ष)</option>
+        <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
+        <option value="Final Year">Final Year (अंतिम वर्ष)</option>
+      `;
+    } else {
+      termSel.innerHTML = `
+        <option value="Semester 1">Semester 1 (प्रथम सेमेस्टर)</option>
+        <option value="Semester 2">Semester 2 (द्वितीय सेमेस्टर)</option>
+        <option value="Semester 3">Semester 3 (तृतीय सेमेस्टर)</option>
+        <option value="Semester 4">Semester 4 (चतुर्थ सेमेस्टर)</option>
+        <option value="All Semesters Completed">All Semesters Completed (समस्त सेमेस्टर उत्तीर्ण)</option>
+      `;
+    }
+  }
   updateCertPreview();
 }
 
@@ -2016,6 +2037,8 @@ function updateCertPreview() {
   const code = opt.dataset.code;
   const course = opt.dataset.course;
 
+  const certTerm = ($('#certTermSelect') && $('#certTermSelect').value) || (certEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
+
   const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
   const cCode = currentCentre ? (currentCentre.centre_code || 'PESC00001') : 'PESC00001';
   const cDistrict = currentCentre ? (currentCentre.district || 'Varanasi') : 'Varanasi';
@@ -2028,6 +2051,8 @@ function updateCertPreview() {
   const directorPhotoHtml = directorPhoto
     ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
     : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
+
+  const isSemester = certEvalPattern === 'semester';
 
   $('#certPreviewContainer').innerHTML = `
     <!-- Top Accreditations & Run By Bar -->
@@ -2072,8 +2097,16 @@ function updateCertPreview() {
       </div>
     </div>
 
-    <!-- Certificate Body -->
-    <div style="margin:14px 0 6px; font-size:1.25rem; font-family:serif; font-style:italic; color:#0f172a;">Statement of Skill Proficiency &amp; Completion</div>
+    <!-- Certificate Title with Clear Yearly vs Semester Differentiation -->
+    <div style="margin:14px 0 4px; font-size:1.35rem; font-family:serif; font-style:italic; color:${isSemester ? '#0a2a5e' : '#064e3b'}; font-weight:700;">
+      ${isSemester ? 'Statement of Semester Proficiency &amp; Certification' : 'Annual Statement of Skill Proficiency &amp; Certification'}
+    </div>
+    <div style="margin-bottom:10px;">
+      <span style="display:inline-block; background:${isSemester ? '#e0f2fe' : '#fef3c7'}; color:${isSemester ? '#0369a1' : '#92400e'}; border:1px solid ${isSemester ? '#7dd3fc' : '#fde68a'}; padding:3px 12px; border-radius:12px; font-weight:800; font-size:0.8rem; letter-spacing:0.5px;">
+        ${isSemester ? '📚 SEMESTER EVALUATION: ' : '📅 ANNUAL EVALUATION: '} ${esc(certTerm).toUpperCase()}
+      </span>
+    </div>
+
     <div style="font-size:0.9rem; color:#475569; margin-bottom:12px;">This is to officially certify that</div>
 
     <div style="font-size:1.85rem; font-weight:900; color:#064e3b; text-decoration:underline; text-decoration-color:#d4af37; margin-bottom:6px; letter-spacing:0.5px;">
@@ -2085,14 +2118,15 @@ function updateCertPreview() {
     </div>
 
     <div style="font-size:0.94rem; color:#334155; line-height:1.6; max-width:700px; margin:0 auto 18px;">
-      has successfully completed the prescribed vocational &amp; technical curriculum and passed the examination for:
+      has successfully completed the prescribed ${isSemester ? 'semester vocational &amp; technical curriculum' : 'annual vocational &amp; technical curriculum'} and passed the <b>${esc(certTerm)} Examination</b> for:
       <div style="font-size:1.35rem; font-weight:800; margin:6px 0; color:#0a2a5e;">${esc(course)}</div>
       conducted under council national quality standards with <b>Grade A+ (Exemplary Performance)</b>.
     </div>
 
     <div style="display:flex; justify-content:center; gap:24px; font-size:0.8rem; color:#64748b; margin-bottom:12px;">
+      <span>Evaluation Pattern: <b style="color:${isSemester ? '#0369a1' : '#064e3b'};">${isSemester ? 'Semester-Wise (' + esc(certTerm) + ')' : 'Yearly / Annual (' + esc(certTerm) + ')'}</b></span>
       <span>Date of Issue: <b>${new Date().toLocaleDateString('en-IN')}</b></span>
-      <span>Official Verification QR: <code style="font-weight:700; color:#064e3b;">PESC-VRF-2026-OK</code></span>
+      <span>Verification: <code style="font-weight:700; color:#064e3b;">PESC-VRF-2026-OK</code></span>
     </div>
 
     <!-- Bottom 3 Official Mohar & Signatures -->
@@ -2134,12 +2168,39 @@ function updateCertPreview() {
 }
 
 // Marksheet Preview
-let mrkFormat = 'single';
-function setMrkFormat(fmt) {
-  mrkFormat = fmt;
-  $('#btnMrkSingle').className = fmt === 'single' ? 'btn gold sm active' : 'btn alt sm';
-  $('#btnMrkSemester').className = fmt === 'semester' ? 'btn gold sm active' : 'btn alt sm';
+let mrkEvalPattern = 'yearly';
+
+function setMrkEvalPattern(pat) {
+  mrkEvalPattern = pat;
+  const bYearly = $('#btnMrkEvalYearly');
+  const bSem = $('#btnMrkEvalSemester');
+  if (bYearly) bYearly.className = pat === 'yearly' ? 'btn gold sm active' : 'btn alt sm';
+  if (bSem) bSem.className = pat === 'semester' ? 'btn gold sm active' : 'btn alt sm';
+
+  const termSel = $('#mrkTermSelect');
+  if (termSel) {
+    if (pat === 'yearly') {
+      termSel.innerHTML = `
+        <option value="Annual Examination">Annual Examination (वार्षिक परीक्षा)</option>
+        <option value="1st Year">1st Year (प्रथम वर्ष)</option>
+        <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
+        <option value="Final Year">Final Year (अंतिम वर्ष)</option>
+      `;
+    } else {
+      termSel.innerHTML = `
+        <option value="Semester 1">Semester 1 (प्रथम सेमेस्टर)</option>
+        <option value="Semester 2">Semester 2 (द्वितीय सेमेस्टर)</option>
+        <option value="Semester 3">Semester 3 (तृतीय सेमेस्टर)</option>
+        <option value="Semester 4">Semester 4 (चतुर्थ सेमेस्टर)</option>
+      `;
+    }
+  }
   updateMrkPreview();
+}
+
+// Backward compatibility alias for single/semester buttons if needed
+function setMrkFormat(fmt) {
+  setMrkEvalPattern(fmt === 'single' ? 'yearly' : 'semester');
 }
 
 function updateMrkPreview() {
@@ -2151,6 +2212,9 @@ function updateMrkPreview() {
   const father = opt.dataset.father || 'N/A';
   const code = opt.dataset.code;
   const course = opt.dataset.course;
+
+  const mrkTerm = ($('#mrkTermSelect') && $('#mrkTermSelect').value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
+  const isSemester = mrkEvalPattern === 'semester';
 
   const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
   const cCode = currentCentre ? (currentCentre.centre_code || 'PESC00001') : 'PESC00001';
@@ -2165,53 +2229,80 @@ function updateMrkPreview() {
     ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
     : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
 
-  let tableContent = '';
-  if (mrkFormat === 'single') {
-    tableContent = `
-      <table style="width:100%; border-collapse:collapse; margin:14px 0; font-size:0.88rem;">
-        <thead>
-          <tr style="background:#f1f5f9;">
-            <th style="border:1px solid #cbd5e1; padding:7px;">Subject / Module</th>
-            <th style="border:1px solid #cbd5e1; padding:7px;">Max Marks</th>
-            <th style="border:1px solid #cbd5e1; padding:7px;">Theory</th>
-            <th style="border:1px solid #cbd5e1; padding:7px;">Practical</th>
-            <th style="border:1px solid #cbd5e1; padding:7px;">Total Obtained</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td style="border:1px solid #cbd5e1; padding:7px;">Computer Concepts &amp; Operating Systems</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">42</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">44</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center; font-weight:bold;">86</td></tr>
-          <tr><td style="border:1px solid #cbd5e1; padding:7px;">Office Automation &amp; Productivity Tools</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">40</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">45</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center; font-weight:bold;">85</td></tr>
-          <tr><td style="border:1px solid #cbd5e1; padding:7px;">Financial Accounting &amp; Tally Prime GST</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">44</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">46</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center; font-weight:bold;">90</td></tr>
-          <tr><td style="border:1px solid #cbd5e1; padding:7px;">Desktop Publishing &amp; Graphics</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">41</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">43</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center; font-weight:bold;">84</td></tr>
-          <tr><td style="border:1px solid #cbd5e1; padding:7px;">Lab Project Assignment &amp; Viva Voce</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">43</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">47</td><td style="border:1px solid #cbd5e1; padding:7px; text-align:center; font-weight:bold;">90</td></tr>
-        </tbody>
-        <tfoot>
-          <tr style="background:#ecfdf5; font-weight:bold;">
-            <td style="border:1px solid #cbd5e1; padding:7px;">Grand Total:</td>
-            <td style="border:1px solid #cbd5e1; padding:7px; text-align:center;">500</td>
-            <td colspan="2" style="border:1px solid #cbd5e1; padding:7px; text-align:center;">Percentage: 87.0%</td>
-            <td style="border:1px solid #cbd5e1; padding:7px; text-align:center; color:#16a34a; font-size:1.05rem;">435 (PASS)</td>
-          </tr>
-        </tfoot>
-      </table>
-    `;
-  } else {
-    tableContent = `
-      <div style="font-weight:700; color:#064e3b; margin:10px 0 4px; text-align:left;">SEMESTER - I EVALUATION:</div>
-      <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:0.84rem;">
-        <tr style="background:#f8fafc;"><th style="border:1px solid #cbd5e1; padding:6px;">Paper</th><th style="border:1px solid #cbd5e1; padding:6px;">Max</th><th style="border:1px solid #cbd5e1; padding:6px;">Obtained</th><th style="border:1px solid #cbd5e1; padding:6px;">Grade</th></tr>
-        <tr><td style="border:1px solid #cbd5e1; padding:6px;">IT Fundamentals &amp; MS Windows</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">88</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center; color:#16a34a; font-weight:bold;">A+</td></tr>
-        <tr><td style="border:1px solid #cbd5e1; padding:6px;">MS Word, Excel, PowerPoint &amp; Access</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">85</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center; color:#16a34a; font-weight:bold;">A+</td></tr>
-      </table>
-
-      <div style="font-weight:700; color:#064e3b; margin:10px 0 4px; text-align:left;">SEMESTER - II EVALUATION:</div>
-      <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:0.84rem;">
-        <tr style="background:#f8fafc;"><th style="border:1px solid #cbd5e1; padding:6px;">Paper</th><th style="border:1px solid #cbd5e1; padding:6px;">Max</th><th style="border:1px solid #cbd5e1; padding:6px;">Obtained</th><th style="border:1px solid #cbd5e1; padding:6px;">Grade</th></tr>
-        <tr><td style="border:1px solid #cbd5e1; padding:6px;">Tally Prime with Advanced GST</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">92</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center; color:#16a34a; font-weight:bold;">O</td></tr>
-        <tr><td style="border:1px solid #cbd5e1; padding:6px;">Desktop Publishing (Photoshop &amp; Corel)</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">100</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center;">86</td><td style="border:1px solid #cbd5e1; padding:6px; text-align:center; color:#16a34a; font-weight:bold;">A+</td></tr>
-      </table>
-    `;
+  // Find course subjects dynamically
+  const courses = window._currentCourses || [];
+  const matchedCourse = courses.find(c => c.name === course || c.code === course || (course && c.name && course.includes(c.name))) || courses[0];
+  let subjects = [];
+  if (matchedCourse && matchedCourse.subjects) {
+    try {
+      subjects = typeof matchedCourse.subjects === 'string' ? JSON.parse(matchedCourse.subjects) : matchedCourse.subjects;
+    } catch(e) { subjects = []; }
   }
+
+  if (!subjects || !subjects.length) {
+    subjects = [
+      { name: 'Computer Fundamentals & OS', max_marks: 100, theory: 44, practical: 44 },
+      { name: 'Office Automation Tools (Word, Excel, PPT)', max_marks: 100, theory: 42, practical: 45 },
+      { name: 'Financial Accounting & Tally Prime GST', max_marks: 100, theory: 43, practical: 46 },
+      { name: 'Desktop Publishing & Graphics', max_marks: 100, theory: 41, practical: 44 },
+      { name: 'Project Assignment & Viva-Voce', max_marks: 100, theory: 45, practical: 45 }
+    ];
+  }
+
+  let totalMax = 0, totalObt = 0;
+  const rows = subjects.map((s, idx) => {
+    const sMax = +s.max_marks || 100;
+    const th = +s.theory || Math.min(48, Math.round(sMax * 0.44));
+    const pr = +s.practical || Math.min(48, Math.round(sMax * 0.45));
+    const obt = th + pr;
+    totalMax += sMax;
+    totalObt += obt;
+    const grade = obt >= (sMax * 0.85) ? 'A+' : obt >= (sMax * 0.75) ? 'A' : obt >= (sMax * 0.6) ? 'B' : 'C';
+
+    return `
+      <tr>
+        <td style="border:1px solid #cbd5e1; padding:7px 10px; font-weight:600; text-align:left;">${esc(s.name || s)}</td>
+        <td style="border:1px solid #cbd5e1; padding:7px 10px; text-align:center;">${sMax}</td>
+        <td style="border:1px solid #cbd5e1; padding:7px 10px; text-align:center; color:#0369a1;">${th}</td>
+        <td style="border:1px solid #cbd5e1; padding:7px 10px; text-align:center; color:#047857;">${pr}</td>
+        <td style="border:1px solid #cbd5e1; padding:7px 10px; text-align:center; font-weight:800; color:#0f172a;">${obt}</td>
+        <td style="border:1px solid #cbd5e1; padding:7px 10px; text-align:center; font-weight:800; color:#16a34a;">${grade}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const pct = Math.round((totalObt / (totalMax || 1)) * 1000) / 10;
+  const finalGrade = pct >= 85 ? 'Grade A+ (Exemplary)' : pct >= 75 ? 'Grade A (Distinction)' : pct >= 60 ? 'Grade B (First Class)' : 'Grade C (Pass)';
+
+  const tableContent = `
+    <div style="font-weight:800; color:${isSemester ? '#0369a1' : '#064e3b'}; margin:10px 0 6px; text-align:left; font-size:0.95rem; text-transform:uppercase;">
+      ${isSemester ? '📚 ' + esc(mrkTerm).toUpperCase() + ' EVALUATION ASSESSMENT:' : '📅 ' + esc(mrkTerm).toUpperCase() + ' CONSOLIDATED STATEMENT:'}
+    </div>
+    <table style="width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:0.88rem;">
+      <thead>
+        <tr style="background:${isSemester ? '#f0f9ff' : '#f1f5f9'};">
+          <th style="border:1px solid #cbd5e1; padding:8px 10px; text-align:left;">Subject / Module Title</th>
+          <th style="border:1px solid #cbd5e1; padding:8px 10px; text-align:center;">Max Marks</th>
+          <th style="border:1px solid #cbd5e1; padding:8px 10px; text-align:center;">Theory</th>
+          <th style="border:1px solid #cbd5e1; padding:8px 10px; text-align:center;">Practical</th>
+          <th style="border:1px solid #cbd5e1; padding:8px 10px; text-align:center;">Total Obtained</th>
+          <th style="border:1px solid #cbd5e1; padding:8px 10px; text-align:center;">Grade</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+      <tfoot>
+        <tr style="background:#ecfdf5; font-weight:bold;">
+          <td style="border:1px solid #cbd5e1; padding:8px 10px; text-align:left;">Grand Total:</td>
+          <td style="border:1px solid #cbd5e1; padding:8px 10px; text-align:center;">${totalMax}</td>
+          <td colspan="2" style="border:1px solid #cbd5e1; padding:8px 10px; text-align:center;">Percentage: <b>${pct}%</b></td>
+          <td style="border:1px solid #cbd5e1; padding:8px 10px; text-align:center; color:#16a34a; font-size:1.05rem;">${totalObt}</td>
+          <td style="border:1px solid #cbd5e1; padding:8px 10px; text-align:center; color:#16a34a; font-size:0.85rem;">${finalGrade}</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
 
   $('#mrkPreviewContainer').innerHTML = `
     <!-- Top Accreditations & Run By Bar -->
@@ -2238,7 +2329,9 @@ function updateMrkPreview() {
       <div style="flex:1; text-align:center;">
         <div style="display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, #0a2a5e, #064e3b); color:#d4af37; font-weight:900; font-size:1.4rem; box-shadow:0 2px 6px rgba(0,0,0,0.15); margin-bottom:3px; border:2px solid #d4af37;">P</div>
         <div style="font-size:1.15rem; font-weight:900; color:#0a2a5e; letter-spacing:0.5px; line-height:1.2;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</div>
-        <div style="font-size:0.82rem; font-weight:800; color:#b45309; letter-spacing:1px; text-transform:uppercase; margin-top:2px;">OFFICIAL STATEMENT OF MARKS</div>
+        <div style="font-size:0.82rem; font-weight:900; color:${isSemester ? '#0369a1' : '#b45309'}; letter-spacing:1px; text-transform:uppercase; margin-top:2px;">
+          ${isSemester ? 'SEMESTER EXAMINATION STATEMENT OF MARKS' : 'ANNUAL EXAMINATION STATEMENT OF MARKS'}
+        </div>
       </div>
 
       <!-- Right: Director Photo & Validity -->
@@ -2257,11 +2350,13 @@ function updateMrkPreview() {
     </div>
 
     <!-- Student Metadata Grid -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.86rem; margin-bottom:12px; background:#f8fafc; padding:10px 14px; border-radius:6px; text-align:left; border:1px solid #e2e8f0;">
-      <div>Candidate Name: <b>${esc(name)}</b></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.86rem; margin-bottom:12px; background:#f8fafc; padding:12px 14px; border-radius:8px; text-align:left; border:1px solid #e2e8f0;">
+      <div>Candidate Name: <b style="color:#0f172a;">${esc(name)}</b></div>
       <div>Roll No / Student Code: <b style="font-family:monospace; color:#0a2a5e;">${esc(code)}</b></div>
       <div>Father's Name: <b>${esc(father)}</b></div>
       <div>Course: <b style="color:#064e3b;">${esc(course)}</b></div>
+      <div>Evaluation Scheme: <b style="color:${isSemester ? '#0369a1' : '#b45309'};">${isSemester ? '📚 Semester-Wise' : '📅 Yearly / Annual'}</b></div>
+      <div>Examination / Term: <b style="color:#0f172a;">${esc(mrkTerm)}</b></div>
     </div>
 
     ${tableContent}
@@ -2515,32 +2610,71 @@ async function saveCoursePrice(courseId) {
   });
 }
 
-window.openAddCourseModal = function() {
-  const m = $('#addCourseModal');
-  if (m) m.style.display = 'flex';
-};
-
-window.openEditCourseModal = function(courseId) {
+window.showCentreCourseSubjects = function(courseId) {
   const courses = window._currentCourses || [];
   const co = courses.find(x => x.id === courseId);
   if (!co) return;
-  $('#editCourseId').value = co.id;
-  $('#editCourseName').value = co.name;
-  $('#editCourseCode').value = co.code;
-  $('#editCourseDuration').value = co.duration_months || 6;
-  $('#editCourseFee').value = co.fee_rupees || Math.round((co.selling_price_paise || 800000)/100);
-  $('#editCourseDesc').value = co.description || '';
-  const m = $('#editCourseModal');
-  if (m) m.style.display = 'flex';
+  let subjects = [];
+  try {
+    subjects = typeof co.subjects === 'string' ? JSON.parse(co.subjects) : (co.subjects || []);
+  } catch(e) { subjects = []; }
+
+  const modal = $('#centreCourseSubjectsModal');
+  const title = $('#centreCourseSubjectsTitle');
+  const content = $('#centreCourseSubjectsContent');
+  if (!modal || !content) return;
+
+  if (title) title.innerHTML = `📚 Syllabus: ${esc(co.name)} (${esc(co.code)})`;
+
+  if (!subjects.length) {
+    content.innerHTML = `
+      <div style="text-align:center; padding:30px 10px; color:#64748b;">
+        <p style="margin:0 0 6px; font-weight:700;">No custom subjects defined yet.</p>
+        <span style="font-size:0.82rem;">This course follows the standard Purvanchal Education &amp; Skill Council national curriculum.</span>
+      </div>
+    `;
+  } else {
+    content.innerHTML = `
+      <div style="margin-bottom:12px; font-size:0.86rem; color:#475569;">
+        Total Subjects: <b>${subjects.length}</b> · Duration: <b>${co.duration_months} Months</b> · Total Marks: <b>${co.total_marks || 500}</b>
+      </div>
+      <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead>
+          <tr style="background:#f1f5f9; text-align:left;">
+            <th style="padding:8px 10px; border:1px solid #cbd5e1;">#</th>
+            <th style="padding:8px 10px; border:1px solid #cbd5e1;">Subject Name (विषय)</th>
+            <th style="padding:8px 10px; border:1px solid #cbd5e1; text-align:center;">Max Marks</th>
+            <th style="padding:8px 10px; border:1px solid #cbd5e1; text-align:center;">Theory</th>
+            <th style="padding:8px 10px; border:1px solid #cbd5e1; text-align:center;">Practical</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${subjects.map((s, idx) => `
+            <tr style="background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+              <td style="padding:7px 10px; border:1px solid #cbd5e1; font-weight:700; color:#64748b;">${idx + 1}</td>
+              <td style="padding:7px 10px; border:1px solid #cbd5e1; font-weight:700; color:#0f172a;">${esc(s.name || s)}</td>
+              <td style="padding:7px 10px; border:1px solid #cbd5e1; text-align:center;">${s.max_marks || 100}</td>
+              <td style="padding:7px 10px; border:1px solid #cbd5e1; text-align:center; color:#0369a1;">${s.theory || 50}</td>
+              <td style="padding:7px 10px; border:1px solid #cbd5e1; text-align:center; color:#047857;">${s.practical || 50}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+  modal.style.display = 'flex';
 };
 
-window.deleteCourse = function(courseId, courseName) {
-  if (!confirm(`क्या आप सच में कोर्स '${courseName}' को अपने सेंटर से हटाना/डिलीट करना चाहते हैं?`)) return;
-  guard(async () => {
-    await api(`/api/centre/courses/${courseId}`, { method: 'DELETE' });
-    toast(`✓ Course '${courseName}' removed successfully!`);
-    views.MyCourses();
-  });
+window.openAddCourseModal = function() {
+  alert('🔒 सूचना: नए कोर्स जोड़ना केवल हेड ऑफिस एडमिन द्वारा ही अधिकृत है।');
+};
+
+window.openEditCourseModal = function() {
+  alert('🔒 सूचना: कोर्स का नाम व काउंसिल फीस में परिवर्तन केवल हेड ऑफिस कर सकता है। आप कार्ड पर अपनी विद्यार्थी फीस (Institute Student Fee) एडिट करके सेव कर सकते हैं।');
+};
+
+window.deleteCourse = function() {
+  alert('🔒 सूचना: हेड ऑफिस द्वारा अनुमोदित कोर्सेज को सेंटर से हटाया नहीं जा सकता।');
 };
 
 // Attendance helpers

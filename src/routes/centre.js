@@ -227,9 +227,9 @@ router.post('/students/:id/account', h(async (req, res) => {
 }));
 
 
-// 3. My Courses - Centre apna selling price khud set karega
+// 3. My Courses - Centre apna selling price khud set karega (Head office courses read-only)
 router.get('/courses', (req, res) => {
-  const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.fee_paise AS system_fee_paise,
+  const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.subjects, co.total_marks, co.fee_paise AS system_fee_paise,
     COALESCE(cc.selling_price_paise, co.fee_paise * 2, 800000) AS selling_price_paise,
     (SELECT COUNT(*) FROM students WHERE course_id=co.id AND centre_id=?) AS enrolled_count
     FROM courses co

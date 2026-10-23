@@ -122,6 +122,7 @@ const views = {
 
   async Courses() {
     const { courses } = await api('/api/admin/courses');
+    window._adminCourses = courses;
     V.innerHTML = `
       <h2>Affiliated Courses Catalog</h2>
       ${table([
@@ -131,6 +132,20 @@ const views = {
         ['Duration', (r) => `${r.duration_months} Months`],
         ['Total Marks', (r) => r.total_marks || 100],
         ['Course Fee', (r) => inr(r.fee_paise)],
+        ['Course Subjects', (r) => {
+          let subs = [];
+          try { subs = typeof r.subjects === 'string' ? JSON.parse(r.subjects || '[]') : (r.subjects || []); } catch (_) {}
+          const count = subs.length;
+          const names = subs.map(s => s.name || s).join(', ');
+          return `
+            <div style="max-width:260px;">
+              <button type="button" class="btn sm" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:700; font-size:0.8rem; padding:3px 9px; border-radius:6px;" onclick="showCourseSubjectsModal(${r.id})">
+                📚 ${count} Subjects (विषय)
+              </button>
+              ${count ? `<div class="muted" style="font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px;" title="${esc(names)}">${esc(names)}</div>` : '<div class="muted" style="font-size:0.75rem;">No subjects added</div>'}
+            </div>
+          `;
+        }],
         ['Status', (r) => r.active ? `<span class="badge Valid">Active</span>` : `<span class="badge Rejected">Inactive</span>`],
         ['Actions', (r) => `
           <button class="btn sm alt" data-a="edit_course" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.code)}" data-dur="${r.duration_months}" data-fee="${Math.round(r.fee_paise/100)}" data-marks="${r.total_marks || 100}" data-active="${r.active}">✏️ Edit</button>
@@ -143,7 +158,13 @@ const views = {
         <div><label>Course Name *</label><input name="name" required maxlength="120"></div>
         <div><label>Duration in Months *</label><input name="duration_months" type="number" min="1" required></div>
         <div><label>Course Fee (₹) *</label><input name="fee_rupees" type="number" min="0" required></div>
-        <div style="align-self:end;"><button class="btn">Create Course</button></div>
+        <div><label>Total Marks *</label><input name="total_marks" type="number" min="50" value="100" required></div>
+        <div style="grid-column: 1 / -1; width:100%;">
+          <label style="font-weight:700; display:block; margin-bottom:4px;">Course Subjects (पाठ्यक्रम के विषय) – Enter subjects separated by comma or new lines:</label>
+          <textarea name="subjects_text" rows="3" placeholder="e.g. IT Fundamentals, Office Automation, Tally Prime GST, Project Lab Viva" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:8px 12px; font-size:0.9rem;"></textarea>
+          <small class="muted">Each subject will automatically be configured with standard evaluation marks.</small>
+        </div>
+        <div style="align-self:end;"><button class="btn gold" style="font-weight:700;">➕ Create Course</button></div>
       </form>
     `;
   },
@@ -1045,6 +1066,11 @@ V.addEventListener('click', (e) => {
       return;
     } else if (a === 'edit_course') {
       const d = b.dataset;
+      const targetCourse = (window._adminCourses || []).find(x => x.id === +id) || {};
+      let subs = [];
+      try { subs = typeof targetCourse.subjects === 'string' ? JSON.parse(targetCourse.subjects || '[]') : (targetCourse.subjects || []); } catch (_) {}
+      const subLines = subs.map(s => s.name || s).join('\n');
+
       showModal(`✏️ Edit Course: ${d.code} - ${d.name}`, `
         <form id="editCourseModalForm">
           <div class="row">
@@ -1060,6 +1086,10 @@ V.addEventListener('click', (e) => {
                 <option value="0" ${d.active === '0' ? 'selected' : ''}>Inactive / Archived</option>
               </select>
             </div>
+            <div style="grid-column: 1 / -1; width:100%;">
+              <label style="font-weight:700; display:block; margin-bottom:4px;">Course Subjects (पाठ्यक्रम के विषय) – One subject per line:</label>
+              <textarea name="subjects_text" rows="4" placeholder="Enter subjects one per line..." style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:8px 12px; font-size:0.9rem;">${esc(subLines)}</textarea>
+            </div>
           </div>
           <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
             <button type="button" class="btn alt" onclick="document.getElementById('adminModalOverlay').style.display='none'">Cancel</button>
@@ -1069,6 +1099,17 @@ V.addEventListener('click', (e) => {
       `, async (formData) => {
         const payload = Object.fromEntries(formData.entries());
         payload.active = payload.active === '1';
+        if (payload.subjects_text !== undefined) {
+          const lines = String(payload.subjects_text || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+          payload.subjects = lines.map((sName, idx) => ({
+            code: `${payload.code || 'SUB'}${idx + 1}`,
+            name: sName,
+            max_theory: 70,
+            max_practical: 30,
+            total_max: 100
+          }));
+          delete payload.subjects_text;
+        }
         await api(`/api/admin/courses/${id}`, { method: 'PUT', body: payload });
         toast('Course updated successfully!');
         await views.Courses();
@@ -1240,14 +1281,11 @@ V.addEventListener('click', (e) => {
       await post(`/api/admin/users/${id}/reset-password`, { password: np });
       toast(`Password updated to: ${np}`);
     } else if (a === 'c_direct_issue') {
-      if (!confirm(`Issue official verified certificate immediately for candidate ${b.dataset.name}?`)) return;
-      const res = await post('/api/admin/certificates/direct-issue', { student_id: +id });
-      toast(`Certificate issued: ${res.cert_no}!`);
+      await openAdminCertificateIssueModal(+id, b.dataset.name);
+      return;
     } else if (a === 'm_direct_issue') {
-      const obt = ask(`Enter total marks obtained (out of 400) for candidate ${b.dataset.name}:`) || '340';
-      if (isNaN(obt) || +obt <= 0 || +obt > 400) return alert('Invalid score. Must be 1 to 400.');
-      const res = await post('/api/admin/marksheets/direct-issue', { student_id: +id, total_max: 400, total_obtained: +obt });
-      toast(`Marksheet issued: ${res.marksheet_no} (${res.percentage}% Grade ${res.grade})!`);
+      await openAdminMarksheetIssueModal(+id, b.dataset.name);
+      return;
     } else if (a === 'notice_toggle') {
       await post(`/api/admin/notices/${id}/toggle`);
       toast('Notice status updated!');
@@ -1411,10 +1449,365 @@ function showAdminCoordCertModal(cert) {
   document.body.appendChild(modal);
 }
 
+function showCourseSubjectsModal(courseId) {
+  const c = (window._adminCourses || []).find(x => x.id === courseId);
+  if (!c) return;
+  let subs = [];
+  try { subs = typeof c.subjects === 'string' ? JSON.parse(c.subjects || '[]') : (c.subjects || []); } catch (_) {}
+  
+  const existing = document.getElementById('subjectsModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'subjectsModal';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;';
+  modal.innerHTML = `
+    <div style="background:#fff; border-radius:12px; max-width:640px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
+        <h3 style="margin:0; color:#0a2a5e;">📚 Course Subjects: ${esc(c.code)} - ${esc(c.name)}</h3>
+        <button type="button" onclick="document.getElementById('subjectsModal').remove()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      <p class="muted" style="margin-top:0; font-size:0.88rem;">Total Duration: <b>${c.duration_months} Months</b> | Total Marks: <b>${c.total_marks || 100}</b></p>
+      
+      ${subs.length ? `
+        <table style="width:100%; border-collapse:collapse; font-size:0.88rem; margin-bottom:18px;">
+          <thead>
+            <tr style="background:#f8fafc; border-bottom:2px solid #cbd5e1;">
+              <th style="padding:8px; text-align:left;">#</th>
+              <th style="padding:8px; text-align:left;">Code</th>
+              <th style="padding:8px; text-align:left;">Subject Title</th>
+              <th style="padding:8px; text-align:center;">Max Th.</th>
+              <th style="padding:8px; text-align:center;">Max Pr.</th>
+              <th style="padding:8px; text-align:center;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${subs.map((s, idx) => `
+              <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:8px;">${idx + 1}</td>
+                <td style="padding:8px;"><b style="font-family:monospace; color:#0284c7;">${esc(s.code || `SUB${idx+1}`)}</b></td>
+                <td style="padding:8px; font-weight:600;">${esc(s.name || s)}</td>
+                <td style="padding:8px; text-align:center;">${s.max_theory || 70}</td>
+                <td style="padding:8px; text-align:center;">${s.max_practical || 30}</td>
+                <td style="padding:8px; text-align:center; font-weight:700; color:#0a2a5e;">${s.total_max || 100}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<p class="muted" style="padding:20px; text-align:center; background:#f8fafc; border-radius:8px;">No subjects configured for this course yet.</p>'}
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button class="btn alt sm" onclick="document.getElementById('subjectsModal').remove()">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function openAdminMarksheetIssueModal(studentId, studentName) {
+  const existing = document.getElementById('marksheetDirectModal');
+  if (existing) existing.remove();
+
+  let s = (window._currentStudents || []).find(x => x.id === studentId);
+  if (!s) {
+    const res = await api('/api/admin/students');
+    s = (res.students || []).find(x => x.id === studentId) || { id: studentId, name: studentName, course_name: 'DCA', student_code: 'PESC0001' };
+  }
+
+  if (!window._adminCourses) {
+    const cr = await api('/api/admin/courses');
+    window._adminCourses = cr.courses || [];
+  }
+  const co = (window._adminCourses || []).find(c => c.id === s.course_id) || window._adminCourses[0] || {};
+  let subs = [];
+  try { subs = typeof co.subjects === 'string' ? JSON.parse(co.subjects || '[]') : (co.subjects || []); } catch (_) {}
+  if (!subs.length) {
+    subs = [
+      { code: 'TH01', name: 'Information Technology Core Concepts', max_theory: 70, max_practical: 30, total_max: 100 },
+      { code: 'TH02', name: 'Software Applications & Productive Tools', max_theory: 70, max_practical: 30, total_max: 100 },
+      { code: 'PR01', name: 'Practical Assessment & Viva Voce', max_theory: 50, max_practical: 50, total_max: 100 }
+    ];
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'marksheetDirectModal';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; overflow-y:auto;';
+  modal.innerHTML = `
+    <div style="background:#fff; border-radius:12px; max-width:760px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.25); max-height:92vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
+        <div>
+          <h3 style="margin:0; color:#0a2a5e;">📊 Issue Official Marksheet: ${esc(s.name)}</h3>
+          <span class="muted" style="font-size:0.85rem;">Enrolment: <b>${esc(s.student_code)}</b> · Course: <b>${esc(co.name || s.course_name)}</b></span>
+        </div>
+        <button type="button" onclick="document.getElementById('marksheetDirectModal').remove()" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <form id="marksheetDirectForm">
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:18px;">
+          <label style="font-weight:700; display:block; margin-bottom:8px; color:#0f172a;">Evaluation System (मूल्यांकन प्रणाली) *</label>
+          <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:12px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+              <input type="radio" name="evaluation_type" value="yearly" checked onchange="toggleAdminPatternTerms('yearly')">
+              📅 Yearly / Annual (वार्षिक परीक्षा आधारित अंकपत्र)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+              <input type="radio" name="evaluation_type" value="semester" onchange="toggleAdminPatternTerms('semester')">
+              📚 Semester-wise (सेमेस्टर आधारित परीक्षा अंकपत्र)
+            </label>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div>
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Term / Examination Stage *</label>
+              <select name="term" id="adminTermSelect" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+                <option value="Annual">Annual Examination (वार्षिक परीक्षा)</option>
+                <option value="1st Year">1st Year (प्रथम वर्ष)</option>
+                <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
+                <option value="Final Year">Final Year (अंतिम वर्ष)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Exam Session *</label>
+              <input name="exam_session" value="${esc(s.session || '2026-27')}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+          </div>
+        </div>
+
+        <h4 style="margin:16px 0 8px; color:#0a2a5e;">Course Subjects &amp; Marks Entry:</h4>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:16px;">
+            <thead>
+              <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                <th style="padding:6px 8px; text-align:left;">Subject Title</th>
+                <th style="padding:6px 8px; text-align:center;">Max Th.</th>
+                <th style="padding:6px 8px; text-align:center;">Obt Th.</th>
+                <th style="padding:6px 8px; text-align:center;">Max Pr.</th>
+                <th style="padding:6px 8px; text-align:center;">Obt Pr.</th>
+                <th style="padding:6px 8px; text-align:center;">Total</th>
+              </tr>
+            </thead>
+            <tbody id="adminDirectSubjectsTbody">
+              ${subs.map((sub, idx) => `
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="padding:6px 8px;">
+                    <b>${esc(sub.name)}</b>
+                    <input type="hidden" name="sub_code_${idx}" value="${esc(sub.code || `SUB${idx+1}`)}">
+                    <input type="hidden" name="sub_name_${idx}" value="${esc(sub.name)}">
+                  </td>
+                  <td style="padding:6px 8px; text-align:center;">
+                    <input type="number" name="sub_max_th_${idx}" value="${sub.max_theory || 70}" style="width:50px; text-align:center; padding:4px;" readonly>
+                  </td>
+                  <td style="padding:6px 8px; text-align:center;">
+                    <input type="number" name="sub_obt_th_${idx}" value="58" min="0" max="${sub.max_theory || 70}" style="width:55px; text-align:center; padding:4px; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;" onchange="recalcAdminTotal()" required>
+                  </td>
+                  <td style="padding:6px 8px; text-align:center;">
+                    <input type="number" name="sub_max_pr_${idx}" value="${sub.max_practical || 30}" style="width:50px; text-align:center; padding:4px;" readonly>
+                  </td>
+                  <td style="padding:6px 8px; text-align:center;">
+                    <input type="number" name="sub_obt_pr_${idx}" value="26" min="0" max="${sub.max_practical || 30}" style="width:55px; text-align:center; padding:4px; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;" onchange="recalcAdminTotal()" required>
+                  </td>
+                  <td style="padding:6px 8px; text-align:center; font-weight:800; color:#0a2a5e;" id="sub_tot_preview_${idx}">
+                    84
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+            <tfoot>
+              <tr style="background:#ecfdf5; font-weight:800; border-top:2px solid #a7f3d0;">
+                <td style="padding:8px;">Total Score:</td>
+                <td colspan="4" style="padding:8px; text-align:right;" id="adminGrandTotalDisplay">Grand Total: 0 / 0 (0%)</td>
+                <td style="padding:8px; text-align:center; color:#16a34a;" id="adminGradeDisplay">Grade: A+</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+          <button type="button" class="btn alt" onclick="document.getElementById('marksheetDirectModal').remove()">Cancel</button>
+          <button type="submit" class="btn gold" style="font-weight:700;">Authorize &amp; Issue Marksheet</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  window.toggleAdminPatternTerms = (pattern) => {
+    const sel = document.getElementById('adminTermSelect');
+    if (!sel) return;
+    if (pattern === 'semester') {
+      sel.innerHTML = `
+        <option value="Semester 1">Semester 1 (1st Sem / प्रथम सेमेस्टर)</option>
+        <option value="Semester 2">Semester 2 (2nd Sem / द्वितीय सेमेस्टर)</option>
+        <option value="Semester 3">Semester 3 (3rd Sem / तृतीय सेमेस्टर)</option>
+        <option value="Semester 4">Semester 4 (4th Sem / चतुर्थ सेमेस्टर)</option>
+      `;
+    } else {
+      sel.innerHTML = `
+        <option value="Annual">Annual Examination (वार्षिक परीक्षा)</option>
+        <option value="1st Year">1st Year (प्रथम वर्ष)</option>
+        <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
+        <option value="Final Year">Final Year (अंतिम वर्ष)</option>
+      `;
+    }
+  };
+
+  window.recalcAdminTotal = () => {
+    let totMax = 0, totObt = 0;
+    subs.forEach((sub, idx) => {
+      const maxTh = +document.querySelector(`input[name="sub_max_th_${idx}"]`)?.value || 70;
+      const obtTh = +document.querySelector(`input[name="sub_obt_th_${idx}"]`)?.value || 0;
+      const maxPr = +document.querySelector(`input[name="sub_max_pr_${idx}"]`)?.value || 30;
+      const obtPr = +document.querySelector(`input[name="sub_obt_pr_${idx}"]`)?.value || 0;
+      const subTot = obtTh + obtPr;
+      const rowTotEl = document.getElementById(`sub_tot_preview_${idx}`);
+      if (rowTotEl) rowTotEl.textContent = subTot;
+      totMax += (maxTh + maxPr);
+      totObt += subTot;
+    });
+    const pct = totMax > 0 ? Math.round((totObt / totMax) * 1000) / 10 : 0;
+    const grade = pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : 'C';
+    const disp = document.getElementById('adminGrandTotalDisplay');
+    if (disp) disp.textContent = `Grand Total: ${totObt} / ${totMax} (${pct}%)`;
+    const grd = document.getElementById('adminGradeDisplay');
+    if (grd) grd.textContent = `Grade: ${grade}`;
+  };
+
+  recalcAdminTotal();
+
+  document.getElementById('marksheetDirectForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const evaluationType = fd.get('evaluation_type') || 'yearly';
+    const term = fd.get('term') || 'Annual';
+    const examSession = fd.get('exam_session') || '2026-27';
+
+    let totalMax = 0, totalObtained = 0;
+    const subjectsPayload = subs.map((sub, idx) => {
+      const maxTh = +fd.get(`sub_max_th_${idx}`) || 70;
+      const obtTh = +fd.get(`sub_obt_th_${idx}`) || 0;
+      const maxPr = +fd.get(`sub_max_pr_${idx}`) || 30;
+      const obtPr = +fd.get(`sub_obt_pr_${idx}`) || 0;
+      const sMax = maxTh + maxPr;
+      const sObt = obtTh + obtPr;
+      totalMax += sMax;
+      totalObtained += sObt;
+      return {
+        code: fd.get(`sub_code_${idx}`) || `SUB${idx+1}`,
+        name: fd.get(`sub_name_${idx}`) || sub.name,
+        max_theory: maxTh,
+        obt_theory: obtTh,
+        max_practical: maxPr,
+        obt_practical: obtPr,
+        total_max: sMax,
+        total_obt: sObt,
+        result: sObt >= Math.round(sMax * 0.33) ? 'PASS' : 'FAIL'
+      };
+    });
+
+    const res = await post('/api/admin/marksheets/direct-issue', {
+      student_id: studentId,
+      evaluation_type: evaluationType,
+      term: term,
+      exam_session: examSession,
+      subjects: subjectsPayload,
+      total_max: totalMax,
+      total_obtained: totalObtained
+    });
+
+    toast(`Official Marksheet issued: ${res.marksheet_no} (${res.percentage}% Grade ${res.grade}) [${term}]!`);
+    document.getElementById('marksheetDirectModal').remove();
+    await views.Students();
+  };
+}
+
+async function openAdminCertificateIssueModal(studentId, studentName) {
+  const existing = document.getElementById('certDirectModal');
+  if (existing) existing.remove();
+
+  let s = (window._currentStudents || []).find(x => x.id === studentId);
+  if (!s) {
+    const res = await api('/api/admin/students');
+    s = (res.students || []).find(x => x.id === studentId) || { id: studentId, name: studentName, course_name: 'DCA', student_code: 'PESC0001' };
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'certDirectModal';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;';
+  modal.innerHTML = `
+    <div style="background:#fff; border-radius:12px; max-width:560px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.25);">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
+        <div>
+          <h3 style="margin:0; color:#0a2a5e;">📜 Issue Official Certificate: ${esc(s.name)}</h3>
+          <span class="muted" style="font-size:0.85rem;">Candidate: <b>${esc(s.student_code)}</b></span>
+        </div>
+        <button type="button" onclick="document.getElementById('certDirectModal').remove()" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <form id="certDirectForm">
+        <div style="margin-bottom:16px;">
+          <label style="font-weight:700; display:block; margin-bottom:8px;">Certificate Evaluation Pattern *</label>
+          <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:12px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+              <input type="radio" name="evaluation_type" value="yearly" checked onchange="document.getElementById('adminCertTerm').value='Annual Examination / Course Completion'">
+              📅 Yearly / Annual Certificate (वार्षिक प्रमाणपत्र)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+              <input type="radio" name="evaluation_type" value="semester" onchange="document.getElementById('adminCertTerm').value='Semester 1'">
+              📚 Semester-wise Certificate (सेमेस्टर आधारित प्रमाणपत्र)
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Term / Examination Stage *</label>
+          <input name="term" id="adminCertTerm" value="Annual Examination / Course Completion" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button type="button" class="btn alt" onclick="document.getElementById('certDirectModal').remove()">Cancel</button>
+          <button type="submit" class="btn gold" style="font-weight:700;">Issue Official Certificate</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById('certDirectForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const evaluationType = fd.get('evaluation_type') || 'yearly';
+    const term = fd.get('term') || 'Annual Examination';
+
+    const res = await post('/api/admin/certificates/direct-issue', {
+      student_id: studentId,
+      evaluation_type: evaluationType,
+      term: term
+    });
+
+    toast(`Official Certificate issued: ${res.cert_no} [${term}]!`);
+    document.getElementById('certDirectModal').remove();
+    await views.Students();
+  };
+}
+
 V.addEventListener('submit', (e) => {
   e.preventDefault();
   guard(async () => {
-    if (e.target.id === 'cf') await api('/api/admin/courses', { method: 'POST', body: form(e.target) });
+    if (e.target.id === 'cf') {
+      const data = form(e.target);
+      if (data.subjects_text) {
+        const lines = String(data.subjects_text || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+        data.subjects = lines.map((sName, idx) => ({
+          code: `${data.code || 'SUB'}${idx + 1}`,
+          name: sName,
+          max_theory: 70,
+          max_practical: 30,
+          total_max: 100
+        }));
+        delete data.subjects_text;
+      }
+      await api('/api/admin/courses', { method: 'POST', body: data });
+    }
     if (e.target.id === 'kf') {
       const r = await api('/api/admin/coordinators', { method: 'POST', body: form(e.target) });
       toast(`Regional coordinator appointed successfully! Certificate: ${r.cert_no || 'Issued'}`);

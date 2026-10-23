@@ -265,18 +265,67 @@ try { rawDb.exec("ALTER TABLE users ADD COLUMN signature_url TEXT;"); } catch (_
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN director_name TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN phone TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN email TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE marksheets ADD COLUMN evaluation_type TEXT DEFAULT 'yearly';"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE marksheets ADD COLUMN term TEXT DEFAULT 'Annual';"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE certificates ADD COLUMN evaluation_type TEXT DEFAULT 'yearly';"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE certificates ADD COLUMN term TEXT DEFAULT 'Annual';"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE courses ADD COLUMN subjects TEXT DEFAULT '[]';"); } catch (_) {}
+
+// Default standard subjects for accredited courses
+const DEFAULT_COURSE_SUBJECTS = {
+  DCA: [
+    { code: 'DCA101', name: 'Information Technology & MS Windows', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'DCA102', name: 'Office Automation Tools (Word, Excel, PPT)', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'DCA103', name: 'Financial Accounting & Tally Prime GST', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'DCA104', name: 'Desktop Publishing & Graphics Fundamentals', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'DCA105', name: 'Lab Practical Assessment & Viva Voce', max_theory: 50, max_practical: 50, total_max: 100 },
+  ],
+  ADCA: [
+    { code: 'ADCA101', name: 'Computer Fundamentals & Programming in C/Python', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'ADCA102', name: 'Advanced MS Office Suite & Database Systems', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'ADCA103', name: 'Financial Accounting with Advanced GST & Payroll', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'ADCA104', name: 'Web Designing Fundamentals (HTML5, CSS3, JS)', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'ADCA105', name: 'Graphic Designing (CorelDraw, Photoshop)', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'ADCA106', name: 'Software Project Implementation & Viva Voce', max_theory: 50, max_practical: 50, total_max: 100 },
+  ],
+  TALLY: [
+    { code: 'TAL101', name: 'Basic Accounting Principles & Inventory Management', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'TAL102', name: 'Tally Prime Operations & Financial Vouchers', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'TAL103', name: 'Goods & Services Tax (GST) Computations & E-Way', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'TAL104', name: 'Payroll, TDS Compliance & Audit Reports', max_theory: 70, max_practical: 30, total_max: 100 },
+  ],
+  CCC: [
+    { code: 'CCC101', name: 'Introduction to Computer & Operating Systems', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'CCC102', name: 'Word Processing & Electronic Spreadsheets', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'CCC103', name: 'Presentation Systems & Internet / Web Technologies', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'CCC104', name: 'Digital Financial Services & Cyber Security Basics', max_theory: 70, max_practical: 30, total_max: 100 },
+  ],
+  PGDCA: [
+    { code: 'PGD101', name: 'Fundamentals of IT & Modern Operating Systems', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'PGD102', name: 'Object Oriented Programming (C++ & Java/Python)', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'PGD103', name: 'Relational Database Management Systems (SQL Server)', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'PGD104', name: 'Web Application Development & Network Security', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'PGD105', name: 'Capstone Project Development & Viva Voce', max_theory: 50, max_practical: 50, total_max: 100 },
+  ],
+  DTP: [
+    { code: 'DTP101', name: 'Design Principles & Page Layout Concepts', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'DTP102', name: 'Adobe Photoshop & Digital Image Processing', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'DTP103', name: 'CorelDraw & Vector Illustration Design', max_theory: 70, max_practical: 30, total_max: 100 },
+    { code: 'DTP104', name: 'Adobe InDesign & Pre-press Printing Technology', max_theory: 70, max_practical: 30, total_max: 100 },
+  ]
+};
+
 try {
-  rawDb.exec(`CREATE TABLE IF NOT EXISTS coordinator_certificates(
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    cert_no TEXT UNIQUE NOT NULL,
-    token TEXT UNIQUE NOT NULL,
-    state TEXT,
-    status TEXT NOT NULL DEFAULT 'Valid' CHECK(status IN ('Valid','Revoked')),
-    issued_at INTEGER NOT NULL,
-    valid_until INTEGER,
-    created_at INTEGER NOT NULL);
-  CREATE INDEX IF NOT EXISTS ix_coord_cert_user ON coordinator_certificates(user_id);`);
+  const existingCourses = rawDb.prepare('SELECT id, code, subjects FROM courses').all();
+  for (const co of existingCourses) {
+    if (!co.subjects || co.subjects === '[]' || co.subjects === 'null') {
+      const defSubs = DEFAULT_COURSE_SUBJECTS[co.code] || [
+        { code: `${co.code}101`, name: 'Core Theory & Practical Concepts', max_theory: 70, max_practical: 30, total_max: 100 },
+        { code: `${co.code}102`, name: 'Applied Laboratory Work & Project', max_theory: 50, max_practical: 50, total_max: 100 }
+      ];
+      rawDb.prepare('UPDATE courses SET subjects=? WHERE id=?').run(JSON.stringify(defSubs), co.id);
+    }
+  }
 } catch (_) {}
 
 

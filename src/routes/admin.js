@@ -136,8 +136,14 @@ router.get('/courses', (req, res) => res.json({ courses: db.prepare('SELECT * FR
 router.post('/courses', (req, res) => {
   const b = req.body, code = str(b.code, 20).toUpperCase(), name = str(b.name, 120);
   const dur = +b.duration_months, fee = Math.round(+b.fee_rupees * 100);
+  const totalMarks = +b.total_marks || 100;
+  const subjects = b.subjects ? (typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects)) : '[]';
   if (!/^[A-Z0-9-]{2,20}$/.test(code) || !name || !(dur > 0) || !(fee >= 0)) throw new HttpError(400, 'Invalid course data');
-  try { const r = db.prepare('INSERT INTO courses(code,name,duration_months,fee_paise) VALUES(?,?,?,?)').run(code, name, dur, fee); audit(req, 'course.create', 'course', r.lastInsertRowid); res.status(201).json({ id: r.lastInsertRowid }); }
+  try {
+    const r = db.prepare('INSERT INTO courses(code,name,duration_months,fee_paise,total_marks,subjects) VALUES(?,?,?,?,?,?)').run(code, name, dur, fee, totalMarks, subjects);
+    audit(req, 'course.create', 'course', r.lastInsertRowid);
+    res.status(201).json({ id: r.lastInsertRowid });
+  }
   catch (e) { if (String(e.code).startsWith('SQLITE_CONSTRAINT')) throw new HttpError(409, 'Course code exists'); throw e; }
 });
 
@@ -151,11 +157,12 @@ router.put('/courses/:id', (req, res) => {
   const code = str(b.code, 20) ? str(b.code, 20).toUpperCase() : c.code;
   const dur = b.duration_months ? +b.duration_months : c.duration_months;
   const fee = b.fee_rupees !== undefined ? Math.round(+b.fee_rupees * 100) : (b.fee_paise !== undefined ? +b.fee_paise : c.fee_paise);
-  const totalMarks = b.total_marks ? +b.total_marks : c.total_marks;
+  const totalMarks = b.total_marks ? +b.total_marks : (c.total_marks || 100);
   const active = b.active !== undefined ? (b.active ? 1 : 0) : c.active;
+  const subjects = b.subjects !== undefined ? (typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects)) : c.subjects;
 
-  db.prepare('UPDATE courses SET code=?, name=?, duration_months=?, fee_paise=?, total_marks=?, active=? WHERE id=?')
-    .run(code, name, dur, fee, totalMarks, active, cid);
+  db.prepare('UPDATE courses SET code=?, name=?, duration_months=?, fee_paise=?, total_marks=?, subjects=?, active=? WHERE id=?')
+    .run(code, name, dur, fee, totalMarks, subjects, active, cid);
 
   audit(req, 'course.update', 'course', cid, 'ok', `Updated ${code} - ${name}`);
   res.json({ ok: true, message: 'Course updated successfully' });
@@ -560,39 +567,65 @@ router.post('/students/direct-enroll', h(async (req, res) => {
 router.post('/marksheets/direct-issue', (req, res) => {
   const b = req.body;
   const studentId = +b.student_id;
-  const s = db.prepare('SELECT s.*, co.name AS course_name, c.centre_code FROM students s JOIN courses co ON co.id=s.course_id JOIN centres c ON c.id=s.centre_id WHERE s.id=?').get(studentId);
+  const s = db.prepare('SELECT s.*, co.name AS course_name, co.subjects AS course_subjects, c.centre_code FROM students s JOIN courses co ON co.id=s.course_id JOIN centres c ON c.id=s.centre_id WHERE s.id=?').get(studentId);
   if (!s) throw new HttpError(404, 'Student not found');
 
   const rollNo = str(b.roll_no, 30) || s.student_code;
   const session = str(b.exam_session, 30) || s.session || '2026';
+  const evaluationType = b.evaluation_type === 'semester' ? 'semester' : 'yearly';
+  const term = str(b.term, 50) || (evaluationType === 'semester' ? 'Semester 1' : 'Annual');
   const totalMax = +b.total_max || 400;
   const totalObt = +b.total_obtained || 320;
   const pct = Math.round((totalObt / totalMax) * 1000) / 10;
   const grade = b.grade || (pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : 'C');
   const result = b.result || 'PASS';
-  const subjects = b.subjects || JSON.stringify([
-    { code: 'TH01', name: 'Theory Paper 1', max: 100, obt: Math.round(totalObt * 0.25) },
-    { code: 'TH02', name: 'Theory Paper 2', max: 100, obt: Math.round(totalObt * 0.25) },
-    { code: 'PR01', name: 'Practical Assessment', max: 100, obt: Math.round(totalObt * 0.25) },
-    { code: 'PR02', name: 'Viva & Project Work', max: 100, obt: Math.round(totalObt * 0.25) }
-  ]);
+
+  let subjects = b.subjects;
+  if (!subjects) {
+    try {
+      const parsed = JSON.parse(s.course_subjects || '[]');
+      if (parsed.length) {
+        const perSub = Math.round(totalObt / parsed.length);
+        subjects = parsed.map(sub => ({
+          code: sub.code,
+          name: sub.name,
+          max_theory: sub.max_theory || 70,
+          obt_theory: Math.round(perSub * 0.7),
+          max_practical: sub.max_practical || 30,
+          obt_practical: Math.round(perSub * 0.3),
+          total_max: sub.total_max || 100,
+          total_obt: perSub
+        }));
+      }
+    } catch (_) {}
+  }
+  if (!subjects) {
+    subjects = [
+      { code: 'TH01', name: 'Theory Paper 1', max: 100, obt: Math.round(totalObt * 0.25) },
+      { code: 'TH02', name: 'Theory Paper 2', max: 100, obt: Math.round(totalObt * 0.25) },
+      { code: 'PR01', name: 'Practical Assessment', max: 100, obt: Math.round(totalObt * 0.25) },
+      { code: 'PR02', name: 'Viva & Project Work', max: 100, obt: Math.round(totalObt * 0.25) }
+    ];
+  }
 
   const year = new Date().getFullYear();
   const mNum = counter('marksheet:' + year);
   const marksheetNo = `PESC/MRK/${year}/${String(mNum).padStart(6, '0')}`;
   const token = rand(32);
 
-  const r = db.prepare(`INSERT INTO marksheets(marksheet_no,token,student_id,centre_id,course_id,exam_session,roll_no,subjects,total_max,total_obtained,percentage,grade,result,status,issue_date,decided_by,created_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'Approved',?,?,?)`)
-    .run(marksheetNo, token, s.id, s.centre_id, s.course_id, session, rollNo, typeof subjects === 'string' ? subjects : JSON.stringify(subjects), totalMax, totalObt, pct, grade, result, now(), req.user.id, now());
+  const r = db.prepare(`INSERT INTO marksheets(marksheet_no,token,student_id,centre_id,course_id,exam_session,roll_no,subjects,total_max,total_obtained,percentage,grade,result,status,issue_date,decided_by,evaluation_type,term,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'Approved',?,?,?,?,?)`)
+    .run(marksheetNo, token, s.id, s.centre_id, s.course_id, session, rollNo, typeof subjects === 'string' ? subjects : JSON.stringify(subjects), totalMax, totalObt, pct, grade, result, now(), req.user.id, evaluationType, term, now());
 
   audit(req, 'marksheet.direct_issue', 'marksheet', r.lastInsertRowid, 'ok', marksheetNo);
-  res.status(201).json({ id: r.lastInsertRowid, marksheet_no: marksheetNo, token, percentage: pct, grade });
+  res.status(201).json({ id: r.lastInsertRowid, marksheet_no: marksheetNo, token, percentage: pct, grade, evaluation_type: evaluationType, term });
 });
 
 // Direct Certificate Generation by Admin
 router.post('/certificates/direct-issue', (req, res) => {
   const studentId = +req.body.student_id;
+  const evaluationType = req.body.evaluation_type === 'semester' ? 'semester' : 'yearly';
+  const term = str(req.body.term, 50) || (evaluationType === 'semester' ? 'Semester 1' : 'Annual');
   const s = db.prepare('SELECT * FROM students WHERE id=?').get(studentId);
   if (!s) throw new HttpError(404, 'Student not found');
 
@@ -601,12 +634,12 @@ router.post('/certificates/direct-issue', (req, res) => {
   const certNo = `PESC/${year}/${String(cNum).padStart(6, '0')}`;
   const token = rand(32);
 
-  const r = db.prepare(`INSERT INTO certificates(cert_no,token,student_id,centre_id,course_id,status,issued_at,decided_by,created_at)
-    VALUES(?,?,?,?,?,'Valid',?,?,?)`)
-    .run(certNo, token, s.id, s.centre_id, s.course_id, now(), req.user.id, now());
+  const r = db.prepare(`INSERT INTO certificates(cert_no,token,student_id,centre_id,course_id,status,issued_at,decided_by,evaluation_type,term,created_at)
+    VALUES(?,?,?,?,?,'Valid',?,?,?,?,?)`)
+    .run(certNo, token, s.id, s.centre_id, s.course_id, now(), req.user.id, evaluationType, term, now());
 
   audit(req, 'certificate.direct_issue', 'certificate', r.lastInsertRowid, 'ok', certNo);
-  res.status(201).json({ id: r.lastInsertRowid, cert_no: certNo, token });
+  res.status(201).json({ id: r.lastInsertRowid, cert_no: certNo, token, evaluation_type: evaluationType, term });
 });
 
 // Edit Marksheet scores/details

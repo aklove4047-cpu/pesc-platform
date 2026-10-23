@@ -852,6 +852,8 @@ export default {
       return jsonResponse({
         status: cert.status,
         type: 'Certificate',
+        evaluation_type: cert.evaluation_type || 'yearly',
+        term: cert.term || (cert.evaluation_type === 'semester' ? 'Semester 1' : 'Annual'),
         certificate_no: cert.cert_no,
         token: cert.token,
         holder: student.name || 'Candidate',
@@ -900,6 +902,8 @@ export default {
       return jsonResponse({
         status: mrk.status || 'Approved',
         type: 'Marksheet',
+        evaluation_type: mrk.evaluation_type || 'yearly',
+        term: mrk.term || (mrk.evaluation_type === 'semester' ? 'Semester 1' : 'Annual'),
         marksheet_no: mrk.marksheet_no,
         token: mrk.token,
         holder: student.name || 'Candidate',
@@ -1272,7 +1276,177 @@ export default {
       }
 
       if (path === '/api/admin/courses') {
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            const nextId = store.courses.length + 1;
+            const code = String(body.code || '').trim().toUpperCase();
+            const name = String(body.name || '').trim();
+            const dur = +body.duration_months || 6;
+            const fee = Math.round((+body.fee_rupees || 5500) * 100);
+            const totalMarks = +body.total_marks || 100;
+            let subjects = body.subjects;
+            if (typeof subjects === 'object') subjects = JSON.stringify(subjects);
+            else if (!subjects) subjects = '[]';
+            const newCourse = {
+              id: nextId,
+              code,
+              name,
+              duration_months: dur,
+              fee_paise: fee,
+              total_marks: totalMarks,
+              pass_marks: 33,
+              subjects,
+              active: 1
+            };
+            store.courses.push(newCourse);
+            await persistToKV(env, 'courses', store.courses);
+            return jsonResponse({ ok: true, id: newCourse.id, course: newCourse }, 201);
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
         return jsonResponse({ courses: store.courses });
+      }
+
+      if (path.match(/\/api\/admin\/courses\/\d+$/) && (request.method === 'PUT' || request.method === 'POST')) {
+        try {
+          const cId = +path.split('/')[4];
+          const target = store.courses.find(c => c.id === cId);
+          if (!target) return jsonResponse({ error: 'Course not found' }, 404);
+          const body = await request.json();
+          if (body.code) target.code = String(body.code).trim().toUpperCase();
+          if (body.name) target.name = String(body.name).trim();
+          if (body.duration_months) target.duration_months = +body.duration_months;
+          if (body.fee_rupees !== undefined) target.fee_paise = Math.round(+body.fee_rupees * 100);
+          else if (body.fee_paise !== undefined) target.fee_paise = +body.fee_paise;
+          if (body.total_marks !== undefined) target.total_marks = +body.total_marks;
+          if (body.active !== undefined) target.active = body.active ? 1 : 0;
+          if (body.subjects !== undefined) {
+            target.subjects = typeof body.subjects === 'object' ? JSON.stringify(body.subjects) : String(body.subjects);
+          }
+          await persistToKV(env, 'courses', store.courses);
+          return jsonResponse({ ok: true, message: 'Course updated successfully!', course: target });
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
+      }
+
+      if (path === '/api/admin/marksheets/direct-issue' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const studentId = +body.student_id;
+          const s = store.students.find(x => x.id === studentId);
+          if (!s) return jsonResponse({ error: 'Student not found' }, 404);
+          const co = store.courses.find(x => x.id === s.course_id) || store.courses[0];
+          const ce = store.centres.find(x => x.id === s.centre_id) || store.centres[0];
+          const totalMax = +body.total_max || 400;
+          const totalObt = +body.total_obtained || 320;
+          const pct = Math.round((totalObt / totalMax) * 1000) / 10;
+          const grade = body.grade || (pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : 'C');
+          const evaluationType = body.evaluation_type === 'semester' ? 'semester' : 'yearly';
+          const term = String(body.term || (evaluationType === 'semester' ? 'Semester 1' : 'Annual')).trim();
+          const year = new Date().getFullYear();
+          const nextId = store.marksheets.length + 1;
+          const marksheetNo = `PESC/MRK/${year}/${String(nextId).padStart(6, '0')}`;
+          const token = 'mrk-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          let subjects = body.subjects;
+          if (!subjects) {
+            try {
+              const parsed = JSON.parse(co.subjects || '[]');
+              if (parsed.length) {
+                const per = Math.round(totalObt / parsed.length);
+                subjects = parsed.map(sub => ({
+                  code: sub.code,
+                  name: sub.name,
+                  max_theory: sub.max_theory || 70,
+                  obt_theory: Math.round(per * 0.7),
+                  max_practical: sub.max_practical || 30,
+                  obt_practical: Math.round(per * 0.3),
+                  total_max: sub.total_max || 100,
+                  total_obt: per
+                }));
+              }
+            } catch (_) {}
+          }
+          if (!subjects) {
+            subjects = [
+              { code: 'TH01', name: 'Theory Paper 1', max: 100, obt: Math.round(totalObt * 0.25) },
+              { code: 'TH02', name: 'Theory Paper 2', max: 100, obt: Math.round(totalObt * 0.25) },
+              { code: 'PR01', name: 'Practical Assessment', max: 100, obt: Math.round(totalObt * 0.25) },
+              { code: 'PR02', name: 'Viva & Project Work', max: 100, obt: Math.round(totalObt * 0.25) }
+            ];
+          }
+          const newMrk = {
+            id: nextId,
+            marksheet_no: marksheetNo,
+            token,
+            student_id: s.id,
+            student_name: s.name,
+            centre_id: s.centre_id,
+            centre_name: ce.name,
+            centre_code: ce.centre_code,
+            course_id: s.course_id,
+            course_name: co.name,
+            course_code: co.code,
+            exam_session: body.exam_session || s.session || '2026-27',
+            roll_no: body.roll_no || s.roll_no || s.student_code,
+            subjects: typeof subjects === 'string' ? subjects : JSON.stringify(subjects),
+            total_max: totalMax,
+            total_obtained: totalObt,
+            percentage: pct,
+            grade,
+            result: 'PASS',
+            status: 'Approved',
+            evaluation_type: evaluationType,
+            term,
+            issue_date: Date.now(),
+            created_at: Date.now()
+          };
+          store.marksheets.push(newMrk);
+          await persistToKV(env, 'marksheets', store.marksheets);
+          return jsonResponse({ id: newMrk.id, marksheet_no: marksheetNo, token, percentage: pct, grade, evaluation_type: evaluationType, term }, 201);
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
+      }
+
+      if (path === '/api/admin/certificates/direct-issue' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const studentId = +body.student_id;
+          const s = store.students.find(x => x.id === studentId);
+          if (!s) return jsonResponse({ error: 'Student not found' }, 404);
+          const ce = store.centres.find(x => x.id === s.centre_id) || store.centres[0];
+          const co = store.courses.find(x => x.id === s.course_id) || store.courses[0];
+          const evaluationType = body.evaluation_type === 'semester' ? 'semester' : 'yearly';
+          const term = String(body.term || (evaluationType === 'semester' ? 'Semester 1' : 'Annual')).trim();
+          const year = new Date().getFullYear();
+          const nextId = store.certificates.length + 1;
+          const certNo = `PESC/${year}/${String(nextId).padStart(6, '0')}`;
+          const token = 'cert-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          const newCert = {
+            id: nextId,
+            cert_no: certNo,
+            token,
+            student_id: s.id,
+            student_name: s.name,
+            centre_id: s.centre_id,
+            centre_name: ce.name,
+            course_id: s.course_id,
+            course_name: co.name,
+            status: 'Valid',
+            evaluation_type: evaluationType,
+            term,
+            issued_at: Date.now(),
+            created_at: Date.now()
+          };
+          store.certificates.push(newCert);
+          await persistToKV(env, 'certificates', store.certificates);
+          return jsonResponse({ id: newCert.id, cert_no: certNo, token, evaluation_type: evaluationType, term }, 201);
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
       }
 
       if (path === '/api/admin/coordinators') {
@@ -1830,91 +2004,54 @@ export default {
       }
 
       if (path === '/api/centre/courses') {
-        if (!Array.isArray(c.courses_list) || !c.courses_list.length) {
-          c.courses_list = store.courses.map(co => ({
+        if (!c.course_prices) c.course_prices = {};
+        const centreCourses = store.courses.filter(co => co.active !== 0).map(co => {
+          const sysFeePaise = co.fee_paise || 550000;
+          const sellFeePaise = c.course_prices[co.id] !== undefined ? c.course_prices[co.id] : (sysFeePaise * 1.5);
+          return {
             id: co.id,
             code: co.code,
             name: co.name,
             duration_months: co.duration_months || 6,
-            fee_rupees: Math.round((co.selling_price_paise || 800000) / 100),
-            selling_price_paise: co.selling_price_paise || 800000,
-            system_fee_paise: co.system_fee_paise || 50000,
-            active: co.active !== 0,
+            total_marks: co.total_marks || 100,
+            subjects: co.subjects || '[]',
+            system_fee_paise: sysFeePaise,
+            selling_price_paise: sellFeePaise,
+            fee_rupees: Math.round(sellFeePaise / 100),
+            active: true,
             description: co.description || ''
-          }));
-        }
+          };
+        });
 
         if (request.method === 'POST') {
-          try {
-            const body = await request.json();
-            const maxId = c.courses_list.reduce((m, x) => Math.max(m, x.id || 0), 100);
-            const feeRupees = +body.fee_rupees || +body.fee || +body.selling_price_rupees || 6000;
-            const newCourse = {
-              id: maxId + 1,
-              code: String(body.code || 'CERT').trim().toUpperCase(),
-              name: String(body.name || 'New Certification Course').trim(),
-              duration_months: +body.duration_months || 6,
-              fee_rupees: feeRupees,
-              selling_price_paise: feeRupees * 100,
-              system_fee_paise: 50000,
-              active: true,
-              description: String(body.description || '').trim(),
-              created_at: Date.now()
-            };
-            c.courses_list.push(newCourse);
-            await persistToKV(env, 'centres', store.centres);
-            return jsonResponse({ ok: true, message: 'Course added successfully!', course: newCourse }, 201);
-          } catch (err) {
-            return jsonResponse({ error: err.message }, 400);
-          }
+          return jsonResponse({
+            error: 'Franchise centres cannot add new base courses. Courses are centrally managed by Head Office.'
+          }, 403);
         }
 
-        return jsonResponse({ courses: c.courses_list.filter(x => x.active !== false) });
+        return jsonResponse({ courses: centreCourses });
       }
 
       if (path.match(/\/api\/centre\/courses\/\d+\/price/)) {
         const courseId = +path.split('/')[4];
         const body = await request.json();
-        if (!c.courses_list) c.courses_list = [...store.courses];
-        const target = c.courses_list.find(x => x.id === courseId);
-        if (target) {
-          const fee = +body.selling_price_rupees || +body.fee_rupees || 8000;
-          target.fee_rupees = fee;
-          target.selling_price_paise = fee * 100;
-          await persistToKV(env, 'centres', store.centres);
-        }
-        return jsonResponse({ ok: true, message: 'Course fee updated successfully!' });
+        if (!c.course_prices) c.course_prices = {};
+        const feeRupees = Math.max(0, Math.round(+body.selling_price_rupees || +body.fee_rupees || 8000));
+        c.course_prices[courseId] = feeRupees * 100;
+        await persistToKV(env, 'centres', store.centres);
+        return jsonResponse({ ok: true, message: 'Student training fee updated successfully!', selling_price_paise: feeRupees * 100 });
       }
 
       if (path.match(/\/api\/centre\/courses\/\d+\/delete/) || (path.match(/\/api\/centre\/courses\/\d+$/) && request.method === 'DELETE')) {
-        const courseId = +path.split('/')[4];
-        if (!c.courses_list) c.courses_list = [...store.courses];
-        const idx = c.courses_list.findIndex(x => x.id === courseId);
-        if (idx !== -1) {
-          c.courses_list.splice(idx, 1);
-          await persistToKV(env, 'centres', store.centres);
-          return jsonResponse({ ok: true, message: 'Course deleted successfully!' });
-        }
-        return jsonResponse({ error: 'Course not found' }, 404);
+        return jsonResponse({
+          error: 'Affiliated courses are authorized by Head Office and cannot be deleted by franchise centres.'
+        }, 403);
       }
 
       if (path.match(/\/api\/centre\/courses\/\d+$/) && (request.method === 'PUT' || request.method === 'POST')) {
-        const courseId = +path.split('/')[4];
-        const body = await request.json();
-        if (!c.courses_list) c.courses_list = [...store.courses];
-        let target = c.courses_list.find(x => x.id === courseId);
-        if (!target) return jsonResponse({ error: 'Course not found' }, 404);
-        if (body.name) target.name = String(body.name).trim();
-        if (body.code) target.code = String(body.code).trim().toUpperCase();
-        if (body.duration_months) target.duration_months = +body.duration_months;
-        if (body.fee_rupees !== undefined || body.selling_price_rupees !== undefined || body.fee !== undefined) {
-          const fee = +(body.fee_rupees ?? body.selling_price_rupees ?? body.fee);
-          target.fee_rupees = fee;
-          target.selling_price_paise = fee * 100;
-        }
-        if (body.description !== undefined) target.description = String(body.description).trim();
-        await persistToKV(env, 'centres', store.centres);
-        return jsonResponse({ ok: true, message: 'Course updated successfully!', course: target });
+        return jsonResponse({
+          error: 'Base course details (code, title, duration, head office fees) cannot be edited by centres. You can only customize the student training fee.'
+        }, 403);
       }
 
       if (path === '/api/centre/wallet') {

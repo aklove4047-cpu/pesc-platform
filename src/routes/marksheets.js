@@ -41,6 +41,8 @@ const submitMarksheet = (req, res) => {
   const sid = +req.body.student_id;
   const examSession = str(req.body.exam_session, 40) || '2026';
   const rollNo = str(req.body.roll_no, 40);
+  const evaluationType = req.body.evaluation_type === 'semester' ? 'semester' : 'yearly';
+  const term = str(req.body.term, 50) || (evaluationType === 'semester' ? 'Semester 1' : 'Annual');
 
   const student = db.prepare('SELECT s.*, c.name AS course_name FROM students s JOIN courses c ON c.id=s.course_id WHERE s.id=? AND s.centre_id=?').get(sid, cid);
   if (!student) throw new HttpError(404, 'Student not found in this centre');
@@ -91,17 +93,17 @@ const submitMarksheet = (req, res) => {
       INSERT INTO marksheets(
         student_id, centre_id, course_id, exam_session, roll_no,
         subjects, total_max, total_obtained, percentage, grade, result,
-        status, requested_by, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?)
+        status, requested_by, evaluation_type, term, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, ?)
     `).run(
       student.id, cid, student.course_id, examSession, rollNo || student.student_code,
       JSON.stringify(sanitizedSubjects), totalMax, totalObtained, percentage, grade, result,
-      req.user.id, now()
+      req.user.id, evaluationType, term, now()
     ).lastInsertRowid;
   })();
 
   audit(req, 'marksheet.submit', 'marksheet', rowId);
-  res.status(201).json({ id: rowId, total_max: totalMax, total_obtained: totalObtained, percentage, grade, result });
+  res.status(201).json({ id: rowId, total_max: totalMax, total_obtained: totalObtained, percentage, grade, result, evaluation_type: evaluationType, term });
 };
 
 router.post('/submit', requireRole('centre_owner', 'centre_staff'), submitMarksheet);
@@ -206,10 +208,12 @@ router.get('/:id/pdf', requireAuth, h(async (req, res) => {
     .text('Website: www.pescouncil.in  |  Official Academic Record', 20, 66, { align: 'center', width: W - 40 });
 
   // Document Title Bar
-  doc.rect(40, 105, W - 80, 24).fill('#f1f5f9');
-  doc.rect(40, 105, W - 80, 24).lineWidth(1).stroke('#cbd5e1');
-  doc.fillColor('#0a2a5e').fontSize(12).font('Helvetica-Bold')
-    .text('OFFICIAL STATEMENT OF MARKS', 40, 111, { align: 'center', width: W - 80 });
+  const isSem = m.evaluation_type === 'semester';
+  const mrkTitle = isSem ? 'SEMESTER EXAMINATION STATEMENT OF MARKS' : 'ANNUAL EXAMINATION STATEMENT OF MARKS';
+  doc.rect(40, 105, W - 80, 24).fill(isSem ? '#e0f2fe' : '#f1f5f9');
+  doc.rect(40, 105, W - 80, 24).lineWidth(1).stroke(isSem ? '#0284c7' : '#cbd5e1');
+  doc.fillColor(isSem ? '#0369a1' : '#0a2a5e').fontSize(12).font('Helvetica-Bold')
+    .text(mrkTitle, 40, 111, { align: 'center', width: W - 80 });
 
   // Candidate Information Box
   let y = 140;
@@ -228,8 +232,8 @@ router.get('/:id/pdf', requireAuth, h(async (req, res) => {
     .font('Helvetica').text(m.student_code, leftX + 90, y + 42);
   doc.font('Helvetica-Bold').text('Roll Number:', leftX, y + 58)
     .font('Helvetica').text(m.roll_no || m.student_code, leftX + 90, y + 58);
-  doc.font('Helvetica-Bold').text('Exam Session:', leftX, y + 74)
-    .font('Helvetica').text(m.exam_session, leftX + 90, y + 74);
+  doc.font('Helvetica-Bold').text(isSem ? 'Semester / Term:' : 'Exam Session:', leftX, y + 74)
+    .font('Helvetica').text(isSem ? `${m.term || 'Semester 1'} (${m.exam_session})` : `${m.term || 'Annual'} (${m.exam_session})`, leftX + 90, y + 74);
 
   doc.font('Helvetica-Bold').text('Marksheet No:', midX, y + 10)
     .font('Helvetica').fillColor('#0a2a5e').text(m.marksheet_no, midX + 85, y + 10).fillColor('#1e293b');
