@@ -870,8 +870,8 @@ export default {
         director_photo: dPhoto,
         validity: 'Lifetime Validity / Session 2026-27',
         session: student.session || '2026-27',
-        run_by: 'Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)',
-        registration: 'Ministry of Micro, Small and Medium Enterprises of India (MSME), Govt. of NCT Delhi, NITI Aayog Recognized, ISO with IAF ISO 9001:2015',
+        run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
+        registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
         coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
         head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi',
         issued_on: new Date(cert.issued_at || cert.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -920,8 +920,8 @@ export default {
         director_name: dName,
         director_photo: dPhoto,
         validity: 'Lifetime Validity / Session 2026-27',
-        run_by: 'Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)',
-        registration: 'Ministry of Micro, Small and Medium Enterprises of India (MSME), Govt. of NCT Delhi, NITI Aayog Recognized, ISO with IAF ISO 9001:2015',
+        run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
+        registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
         coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
         head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi',
         total_obtained: mrk.total_obtained,
@@ -2337,8 +2337,8 @@ export default {
             director_name: cTarget.director_name || 'Dr. Ramesh Kumar',
             director_photo: cTarget.director_photo || cTarget.photo_url || '',
             validity: 'Lifetime Validity / Session 2026-27',
-            run_by: 'Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)',
-            registration: 'Ministry of Micro, Small and Medium Enterprises of India (MSME), Govt. of NCT Delhi, NITI Aayog Recognized, ISO with IAF ISO 9001:2015',
+            run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
+            registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
             coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
             head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi'
           };
@@ -2357,8 +2357,8 @@ export default {
             director_name: cTarget.director_name || 'Dr. Ramesh Kumar',
             director_photo: cTarget.director_photo || cTarget.photo_url || '',
             validity: 'Lifetime Validity / Session 2026-27',
-            run_by: 'Purvanchal Shiksha Parishad (पूर्वांचल शिक्षा परिषद द्वारा संचालित)',
-            registration: 'Ministry of Micro, Small and Medium Enterprises of India (MSME), Govt. of NCT Delhi, NITI Aayog Recognized, ISO with IAF ISO 9001:2015',
+            run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
+            registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
             coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
             head_office: 'Head Office, Purvanchal Education & Skill Council, New Delhi'
           };

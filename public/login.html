@@ -101,18 +101,7 @@
       pwToggle.textContent = isPw ? '🙈' : '👁️';
     };
 
-    // Auto-redirect if already logged in
-    (async () => {
-      try {
-        const me = await api('/api/auth/me');
-        if (me && me.user) {
-          if (['super_admin', 'admin'].includes(me.user.role)) window.location.replace('/admin');
-          else if (me.user.role === 'coordinator') window.location.replace('/coordinator');
-          else if (me.user.role === 'student') window.location.replace('/student');
-          else window.location.replace('/portal');
-        }
-      } catch (_) {}
-    })();
+    // No automatic redirect on login page load - user must explicitly click Sign In button
 
     async function handleLogin(e) {
       if (e) {

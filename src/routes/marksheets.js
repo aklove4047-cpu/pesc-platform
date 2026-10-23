@@ -199,13 +199,16 @@ router.get('/:id/pdf', requireAuth, h(async (req, res) => {
   doc.rect(19, 19, W - 38, H - 38).lineWidth(0.8).stroke('#d4af37');
 
   // Header Banner
-  doc.rect(20, 20, W - 40, 75).fill('#0a2a5e');
-  doc.fillColor('#ffffff').fontSize(18).font('Helvetica-Bold')
-    .text('PURVANCHAL EDUCATION & SKILL COUNCIL', 20, 30, { align: 'center', width: W - 40 });
-  doc.fontSize(9).font('Helvetica')
+  doc.rect(20, 20, W - 40, 85).fill('#0a2a5e');
+  doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold')
+    .text('PURVANCHAL EDUCATION AND SKILL COUNCIL', 20, 26, { align: 'center', width: W - 40 });
+  doc.fontSize(9.5).font('Helvetica-Bold')
+    .fillColor('#fcd34d')
+    .text('RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD', 20, 45, { align: 'center', width: W - 40 });
+  doc.fontSize(7.8).font('Helvetica')
     .fillColor('#e0e7ff')
-    .text('An Autonomous Skill Development & Vocational Training Council (Govt. Regd.)', 20, 52, { align: 'center', width: W - 40 })
-    .text('Website: www.pescouncil.in  |  Official Academic Record', 20, 66, { align: 'center', width: W - 40 });
+    .text('REGISTERED UNDER INDIAN TRUST ACT  ||  NITI AAYOG (NGO DARPAN), GOVT. OF INDIA', 20, 59, { align: 'center', width: W - 40 })
+    .text('AN ISO 9001:2015 CERTIFIED COUNCIL  ||  MSME REGISTERED ORGANISATION  ||  https://pescouncil.in', 20, 72, { align: 'center', width: W - 40 });
 
   // Document Title Bar
   const isSem = m.evaluation_type === 'semester';
