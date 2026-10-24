@@ -481,8 +481,12 @@ function getOrCreateWorkerCoordCert(userId) {
 
 const DATA_VERSION = 'v2_clean_2026';
 let kvLoaded = false;
-async function syncFromKV(env) {
-  if (!env || !env.PESC_KV || kvLoaded) return;
+let lastKvSync = 0;
+
+async function syncFromKV(env, force = false) {
+  if (!env || !env.PESC_KV) return;
+  const now = Date.now();
+  if (!force && kvLoaded && (now - lastKvSync < 5000)) return;
   try {
     const currentVersion = await env.PESC_KV.get('data_version');
     if (currentVersion !== DATA_VERSION) {
@@ -504,6 +508,7 @@ async function syncFromKV(env) {
       store.marksheets = [];
       store.coordinator_certificates = [];
       kvLoaded = true;
+      lastKvSync = now;
       return;
     }
 
@@ -550,6 +555,7 @@ async function syncFromKV(env) {
       store.users = u;
     }
     kvLoaded = true;
+    lastKvSync = now;
   } catch (_) {}
 }
 
