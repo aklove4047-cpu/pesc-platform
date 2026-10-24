@@ -29,6 +29,30 @@ const store = {
       created_at: Date.now() - 30 * 864e5,
     }
   ],
+  site_settings: {
+    logo_url: '',
+    council_title: 'pescouncil.in',
+    hindi_title: 'पूर्वांचल शिक्षा एवं कौशल परिषद',
+    notice_text: '• Admissions open for DCA / PGDCA session 2026-27\n• Last date to apply 30 November 2026\n• For queries contact: info@pescouncil.in | +91 542-1234567',
+    show_notice: true,
+    show_verify: true,
+    show_coordinators: true,
+    show_centres: true,
+    show_students: true,
+    show_franchise_btn: true
+  },
+  notices: [
+    {
+      id: 1,
+      title: 'Admissions Open for Session 2026-27',
+      category: 'Admission',
+      content: 'Autonomous Skill and Vocational Diploma Admissions are officially ongoing across all affiliated study centres.',
+      target: 'all',
+      pinned: 1,
+      active: 1,
+      created_at: Date.now() - 5 * 864e5
+    }
+  ],
 };
 
 // Comprehensive Accredited Course Curriculum: Yearly-Wise & Semester-Wise Distinct Subjects
@@ -471,13 +495,16 @@ let kvLoaded = false;
 async function syncFromKV(env) {
   if (!env || !env.PESC_KV || kvLoaded) return;
   try {
-    const [c, a, s, u, certs, mrks] = await Promise.all([
+    const [c, a, s, u, certs, mrks, courses, settings, notices] = await Promise.all([
       env.PESC_KV.get('centres', 'json'),
       env.PESC_KV.get('applications', 'json'),
       env.PESC_KV.get('students', 'json'),
       env.PESC_KV.get('users', 'json'),
       env.PESC_KV.get('certificates', 'json'),
       env.PESC_KV.get('marksheets', 'json'),
+      env.PESC_KV.get('courses', 'json'),
+      env.PESC_KV.get('site_settings', 'json'),
+      env.PESC_KV.get('notices', 'json'),
     ]);
     if (Array.isArray(c) && c.length) {
       c.forEach(item => {
@@ -501,6 +528,15 @@ async function syncFromKV(env) {
     }
     if (Array.isArray(mrks)) {
       store.marksheets = mrks;
+    }
+    if (Array.isArray(courses) && courses.length) {
+      store.courses = courses;
+    }
+    if (settings && typeof settings === 'object') {
+      store.site_settings = Object.assign(store.site_settings, settings);
+    }
+    if (Array.isArray(notices) && notices.length) {
+      store.notices = notices;
     }
     if (Array.isArray(u) && u.length) {
       u.forEach(item => {
@@ -998,6 +1034,10 @@ export default {
 
     // 5. REST APIs
     // --- Public APIs ---
+    if (path === '/api/public/settings') {
+      return jsonResponse({ ok: true, settings: store.site_settings });
+    }
+
     if (path === '/api/public/centres') {
       const active = store.centres.filter(c => c.status === 'active').map(c => {
         let photo = c.center_photo || c.photo_url;
@@ -1515,6 +1555,30 @@ export default {
         });
       }
 
+      if (path === '/api/admin/site-settings') {
+        if (request.method === 'POST' || request.method === 'PUT') {
+          try {
+            const body = await request.json().catch(() => ({}));
+            if (body.logo_url !== undefined) store.site_settings.logo_url = String(body.logo_url || '').trim();
+            if (body.council_title !== undefined) store.site_settings.council_title = String(body.council_title || '').trim();
+            if (body.hindi_title !== undefined) store.site_settings.hindi_title = String(body.hindi_title || '').trim();
+            if (body.notice_text !== undefined) store.site_settings.notice_text = String(body.notice_text || '').trim();
+            if (body.show_notice !== undefined) store.site_settings.show_notice = Boolean(body.show_notice);
+            if (body.show_verify !== undefined) store.site_settings.show_verify = Boolean(body.show_verify);
+            if (body.show_coordinators !== undefined) store.site_settings.show_coordinators = Boolean(body.show_coordinators);
+            if (body.show_centres !== undefined) store.site_settings.show_centres = Boolean(body.show_centres);
+            if (body.show_students !== undefined) store.site_settings.show_students = Boolean(body.show_students);
+            if (body.show_franchise_btn !== undefined) store.site_settings.show_franchise_btn = Boolean(body.show_franchise_btn);
+
+            await persistToKV(env, 'site_settings', store.site_settings);
+            return jsonResponse({ ok: true, message: 'Website branding & content controls updated successfully!', settings: store.site_settings });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+        return jsonResponse({ ok: true, settings: store.site_settings });
+      }
+
       if (path === '/api/admin/centres') {
         const enriched = store.centres.map(c => {
           const stus = store.students.filter(s => s.centre_id === c.id);
@@ -1826,6 +1890,16 @@ export default {
         }
       }
 
+      if (path.match(/\/api\/admin\/courses\/\d+$/) && request.method === 'DELETE') {
+        const cId = +path.split('/')[4];
+        const target = store.courses.find(c => c.id === cId);
+        if (!target) return jsonResponse({ error: 'Course not found' }, 404);
+        target.active = 0;
+        store.courses = store.courses.filter(c => c.id !== cId);
+        await persistToKV(env, 'courses', store.courses);
+        return jsonResponse({ ok: true, message: `Course ${target.code} removed successfully!` });
+      }
+
       if (path === '/api/admin/marksheets/direct-issue' && request.method === 'POST') {
         try {
           const body = await request.json();
@@ -1968,13 +2042,21 @@ export default {
               id: nextId,
               name: String(body.name || 'Regional Coordinator').trim(),
               email: String(body.email || '').trim().toLowerCase(),
+              mobile: String(body.mobile || '').trim(),
+              address: String(body.address || '').trim(),
+              district: String(body.district || '').trim(),
               state: String(body.state || 'Uttar Pradesh').trim(),
+              pin: String(body.pin || '').trim(),
+              aadhar_no: String(body.aadhar_no || '').trim(),
+              qualification: String(body.qualification || '').trim(),
+              territory: String(body.territory || body.state || 'All Assigned Territories').trim(),
+              photo_url: String(body.photo_url || '').trim() || null,
               role: 'coordinator',
               status: 'active',
               created_at: Date.now(),
             };
             store.users.push(newCoord);
-            const cert = getOrCreateWorkerCoordCert(newCoord.id);
+            const cert = getOrCreateWorkerCoordCert(newCoord.id, newCoord);
             await persistToKV(env, 'users', store.users);
             return jsonResponse({ ok: true, id: newCoord.id, cert_no: cert.cert_no }, 201);
           } catch (err) {
@@ -1983,10 +2065,10 @@ export default {
         }
         let coords = store.users.filter(u => u.role === 'coordinator');
         if (!coords.length) {
-          coords.push({ id: 2, name: 'State Coordinator', email: 'coord@pescouncil.in', state: 'Uttar Pradesh' });
+          coords.push({ id: 2, name: 'State Coordinator', email: 'coord@pescouncil.in', state: 'Uttar Pradesh', mobile: '+91 94150 12345', district: 'Gorakhpur', address: 'Regional Headquarters', qualification: 'MCA / M.Tech' });
         }
         const enrichedCoords = coords.map(c => {
-          const cert = getOrCreateWorkerCoordCert(c.id);
+          const cert = getOrCreateWorkerCoordCert(c.id, c);
           return {
             ...c,
             cert_no: cert.cert_no,
@@ -2001,17 +2083,23 @@ export default {
       if (path.startsWith('/api/admin/coordinators/') && path.endsWith('/cert')) {
         const coordId = +path.replace('/api/admin/coordinators/', '').replace('/cert', '');
         const coordUser = store.users.find(u => u.id === coordId) || store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'Vikram Singh', email: 'coord@pescouncil.in', state: 'Uttar Pradesh' };
-        const cert = getOrCreateWorkerCoordCert(coordUser.id);
+        const cert = getOrCreateWorkerCoordCert(coordUser.id, coordUser);
         return jsonResponse({
           certificate: {
             ...cert,
             name: coordUser.name,
             email: coordUser.email,
             mobile: coordUser.mobile || null,
+            address: coordUser.address || `${coordUser.district || 'Varanasi'}, ${coordUser.state || 'Uttar Pradesh'}`,
+            district: coordUser.district || 'Varanasi',
+            state: coordUser.state || cert.state || 'Uttar Pradesh',
+            pin: coordUser.pin || '221001',
+            aadhar_no: coordUser.aadhar_no || 'XXXX-XXXX-2026',
+            qualification: coordUser.qualification || 'Post Graduate / MCA',
+            territory: coordUser.territory || coordUser.state || 'All Assigned Territories',
             photo_url: coordUser.photo_url || null,
             seal_url: coordUser.seal_url || null,
             signature_url: coordUser.signature_url || null,
-            state: coordUser.state || cert.state || 'All Assigned Territories',
             verification_url: `https://${host}/verify/coordinator/${cert.token}`,
           }
         });
@@ -2026,7 +2114,47 @@ export default {
       }
 
       if (path === '/api/admin/notices') {
-        return jsonResponse({ notices: [] });
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            const nextId = (store.notices && store.notices.length) ? Math.max(...store.notices.map(n => n.id)) + 1 : 1;
+            const newNotice = {
+              id: nextId,
+              title: String(body.title || 'Announcement').trim(),
+              category: String(body.category || 'General').trim(),
+              content: String(body.content || '').trim(),
+              target: String(body.target || 'all').trim(),
+              link: String(body.link || '').trim(),
+              pinned: body.pinned ? 1 : 0,
+              active: 1,
+              created_at: Date.now()
+            };
+            store.notices = store.notices || [];
+            store.notices.unshift(newNotice);
+            await persistToKV(env, 'notices', store.notices);
+            return jsonResponse({ ok: true, id: newNotice.id, notice: newNotice }, 201);
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+        return jsonResponse({ notices: store.notices || [] });
+      }
+
+      if (path.match(/\/api\/admin\/notices\/\d+$/) && request.method === 'DELETE') {
+        const nId = +path.split('/')[4];
+        store.notices = (store.notices || []).filter(n => n.id !== nId);
+        await persistToKV(env, 'notices', store.notices);
+        return jsonResponse({ ok: true, message: 'Notice deleted successfully!' });
+      }
+
+      if (path.match(/\/api\/admin\/notices\/\d+\/toggle$/) && request.method === 'POST') {
+        const nId = +path.split('/')[4];
+        const n = (store.notices || []).find(x => x.id === nId);
+        if (n) {
+          n.active = !n.active;
+          await persistToKV(env, 'notices', store.notices);
+        }
+        return jsonResponse({ ok: true, notice: n });
       }
 
       if (path.startsWith('/api/admin/audit')) {
@@ -2219,7 +2347,113 @@ export default {
       }
 
       if (path === '/api/admin/students') {
-        return jsonResponse({ students: store.students });
+        const enriched = store.students.map(s => {
+          const ce = store.centres.find(c => c.id === s.centre_id) || store.centres[0] || { name: 'PESC Centre', centre_code: 'PESC0001' };
+          const co = store.courses.find(c => c.id === s.course_id) || store.courses[0] || { name: 'Diploma Course', code: 'DCA' };
+          return {
+            ...s,
+            centre_name: ce.name,
+            centre_code: ce.centre_code,
+            course_name: co.name,
+            course_code: co.code
+          };
+        });
+        return jsonResponse({ students: enriched });
+      }
+
+      if (path.match(/\/api\/admin\/students\/\d+\/credentials/)) {
+        const sId = +path.split('/')[4];
+        const student = store.students.find(s => s.id === sId);
+        if (!student) return jsonResponse({ error: 'Student not found' }, 404);
+        const ce = store.centres.find(c => c.id === student.centre_id) || store.centres[0] || { name: 'Council Centre', centre_code: 'PESC0001' };
+        const co = store.courses.find(c => c.id === student.course_id) || store.courses[0] || { name: 'Course' };
+        return jsonResponse({
+          ok: true,
+          credentials: {
+            student_id: student.id,
+            student_code: student.student_code,
+            roll_no: student.roll_no || student.student_code,
+            name: student.name,
+            father_name: student.father_name,
+            mobile: student.mobile,
+            email: student.email || `${student.student_code.toLowerCase()}@student.pescouncil.in`,
+            password: student.initial_password || 'Student@123',
+            centre_name: ce.name,
+            centre_code: ce.centre_code,
+            course_name: co.name,
+            portal_url: `https://${host}/student`,
+            status: student.status
+          }
+        });
+      }
+
+      if (path.match(/\/api\/admin\/students\/\d+\/set-password/) && request.method === 'POST') {
+        const sId = +path.split('/')[4];
+        const student = store.students.find(s => s.id === sId);
+        if (!student) return jsonResponse({ error: 'Student not found' }, 404);
+        const body = await request.json();
+        const newPw = String(body.password || 'Student@123').trim();
+        student.initial_password = newPw;
+        const u = store.users.find(x => x.id === student.user_id);
+        if (u) u.password_plain = newPw;
+        await Promise.all([
+          persistToKV(env, 'students', store.students),
+          persistToKV(env, 'users', store.users)
+        ]);
+        return jsonResponse({ ok: true, message: 'Password updated successfully!', password: newPw });
+      }
+
+      if (path.match(/\/api\/admin\/students\/\d+$/)) {
+        const sId = +path.split('/')[4];
+        const student = store.students.find(s => s.id === sId);
+        if (!student) return jsonResponse({ error: 'Student not found' }, 404);
+
+        if (request.method === 'GET') {
+          const ce = store.centres.find(c => c.id === student.centre_id) || store.centres[0] || { name: 'Council Centre', centre_code: 'PESC0001' };
+          const co = store.courses.find(c => c.id === student.course_id) || store.courses[0] || { name: 'Course', code: 'DCA' };
+          return jsonResponse({
+            student: {
+              ...student,
+              centre_name: ce.name,
+              centre_code: ce.centre_code,
+              course_name: co.name,
+              course_code: co.code
+            }
+          });
+        }
+
+        if (request.method === 'PUT' || request.method === 'POST') {
+          const body = await request.json();
+          if (body.name !== undefined) student.name = String(body.name).trim();
+          if (body.father_name !== undefined) student.father_name = String(body.father_name).trim();
+          if (body.mobile !== undefined) student.mobile = String(body.mobile).trim();
+          if (body.email !== undefined) student.email = String(body.email).trim().toLowerCase();
+          if (body.dob !== undefined) student.dob = String(body.dob).trim();
+          if (body.session !== undefined) student.session = String(body.session).trim();
+          if (body.course_id !== undefined) student.course_id = +body.course_id;
+          if (body.centre_id !== undefined) student.centre_id = +body.centre_id;
+          if (body.fee_total !== undefined) student.fee_total = +body.fee_total;
+          if (body.fee_paid !== undefined) student.fee_paid = +body.fee_paid;
+          if (body.status !== undefined) student.status = String(body.status).trim();
+          await persistToKV(env, 'students', store.students);
+          return jsonResponse({ ok: true, message: 'Student updated successfully!', student });
+        }
+
+        if (request.method === 'DELETE') {
+          store.students = store.students.filter(s => s.id !== sId);
+          store.certificates = store.certificates.filter(c => c.student_id !== sId);
+          store.marksheets = store.marksheets.filter(m => m.student_id !== sId);
+          if (student && student.user_id) {
+            store.users = store.users.filter(u => u.id !== student.user_id);
+          }
+          await Promise.all([
+            persistToKV(env, 'students', store.students),
+            persistToKV(env, 'certificates', store.certificates),
+            persistToKV(env, 'marksheets', store.marksheets),
+            persistToKV(env, 'users', store.users)
+          ]);
+          return jsonResponse({ ok: true, message: 'Student deleted successfully!' });
+        }
       }
 
       if (path === '/api/admin/students/clear-all' && request.method === 'POST') {
@@ -2234,24 +2468,6 @@ export default {
           persistToKV(env, 'users', store.users)
         ]);
         return jsonResponse({ ok: true, message: 'All students, certificates, and marksheets cleared successfully!' });
-      }
-
-      if (path.match(/\/api\/admin\/students\/\d+$/) && request.method === 'DELETE') {
-        const sId = +path.split('/')[4];
-        const student = store.students.find(s => s.id === sId);
-        store.students = store.students.filter(s => s.id !== sId);
-        store.certificates = store.certificates.filter(c => c.student_id !== sId);
-        store.marksheets = store.marksheets.filter(m => m.student_id !== sId);
-        if (student && student.user_id) {
-          store.users = store.users.filter(u => u.id !== student.user_id);
-        }
-        await Promise.all([
-          persistToKV(env, 'students', store.students),
-          persistToKV(env, 'certificates', store.certificates),
-          persistToKV(env, 'marksheets', store.marksheets),
-          persistToKV(env, 'users', store.users)
-        ]);
-        return jsonResponse({ ok: true, message: 'Student deleted successfully!' });
       }
 
       if (path === '/api/admin/certificates') {
@@ -2337,7 +2553,125 @@ export default {
       return jsonResponse({ certificates: store.certificates.filter(c => c.status === 'Submitted') });
     }
     if (path.startsWith('/api/reports/')) {
-      return jsonResponse({ rows: [], total: 0 });
+      const urlObj = new URL(request.url);
+      const isCsv = urlObj.searchParams.get('format') === 'csv';
+
+      if (path === '/api/reports/admissions') {
+        const rows = store.students.map(s => {
+          const ce = store.centres.find(c => c.id === s.centre_id) || { name: 'PESC Centre', centre_code: 'PESC0001' };
+          const co = store.courses.find(c => c.id === s.course_id) || { name: 'Diploma Course' };
+          return {
+            student_code: s.student_code,
+            name: s.name,
+            course_name: co.name,
+            centre_name: ce.name,
+            centre_code: ce.centre_code,
+            created_at: s.created_at || Date.now(),
+            status: s.status || 'Active'
+          };
+        });
+        if (isCsv) {
+          const csv = 'Student Code,Candidate Name,Course,Centre,Centre Code,Date,Status\n' +
+            rows.map(r => `"${r.student_code}","${r.name}","${r.course_name}","${r.centre_name}","${r.centre_code}","${new Date(r.created_at).toLocaleDateString()}","${r.status}"`).join('\n');
+          return new Response(csv, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="pesc_admissions.csv"' } });
+        }
+        return jsonResponse({ count: rows.length, admissions: rows });
+      }
+
+      if (path === '/api/reports/marksheets') {
+        const rows = store.marksheets.map(m => {
+          const s = store.students.find(x => x.id === m.student_id) || { name: 'Candidate', student_code: m.roll_no || 'STU01' };
+          const ce = store.centres.find(c => c.id === m.centre_id) || { name: 'Council Centre' };
+          const co = store.courses.find(c => c.id === m.course_id) || { name: 'Course' };
+          return {
+            marksheet_no: m.marksheet_no || 'Pending',
+            student_name: s.name,
+            student_code: s.student_code,
+            centre_name: ce.name,
+            course_name: co.name,
+            total_obtained: m.total_obtained || 0,
+            total_max: m.total_max || 100,
+            percentage: m.percentage || 0,
+            grade: m.grade || 'A',
+            result: m.result || 'PASS',
+            status: m.status || 'Approved'
+          };
+        });
+        if (isCsv) {
+          const csv = 'Marksheet No,Student Name,Roll No,Centre,Course,Obtained,Max,Percentage,Grade,Result,Status\n' +
+            rows.map(r => `"${r.marksheet_no}","${r.student_name}","${r.student_code}","${r.centre_name}","${r.course_name}",${r.total_obtained},${r.total_max},${r.percentage},"${r.grade}","${r.result}","${r.status}"`).join('\n');
+          return new Response(csv, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="pesc_marksheets.csv"' } });
+        }
+        return jsonResponse({ count: rows.length, marksheets: rows });
+      }
+
+      if (path === '/api/reports/certificates') {
+        const rows = store.certificates.map(c => {
+          const s = store.students.find(x => x.id === c.student_id) || { name: 'Candidate', student_code: 'STU01' };
+          const ce = store.centres.find(c => c.id === c.centre_id) || { name: 'Council Centre' };
+          const co = store.courses.find(c => c.id === c.course_id) || { name: 'Course' };
+          return {
+            cert_no: c.cert_no || 'Pending',
+            student_name: s.name,
+            student_code: s.student_code,
+            centre_name: ce.name,
+            course_name: co.name,
+            issued_at: c.issued_at || c.created_at || Date.now(),
+            status: c.status || 'Valid'
+          };
+        });
+        if (isCsv) {
+          const csv = 'Certificate No,Student Name,Roll No,Centre,Course,Issued Date,Status\n' +
+            rows.map(r => `"${r.cert_no}","${r.student_name}","${r.student_code}","${r.centre_name}","${r.course_name}","${new Date(r.issued_at).toLocaleDateString()}","${r.status}"`).join('\n');
+          return new Response(csv, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="pesc_certificates.csv"' } });
+        }
+        return jsonResponse({ count: rows.length, certificates: rows });
+      }
+
+      if (path === '/api/reports/centres') {
+        const rows = store.centres.map(c => {
+          const stus = store.students.filter(s => s.centre_id === c.id);
+          const certs = store.certificates.filter(x => x.centre_id === c.id);
+          const mrks = store.marksheets.filter(x => x.centre_id === c.id);
+          return {
+            centre_code: c.centre_code,
+            name: c.name,
+            owner_name: c.director_name || 'Director',
+            owner_mobile: c.phone || '+91 98765 43210',
+            total_students: stus.length,
+            valid_certs: certs.length,
+            approved_marksheets: mrks.length,
+            wallet_paise: 500000,
+            status: c.status || 'active'
+          };
+        });
+        if (isCsv) {
+          const csv = 'Centre Code,Centre Name,Director,Mobile,Total Students,Valid Certs,Approved Marksheets,Wallet (INR),Status\n' +
+            rows.map(r => `"${r.centre_code}","${r.name}","${r.owner_name}","${r.owner_mobile}",${r.total_students},${r.valid_certs},${r.approved_marksheets},${r.wallet_paise / 100},"${r.status}"`).join('\n');
+          return new Response(csv, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="pesc_centres.csv"' } });
+        }
+        return jsonResponse({ count: rows.length, centres: rows });
+      }
+
+      if (path === '/api/reports/financials') {
+        const transactions = store.centres.map((c, i) => ({
+          centre_name: c.name,
+          centre_code: c.centre_code,
+          kind: i % 2 === 0 ? 'credit' : 'debit',
+          amount_paise: i % 2 === 0 ? 500000 : 60000,
+          balance_after: 500000,
+          reference: `TXN-2026-${String(i + 1).padStart(4, '0')}`,
+          created_at: Date.now() - (i * 864e5)
+        }));
+        if (isCsv) {
+          const csv = 'Centre,Centre Code,Type,Amount (INR),Balance After (INR),Reference,Date\n' +
+            transactions.map(t => `"${t.centre_name}","${t.centre_code}","${t.kind.toUpperCase()}",${t.amount_paise / 100},${t.balance_after / 100},"${t.reference}","${new Date(t.created_at).toLocaleDateString()}"`).join('\n');
+          return new Response(csv, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="pesc_financials.csv"' } });
+        }
+        return jsonResponse({ count: transactions.length, transactions });
+      }
+
+      return jsonResponse({ count: 0, rows: [] });
     }
 
     // --- Coordinator APIs ---

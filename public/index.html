@@ -1254,8 +1254,6 @@
             body: JSON.stringify(data)
           }).then(r => r.json());
 
-          notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-size:0.85rem; font-weight:700; text-align:center;">✓ Franchise Application Submitted Successfully!<br><span style="font-size:0.78rem; font-weight:normal;">Application No: ${res.application_no}. Once approved by Head Admin, your credentials and official affiliation certificate will be delivered to ${escapeHtml(data.email)}.</span></div>`;
-          appForm.reset();
           if (photoBase64) photoBase64.value = '';
           if (photoPreview) photoPreview.innerHTML = '<span style="font-size:0.7rem; color:#94a3b8; text-align:center; padding:4px;">No Photo</span>';
         } catch (err) {
@@ -1263,6 +1261,86 @@
         }
       };
     }
+
+    // Dynamic Head Office Website Settings & Content Visibility Control
+    async function loadSiteSettings() {
+      try {
+        const res = await fetch('/api/public/settings');
+        if (!res.ok) return;
+        const data = await res.json();
+        const settings = data.settings;
+        if (!settings) return;
+
+        // 1. Logo
+        if (settings.logo_url) {
+          const navSvg = document.querySelector('.brand-logo-svg');
+          if (navSvg) {
+            navSvg.outerHTML = `<img src="${settings.logo_url}" alt="PESC Logo" class="brand-logo-svg" style="object-fit:contain; border-radius:8px;">`;
+          }
+          const footerSvg = document.querySelector('.footer-brand svg');
+          if (footerSvg) {
+            footerSvg.outerHTML = `<img src="${settings.logo_url}" alt="PESC Logo" style="width:48px; height:48px; object-fit:contain; border-radius:6px; flex-shrink:0;">`;
+          }
+        }
+
+        // 2. Titles
+        if (settings.council_title) {
+          const h1 = document.querySelector('.brand-text-box h1');
+          if (h1) h1.textContent = settings.council_title;
+        }
+        if (settings.hindi_title) {
+          const sp = document.querySelector('.brand-text-box span');
+          if (sp) sp.textContent = settings.hindi_title;
+        }
+
+        // 3. Notice Card
+        const noticeCard = document.querySelector('.notice-card');
+        if (noticeCard) {
+          if (settings.show_notice === false) {
+            noticeCard.style.display = 'none';
+          } else {
+            noticeCard.style.display = 'flex';
+            if (settings.notice_text) {
+              const textDiv = noticeCard.querySelector('.notice-text');
+              if (textDiv) {
+                const lines = settings.notice_text.split('\n').filter(Boolean);
+                textDiv.innerHTML = lines.map(l => `<div>${escapeHtml(l)}</div>`).join('');
+              }
+            }
+          }
+        }
+
+        // 4. Verification Section
+        const verifySec = document.getElementById('verify-section');
+        if (verifySec) {
+          verifySec.style.display = (settings.show_verify === false) ? 'none' : 'block';
+        }
+
+        // 5. Coordinators Row
+        const coordRow = document.getElementById('coordinatorsRow');
+        if (coordRow) {
+          coordRow.style.display = (settings.show_coordinators === false) ? 'none' : 'grid';
+        }
+
+        // 6. Affiliated Centres Section
+        const centSec = document.getElementById('centres-section');
+        if (centSec) {
+          centSec.style.display = (settings.show_centres === false) ? 'none' : 'block';
+        }
+
+        // 7. Enrolled Students Section
+        const stuSec = document.getElementById('students-section');
+        if (stuSec) {
+          stuSec.style.display = (settings.show_students === false) ? 'none' : 'block';
+        }
+
+        // 8. Franchise CTA
+        if (settings.show_franchise_btn === false) {
+          document.querySelectorAll('a[onclick*="openApplyModal"]').forEach(el => el.style.display = 'none');
+        }
+      } catch (_) {}
+    }
+    window.addEventListener('DOMContentLoaded', loadSiteSettings);
   </script>
 </body>
 </html>

@@ -9,6 +9,123 @@ function imgToBase64(file) {
   });
 }
 
+// Official PESC Council Header Builder matching User's Exact Specification
+function renderOfficialCouncilHeader(opts = {}) {
+  const studentCode = opts.studentCode || 'PESC-26-00008';
+  const rollNo = opts.rollNo || studentCode;
+  const refNo = opts.refNo || 'PESC-CERT-2026-0007';
+  const issueDate = opts.issueDate || '04-10-2026';
+  const uid = Math.random().toString(36).substring(2, 7);
+
+  return `
+    <!-- Top Hindi Title (Prominent Royal Blue) -->
+    <div style="text-align:center; margin-bottom:4px;">
+      <div style="font-size:1.65rem; font-weight:900; color:#0a48a3; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; letter-spacing:0.5px; line-height:1.2;">
+        पूर्वांचल एजुकेशन एंड स्किल काउंसिल
+      </div>
+    </div>
+
+    <!-- Council Circular Seal + 5-Line Official Accreditation Block -->
+    <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin:4px 0 6px;">
+      <!-- Circular Council Seal SVG -->
+      <div style="flex-shrink:0;">
+        <svg width="84" height="84" viewBox="0 0 100 100" style="display:block;">
+          <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#047857" stroke-width="3"/>
+          <circle cx="50" cy="50" r="43" fill="#ffffff" stroke="#d4af37" stroke-width="1.5"/>
+          <path id="txtArcTop_${uid}" d="M 20 50 A 30 30 0 1 1 80 50" fill="none" stroke="none"/>
+          <text font-size="5.2" font-weight="900" fill="#047857" font-family="'Segoe UI', Arial, sans-serif">
+            <textPath href="#txtArcTop_${uid}" startOffset="50%" text-anchor="middle">PURVANCHAL EDUCATION &amp; SKILL</textPath>
+          </text>
+          <path d="M47 24 Q50 17 53 24 Q55 30 50 33 Q45 30 47 24 Z" fill="#ef4444"/>
+          <path d="M48 26 Q50 20 52 26 Q53 30 50 31 Q47 30 48 26 Z" fill="#fbbf24"/>
+          <polygon points="48,33 52,33 51,40 49,40" fill="#b45309"/>
+          <path d="M40 33 L36 30 M60 33 L64 30 M37 39 L32 39 M63 39 L68 39" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M50 54 Q36 46 25 51 L25 64 Q36 59 50 67 Q64 59 75 64 L75 51 Q64 46 50 54 Z" fill="#ffffff" stroke="#0a2a5e" stroke-width="1.6"/>
+          <path d="M50 54 L50 67" stroke="#0a2a5e" stroke-width="1.6"/>
+          <path d="M30 55 Q38 52 46 56 M30 59 Q38 56 46 60 M54 56 Q62 52 70 55 M54 60 Q62 56 70 59" stroke="#94a3b8" stroke-width="0.8" fill="none"/>
+          <circle cx="50" cy="71" r="2.5" fill="#047857"/>
+          <rect x="24" y="76" width="52" height="15" rx="3" fill="#0a2a5e" stroke="#d4af37" stroke-width="1"/>
+          <text x="50" y="87" fill="#ffffff" font-size="9" font-weight="900" font-family="Arial, sans-serif" text-anchor="middle" letter-spacing="1.5">PESC</text>
+        </svg>
+      </div>
+
+      <!-- 5-Line Official Accreditation Block -->
+      <div style="text-align:center;">
+        <div style="font-size:1.24rem; font-weight:900; color:#047857; letter-spacing:0.5px; line-height:1.2; text-transform:uppercase;">
+          PURVANCHAL EDUCATION AND SKILL COUNCIL
+        </div>
+        <div style="font-size:0.86rem; font-weight:900; color:#000000; letter-spacing:0.4px; text-transform:uppercase; margin-top:2px;">
+          RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD
+        </div>
+        <div style="font-size:0.72rem; font-weight:900; color:#000000; text-transform:uppercase; margin-top:2px; letter-spacing:0.2px;">
+          REGISTERED UNDER INDIAN TRUST ACT &nbsp;||&nbsp; NITI AAYOG (NGO DARPAN), GOVT. OF INDIA
+        </div>
+        <div style="font-size:0.71rem; font-weight:900; color:#000000; text-transform:uppercase; margin-top:2px; letter-spacing:0.2px;">
+          AN ISO 9001:2015 CERTIFIED COUNCIL &nbsp;||&nbsp; MSME REGISTERED ORGANISATION
+        </div>
+        <div style="font-size:0.76rem; font-weight:900; color:#000000; margin-top:2px;">
+          <a href="https://pescouncil.in" target="_blank" style="color:#000000; text-decoration:none;">https://pescouncil.in</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Double Line Divider matching ======================================== -->
+    <div style="border-top:3.5px double #000000; margin:6px 0 8px; width:100%;"></div>
+
+    <!-- Two-Column Official Header Metadata -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; font-size:0.82rem; font-weight:900; color:#000000; text-align:left; line-height:1.45; margin-bottom:10px;">
+      <div>
+        <div>REGD. NO. (COUNCIL): <span style="font-family:monospace; font-weight:900;">TRUST/2025/5/IV/299</span></div>
+        <div>Student Reg. No: <span style="font-family:monospace; font-weight:900;">${esc(studentCode)}</span></div>
+        <div>Roll Number: <span style="font-family:monospace; font-weight:900;">${esc(rollNo)}</span></div>
+      </div>
+      <div style="text-align:right;">
+        <div>Ref No: <span style="font-family:monospace; font-weight:900;">${esc(refNo)}</span></div>
+        <div>Date of Issue: <span style="font-weight:900;">${esc(issueDate)}</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderOfficialCouncilFooter(opts = {}) {
+  const directorName = opts.directorName || 'Authorized Signatory';
+  const centreCode = opts.centreCode || 'PESC00001';
+  const qrUrl = opts.qrUrl || `https://pescouncil.in/verify`;
+  const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrUrl)}`;
+
+  return `
+    <!-- Signatures and QR Code Row -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:22px; padding:0 12px; text-align:center;">
+      <!-- Left: Centre Director Sign & Stamp -->
+      <div style="text-align:center; min-width:140px;">
+        <div style="height:40px; display:flex; align-items:center; justify-content:center;">
+          <span style="font-family:'Brush Script MT',cursive; font-size:1.5rem; color:#0a2a5e;">Authorized</span>
+        </div>
+        <div style="border-bottom:1.5px solid #000000; width:130px; margin:2px auto 4px;"></div>
+        <div style="font-size:0.8rem; font-weight:900; color:#000000;">Centre Director / Sign</div>
+        <div style="font-size:0.7rem; font-weight:700; color:#475569;">Study Centre (${esc(centreCode)})</div>
+      </div>
+
+      <!-- Center: Golden Hologram Seal & Security QR -->
+      <div style="text-align:center;">
+        <img src="${qrImg}" alt="Verification QR" style="width:75px; height:75px; border:1.5px solid #cbd5e1; border-radius:4px; display:block; margin:0 auto 4px;">
+        <div style="font-size:0.68rem; font-weight:900; color:#047857;">ONLINE VERIFIABLE</div>
+        <div style="font-size:0.62rem; color:#64748b; font-family:monospace;">pescouncil.in/verify</div>
+      </div>
+
+      <!-- Right: Central Council Controller of Examinations -->
+      <div style="text-align:center; min-width:160px;">
+        <div style="height:40px; display:flex; align-items:center; justify-content:center;">
+          <span style="font-family:'Brush Script MT',cursive; font-size:1.6rem; color:#047857;">Dr. R. K. Verma</span>
+        </div>
+        <div style="border-bottom:1.5px solid #000000; width:150px; margin:2px auto 4px;"></div>
+        <div style="font-size:0.8rem; font-weight:900; color:#000000;">Controller of Examinations</div>
+        <div style="font-size:0.7rem; font-weight:700; color:#475569;">Central Directorate (Gorakhpur/Lucknow)</div>
+      </div>
+    </div>
+  `;
+}
+
 const views = {
   async Dashboard() {
     const s = await api('/api/admin/stats');
@@ -454,56 +571,193 @@ const views = {
   },
 
   async Marksheets() {
-    const data = await api('/api/marksheets/pending');
-    const list = data.marksheets;
+    const [{ marksheets: issuedList }, { marksheets: pendingList }, { students }, { centres }, { courses }] = await Promise.all([
+      api('/api/admin/marksheets'),
+      api('/api/marksheets/pending'),
+      api('/api/admin/students'),
+      api('/api/admin/centres'),
+      api('/api/admin/courses'),
+    ]);
+    window._currentStudents = students;
+    window._adminCentres = centres;
+    window._adminCourses = courses;
+    window._adminMarksheets = issuedList;
+
+    const list = issuedList || [];
+    const pending = pendingList || [];
 
     V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
         <div>
-          <h2>Marksheet Approvals Queue</h2>
-          <p class="muted">Review examination scores entered by centres and authorize official statements of marks</p>
+          <h2>🎓 Examination &amp; Marksheet Issuance Console</h2>
+          <p class="muted">Authorize accredited statements of marks, evaluate semester &amp; yearly performance, and print official council marksheets</p>
         </div>
-        <span class="badge ${list.length ? 'Pending' : 'Approved'}">${list.length} Pending</span>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <span class="badge active">${list.length} Issued Marksheets</span>
+          ${pending.length ? `<span class="badge Pending">${pending.length} Pending Approvals</span>` : ''}
+          <button type="button" class="btn gold" onclick="openAdminMarksheetIssueModal()" style="font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+            ➕ Issue New Marksheet &amp; Certificate
+          </button>
+        </div>
       </div>
 
+      <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:16px 20px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+        <h4 style="margin:0 0 10px; color:#0a2a5e;">⚡ Quick Candidate Evaluation &amp; Issue:</h4>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)) 120px; gap:12px; align-items:end;">
+          <div>
+            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Filter by Centre:</label>
+            <select id="quickMarksheetCentreFilter" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+              <option value="">All Centres</option>
+              ${centres.map(c => `<option value="${c.id}">${esc(c.name)} (${esc(c.centre_code)})</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700; display:block; margin-bottom:4px;">Select Candidate:</label>
+            <select id="quickMarksheetStudentSelect" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; font-weight:600;">
+              <option value="">-- Choose Student --</option>
+              ${students.map(s => `<option value="${s.id}" data-cid="${s.centre_id}">${esc(s.name)} · ${esc(s.student_code)} (${esc(s.course_name || s.course_code || 'Course')})</option>`).join('')}
+            </select>
+          </div>
+          <button type="button" class="btn gold" id="btnLaunchQuickMarksheet" style="height:38px; font-weight:800;">
+            🚀 Evaluate &amp; Issue
+          </button>
+        </div>
+      </div>
+
+      <h3 style="margin:24px 0 12px; color:#0a2a5e;">Issued Marksheets Registry (${list.length})</h3>
       ${table([
-        ['Candidate', (r) => `<b>${esc(r.student_name)}</b><br><span class="muted">${esc(r.student_code)} · Roll: ${esc(r.roll_no)}</span>`],
-        ['Course & Centre', (r) => `<b>${esc(r.course_name)}</b><br><span class="muted">${esc(r.centre_name)} (${esc(r.centre_code)})</span>`],
-        ['Score', (r) => `<b>${r.total_obtained} / ${r.total_max}</b> (${r.percentage}%)`],
-        ['Grade', (r) => `<b>${esc(r.grade)}</b>`],
-        ['Result', (r) => badge(r.result)],
+        ['Marksheet No', (r) => `<b style="font-family:monospace; color:#0a2a5e;">${esc(r.marksheet_no || 'PESC/MRK/2026/0001')}</b><br><span class="muted">${esc(r.evaluation_type === 'semester' ? 'Semester-Wise' : 'Annual-Wise')} · ${esc(r.term || 'Annual')}</span>`],
+        ['Candidate', (r) => {
+          const stu = students.find(s => s.id === r.student_id) || { name: r.student_name || 'Candidate', student_code: r.roll_no };
+          return `<b>${esc(stu.name)}</b><br><span class="muted">Roll: <b>${esc(r.roll_no || stu.student_code)}</b></span>`;
+        }],
+        ['Course & Centre', (r) => {
+          const ce = centres.find(c => c.id === r.centre_id) || { name: 'Council Centre', centre_code: 'PESC0001' };
+          const co = courses.find(c => c.id === r.course_id) || { name: 'Diploma Course' };
+          return `<b>${esc(co.name)}</b><br><span class="muted">${esc(ce.name)} (${esc(ce.centre_code)})</span>`;
+        }],
+        ['Marks Score', (r) => `<b>${r.total_obtained} / ${r.total_max}</b><br><span style="color:#16a34a; font-weight:800;">${r.percentage}% (${esc(r.grade || 'A')})</span>`],
+        ['Result', (r) => badge(r.result || 'PASS')],
         ['Actions', (r) => `
           <div style="display:flex; gap:6px;">
-            <button class="btn sm" data-a="mapprove" data-id="${r.id}">Approve</button>
-            <button class="btn sm danger" data-a="mreject" data-id="${r.id}">Reject</button>
+            <button class="btn sm gold" data-a="view_official_mrk" data-id="${r.id}" style="display:inline-flex; align-items:center; gap:4px;">
+              👁️ View &amp; Print
+            </button>
           </div>
         `],
-      ], list, 'No marksheets pending council approval.')}
+      ], list, 'No marksheets issued yet. Use the button above to issue your first marksheet.')}
+
+      ${pending.length ? `
+        <h3 style="margin-top:32px; color:#b45309;">Centre-Submitted Marksheet Approval Queue (${pending.length})</h3>
+        ${table([
+          ['Candidate', (r) => `<b>${esc(r.student_name)}</b><br><span class="muted">${esc(r.student_code)} · Roll: ${esc(r.roll_no)}</span>`],
+          ['Course & Centre', (r) => `<b>${esc(r.course_name)}</b><br><span class="muted">${esc(r.centre_name)} (${esc(r.centre_code)})</span>`],
+          ['Score', (r) => `<b>${r.total_obtained} / ${r.total_max}</b> (${r.percentage}%)`],
+          ['Grade', (r) => `<b>${esc(r.grade)}</b>`],
+          ['Result', (r) => badge(r.result)],
+          ['Actions', (r) => `
+            <div style="display:flex; gap:6px;">
+              <button class="btn sm" data-a="mapprove" data-id="${r.id}">Approve</button>
+              <button class="btn sm danger" data-a="mreject" data-id="${r.id}">Reject</button>
+            </div>
+          `],
+        ], pending)}
+      ` : ''}
     `;
+
+    const cFilter = $('#quickMarksheetCentreFilter');
+    const sSelect = $('#quickMarksheetStudentSelect');
+    if (cFilter && sSelect) {
+      cFilter.onchange = (e) => {
+        const cid = e.target.value;
+        const filtered = cid ? students.filter(s => s.centre_id == cid) : students;
+        sSelect.innerHTML = `<option value="">-- Choose Student (${filtered.length}) --</option>` +
+          filtered.map(s => `<option value="${s.id}">${esc(s.name)} · ${esc(s.student_code)} (${esc(s.course_name || s.course_code || 'Course')})</option>`).join('');
+      };
+    }
+
+    const btnLaunch = $('#btnLaunchQuickMarksheet');
+    if (btnLaunch && sSelect) {
+      btnLaunch.onclick = () => {
+        const sid = +sSelect.value;
+        if (!sid) return alert('Please select a candidate first!');
+        const s = students.find(x => x.id === sid);
+        openAdminMarksheetIssueModal(sid, s ? s.name : '');
+      };
+    }
   },
 
   async Certificates() {
-    const { certificates } = await api('/api/certificates/pending');
+    const [{ certificates: issuedList }, { certificates: pendingList }, { students }, { centres }, { courses }] = await Promise.all([
+      api('/api/admin/certificates'),
+      api('/api/certificates/pending'),
+      api('/api/admin/students'),
+      api('/api/admin/centres'),
+      api('/api/admin/courses'),
+    ]);
+    window._currentStudents = students;
+    window._adminCentres = centres;
+    window._adminCourses = courses;
+    window._adminCertificates = issuedList;
+
+    const list = issuedList || [];
+    const pending = pendingList || [];
+
     V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
         <div>
-          <h2>Pending Certificates Queue</h2>
-          <p class="muted">Authorize course completion certificates and generate unguessable verification QR tokens</p>
+          <h2>📜 National Council Passing Certificates Registry</h2>
+          <p class="muted">Issue cryptographically verifiable Council passing certificates with golden hologram, official seal &amp; QR verification</p>
         </div>
-        <span class="badge ${certificates.length ? 'Pending' : 'Approved'}">${certificates.length} Pending</span>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <span class="badge active">${list.length} Valid Certificates</span>
+          ${pending.length ? `<span class="badge Pending">${pending.length} Pending</span>` : ''}
+          <button type="button" class="btn gold" onclick="openAdminCertificateIssueModal()" style="font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+            ➕ Issue Passing Certificate
+          </button>
+        </div>
       </div>
 
+      <h3 style="margin:20px 0 12px; color:#0a2a5e;">Issued Certificates Registry (${list.length})</h3>
       ${table([
-        ['Candidate', (r) => `<b>${esc(r.student_name)}</b><br><span class="muted">${esc(r.student_code)}</span>`],
-        ['Course', (r) => esc(r.course_name)],
-        ['Centre', (r) => `${esc(r.centre_name)} (${esc(r.centre_code)})`],
+        ['Certificate No', (r) => `<b style="font-family:monospace; color:#064e3b; font-size:0.95rem;">${esc(r.cert_no || 'PESC/2026/0001')}</b><br><span class="muted">${esc(r.evaluation_type === 'semester' ? 'Semester Completion' : 'Course Completion')} · ${esc(r.term || 'Annual')}</span>`],
+        ['Candidate', (r) => {
+          const stu = students.find(s => s.id === r.student_id) || { name: r.student_name || 'Candidate', student_code: 'PESC001' };
+          return `<b>${esc(stu.name)}</b><br><span class="muted">Reg. No: <b>${esc(stu.student_code)}</b></span>`;
+        }],
+        ['Course & Centre', (r) => {
+          const ce = centres.find(c => c.id === r.centre_id) || { name: 'Council Centre', centre_code: 'PESC0001' };
+          const co = courses.find(c => c.id === r.course_id) || { name: 'Diploma Course' };
+          return `<b>${esc(co.name)}</b><br><span class="muted">${esc(ce.name)} (${esc(ce.centre_code)})</span>`;
+        }],
+        ['Issue Date', (r) => date(r.issued_at || r.created_at)],
+        ['Status', (r) => badge(r.status || 'Valid')],
         ['Actions', (r) => `
           <div style="display:flex; gap:6px;">
-            <button class="btn sm" data-a="capprove" data-id="${r.id}">Approve &amp; Issue</button>
-            <button class="btn sm danger" data-a="creject" data-id="${r.id}">Reject</button>
+            <button class="btn sm gold" data-a="view_official_cert" data-id="${r.id}" style="display:inline-flex; align-items:center; gap:4px;">
+              📜 View &amp; Print
+            </button>
+            <a href="/verify/${r.token || ''}" target="_blank" class="btn sm alt" title="Open Public Verification Link">
+              🔍 Verify
+            </a>
           </div>
         `],
-      ], certificates, 'No pending certificates.')}
+      ], list, 'No certificates issued yet. Issue your first certificate using the button above.')}
+
+      ${pending.length ? `
+        <h3 style="margin-top:32px; color:#b45309;">Pending Certificate Applications Queue (${pending.length})</h3>
+        ${table([
+          ['Candidate', (r) => `<b>${esc(r.student_name)}</b><br><span class="muted">${esc(r.student_code)}</span>`],
+          ['Course', (r) => esc(r.course_name)],
+          ['Centre', (r) => `${esc(r.centre_name)} (${esc(r.centre_code)})`],
+          ['Actions', (r) => `
+            <div style="display:flex; gap:6px;">
+              <button class="btn sm" data-a="capprove" data-id="${r.id}">Approve &amp; Issue</button>
+              <button class="btn sm danger" data-a="creject" data-id="${r.id}">Reject</button>
+            </div>
+          `],
+        ], pending)}
+      ` : ''}
     `;
   },
 
@@ -511,19 +765,31 @@ const views = {
     const { coordinators } = await api('/api/admin/coordinators');
     V.innerHTML = `
       <h2>Regional Coordinators &amp; State Appointments</h2>
-      <p class="muted" style="margin-bottom:16px;">Appoint regional coordinators, issue official appointment certificates, and monitor territorial accreditations</p>
+      <p class="muted" style="margin-bottom:16px;">Appoint regional coordinators, record full residential &amp; jurisdiction credentials, issue official appointment certificates, and monitor territorial accreditations</p>
       ${table([
         ['Coordinator', (r) => `
           <div style="display:flex; align-items:center; gap:10px;">
-            ${r.photo_url ? `<img src="${esc(r.photo_url)}" style="width:36px; height:44px; object-fit:cover; border-radius:4px; border:1px solid #cbd5e1; flex-shrink:0;">` : `<div style="width:36px; height:44px; background:#e0f2fe; border-radius:4px; display:grid; place-items:center;">👔</div>`}
+            ${r.photo_url ? `<img src="${esc(r.photo_url)}" style="width:38px; height:46px; object-fit:cover; border-radius:4px; border:1px solid #cbd5e1; flex-shrink:0;">` : `<div style="width:38px; height:46px; background:#e0f2fe; border-radius:4px; display:grid; place-items:center;">👔</div>`}
             <div>
               <b>${esc(r.name)}</b><br>
-              <span class="muted">${esc(r.email)} ${r.mobile ? `· ${esc(r.mobile)}` : ''}</span>
+              <span class="muted">${esc(r.email)} · 📞 ${esc(r.mobile || '—')}</span>
             </div>
           </div>
         `],
-        ['Jurisdiction State', (r) => `<b style="color:#0a2a5e;">${esc(r.state || 'All State')}</b>`],
-        ['Certificate No', (r) => `<span style="font-family:monospace; font-weight:700; color:#b45309;">${esc(r.cert_no || 'Issued')}</span>`],
+        ['Full Address &amp; District', (r) => `
+          <div style="font-size:0.86rem;">
+            <b>${esc(r.address || 'Regional Headquarters')}</b><br>
+            <span class="muted">${esc(r.district || '')}${r.district ? ', ' : ''}${esc(r.state || 'Uttar Pradesh')} - ${esc(r.pin || '221001')}</span>
+          </div>
+        `],
+        ['Aadhaar &amp; Qualification', (r) => `
+          <div style="font-size:0.86rem;">
+            <b style="color:#0a2a5e;">${esc(r.qualification || 'Post Graduate')}</b><br>
+            <span class="muted" style="font-family:monospace;">ID: ${esc(r.aadhar_no || 'Verified')}</span>
+          </div>
+        `],
+        ['Assigned Jurisdiction', (r) => `<b style="color:#b45309;">${esc(r.territory || r.state || 'All State')}</b>`],
+        ['Certificate No', (r) => `<span style="font-family:monospace; font-weight:700; color:#064e3b;">${esc(r.cert_no || 'Issued')}</span>`],
         ['Status', (r) => badge(r.status || 'Active')],
         ['Actions', (r) => `
           <button class="btn sm gold" data-a="view_coord_cert" data-id="${r.id}" data-name="${esc(r.name)}" style="display:inline-flex; align-items:center; gap:4px;">
@@ -532,15 +798,210 @@ const views = {
         `],
       ], coordinators)}
 
-      <h3 style="margin-top:28px;">Appoint New Regional Coordinator</h3>
-      <p class="muted" style="margin-bottom:12px;">Upon appointing a new coordinator, an official appointment certificate is automatically issued and a setup link is sent to their email.</p>
-      <form id="kf" class="row">
-        <div><label>Full Name *</label><input name="name" required maxlength="100" placeholder="e.g. Vikram Singh"></div>
-        <div><label>Email Address *</label><input name="email" type="email" required placeholder="coord@pescouncil.in"></div>
-        <div><label>Assigned State *</label><input name="state" required value="Uttar Pradesh"></div>
-        <div style="align-self:end;"><button class="btn gold">Appoint Coordinator &amp; Issue Certificate</button></div>
+      <h3 style="margin-top:28px; color:#0a2a5e;">➕ Appoint New Regional Coordinator (Full Details Required)</h3>
+      <p class="muted" style="margin-bottom:14px;">All details including full street address, district, state, PIN, mobile, Aadhaar and qualification are required for statutory appointment credentials.</p>
+      
+      <form id="kf" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:22px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:14px;">
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Coordinator Full Name *</label><input name="name" required maxlength="100" placeholder="e.g. Vikram Singh" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Mobile Number * (10 Digits)</label><input name="mobile" required maxlength="15" placeholder="e.g. 9415012345" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Email Address *</label><input name="email" type="email" required placeholder="coord@pescouncil.in" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:14px; margin-bottom:14px;">
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Full Residential / Office Address *</label><input name="address" required placeholder="House/Shop No., Street, Landmark, Village/Locality" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">District *</label><input name="district" required placeholder="e.g. Gorakhpur" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">State *</label><input name="state" required value="Uttar Pradesh" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">PIN Code *</label><input name="pin" required maxlength="10" placeholder="273001" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 2fr; gap:14px; margin-bottom:18px;">
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Aadhaar / National ID No. *</label><input name="aadhar_no" required placeholder="XXXX-XXXX-XXXX" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Highest Qualification *</label><input name="qualification" required placeholder="e.g. MCA / M.Tech / B.Ed" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Assigned Jurisdiction / Territory Details *</label><input name="territory" required placeholder="e.g. Eastern UP Zone (Gorakhpur, Varanasi, Azamgarh, Mau)" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <button class="btn gold" style="font-weight:800; padding:10px 24px; font-size:0.95rem;">
+            📜 Appoint Coordinator &amp; Issue Official Certificate
+          </button>
+        </div>
       </form>
     `;
+  },
+
+  async Website_CMS() {
+    const res = await api('/api/admin/site-settings');
+    const s = res.settings || {};
+
+    V.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div>
+          <h2>🌐 Website Logo &amp; Content Management (CMS)</h2>
+          <p class="muted">Upload and update the Council website logo, customize ticker announcements, and toggle website sections on or off</p>
+        </div>
+        <a href="/" target="_blank" class="btn alt" style="display:inline-flex; align-items:center; gap:6px;">
+          👁️ Preview Live Website
+        </a>
+      </div>
+
+      <form id="websiteCmsForm" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:1100px;">
+        <!-- Card 1: Logo & Branding -->
+        <div class="card" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:22px; box-shadow:0 4px 12px rgba(0,0,0,0.04);">
+          <h3 style="margin:0 0 16px; color:#0a2a5e; display:flex; align-items:center; gap:8px;">
+            🖼️ Website Logo &amp; Header Titles
+          </h3>
+
+          <div style="display:flex; align-items:center; gap:20px; margin-bottom:18px; background:#f8fafc; padding:14px; border-radius:8px; border:1px dashed #cbd5e1;">
+            <div id="cmsLogoPreviewBox" style="width:90px; height:90px; border-radius:10px; background:#ffffff; border:2px solid #0284c7; display:grid; place-items:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); flex-shrink:0;">
+              ${s.logo_url
+                ? `<img src="${esc(s.logo_url)}" style="width:100%; height:100%; object-fit:contain;" alt="Logo">`
+                : `<span style="font-size:2.4rem;">🏛️</span>`
+              }
+            </div>
+            <div>
+              <b style="font-size:0.9rem; color:#0f172a; display:block; margin-bottom:4px;">Upload Council Logo (परिषद लोगो):</b>
+              <span class="muted" style="font-size:0.78rem; display:block; margin-bottom:8px;">Upload high-res PNG/JPG or enter custom image URL. Automatically replaces logo across website header and footer.</span>
+              <input type="file" id="cmsLogoFileInput" accept="image/*" style="font-size:0.82rem; border:1px solid #cbd5e1; border-radius:6px; padding:4px 8px; background:#fff;">
+              <input type="hidden" name="logo_url" id="cmsLogoUrlInput" value="${esc(s.logo_url || '')}">
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Council Domain / Brand Title *</label>
+            <input name="council_title" value="${esc(s.council_title || 'pescouncil.in')}" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Hindi Title / Subtitle *</label>
+            <input name="hindi_title" value="${esc(s.hindi_title || 'पूर्वांचल शिक्षा एवं कौशल परिषद')}" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; color:#0a48a3;">
+          </div>
+        </div>
+
+        <!-- Card 2: Notice Bar / Ticker Settings -->
+        <div class="card" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:22px; box-shadow:0 4px 12px rgba(0,0,0,0.04);">
+          <h3 style="margin:0 0 16px; color:#0a2a5e; display:flex; align-items:center; gap:8px;">
+            📢 Public Megaphone Notice Banner
+          </h3>
+
+          <div style="margin-bottom:16px;">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:700; color:#0f172a;">
+              <input type="checkbox" name="show_notice" ${s.show_notice !== false ? 'checked' : ''} style="width:18px; height:18px;">
+              <span>Enable Notice Megaphone Bar on Website (वेबसाइट पर नोटिस बार दिखाएं)</span>
+            </label>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Notice Ticker Text (One line per bullet):</label>
+            <textarea name="notice_text" rows="5" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem; line-height:1.5;">${esc(s.notice_text || '• Admissions open for DCA / PGDCA session 2026-27\n• Last date to apply 30 November 2026\n• For queries contact: info@pescouncil.in | +91 542-1234567')}</textarea>
+            <small class="muted">Lines will be displayed with bullet points inside the prominent blue notice card.</small>
+          </div>
+        </div>
+
+        <!-- Card 3: Section Visibility Handles (Full Width) -->
+        <div class="card" style="grid-column:1 / -1; background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:22px; box-shadow:0 4px 12px rgba(0,0,0,0.04);">
+          <h3 style="margin:0 0 8px; color:#0a2a5e; display:flex; align-items:center; gap:8px;">
+            🎛️ Website Section Visibility Handles (क्या दिखाना है क्या हटाना है)
+          </h3>
+          <p class="muted" style="margin-bottom:18px;">Easily switch sections on or off on the public website with these toggles.</p>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+            <!-- Toggle 1: Verify Section -->
+            <label style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:8px; padding:14px; display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
+              <input type="checkbox" name="show_verify" ${s.show_verify !== false ? 'checked' : ''} style="width:20px; height:20px; margin-top:2px;">
+              <div>
+                <b style="font-size:0.95rem; color:#0f172a; display:block;">🛡️ Verification Section &amp; QR Scanner</b>
+                <span class="muted" style="font-size:0.8rem;">Public certificate and roll number search box</span>
+              </div>
+            </label>
+
+            <!-- Toggle 2: Coordinators Row -->
+            <label style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:8px; padding:14px; display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
+              <input type="checkbox" name="show_coordinators" ${s.show_coordinators !== false ? 'checked' : ''} style="width:20px; height:20px; margin-top:2px;">
+              <div>
+                <b style="font-size:0.95rem; color:#0f172a; display:block;">👔 Verified Regional Coordinators Showcase</b>
+                <span class="muted" style="font-size:0.8rem;">Coordinator photo cards and appointment verification</span>
+              </div>
+            </label>
+
+            <!-- Toggle 3: Affiliated Centres Grid -->
+            <label style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:8px; padding:14px; display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
+              <input type="checkbox" name="show_centres" ${s.show_centres !== false ? 'checked' : ''} style="width:20px; height:20px; margin-top:2px;">
+              <div>
+                <b style="font-size:0.95rem; color:#0f172a; display:block;">🏛️ Affiliated Study Centres Grid</b>
+                <span class="muted" style="font-size:0.8rem;">Recognized computer centres with photos &amp; codes</span>
+              </div>
+            </label>
+
+            <!-- Toggle 4: Enrolled Students Directory -->
+            <label style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:8px; padding:14px; display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
+              <input type="checkbox" name="show_students" ${s.show_students !== false ? 'checked' : ''} style="width:20px; height:20px; margin-top:2px;">
+              <div>
+                <b style="font-size:0.95rem; color:#0f172a; display:block;">🎓 Enrolled Students &amp; Star Ratings</b>
+                <span class="muted" style="font-size:0.8rem;">Candidate testimonials &amp; diploma awards</span>
+              </div>
+            </label>
+
+            <!-- Toggle 5: Franchise Application Button -->
+            <label style="background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:8px; padding:14px; display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
+              <input type="checkbox" name="show_franchise_btn" ${s.show_franchise_btn !== false ? 'checked' : ''} style="width:20px; height:20px; margin-top:2px;">
+              <div>
+                <b style="font-size:0.95rem; color:#0f172a; display:block;">🏢 Franchise / Centre Application CTA</b>
+                <span class="muted" style="font-size:0.8rem;">Allow academies to apply online for centre affiliation</span>
+              </div>
+            </label>
+          </div>
+
+          <div style="margin-top:22px; display:flex; justify-content:flex-end;">
+            <button type="submit" class="btn gold" style="font-weight:800; font-size:1rem; padding:12px 28px; box-shadow:0 4px 15px rgba(212,175,55,0.4);">
+              💾 Save Website Settings &amp; Section Visibility
+            </button>
+          </div>
+        </div>
+      </form>
+    `;
+
+    // File to base64 binder for logo
+    const fileInput = $('#cmsLogoFileInput');
+    const logoUrlInput = $('#cmsLogoUrlInput');
+    const previewBox = $('#cmsLogoPreviewBox');
+    if (fileInput && logoUrlInput && previewBox) {
+      fileInput.onchange = async () => {
+        if (!fileInput.files || !fileInput.files[0]) return;
+        const b64 = await imgToBase64(fileInput.files[0]);
+        logoUrlInput.value = b64;
+        previewBox.innerHTML = `<img src="${b64}" style="width:100%; height:100%; object-fit:contain;" alt="Logo">`;
+        toast('New logo loaded! Click Save to apply.');
+      };
+    }
+
+    // Save Form Handler
+    const cmsForm = $('#websiteCmsForm');
+    if (cmsForm) {
+      cmsForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(cmsForm);
+        const payload = {
+          logo_url: fd.get('logo_url'),
+          council_title: fd.get('council_title'),
+          hindi_title: fd.get('hindi_title'),
+          notice_text: fd.get('notice_text'),
+          show_notice: fd.get('show_notice') === 'on',
+          show_verify: fd.get('show_verify') === 'on',
+          show_coordinators: fd.get('show_coordinators') === 'on',
+          show_centres: fd.get('show_centres') === 'on',
+          show_students: fd.get('show_students') === 'on',
+          show_franchise_btn: fd.get('show_franchise_btn') === 'on',
+        };
+
+        const res = await api('/api/admin/site-settings', {
+          method: 'POST',
+          body: payload
+        });
+
+        toast('Website settings saved & updated live!');
+      };
+    }
   },
 
   async Reports() {
@@ -1675,6 +2136,22 @@ V.addEventListener('click', (e) => {
       const { certificate } = await api(`/api/admin/coordinators/${id}/cert`);
       showAdminCoordCertModal(certificate);
       return;
+    } else if (a === 'view_official_mrk') {
+      let mrk = (window._adminMarksheets || []).find(x => x.id === +id);
+      if (!mrk) {
+        const res = await api('/api/admin/marksheets');
+        mrk = (res.marksheets || []).find(x => x.id === +id) || { id: +id };
+      }
+      showAdminOfficialMarksheetModal(mrk);
+      return;
+    } else if (a === 'view_official_cert') {
+      let cert = (window._adminCertificates || []).find(x => x.id === +id);
+      if (!cert) {
+        const res = await api('/api/admin/certificates');
+        cert = (res.certificates || []).find(x => x.id === +id) || { id: +id };
+      }
+      showAdminOfficialCertModal(cert);
+      return;
     }
     toast('Action completed');
     await views[current]();
@@ -1745,26 +2222,30 @@ function showAdminCoordCertModal(cert) {
           By virtue of the powers vested in the Central Governing Board of <b>Purvanchal Education &amp; Skill Council</b>, this is to officially proclaim that having met all institutional standards and executive criteria:
         </p>
 
-        <!-- Coordinator Details Box -->
-        <div style="margin:16px auto; padding:18px 24px; background:#f0fdf4; border:2px solid #86efac; border-radius:12px; display:inline-block; width:88%; box-sizing:border-box;">
-          <div style="display:flex; align-items:center; justify-content:center; gap:24px; text-align:left; flex-wrap:wrap;">
+        <!-- Coordinator Details Box with Full Profile -->
+        <div style="margin:16px auto; padding:20px 26px; background:#f0fdf4; border:2px solid #86efac; border-radius:12px; display:inline-block; width:92%; box-sizing:border-box;">
+          <div style="display:flex; align-items:flex-start; justify-content:center; gap:24px; text-align:left; flex-wrap:wrap;">
             <div style="text-align:center; flex-shrink:0;">
               ${cert.photo_url
-                ? `<img src="${esc(cert.photo_url)}" style="width:96px; height:116px; object-fit:cover; border:2px solid #b45309; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.12); display:block; margin:0 auto 4px;" alt="Coordinator Photo">`
-                : `<div style="width:96px; height:116px; background:#dbeafe; border:2px solid #93c5fd; border-radius:6px; display:grid; place-items:center; font-size:3rem; margin:0 auto 4px;">👔</div>`
+                ? `<img src="${esc(cert.photo_url)}" style="width:105px; height:125px; object-fit:cover; border:2.5px solid #b45309; border-radius:6px; box-shadow:0 4px 10px rgba(0,0,0,0.12); display:block; margin:0 auto 6px;" alt="Coordinator Photo">`
+                : `<div style="width:105px; height:125px; background:#dbeafe; border:2px solid #93c5fd; border-radius:6px; display:grid; place-items:center; font-size:3.2rem; margin:0 auto 6px;">👔</div>`
               }
-              <div style="font-size:0.7rem; color:#78350f; font-weight:700; text-transform:uppercase;">Appointee</div>
+              <div style="font-size:0.75rem; color:#78350f; font-weight:800; text-transform:uppercase;">Appointed Official</div>
             </div>
-            <div style="flex:1; min-width:240px;">
-              <h2 style="margin:0; font-size:1.85rem; color:#064e3b; font-weight:800;">${esc(cert.name)}</h2>
-              <div style="font-size:1.15rem; color:#0f172a; margin-top:6px; font-weight:700;">
-                Designation: <span style="color:#0a2a5e;">Regional / State Coordinator (समन्वयक)</span>
+            <div style="flex:1; min-width:280px;">
+              <h2 style="margin:0; font-size:1.9rem; color:#064e3b; font-weight:900;">${esc(cert.name)}</h2>
+              <div style="font-size:1.15rem; color:#0a2a5e; margin-top:4px; font-weight:800;">
+                Designation: <span>Regional / State Coordinator (क्षेत्रीय / राज्य समन्वयक)</span>
               </div>
-              <div style="font-size:1rem; color:#1e293b; margin-top:4px;">
-                Jurisdiction Territory: <b style="color:#b45309;">${esc(cert.state || 'All Assigned Territories')}</b>
-              </div>
-              <div style="font-size:0.88rem; color:#64748b; margin-top:4px;">
-                Contact: ${esc(cert.email)} ${cert.mobile ? `· 📞 ${esc(cert.mobile)}` : ''}
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; margin-top:10px; font-size:0.88rem; color:#1e293b;">
+                <div><b>Assigned Territory:</b> <span style="color:#b45309; font-weight:800;">${esc(cert.territory || cert.state || 'All Assigned Territories')}</span></div>
+                <div><b>Qualification:</b> <span style="font-weight:700;">${esc(cert.qualification || 'Higher Academic / Professional')}</span></div>
+                <div><b>Aadhaar / Gov ID:</b> <span style="font-family:monospace; font-weight:800; color:#0369a1;">${esc(cert.aadhar_no || 'Verified on Record')}</span></div>
+                <div><b>Official Contact:</b> <span style="font-weight:700;">${esc(cert.mobile || '—')}</span></div>
+                <div style="grid-column:1 / -1; margin-top:2px;">
+                  <b>Official Residential / Office Address:</b><br>
+                  <span style="color:#334155; line-height:1.4;">${esc(cert.address ? cert.address + ', ' + (cert.district || '') + ', ' + (cert.state || '') + ' - ' + (cert.pin || '') : (cert.state || 'India'))}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -2291,62 +2772,323 @@ function showCourseSubjectsModal(courseId) {
 }
 window.showCourseSubjectsModal = showCourseSubjectsModal;
 
+// Official Marksheet View & Print Modal matching Exact Specification
+async function showAdminOfficialMarksheetModal(mrk) {
+  const existing = document.getElementById('officialMarksheetModal');
+  if (existing) existing.remove();
+
+  let m = mrk;
+  if (!m.subjects || !m.student_name) {
+    try {
+      const res = await api('/api/admin/marksheets');
+      const found = (res.marksheets || []).find(x => x.id === mrk.id);
+      if (found) m = found;
+    } catch (_) {}
+  }
+
+  let subs = [];
+  try {
+    subs = typeof m.subjects === 'string' ? JSON.parse(m.subjects || '[]') : (m.subjects || []);
+  } catch (_) { subs = []; }
+
+  const studentCode = m.student_code || m.roll_no || 'PESC-26-00008';
+  const rollNo = m.roll_no || studentCode;
+  const marksheetNo = m.marksheet_no || `PESC/MRK/2026/${String(m.id || 1).padStart(4, '0')}`;
+  const issueDateStr = m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '04-10-2026';
+
+  const modal = document.createElement('div');
+  modal.id = 'officialMarksheetModal';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; overflow-y:auto;';
+  
+  modal.innerHTML = `
+    <div style="background:#fff; border-radius:14px; max-width:940px; width:100%; max-height:94vh; overflow-y:auto; padding:24px; box-shadow:0 25px 50px rgba(0,0,0,0.35);">
+      <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+        <div>
+          <h3 style="margin:0; color:#0a2a5e;">Official Statement of Marks (अंक तालिका)</h3>
+          <span class="muted" style="font-size:0.85rem;">Document: <b>${esc(marksheetNo)}</b> · Candidate: <b>${esc(m.student_name || 'Candidate')}</b></span>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn gold sm" onclick="window.print()" style="font-weight:800;">🖨️ Print / Save PDF</button>
+          <button type="button" class="btn danger sm" onclick="document.getElementById('officialMarksheetModal').remove()">✕ Close</button>
+        </div>
+      </div>
+
+      <!-- Marksheet Printable Page Container with Exact Council Framing -->
+      <div id="printOfficialMarksheetArea" style="background:#ffffff; border:6px double #000000; outline:2px solid #000000; outline-offset:4px; padding:28px 36px; color:#000000; font-family:'Segoe UI', Arial, sans-serif; position:relative; box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+        
+        <!-- Watermark Background -->
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0.04; pointer-events:none; font-size:20rem; font-weight:900; color:#0a2a5e;">
+          PESC
+        </div>
+
+        <!-- Official Council Header (Exact 6-Line Text Specification) -->
+        ${renderOfficialCouncilHeader({
+          studentCode: studentCode,
+          rollNo: rollNo,
+          refNo: marksheetNo,
+          issueDate: issueDateStr
+        })}
+
+        <!-- Marksheet Title Box -->
+        <div style="text-align:center; margin:10px 0 14px;">
+          <div style="display:inline-block; border:2px solid #000000; padding:4px 24px; background:#f8fafc; font-weight:900; font-size:1.15rem; letter-spacing:1px; text-transform:uppercase;">
+            STATEMENT OF MARKS / अंक तालिका
+          </div>
+          <div style="font-size:0.88rem; font-weight:800; color:#000000; margin-top:4px;">
+            ${esc(m.term || 'ANNUAL EXAMINATION')} (${esc(m.evaluation_type === 'semester' ? 'SEMESTER SYSTEM' : 'ANNUAL SCHEME')})
+          </div>
+        </div>
+
+        <!-- Candidate & Course Details Grid -->
+        <div style="border:1.5px solid #000000; padding:10px 14px; margin-bottom:14px; font-size:0.86rem; line-height:1.6; background:#fff;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 20px;">
+            <div><b>Candidate's Name (परीक्षार्थी का नाम):</b> <span style="text-transform:uppercase; font-weight:900;">${esc(m.student_name || 'Candidate')}</span></div>
+            <div><b>Father's / Husband's Name:</b> <span style="text-transform:uppercase; font-weight:800;">${esc(m.father_name || 'Guardian')}</span></div>
+            <div><b>Course Name (पाठ्यक्रम):</b> <span style="font-weight:900; color:#0a2a5e;">${esc(m.course_name || 'Diploma Course')}</span></div>
+            <div><b>Session / Batch:</b> <span style="font-weight:800;">${esc(m.exam_session || '2026-27')}</span></div>
+            <div style="grid-column:1 / -1;"><b>Study / Examination Centre:</b> <span style="font-weight:800;">${esc(m.centre_name || 'Accredited Study Centre')} (${esc(m.centre_code || 'PESC001')})</span></div>
+          </div>
+        </div>
+
+        <!-- Marks Table -->
+        <table style="width:100%; border-collapse:collapse; font-size:0.82rem; margin-bottom:14px; border:1.5px solid #000000; text-align:center;">
+          <thead>
+            <tr style="background:#f1f5f9; border-bottom:1.5px solid #000000; font-weight:900;">
+              <th rowspan="2" style="border:1px solid #000000; padding:6px 4px; width:45px;">PAPER CODE</th>
+              <th rowspan="2" style="border:1px solid #000000; padding:6px 8px; text-align:left;">SUBJECT / MODULE TITLE</th>
+              <th colspan="2" style="border:1px solid #000000; padding:4px;">THEORY</th>
+              <th colspan="2" style="border:1px solid #000000; padding:4px;">PRACTICAL</th>
+              <th colspan="2" style="border:1px solid #000000; padding:4px;">TOTAL</th>
+              <th rowspan="2" style="border:1px solid #000000; padding:6px 4px; width:65px;">RESULT</th>
+            </tr>
+            <tr style="background:#f8fafc; border-bottom:1.5px solid #000000; font-size:0.75rem;">
+              <th style="border:1px solid #000000; padding:4px; width:55px;">MAX</th>
+              <th style="border:1px solid #000000; padding:4px; width:55px;">OBT</th>
+              <th style="border:1px solid #000000; padding:4px; width:55px;">MAX</th>
+              <th style="border:1px solid #000000; padding:4px; width:55px;">OBT</th>
+              <th style="border:1px solid #000000; padding:4px; width:55px;">MAX</th>
+              <th style="border:1px solid #000000; padding:4px; width:55px;">OBT</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${subs.map((sub, idx) => {
+              const thMax = sub.max_theory !== undefined ? sub.max_theory : 70;
+              const thObt = sub.obt_theory !== undefined ? sub.obt_theory : 58;
+              const prMax = sub.max_practical !== undefined ? sub.max_practical : 30;
+              const prObt = sub.obt_practical !== undefined ? sub.obt_practical : 26;
+              const totMax = sub.total_max !== undefined ? sub.total_max : (thMax + prMax);
+              const totObt = sub.total_obt !== undefined ? sub.total_obt : (thObt + prObt);
+              const isPass = totObt >= Math.round(totMax * 0.33);
+
+              return `
+                <tr style="border-bottom:1px solid #000000;">
+                  <td style="border:1px solid #000000; padding:5px 4px; font-family:monospace; font-weight:800;">${esc(sub.code || `SUB0${idx+1}`)}</td>
+                  <td style="border:1px solid #000000; padding:5px 8px; text-align:left; font-weight:700;">${esc(sub.name || 'Subject')}</td>
+                  <td style="border:1px solid #000000; padding:5px 4px;">${thMax}</td>
+                  <td style="border:1px solid #000000; padding:5px 4px; font-weight:800;">${thObt}</td>
+                  <td style="border:1px solid #000000; padding:5px 4px;">${prMax}</td>
+                  <td style="border:1px solid #000000; padding:5px 4px; font-weight:800;">${prObt}</td>
+                  <td style="border:1px solid #000000; padding:5px 4px; font-weight:800;">${totMax}</td>
+                  <td style="border:1px solid #000000; padding:5px 4px; font-weight:900; color:#0a2a5e;">${totObt}</td>
+                  <td style="border:1px solid #000000; padding:5px 4px; font-weight:900; color:${isPass ? '#15803d' : '#b91c1c'};">${isPass ? 'PASS' : 'FAIL'}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f1f5f9; font-weight:900; border-top:1.5px solid #000000; font-size:0.85rem;">
+              <td colspan="6" style="border:1px solid #000000; padding:8px 12px; text-align:right;">GRAND TOTAL (पूर्णांक एवं प्राप्तांक):</td>
+              <td style="border:1px solid #000000; padding:8px 4px;">${m.total_max || 100}</td>
+              <td style="border:1px solid #000000; padding:8px 4px; color:#0a2a5e; font-size:0.95rem;">${m.total_obtained || 84}</td>
+              <td style="border:1px solid #000000; padding:8px 4px; color:#15803d;">${m.result || 'PASS'}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Result Summary Box -->
+        <div style="border:1.5px solid #000000; padding:8px 14px; margin-bottom:12px; display:flex; justify-content:space-around; align-items:center; font-size:0.9rem; font-weight:900; background:#f8fafc;">
+          <div>PERCENTAGE: <span style="color:#047857; font-size:1.05rem;">${m.percentage || 84}%</span></div>
+          <div>GRADE: <span style="color:#0a2a5e; font-size:1.05rem;">${esc(m.grade || 'A+')}</span></div>
+          <div>FINAL RESULT: <span style="color:#15803d; font-size:1.05rem;">${esc(m.result === 'PASS' ? 'PASSED / FIRST DIVISION' : (m.result || 'PASSED'))}</span></div>
+        </div>
+
+        <!-- Official Council Footer -->
+        ${renderOfficialCouncilFooter({
+          centreCode: m.centre_code || 'PESC001',
+          directorName: m.centre_owner || 'Study Centre Director',
+          qrUrl: `https://pescouncil.in/verify`
+        })}
+
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+// Official Certificate View & Print Modal matching Exact Specification
+async function showAdminOfficialCertModal(cert) {
+  const existing = document.getElementById('officialCertModal');
+  if (existing) existing.remove();
+
+  let c = cert;
+  if (!c.student_name || !c.course_name) {
+    try {
+      const res = await api('/api/admin/certificates');
+      const found = (res.certificates || []).find(x => x.id === cert.id);
+      if (found) c = found;
+    } catch (_) {}
+  }
+
+  const studentCode = c.student_code || c.roll_no || 'PESC-26-00008';
+  const rollNo = c.roll_no || studentCode;
+  const certNo = c.cert_no || `PESC/CERT/2026/${String(c.id || 1).padStart(4, '0')}`;
+  const issueDateStr = c.issued_at || c.created_at ? new Date(c.issued_at || c.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '04-10-2026';
+  const verifyUrl = `https://pescouncil.in/verify/${c.token || ''}`;
+
+  const modal = document.createElement('div');
+  modal.id = 'officialCertModal';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; overflow-y:auto;';
+
+  modal.innerHTML = `
+    <div style="background:#fff; border-radius:14px; max-width:960px; width:100%; max-height:94vh; overflow-y:auto; padding:24px; box-shadow:0 25px 50px rgba(0,0,0,0.35);">
+      <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+        <div>
+          <h3 style="margin:0; color:#0a2a5e;">Official Passing Certificate (प्रमाण-पत्र)</h3>
+          <span class="muted" style="font-size:0.85rem;">Certificate No: <b>${esc(certNo)}</b> · Candidate: <b>${esc(c.student_name || 'Candidate')}</b></span>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn gold sm" onclick="window.print()" style="font-weight:800;">🖨️ Print / Save PDF</button>
+          <a href="${verifyUrl}" target="_blank" class="btn alt sm" style="font-weight:700;">🔍 Public Verification</a>
+          <button type="button" class="btn danger sm" onclick="document.getElementById('officialCertModal').remove()">✕ Close</button>
+        </div>
+      </div>
+
+      <!-- Certificate Printable Container with Elegant Council Borders -->
+      <div id="printOfficialCertArea" style="background:#ffffff; border:8px double #d4af37; outline:3px solid #0a2a5e; outline-offset:6px; border-radius:8px; padding:36px 44px; color:#000000; font-family:'Segoe UI', Arial, sans-serif; position:relative; box-shadow:0 12px 36px rgba(212,175,55,0.18); text-align:center;">
+        
+        <!-- Watermark Background -->
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0.04; pointer-events:none; font-size:24rem; font-weight:900; color:#0a2a5e;">
+          PESC
+        </div>
+
+        <!-- Official Council Header (Exact 6-Line Text Specification) -->
+        ${renderOfficialCouncilHeader({
+          studentCode: studentCode,
+          rollNo: rollNo,
+          refNo: certNo,
+          issueDate: issueDateStr
+        })}
+
+        <!-- Certificate Title Heading -->
+        <div style="margin:16px 0 20px;">
+          <div style="font-size:2.2rem; font-weight:900; color:#0a2a5e; font-family:'Times New Roman', Times, serif; letter-spacing:1.5px; text-transform:uppercase;">
+            DIPLOMA / PASSING CERTIFICATE
+          </div>
+          <div style="font-size:1.25rem; font-weight:800; color:#b45309; margin-top:2px;">
+            (प्रमाण-पत्र)
+          </div>
+        </div>
+
+        <!-- Body Citation Text -->
+        <div style="font-size:1.08rem; line-height:2.0; color:#0f172a; max-width:820px; margin:0 auto 20px; text-align:center;">
+          This is to certify that &nbsp;<b style="font-size:1.35rem; color:#0a2a5e; border-bottom:2px solid #d4af37; padding:0 8px;">${esc(c.student_name || 'Candidate')}</b><br>
+          Son / Daughter / Wife of &nbsp;<b style="font-size:1.15rem; color:#0f172a; border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(c.father_name || 'Guardian')}</b><br>
+          Enrolment / Reg. No: <b style="font-family:monospace; color:#047857;">${esc(studentCode)}</b> &nbsp;&nbsp;|&nbsp;&nbsp; Roll No: <b style="font-family:monospace; color:#047857;">${esc(rollNo)}</b><br>
+          having successfully completed the prescribed curriculum and passed the examination for
+          <div style="margin:10px 0;">
+            <span style="font-size:1.45rem; font-weight:900; color:#047857; background:#f0fdf4; border:1.5px solid #86efac; border-radius:6px; padding:6px 20px; display:inline-block; letter-spacing:0.5px;">
+              ${esc(c.course_name || 'Vocational Diploma Program')}
+            </span>
+          </div>
+          with Grade <b style="color:#0a2a5e; font-size:1.25rem;">${esc(c.grade || 'A+')}</b> in <b style="color:#0f172a;">${esc(c.term || 'Annual Examination')}</b> from Authorized Study Centre
+          <div style="font-weight:800; color:#0a2a5e; margin-top:4px;">
+            ${esc(c.centre_name || 'Recognized Council Centre')} (${esc(c.centre_code || 'PESC001')})
+          </div>
+        </div>
+
+        <!-- Official Council Footer -->
+        ${renderOfficialCouncilFooter({
+          centreCode: c.centre_code || 'PESC001',
+          directorName: c.centre_owner || 'Study Centre Director',
+          qrUrl: verifyUrl
+        })}
+
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+// Redesigned Strategic Examination & Marksheet Issuance Console with Simultaneous Certificate Issuance
 async function openAdminMarksheetIssueModal(studentId, studentName) {
   const existing = document.getElementById('marksheetDirectModal');
   if (existing) existing.remove();
 
-  let s = (window._currentStudents || []).find(x => x.id === studentId);
-  if (!s) {
+  if (!window._currentStudents || !window._currentStudents.length) {
     const res = await api('/api/admin/students');
-    s = (res.students || []).find(x => x.id === studentId) || { id: studentId, name: studentName, course_name: 'DCA', student_code: 'PESC0001' };
+    window._currentStudents = res.students || [];
   }
-
-  if (!window._adminCourses) {
+  if (!window._adminCourses || !window._adminCourses.length) {
     const cr = await api('/api/admin/courses');
     window._adminCourses = cr.courses || [];
   }
-  const co = (window._adminCourses || []).find(c => c.id === s.course_id) || window._adminCourses[0] || {};
-  let subs = [];
-  try { subs = typeof co.subjects === 'string' ? JSON.parse(co.subjects || '[]') : (co.subjects || []); } catch (_) {}
-  if (!subs.length) {
-    subs = [
-      { code: 'TH01', name: 'Information Technology Core Concepts', max_theory: 70, max_practical: 30, total_max: 100 },
-      { code: 'TH02', name: 'Software Applications & Productive Tools', max_theory: 70, max_practical: 30, total_max: 100 },
-      { code: 'PR01', name: 'Practical Assessment & Viva Voce', max_theory: 50, max_practical: 50, total_max: 100 }
-    ];
+  if (!window._adminCentres || !window._adminCentres.length) {
+    const cn = await api('/api/admin/centres');
+    window._adminCentres = cn.centres || [];
+  }
+
+  let s = (window._currentStudents || []).find(x => x.id === studentId);
+  if (!s && studentId) {
+    s = { id: studentId, name: studentName, course_name: 'DCA', student_code: 'PESC0001' };
   }
 
   const modal = document.createElement('div');
   modal.id = 'marksheetDirectModal';
-  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; overflow-y:auto;';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; overflow-y:auto; backdrop-filter:blur(3px);';
+  
   modal.innerHTML = `
-    <div style="background:#fff; border-radius:12px; max-width:760px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.25); max-height:92vh; overflow-y:auto;">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
+    <div style="background:#fff; border-radius:14px; max-width:860px; width:100%; padding:26px; box-shadow:0 25px 50px rgba(0,0,0,0.3); max-height:92vh; overflow-y:auto; border:2px solid #cbd5e1;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #e2e8f0; padding-bottom:14px; margin-bottom:18px;">
         <div>
-          <h3 style="margin:0; color:#0a2a5e;">📊 Issue Official Marksheet: ${esc(s.name)}</h3>
-          <span class="muted" style="font-size:0.85rem;">Enrolment: <b>${esc(s.student_code)}</b> · Course: <b>${esc(co.name || s.course_name)}</b></span>
+          <h3 style="margin:0; color:#0a2a5e; font-size:1.35rem; display:flex; align-items:center; gap:8px;">
+            🎓 Examination Evaluation &amp; Certification Console
+          </h3>
+          <span class="muted" style="font-size:0.86rem;">Official Examination Marksheet and Passing Certificate issuance with curriculum automation</span>
         </div>
-        <button type="button" onclick="document.getElementById('marksheetDirectModal').remove()" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">&times;</button>
+        <button type="button" onclick="document.getElementById('marksheetDirectModal').remove()" style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">&times;</button>
       </div>
 
       <form id="marksheetDirectForm">
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:18px;">
-          <label style="font-weight:700; display:block; margin-bottom:8px; color:#0f172a;">Evaluation System (मूल्यांकन प्रणाली) *</label>
-          <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:12px;">
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
-              <input type="radio" name="evaluation_type" value="yearly" checked onchange="toggleAdminPatternTerms('yearly')">
-              📅 Yearly / Annual (वार्षिक परीक्षा आधारित अंकपत्र)
+        <!-- Candidate Picker (if not preselected) -->
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:18px;">
+          <label style="font-weight:800; font-size:0.9rem; color:#0f172a; display:block; margin-bottom:8px;">1. Select Candidate (परीक्षार्थी चुनें) *</label>
+          <select id="modalStudentSelect" name="student_id" required style="width:100%; padding:9px 12px; border:1.5px solid #0284c7; border-radius:6px; font-weight:700; font-size:0.92rem; background:#fff;">
+            ${(window._currentStudents || []).map(stu => `
+              <option value="${stu.id}" ${s && s.id === stu.id ? 'selected' : ''}>
+                ${esc(stu.name)} · Roll/Code: ${esc(stu.student_code)} (${esc(stu.course_name || 'Course')}) · Centre: ${esc(stu.centre_code || '')}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+
+        <!-- Evaluation Scheme & Term Selector -->
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:18px;">
+          <label style="font-weight:800; font-size:0.9rem; color:#0f172a; display:block; margin-bottom:10px;">2. Examination Evaluation Pattern (मूल्यांकन योजना) *</label>
+          <div style="display:flex; gap:26px; flex-wrap:wrap; margin-bottom:14px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#064e3b;">
+              <input type="radio" name="evaluation_type" value="yearly" checked onchange="window.updateAdminModalCurriculum()">
+              📅 Annual / Yearly Examination (वार्षिक परीक्षा)
             </label>
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
-              <input type="radio" name="evaluation_type" value="semester" onchange="toggleAdminPatternTerms('semester')">
-              📚 Semester-wise (सेमेस्टर आधारित परीक्षा अंकपत्र)
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#0284c7;">
+              <input type="radio" name="evaluation_type" value="semester" onchange="window.updateAdminModalCurriculum()">
+              📚 Semester-wise Examination (सेमेस्टर आधारित परीक्षा)
             </label>
           </div>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
             <div>
-              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Term / Examination Stage *</label>
-              <select name="term" id="adminTermSelect" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Examination Term / Stage *</label>
+              <select name="term" id="adminModalTermSelect" onchange="window.updateAdminModalCurriculum()" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
                 <option value="Annual">Annual Examination (वार्षिक परीक्षा)</option>
                 <option value="1st Year">1st Year (प्रथम वर्ष)</option>
                 <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
@@ -2354,93 +3096,166 @@ async function openAdminMarksheetIssueModal(studentId, studentName) {
               </select>
             </div>
             <div>
-              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Exam Session *</label>
-              <input name="exam_session" value="${esc(s.session || '2026-27')}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Academic Exam Session *</label>
+              <input name="exam_session" value="${esc(s ? s.session || '2026-27' : '2026-27')}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
             </div>
           </div>
         </div>
 
-        <h4 style="margin:16px 0 8px; color:#0a2a5e;">Course Subjects &amp; Marks Entry:</h4>
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:16px;">
-            <thead>
-              <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
-                <th style="padding:6px 8px; text-align:left;">Subject Title</th>
-                <th style="padding:6px 8px; text-align:center;">Max Th.</th>
-                <th style="padding:6px 8px; text-align:center;">Obt Th.</th>
-                <th style="padding:6px 8px; text-align:center;">Max Pr.</th>
-                <th style="padding:6px 8px; text-align:center;">Obt Pr.</th>
-                <th style="padding:6px 8px; text-align:center;">Total</th>
-              </tr>
-            </thead>
-            <tbody id="adminDirectSubjectsTbody">
-              ${subs.map((sub, idx) => `
-                <tr style="border-bottom:1px solid #e2e8f0;">
-                  <td style="padding:6px 8px;">
-                    <b>${esc(sub.name)}</b>
-                    <input type="hidden" name="sub_code_${idx}" value="${esc(sub.code || `SUB${idx+1}`)}">
-                    <input type="hidden" name="sub_name_${idx}" value="${esc(sub.name)}">
-                  </td>
-                  <td style="padding:6px 8px; text-align:center;">
-                    <input type="number" name="sub_max_th_${idx}" value="${sub.max_theory || 70}" style="width:50px; text-align:center; padding:4px;" readonly>
-                  </td>
-                  <td style="padding:6px 8px; text-align:center;">
-                    <input type="number" name="sub_obt_th_${idx}" value="58" min="0" max="${sub.max_theory || 70}" style="width:55px; text-align:center; padding:4px; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;" onchange="recalcAdminTotal()" required>
-                  </td>
-                  <td style="padding:6px 8px; text-align:center;">
-                    <input type="number" name="sub_max_pr_${idx}" value="${sub.max_practical || 30}" style="width:50px; text-align:center; padding:4px;" readonly>
-                  </td>
-                  <td style="padding:6px 8px; text-align:center;">
-                    <input type="number" name="sub_obt_pr_${idx}" value="26" min="0" max="${sub.max_practical || 30}" style="width:55px; text-align:center; padding:4px; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;" onchange="recalcAdminTotal()" required>
-                  </td>
-                  <td style="padding:6px 8px; text-align:center; font-weight:800; color:#0a2a5e;" id="sub_tot_preview_${idx}">
-                    84
-                  </td>
+        <!-- Subjects & Marks Dynamic Table -->
+        <div style="margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h4 style="margin:0; color:#0a2a5e;">3. Subject Curriculum &amp; Examination Marks Entry:</h4>
+            <span class="muted" style="font-size:0.8rem;">Auto-populated from Course Curriculum</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.86rem; border:1.5px solid #cbd5e1;">
+              <thead>
+                <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1; color:#334155;">
+                  <th style="padding:8px; text-align:left;">Subject Title (विषय)</th>
+                  <th style="padding:8px; text-align:center; width:80px;">Max Th.</th>
+                  <th style="padding:8px; text-align:center; width:90px;">Obt Th.</th>
+                  <th style="padding:8px; text-align:center; width:80px;">Max Pr.</th>
+                  <th style="padding:8px; text-align:center; width:90px;">Obt Pr.</th>
+                  <th style="padding:8px; text-align:center; width:90px;">Total</th>
                 </tr>
-              `).join('')}
-            </tbody>
-            <tfoot>
-              <tr style="background:#ecfdf5; font-weight:800; border-top:2px solid #a7f3d0;">
-                <td style="padding:8px;">Total Score:</td>
-                <td colspan="4" style="padding:8px; text-align:right;" id="adminGrandTotalDisplay">Grand Total: 0 / 0 (0%)</td>
-                <td style="padding:8px; text-align:center; color:#16a34a;" id="adminGradeDisplay">Grade: A+</td>
-              </tr>
-            </tfoot>
-          </table>
+              </thead>
+              <tbody id="adminDirectSubjectsTbody">
+                <!-- Rendered dynamically -->
+              </tbody>
+              <tfoot>
+                <tr style="background:#ecfdf5; font-weight:800; border-top:2px solid #a7f3d0; font-size:0.92rem;">
+                  <td style="padding:10px 12px;">Grand Evaluation Score:</td>
+                  <td colspan="4" style="padding:10px 12px; text-align:right;" id="adminGrandTotalDisplay">Total: 0 / 0 (0%)</td>
+                  <td style="padding:10px 12px; text-align:center; color:#16a34a;" id="adminGradeDisplay">Grade: A+</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
 
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <!-- Simultaneous Issue Strategic Feature -->
+        <div style="background:#fefce8; border:2px solid #fde047; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
+          <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;">
+            <input type="checkbox" name="issue_cert_also" id="chkIssueCertAlso" checked style="width:20px; height:20px; margin-top:2px;">
+            <div>
+              <b style="color:#854d0e; font-size:0.98rem; display:block;">📜 Simultaneously Issue National Passing Certificate (एक साथ पासिंग सर्टिफिकेट भी जारी करें)</b>
+              <span style="font-size:0.84rem; color:#713f12; line-height:1.4; display:block; margin-top:2px;">
+                Checking this box will automatically generate and issue the cryptographically verified Passing Certificate with Golden Seal, QR code &amp; permanent online verification in 1 click!
+              </span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Footer Actions -->
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
           <button type="button" class="btn alt" onclick="document.getElementById('marksheetDirectModal').remove()">Cancel</button>
-          <button type="submit" class="btn gold" style="font-weight:700;">Authorize &amp; Issue Marksheet</button>
+          
+          <div style="display:flex; gap:10px;">
+            <button type="button" class="btn alt" id="btnPreviewMarksheet" style="font-weight:700; border:1px solid #0a2a5e; color:#0a2a5e;">
+              👁️ Official Live Preview
+            </button>
+            <button type="submit" class="btn gold" style="font-weight:800; padding:10px 24px; font-size:0.98rem; box-shadow:0 4px 14px rgba(212,175,55,0.4);">
+              ⚡ Authorize &amp; Issue Marksheet + Certificate
+            </button>
+          </div>
         </div>
       </form>
     </div>
   `;
   document.body.appendChild(modal);
 
-  window.toggleAdminPatternTerms = (pattern) => {
-    const sel = document.getElementById('adminTermSelect');
-    if (!sel) return;
-    if (pattern === 'semester') {
-      sel.innerHTML = `
-        <option value="Semester 1">Semester 1 (1st Sem / प्रथम सेमेस्टर)</option>
-        <option value="Semester 2">Semester 2 (2nd Sem / द्वितीय सेमेस्टर)</option>
-        <option value="Semester 3">Semester 3 (3rd Sem / तृतीय सेमेस्टर)</option>
-        <option value="Semester 4">Semester 4 (4th Sem / चतुर्थ सेमेस्टर)</option>
-      `;
+  let activeSubjects = [];
+
+  window.updateAdminModalCurriculum = () => {
+    const sId = +document.getElementById('modalStudentSelect')?.value;
+    const curStu = (window._currentStudents || []).find(x => x.id === sId) || (window._currentStudents || [])[0];
+    if (!curStu) return;
+
+    const co = (window._adminCourses || []).find(c => c.id === curStu.course_id) || window._adminCourses[0] || {};
+    const evalType = document.querySelector('input[name="evaluation_type"]:checked')?.value || 'yearly';
+    const termSelect = document.getElementById('adminModalTermSelect');
+
+    let curData = {};
+    try {
+      curData = typeof co.curriculum === 'string' ? JSON.parse(co.curriculum || '{}') : (co.curriculum || {});
+    } catch (_) {}
+
+    if (evalType === 'semester') {
+      const semTerms = Object.keys(curData.semester || {});
+      const termsList = semTerms.length ? semTerms : ['Semester 1', 'Semester 2'];
+      termSelect.innerHTML = termsList.map(t => `<option value="${t}">${t}</option>`).join('');
     } else {
-      sel.innerHTML = `
-        <option value="Annual">Annual Examination (वार्षिक परीक्षा)</option>
-        <option value="1st Year">1st Year (प्रथम वर्ष)</option>
-        <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
-        <option value="Final Year">Final Year (अंतिम वर्ष)</option>
-      `;
+      const yrTerms = Object.keys(curData.yearly || {});
+      const termsList = yrTerms.length ? yrTerms : ['Annual', '1st Year', '2nd Year'];
+      termSelect.innerHTML = termsList.map(t => `<option value="${t}">${t}</option>`).join('');
     }
+
+    const currentTerm = termSelect.value;
+    let subs = [];
+    if (evalType === 'semester' && curData.semester && curData.semester[currentTerm]) {
+      subs = curData.semester[currentTerm];
+    } else if (evalType === 'yearly' && curData.yearly && curData.yearly[currentTerm]) {
+      subs = curData.yearly[currentTerm];
+    } else {
+      try {
+        subs = typeof co.subjects === 'string' ? JSON.parse(co.subjects || '[]') : (co.subjects || []);
+      } catch (_) {}
+    }
+
+    if (!subs || !subs.length) {
+      subs = [
+        { code: 'TH01', name: 'Information Technology Core Concepts', max_theory: 70, max_practical: 30, total_max: 100 },
+        { code: 'TH02', name: 'Software Applications & Productive Tools', max_theory: 70, max_practical: 30, total_max: 100 },
+        { code: 'PR01', name: 'Practical Assessment & Viva Voce', max_theory: 50, max_practical: 50, total_max: 100 }
+      ];
+    }
+
+    activeSubjects = subs;
+    const tbody = document.getElementById('adminDirectSubjectsTbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = subs.map((sub, idx) => {
+      const sCode = sub.code || `SUB${idx+1}`;
+      const sName = sub.name || sub;
+      const thMax = sub.theory || sub.max_theory || 70;
+      const prMax = sub.practical || sub.max_practical || 30;
+      const thObt = Math.round(thMax * 0.82);
+      const prObt = Math.round(prMax * 0.86);
+
+      return `
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:8px 10px;">
+            <b>${esc(sName)}</b>
+            <span style="font-family:monospace; color:#0284c7; font-size:0.8rem; display:block;">Code: ${esc(sCode)}</span>
+            <input type="hidden" name="sub_code_${idx}" value="${esc(sCode)}">
+            <input type="hidden" name="sub_name_${idx}" value="${esc(sName)}">
+          </td>
+          <td style="padding:8px; text-align:center;">
+            <input type="number" name="sub_max_th_${idx}" value="${thMax}" style="width:55px; text-align:center; padding:4px;" readonly>
+          </td>
+          <td style="padding:8px; text-align:center;">
+            <input type="number" name="sub_obt_th_${idx}" value="${thObt}" min="0" max="${thMax}" style="width:60px; text-align:center; padding:4px; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;" onchange="window.recalcAdminTotal()" required>
+          </td>
+          <td style="padding:8px; text-align:center;">
+            <input type="number" name="sub_max_pr_${idx}" value="${prMax}" style="width:55px; text-align:center; padding:4px;" readonly>
+          </td>
+          <td style="padding:8px; text-align:center;">
+            <input type="number" name="sub_obt_pr_${idx}" value="${prObt}" min="0" max="${prMax}" style="width:60px; text-align:center; padding:4px; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;" onchange="window.recalcAdminTotal()" required>
+          </td>
+          <td style="padding:8px; text-align:center; font-weight:800; color:#0a2a5e;" id="sub_tot_preview_${idx}">
+            ${thObt + prObt}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    window.recalcAdminTotal();
   };
 
   window.recalcAdminTotal = () => {
     let totMax = 0, totObt = 0;
-    subs.forEach((sub, idx) => {
+    activeSubjects.forEach((_, idx) => {
       const maxTh = +document.querySelector(`input[name="sub_max_th_${idx}"]`)?.value || 70;
       const obtTh = +document.querySelector(`input[name="sub_obt_th_${idx}"]`)?.value || 0;
       const maxPr = +document.querySelector(`input[name="sub_max_pr_${idx}"]`)?.value || 30;
@@ -2454,105 +3269,216 @@ async function openAdminMarksheetIssueModal(studentId, studentName) {
     const pct = totMax > 0 ? Math.round((totObt / totMax) * 1000) / 10 : 0;
     const grade = pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : 'C';
     const disp = document.getElementById('adminGrandTotalDisplay');
-    if (disp) disp.textContent = `Grand Total: ${totObt} / ${totMax} (${pct}%)`;
+    if (disp) disp.textContent = `Total: ${totObt} / ${totMax} (${pct}%)`;
     const grd = document.getElementById('adminGradeDisplay');
     if (grd) grd.textContent = `Grade: ${grade}`;
   };
 
-  recalcAdminTotal();
+  const studentSelect = document.getElementById('modalStudentSelect');
+  if (studentSelect) {
+    studentSelect.onchange = () => window.updateAdminModalCurriculum();
+  }
 
-  document.getElementById('marksheetDirectForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const evaluationType = fd.get('evaluation_type') || 'yearly';
-    const term = fd.get('term') || 'Annual';
-    const examSession = fd.get('exam_session') || '2026-27';
+  // Initialize curriculum
+  window.updateAdminModalCurriculum();
 
-    let totalMax = 0, totalObtained = 0;
-    const subjectsPayload = subs.map((sub, idx) => {
-      const maxTh = +fd.get(`sub_max_th_${idx}`) || 70;
-      const obtTh = +fd.get(`sub_obt_th_${idx}`) || 0;
-      const maxPr = +fd.get(`sub_max_pr_${idx}`) || 30;
-      const obtPr = +fd.get(`sub_obt_pr_${idx}`) || 0;
-      const sMax = maxTh + maxPr;
-      const sObt = obtTh + obtPr;
-      totalMax += sMax;
-      totalObtained += sObt;
-      return {
-        code: fd.get(`sub_code_${idx}`) || `SUB${idx+1}`,
-        name: fd.get(`sub_name_${idx}`) || sub.name,
-        max_theory: maxTh,
-        obt_theory: obtTh,
-        max_practical: maxPr,
-        obt_practical: obtPr,
-        total_max: sMax,
-        total_obt: sObt,
-        result: sObt >= Math.round(sMax * 0.33) ? 'PASS' : 'FAIL'
-      };
-    });
+  // Preview Button Handler
+  const btnPrev = document.getElementById('btnPreviewMarksheet');
+  if (btnPrev) {
+    btnPrev.onclick = () => {
+      const sId = +document.getElementById('modalStudentSelect')?.value;
+      const curStu = (window._currentStudents || []).find(x => x.id === sId) || {};
+      const fd = new FormData(document.getElementById('marksheetDirectForm'));
+      const evalType = fd.get('evaluation_type') || 'yearly';
+      const term = fd.get('term') || 'Annual';
+      const examSession = fd.get('exam_session') || '2026-27';
 
-    const res = await post('/api/admin/marksheets/direct-issue', {
-      student_id: studentId,
-      evaluation_type: evaluationType,
-      term: term,
-      exam_session: examSession,
-      subjects: subjectsPayload,
-      total_max: totalMax,
-      total_obtained: totalObtained
-    });
+      let totMax = 0, totObt = 0;
+      const previewSubs = activeSubjects.map((sub, idx) => {
+        const thMax = +fd.get(`sub_max_th_${idx}`) || 70;
+        const thObt = +fd.get(`sub_obt_th_${idx}`) || 0;
+        const prMax = +fd.get(`sub_max_pr_${idx}`) || 30;
+        const prObt = +fd.get(`sub_obt_pr_${idx}`) || 0;
+        totMax += (thMax + prMax);
+        totObt += (thObt + prObt);
+        return {
+          code: fd.get(`sub_code_${idx}`) || `SUB${idx+1}`,
+          name: fd.get(`sub_name_${idx}`) || sub.name,
+          max_theory: thMax,
+          obt_theory: thObt,
+          max_practical: prMax,
+          obt_practical: prObt,
+          total_max: thMax + prMax,
+          total_obt: thObt + prObt
+        };
+      });
 
-    toast(`Official Marksheet issued: ${res.marksheet_no} (${res.percentage}% Grade ${res.grade}) [${term}]!`);
-    document.getElementById('marksheetDirectModal').remove();
-    await views.Students();
-  };
+      const pct = totMax > 0 ? Math.round((totObt / totMax) * 1000) / 10 : 0;
+      const grade = pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : 'C';
+
+      showAdminOfficialMarksheetModal({
+        student_id: sId,
+        student_name: curStu.name || 'Candidate',
+        father_name: curStu.father_name || 'Guardian',
+        student_code: curStu.student_code || 'PESC001',
+        roll_no: curStu.student_code || 'PESC001',
+        course_name: curStu.course_name || 'Diploma Course',
+        centre_name: curStu.centre_name || 'Study Centre',
+        centre_code: curStu.centre_code || 'PESC001',
+        term,
+        evaluation_type: evalType,
+        exam_session: examSession,
+        subjects: previewSubs,
+        total_max: totMax,
+        total_obtained: totObt,
+        percentage: pct,
+        grade,
+        result: 'PASS'
+      });
+    };
+  }
+
+  // Form Submit Handler
+  const formEl = document.getElementById('marksheetDirectForm');
+  if (formEl) {
+    formEl.onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(formEl);
+      const sId = +fd.get('student_id');
+      const evaluationType = fd.get('evaluation_type') || 'yearly';
+      const term = fd.get('term') || 'Annual';
+      const examSession = fd.get('exam_session') || '2026-27';
+      const alsoCert = document.getElementById('chkIssueCertAlso')?.checked;
+
+      let totalMax = 0, totalObtained = 0;
+      const subjectsPayload = activeSubjects.map((sub, idx) => {
+        const maxTh = +fd.get(`sub_max_th_${idx}`) || 70;
+        const obtTh = +fd.get(`sub_obt_th_${idx}`) || 0;
+        const maxPr = +fd.get(`sub_max_pr_${idx}`) || 30;
+        const obtPr = +fd.get(`sub_obt_pr_${idx}`) || 0;
+        const sMax = maxTh + maxPr;
+        const sObt = obtTh + obtPr;
+        totalMax += sMax;
+        totalObtained += sObt;
+        return {
+          code: fd.get(`sub_code_${idx}`) || `SUB${idx+1}`,
+          name: fd.get(`sub_name_${idx}`) || sub.name,
+          max_theory: maxTh,
+          obt_theory: obtTh,
+          max_practical: maxPr,
+          obt_practical: obtPr,
+          total_max: sMax,
+          total_obt: sObt,
+          result: sObt >= Math.round(sMax * 0.33) ? 'PASS' : 'FAIL'
+        };
+      });
+
+      // 1. Issue Marksheet
+      const resM = await api('/api/admin/marksheets/direct-issue', {
+        method: 'POST',
+        body: {
+          student_id: sId,
+          evaluation_type: evaluationType,
+          term: term,
+          exam_session: examSession,
+          subjects: subjectsPayload,
+          total_max: totalMax,
+          total_obtained: totalObtained
+        }
+      });
+
+      // 2. If simultaneously checked, also issue Certificate
+      let certMsg = '';
+      if (alsoCert) {
+        try {
+          const resC = await api('/api/admin/certificates/direct-issue', {
+            method: 'POST',
+            body: {
+              student_id: sId,
+              evaluation_type: evaluationType,
+              term: term
+            }
+          });
+          certMsg = ` & Certificate (${resC.cert_no})`;
+        } catch (cErr) {
+          console.warn('Certificate auto-issue notice:', cErr);
+        }
+      }
+
+      toast(`Official Marksheet (${resM.marksheet_no})${certMsg} successfully issued!`);
+      document.getElementById('marksheetDirectModal').remove();
+      
+      if (typeof current !== 'undefined' && views[current]) {
+        await views[current]();
+      } else {
+        await views.Marksheets();
+      }
+    };
+  }
 }
 
+// Standalone Certificate Direct Issuance Modal
 async function openAdminCertificateIssueModal(studentId, studentName) {
   const existing = document.getElementById('certDirectModal');
   if (existing) existing.remove();
 
-  let s = (window._currentStudents || []).find(x => x.id === studentId);
-  if (!s) {
+  if (!window._currentStudents || !window._currentStudents.length) {
     const res = await api('/api/admin/students');
-    s = (res.students || []).find(x => x.id === studentId) || { id: studentId, name: studentName, course_name: 'DCA', student_code: 'PESC0001' };
+    window._currentStudents = res.students || [];
+  }
+
+  let s = (window._currentStudents || []).find(x => x.id === studentId);
+  if (!s && studentId) {
+    s = { id: studentId, name: studentName, course_name: 'DCA', student_code: 'PESC0001' };
   }
 
   const modal = document.createElement('div');
   modal.id = 'certDirectModal';
-  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; backdrop-filter:blur(3px);';
   modal.innerHTML = `
-    <div style="background:#fff; border-radius:12px; max-width:560px; width:100%; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.25);">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
+    <div style="background:#fff; border-radius:14px; max-width:620px; width:100%; padding:26px; box-shadow:0 25px 50px rgba(0,0,0,0.3); border:2px solid #cbd5e1;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #e2e8f0; padding-bottom:12px; margin-bottom:18px;">
         <div>
-          <h3 style="margin:0; color:#0a2a5e;">📜 Issue Official Certificate: ${esc(s.name)}</h3>
-          <span class="muted" style="font-size:0.85rem;">Candidate: <b>${esc(s.student_code)}</b></span>
+          <h3 style="margin:0; color:#0a2a5e;">📜 Issue Official Passing Certificate</h3>
+          <span class="muted" style="font-size:0.85rem;">Verifiable National Council Certificate issuance</span>
         </div>
-        <button type="button" onclick="document.getElementById('certDirectModal').remove()" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">&times;</button>
+        <button type="button" onclick="document.getElementById('certDirectModal').remove()" style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">&times;</button>
       </div>
 
       <form id="certDirectForm">
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:14px; margin-bottom:16px;">
+          <label style="font-weight:700; display:block; margin-bottom:6px;">Select Candidate *</label>
+          <select name="student_id" required style="width:100%; padding:8px 10px; border:1.5px solid #0284c7; border-radius:6px; font-weight:700;">
+            ${(window._currentStudents || []).map(stu => `
+              <option value="${stu.id}" ${s && s.id === stu.id ? 'selected' : ''}>
+                ${esc(stu.name)} · ${esc(stu.student_code)} (${esc(stu.course_name || 'Course')})
+              </option>
+            `).join('')}
+          </select>
+        </div>
+
         <div style="margin-bottom:16px;">
           <label style="font-weight:700; display:block; margin-bottom:8px;">Certificate Evaluation Pattern *</label>
           <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:12px;">
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#064e3b;">
               <input type="radio" name="evaluation_type" value="yearly" checked onchange="document.getElementById('adminCertTerm').value='Annual Examination / Course Completion'">
               📅 Yearly / Annual Certificate (वार्षिक प्रमाणपत्र)
             </label>
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#0284c7;">
               <input type="radio" name="evaluation_type" value="semester" onchange="document.getElementById('adminCertTerm').value='Semester 1'">
               📚 Semester-wise Certificate (सेमेस्टर आधारित प्रमाणपत्र)
             </label>
           </div>
         </div>
 
-        <div style="margin-bottom:16px;">
+        <div style="margin-bottom:18px;">
           <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Term / Examination Stage *</label>
           <input name="term" id="adminCertTerm" value="Annual Examination / Course Completion" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
         </div>
 
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
           <button type="button" class="btn alt" onclick="document.getElementById('certDirectModal').remove()">Cancel</button>
-          <button type="submit" class="btn gold" style="font-weight:700;">Issue Official Certificate</button>
+          <button type="submit" class="btn gold" style="font-weight:800; padding:10px 22px;">⚡ Issue Official Certificate</button>
         </div>
       </form>
     </div>
@@ -2562,18 +3488,26 @@ async function openAdminCertificateIssueModal(studentId, studentName) {
   document.getElementById('certDirectForm').onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
+    const sId = +fd.get('student_id');
     const evaluationType = fd.get('evaluation_type') || 'yearly';
     const term = fd.get('term') || 'Annual Examination';
 
-    const res = await post('/api/admin/certificates/direct-issue', {
-      student_id: studentId,
-      evaluation_type: evaluationType,
-      term: term
+    const res = await api('/api/admin/certificates/direct-issue', {
+      method: 'POST',
+      body: {
+        student_id: sId,
+        evaluation_type: evaluationType,
+        term: term
+      }
     });
 
     toast(`Official Certificate issued: ${res.cert_no} [${term}]!`);
     document.getElementById('certDirectModal').remove();
-    await views.Students();
+    if (typeof current !== 'undefined' && views[current]) {
+      await views[current]();
+    } else {
+      await views.Certificates();
+    }
   };
 }
 
