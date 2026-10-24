@@ -1184,5 +1184,32 @@ footer {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  .council-hindi-title {
+    font-size: 34pt !important;
+    line-height: 1.15 !important;
+    font-weight: 900 !important;
+    color: #072a60 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .council-seal-svg {
+    width: 110px !important;
+    height: 110px !important;
+    min-width: 110px !important;
+    min-height: 110px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .council-english-title {
+    font-size: 16pt !important;
+    line-height: 1.2 !important;
+    font-weight: 900 !important;
+    color: #047857 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
 
