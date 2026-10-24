@@ -988,11 +988,18 @@ export default {
       return new Response(xml, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
     }
 
-    // 2b. Universal Verification Page Routing: Intercept any /verify and /verify/* requests to serve verify.html
-    if ((path === '/verify' || path.startsWith('/verify/')) && !path.startsWith('/api/')) {
+    // 2b. Universal Verification Page Routing: Intercept any /verify/* subpaths (QR verification) to serve verify.html
+    if (path.startsWith('/verify/') && !path.startsWith('/api/')) {
       const newUrl = new URL(request.url);
-      newUrl.pathname = '/verify.html';
-      return env.ASSETS.fetch(new Request(newUrl, request));
+      newUrl.pathname = '/verify';
+      let res = await env.ASSETS.fetch(new Request(newUrl.toString(), request));
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get('location');
+        if (loc) {
+          res = await env.ASSETS.fetch(new Request(new URL(loc, request.url).toString(), request));
+        }
+      }
+      return res;
     }
 
     // 3. Subdomain Routing: If request is to a franchise subdomain (e.g. navyacomputer.pescouncil.in, shriramcomputer.pescouncil.in)
