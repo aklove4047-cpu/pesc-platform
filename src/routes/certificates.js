@@ -89,7 +89,7 @@ router.get('/:id/pdf', requireAuth, h(async (req, res) => {
   // Official contact footer bar
   doc.moveTo(35, H - 52).lineTo(W - 35, H - 52).lineWidth(1).stroke('#000000');
   doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000000')
-    .text('| 7380435797 | mauryachotu385@gmail.com | Head Office Shahgarh, Azamgarh UP 276001', 0, H - 44, { align: 'center', width: W });
+    .text('Main Head Office: Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001', 0, H - 44, { align: 'center', width: W });
   doc.end();
 }));
 module.exports = router;

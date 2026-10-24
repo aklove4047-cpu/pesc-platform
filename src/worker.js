@@ -1441,8 +1441,6 @@ export default {
         run_by: 'PURVANCHAL SHIKSHA EVAM KAUSHAL PARISHAD | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
         registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION',
         council_reg_no: 'TRUST/2025/5/IV/299',
-        council_phone: '7380435797',
-        council_email: 'mauryachotu385@gmail.com',
         head_office: 'Shahgarh, Azamgarh UP 276001',
         head_office_full: 'Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India',
         place_of_issue: 'Regional Council Office, Shahgarh, Azamgarh UP',
@@ -1502,8 +1500,6 @@ export default {
         run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
         registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
         council_reg_no: 'TRUST/2025/5/IV/299',
-        council_phone: '7380435797',
-        council_email: 'mauryachotu385@gmail.com',
         head_office: 'Head Office Shahgarh, Azamgarh UP 276001',
         coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
         total_obtained: mrk.total_obtained,
@@ -3671,8 +3667,6 @@ export default {
             run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
             registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
             council_reg_no: 'TRUST/2025/5/IV/299',
-            council_phone: '7380435797',
-            council_email: 'mauryachotu385@gmail.com',
             head_office: 'Head Office Shahgarh, Azamgarh UP 276001',
             coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone'
           };
@@ -3695,8 +3689,6 @@ export default {
             run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
             registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
             council_reg_no: 'TRUST/2025/5/IV/299',
-            council_phone: '7380435797',
-            council_email: 'mauryachotu385@gmail.com',
             head_office: 'Head Office Shahgarh, Azamgarh UP 276001',
             coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone'
           };

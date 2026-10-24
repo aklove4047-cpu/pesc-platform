@@ -184,7 +184,7 @@ function renderOfficialCouncilFooter(opts = {}) {
         🏛️ <b>MAIN HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
       </div>
       <div style="font-size:0.78rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
-        📍 <b>PLACE OF ISSUE:</b> Central Examination Board &amp; Regional Office, Uttar Pradesh &nbsp;|&nbsp; <b>Helpline:</b> +91 7380435797 &nbsp;|&nbsp; <b>Email:</b> mauryachotu385@gmail.com
+        📍 <b>PLACE OF ISSUE:</b> Central Examination Board &amp; Regional Council Office, Uttar Pradesh
       </div>
       <div style="font-size:0.72rem; font-weight:700; color:#475569;">
         Official Recognized Autonomous Certification &bull; Validated under Indian Trust Act (Regd. No: TRUST/2025/5/IV/299)
