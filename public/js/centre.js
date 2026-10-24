@@ -89,16 +89,18 @@ function renderOfficialCouncilHeader(opts = {}) {
     <!-- Double Line Divider matching ======================================== -->
     <div style="border-top:3.5px double #072a60; margin:6px 0 8px; width:100%;"></div>
 
-    <!-- Two-Column Official Header Metadata -->
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; font-size:0.82rem; font-weight:900; color:#000000; text-align:left; line-height:1.45; margin-bottom:10px;">
+    <!-- Two-Column Official Header Metadata (Issue Date, Issue Place & Main Head Office) -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; font-size:0.82rem; font-weight:800; color:#000000; text-align:left; line-height:1.45; margin-bottom:10px; background:rgba(248,250,252,0.9); padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1;">
       <div>
-        <div>REGD. NO. (COUNCIL): <span style="font-family:monospace; font-weight:900;">TRUST/2025/5/IV/299</span></div>
-        <div>Student Reg. No: <span style="font-family:monospace; font-weight:900;">${esc(studentCode)}</span></div>
-        <div>Roll Number: <span style="font-family:monospace; font-weight:900;">${esc(rollNo)}</span></div>
+        <div><b>REGD. NO. (COUNCIL):</b> <span style="font-family:monospace; font-weight:900;">TRUST/2025/5/IV/299</span></div>
+        <div><b>Student Reg. No:</b> <span style="font-family:monospace; font-weight:900;">${esc(studentCode)}</span></div>
+        <div><b>Roll Number:</b> <span style="font-family:monospace; font-weight:900;">${esc(rollNo)}</span></div>
+        <div><b>Place of Issue (स्थान):</b> <span style="font-weight:900; color:#072a60;">${esc(opts.issuePlace || 'Regional Council Office, Shahgarh, Azamgarh UP')}</span></div>
       </div>
       <div style="text-align:right;">
-        <div>Ref No: <span style="font-family:monospace; font-weight:900;">${esc(refNo)}</span></div>
-        <div>Date of Issue: <span style="font-weight:900;">${esc(issueDate)}</span></div>
+        <div><b>Ref No:</b> <span style="font-family:monospace; font-weight:900;">${esc(refNo)}</span></div>
+        <div><b>Date of Issue (तिथि):</b> <span style="font-weight:900; color:#047857;">${esc(issueDate)}</span></div>
+        <div><b>Main Head Office:</b> <span style="font-weight:900;">Shahgarh, Azamgarh UP 276001</span></div>
       </div>
     </div>
   `;
@@ -176,11 +178,18 @@ function renderOfficialCouncilFooter(opts = {}) {
       </div>
     </div>
 
-    <!-- Official Helpline & Address Bar -->
-    <div style="margin-top:16px; border-top:1.5px solid #072a60; padding-top:6px; text-align:center;">
-      <div style="font-size:0.82rem; font-weight:900; color:#000000; letter-spacing:0.3px; margin-bottom:8px;">
-        | Helpline: 7380435797 | Email: mauryachotu385@gmail.com | Head Office Shahgarh, Azamgarh UP 276001
+    <!-- Official Head Office, Place of Issue & Contact Bar -->
+    <div style="margin-top:16px; border-top:2px solid #072a60; padding-top:8px; text-align:center; background:rgba(248,250,252,0.7); border-radius:6px; padding:8px 12px; margin-bottom:10px;">
+      <div style="font-size:0.84rem; font-weight:900; color:#072a60; letter-spacing:0.3px; margin-bottom:3px;">
+        🏛️ <b>MAIN HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
       </div>
+      <div style="font-size:0.78rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
+        📍 <b>PLACE OF ISSUE:</b> Central Examination Board &amp; Regional Office, Uttar Pradesh &nbsp;|&nbsp; <b>Helpline:</b> +91 7380435797 &nbsp;|&nbsp; <b>Email:</b> mauryachotu385@gmail.com
+      </div>
+      <div style="font-size:0.72rem; font-weight:700; color:#475569;">
+        Official Recognized Autonomous Certification &bull; Validated under Indian Trust Act (Regd. No: TRUST/2025/5/IV/299)
+      </div>
+    </div>
 
       <!-- Accreditation Badges Row -->
       <div style="display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap; padding:2px 0;">
@@ -2235,11 +2244,12 @@ function setCertEvalPattern(pat) {
   updateCertPreview();
 }
 
-function updateCertPreview() {
+async function updateCertPreview() {
   const sel = $('#certStudentSelect');
   if (!sel) return;
   const opt = sel.selectedOptions[0];
   if (!opt) return;
+  const studentId = +sel.value;
   const name = opt.dataset.name;
   const father = opt.dataset.father || 'N/A';
   const mother = opt.dataset.mother || 'N/A';
@@ -2261,10 +2271,32 @@ function updateCertPreview() {
   const semFee = foundCourse ? (foundCourse.semester_fee_rupees || Math.round((foundCourse.semester_fee_paise || 60000)/100)) : 600;
   const currentFee = isSemester ? semFee : singleFee;
 
+  // Check Dual-Approval Status from backend
+  let certItem = null;
+  try {
+    const stRes = await api(`/api/centre/approvals-status?student_id=${studentId}`);
+    if (stRes && stRes.certificate) certItem = stRes.certificate;
+  } catch (_) {}
+
+  const isHeadApproved = certItem ? (certItem.head_approved || certItem.status === 'Valid' || certItem.status === 'Approved_By_Council') : true;
+  const isCoordApproved = certItem ? (certItem.coordinator_approved || certItem.status === 'Valid' || certItem.status === 'Approved_By_Council') : true;
+  const isCentreSigned = certItem ? (certItem.centre_signed || certItem.status === 'Valid') : true;
+  const certDbId = certItem ? certItem.id : 1;
+
   const feeNoticeEl = $('#certFeeNotice');
   if (feeNoticeEl) {
+    let actionBtnHtml = '';
+    if (!isHeadApproved || !isCoordApproved) {
+      actionBtnHtml = `<button type="button" class="btn sm" onclick="requestDualApproval(${studentId}, 'certificate')" style="background:#0284c7; color:#fff; font-weight:700;">📤 Request Dual Approval (अनुमोदन हेतु भेजें)</button>`;
+    } else if (isHeadApproved && isCoordApproved && !isCentreSigned) {
+      actionBtnHtml = `<button type="button" class="btn sm" onclick="signAndIssueCert(${certDbId})" style="background:#16a34a; color:#fff; font-weight:800; box-shadow:0 2px 8px rgba(22,163,74,0.3);">✍️ Affix Centre Seal &amp; Issue (मुहर लगाकर जारी करें)</button>`;
+    } else {
+      actionBtnHtml = `<span style="background:#dcfce7; color:#166534; font-weight:800; padding:6px 14px; border-radius:20px; font-size:0.82rem;">✅ Officially Issued to Student</span>`;
+    }
+
     feeNoticeEl.innerHTML = `
-      <div style="background:${isSemester ? '#eff6ff' : '#f0fdf4'}; border:1px solid ${isSemester ? '#bfdbfe' : '#bbf7d0'}; border-radius:10px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+      <!-- Prescribed Fee Banner -->
+      <div style="background:${isSemester ? '#eff6ff' : '#f0fdf4'}; border:1px solid ${isSemester ? '#bfdbfe' : '#bbf7d0'}; border-radius:10px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 4px rgba(0,0,0,0.03); margin-bottom:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
           <span style="font-size:1.4rem;">${isSemester ? '📚' : '📜'}</span>
           <div>
@@ -2278,6 +2310,40 @@ function updateCertPreview() {
           <span style="background:${isSemester ? '#1d4ed8' : '#15803d'}; color:#ffffff; font-weight:800; font-size:1.15rem; padding:4px 16px; border-radius:20px; letter-spacing:0.5px; display:inline-block;">
             ₹${currentFee}
           </span>
+        </div>
+      </div>
+
+      <!-- 3-Tier Multi-Stage Dual Approval Status & Strategy Card -->
+      <div style="background:#ffffff; border:1.8px solid #cbd5e1; border-radius:10px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+          <div>
+            <b style="font-size:1.02rem; color:#072a60;">📋 Council 3-Stage Verification &amp; Approval Strategy (अनुमोदन प्रगति)</b>
+            <p style="margin:2px 0 0; font-size:0.8rem; color:#64748b;">
+              1. हेड ऑफिस एवं 2. क्षेत्रीय समन्वयक दोनों की मुहर व साइन अप्रूव होने के बाद ही सेंटर मुहर लगाकर छात्र को जारी कर सकता है।
+            </p>
+          </div>
+          <div>${actionBtnHtml}</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:10px;">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
+            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">1. Head Office Seal (हेड ऑफिस)</div>
+            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
+              ${isHeadApproved ? '<span style="color:#16a34a;">✅ Approved (S. N. Mishra)</span>' : '<span style="color:#d97706;">⏳ Pending Approval</span>'}
+            </div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
+            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">2. Regional Coordinator (समन्वयक)</div>
+            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
+              ${isCoordApproved ? '<span style="color:#16a34a;">✅ Approved (Er. V. K. Maurya)</span>' : '<span style="color:#d97706;">⏳ Pending Approval</span>'}
+            </div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
+            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">3. Centre Director Seal &amp; Issue</div>
+            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
+              ${isCentreSigned ? '<span style="color:#16a34a;">✅ Signed &amp; Issued to Student</span>' : (isHeadApproved && isCoordApproved ? '<span style="color:#2563eb;">✍️ Ready to Sign &amp; Issue</span>' : '<span style="color:#94a3b8;">🔒 Locked (Wait for Step 1 &amp; 2)</span>')}
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -2303,39 +2369,51 @@ function updateCertPreview() {
       studentCode: code,
       rollNo: code,
       refNo: refNo,
-      issueDate: issueDate
+      issueDate: issueDate,
+      issuePlace: cAddress || 'Regional Council Office, Shahgarh, Azamgarh UP',
+      headOffice: 'Shahgarh, Azamgarh UP 276001'
     })}
 
-    <!-- Certificate Title Ribbon & Student Photo -->
-    <div style="position:relative; margin:10px 0 16px;">
-      <!-- Student Photo on Right -->
-      <div style="position:absolute; right:10px; top:0; width:76px; height:92px; border:2px solid #0a2a5e; border-radius:4px; overflow:hidden; background:#f8fafc; box-shadow:0 2px 6px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center;">
-        ${studentPhotoHtml}
+    <!-- Top Section: QR Code on Left, Ribbon in Center, Student Photo on Right (Opposite) -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin:10px 0 16px; gap:12px;">
+      <!-- Left: QR Code -->
+      <div style="border:2px solid #072a60; padding:6px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(cleanNum)}" alt="Verification QR" style="width:82px; height:82px; display:block;">
+        <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">
+          SCAN TO VERIFY
+        </div>
       </div>
 
-      <!-- Centered Ribbon Title -->
-      <div style="text-align:center; max-width:440px; margin:0 auto; padding-right:50px;">
-        <div style="display:inline-block; background:linear-gradient(135deg, #065f46, #047857); color:#ffffff; font-size:1.55rem; font-weight:900; letter-spacing:3px; padding:6px 40px; border-radius:6px; box-shadow:0 3px 8px rgba(4,120,87,0.3); border:2px solid #d4af37;">
+      <!-- Center: Ribbon Title -->
+      <div style="flex:1; text-align:center; padding:0 6px;">
+        <div style="display:inline-block; background:linear-gradient(135deg, #065f46 0%, #047857 50%, #064e3b 100%); color:#ffffff; font-size:1.55rem; font-weight:900; letter-spacing:3px; padding:7px 36px; border-radius:6px; box-shadow:0 4px 12px rgba(4,120,87,0.35); border:2.5px solid #d4af37;">
           CERTIFICATE
         </div>
-        <div style="font-size:0.75rem; font-weight:800; color:#064e3b; letter-spacing:1px; margin-top:4px;">
-          ${isSemester ? 'SEMESTER EXAMINATION EVALUATION' : 'ANNUAL EXAMINATION EVALUATION'}
+        <div style="font-size:0.76rem; font-weight:900; color:#064e3b; letter-spacing:1px; margin-top:5px; text-transform:uppercase;">
+          ${isSemester ? 'SEMESTER EXAMINATION EVALUATION' : 'COURSE COMPLETION & SKILL CERTIFICATION'}
         </div>
+      </div>
+
+      <!-- Right: Student Photo -->
+      <div style="border:2px solid #072a60; padding:3px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
+        <div style="width:76px; height:92px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
+          ${studentPhotoHtml}
+        </div>
+        <div style="font-size:0.52rem; font-weight:900; color:#072a60; margin-top:2px; letter-spacing:0.3px;">PESC VERIFIED</div>
       </div>
     </div>
 
     <!-- Official Certificate Body Text -->
     <div style="font-size:0.92rem; color:#000000; font-weight:700; line-height:2.2; text-align:center; margin:18px auto 14px; max-width:740px;">
       THIS IS TO CERTIFY THAT MR. / MRS. <span style="font-size:1.28rem; font-weight:900; color:#0a2a5e; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(name)}</span><br>
-      S/O / D/O / W/O <span style="font-size:1.05rem; font-weight:900; color:#000000; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(father)}</span> &nbsp;&nbsp;&nbsp;&nbsp;
-      MOTHERS NAME <span style="font-size:1.05rem; font-weight:900; color:#000000; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(mother)}</span> HAS SUCCESSFULLY CLEARED THE<br>
-      ASSESSMENT IN THE JOB ROLE / COURSE <span style="font-size:1.2rem; font-weight:900; color:#064e3b; border-bottom:1.5px solid #64748b; padding:0 8px;">${esc(course)}</span><br>
-      <span style="font-size:1.05rem; font-weight:900; color:#047857; border-bottom:1.5px solid #64748b; padding:0 6px;">78.50 %</span> HELD IN <span style="font-weight:900; border-bottom:1.5px solid #64748b; padding:0 8px;">${esc(cAddress)}</span><br>
-      WITH GRADE <span style="font-size:1.15rem; font-weight:900; color:#16a34a; border-bottom:1.5px solid #64748b; padding:0 8px;">A</span> FROM OUR AUTHORIZED STUDY CENTRE<br>
-      <div style="font-size:1.28rem; font-weight:900; color:#0a2a5e; margin:6px 0; letter-spacing:0.5px;">${esc(cName)} (CODE: ${esc(cCode)})</div>
-      HE / SHE HAS BEEN AWARDED WITH THE CERTIFICATE / DIPLOMA OF SAID JOB ROLE /<br>
-      COURSE DURATION <span style="font-weight:900; border-bottom:1.5px solid #64748b; padding:0 8px;">1 Year</span>
-      FROM <span style="font-weight:900; border-bottom:1.5px solid #64748b; padding:0 8px;">01-09-2025</span> TO <span style="font-weight:900; border-bottom:1.5px solid #64748b; padding:0 8px;">12-09-2026</span>
+      SON / DAUGHTER OF SHRI <span style="font-size:1.05rem; font-weight:900; color:#000000; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(father)}</span> &nbsp;&nbsp;&nbsp;&nbsp;
+      MOTHERS NAME <span style="font-size:1.05rem; font-weight:900; color:#000000; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(mother)}</span><br>
+      STUDENT REGISTRATION CODE <span style="font-family:monospace; font-weight:900; color:#072a60; border-bottom:1.5px solid #64748b; padding:0 8px;">${esc(code)}</span> HAS SUCCESSFULLY COMPLETED THE<br>
+      PRESCRIBED CURRICULUM AND PASSED THE EXAMINATION IN <span style="font-size:1.25rem; font-weight:900; color:#064e3b; border-bottom:1.5px solid #64748b; padding:0 8px;">"${esc(course)}"</span><br>
+      WITH GRADE <span style="font-size:1.15rem; font-weight:900; color:#16a34a; border-bottom:1.5px solid #64748b; padding:0 8px;">A+ (EXEMPLARY)</span> FROM OUR AUTHORIZED STUDY CENTRE<br>
+      <div style="font-size:1.28rem; font-weight:900; color:#0a2a5e; margin:6px 0; letter-spacing:0.5px;">${esc(cName)} (${esc(cCode)})</div>
+      LOCATED AT <span style="font-weight:900; border-bottom:1.5px solid #64748b; padding:0 8px;">${esc(cAddress)}</span>.<br>
+      IN WITNESS WHEREOF, THIS OFFICIAL RECOGNIZED CREDENTIAL IS DULY CONFERRED BY THE COUNCIL.
     </div>
 
     ${renderOfficialCouncilFooter({
@@ -2801,15 +2879,17 @@ function setMrkFormat(fmt) {
   setMrkEvalPattern(fmt === 'single' ? 'yearly' : 'semester');
 }
 
-function updateMrkPreview() {
+async function updateMrkPreview() {
   const sel = $('#mrkStudentSelect');
   if (!sel) return;
   const opt = sel.selectedOptions[0];
   if (!opt) return;
+  const studentId = +sel.value;
   const name = opt.dataset.name;
   const father = opt.dataset.father || 'N/A';
   const code = opt.dataset.code;
   const course = opt.dataset.course;
+  const photo = opt.dataset.photo || '';
 
   const mrkTerm = ($('#mrkTermSelect') && $('#mrkTermSelect').value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
   const isSemester = mrkEvalPattern === 'semester';
@@ -2825,10 +2905,32 @@ function updateMrkPreview() {
   const semFee = foundCourse ? (foundCourse.semester_fee_rupees || Math.round((foundCourse.semester_fee_paise || 60000)/100)) : 600;
   const currentFee = isSemester ? semFee : singleFee;
 
+  // Check Dual-Approval Status from backend
+  let mrkItem = null;
+  try {
+    const stRes = await api(`/api/centre/approvals-status?student_id=${studentId}`);
+    if (stRes && stRes.marksheet) mrkItem = stRes.marksheet;
+  } catch (_) {}
+
+  const isHeadApproved = mrkItem ? (mrkItem.head_approved || mrkItem.status === 'Valid' || mrkItem.status === 'Approved_By_Council') : true;
+  const isCoordApproved = mrkItem ? (mrkItem.coordinator_approved || mrkItem.status === 'Valid' || mrkItem.status === 'Approved_By_Council') : true;
+  const isCentreSigned = mrkItem ? (mrkItem.centre_signed || mrkItem.status === 'Valid') : true;
+  const mrkDbId = mrkItem ? mrkItem.id : 1;
+
   const feeNoticeEl = $('#mrkFeeNotice');
   if (feeNoticeEl) {
+    let actionBtnHtml = '';
+    if (!isHeadApproved || !isCoordApproved) {
+      actionBtnHtml = `<button type="button" class="btn sm" onclick="requestDualApproval(${studentId}, 'marksheet')" style="background:#0284c7; color:#fff; font-weight:700;">📤 Request Dual Approval (अंकतालिका अनुमोदन भेजें)</button>`;
+    } else if (isHeadApproved && isCoordApproved && !isCentreSigned) {
+      actionBtnHtml = `<button type="button" class="btn sm" onclick="signAndIssueMrk(${mrkDbId})" style="background:#16a34a; color:#fff; font-weight:800; box-shadow:0 2px 8px rgba(22,163,74,0.3);">✍️ Affix Centre Seal &amp; Issue (मुहर लगाकर अंकतालिका दें)</button>`;
+    } else {
+      actionBtnHtml = `<span style="background:#dcfce7; color:#166534; font-weight:800; padding:6px 14px; border-radius:20px; font-size:0.82rem;">✅ Officially Issued to Student</span>`;
+    }
+
     feeNoticeEl.innerHTML = `
-      <div style="background:${isSemester ? '#eff6ff' : '#f0fdf4'}; border:1px solid ${isSemester ? '#bfdbfe' : '#bbf7d0'}; border-radius:10px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+      <!-- Prescribed Fee Banner -->
+      <div style="background:${isSemester ? '#eff6ff' : '#f0fdf4'}; border:1px solid ${isSemester ? '#bfdbfe' : '#bbf7d0'}; border-radius:10px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 4px rgba(0,0,0,0.03); margin-bottom:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
           <span style="font-size:1.4rem;">${isSemester ? '📚' : '📜'}</span>
           <div>
@@ -2844,21 +2946,49 @@ function updateMrkPreview() {
           </span>
         </div>
       </div>
+
+      <!-- 3-Tier Multi-Stage Dual Approval Status & Strategy Card -->
+      <div style="background:#ffffff; border:1.8px solid #cbd5e1; border-radius:10px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+          <div>
+            <b style="font-size:1.02rem; color:#072a60;">📋 Council 3-Stage Verification &amp; Approval Strategy (अंकतालिका अनुमोदन)</b>
+            <p style="margin:2px 0 0; font-size:0.8rem; color:#64748b;">
+              1. हेड ऑफिस एवं 2. क्षेत्रीय समन्वयक दोनों की मुहर व साइन अप्रूव होने के बाद ही सेंटर मुहर लगाकर छात्र को जारी कर सकता है।
+            </p>
+          </div>
+          <div>${actionBtnHtml}</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:10px;">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
+            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">1. Head Office Seal (हेड ऑफिस)</div>
+            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
+              ${isHeadApproved ? '<span style="color:#16a34a;">✅ Approved (S. N. Mishra)</span>' : '<span style="color:#d97706;">⏳ Pending Approval</span>'}
+            </div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
+            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">2. Regional Coordinator (समन्वयक)</div>
+            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
+              ${isCoordApproved ? '<span style="color:#16a34a;">✅ Approved (Er. V. K. Maurya)</span>' : '<span style="color:#d97706;">⏳ Pending Approval</span>'}
+            </div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
+            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">3. Centre Director Seal &amp; Issue</div>
+            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
+              ${isCentreSigned ? '<span style="color:#16a34a;">✅ Signed &amp; Issued to Student</span>' : (isHeadApproved && isCoordApproved ? '<span style="color:#2563eb;">✍️ Ready to Sign &amp; Issue</span>' : '<span style="color:#94a3b8;">🔒 Locked (Wait for Step 1 &amp; 2)</span>')}
+            </div>
+          </div>
+        </div>
+      </div>
     `;
   }
 
   const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
   const cCode = currentCentre ? (currentCentre.centre_code || 'PESC00001') : 'PESC00001';
-  const cDistrict = currentCentre ? (currentCentre.district || 'Varanasi') : 'Varanasi';
+  const cDistrict = currentCentre ? (currentCentre.district || 'Azamgarh') : 'Azamgarh';
   const cState = currentCentre ? (currentCentre.state || 'Uttar Pradesh') : 'Uttar Pradesh';
-  const cAddress = currentCentre ? (currentCentre.address || `${cDistrict}, ${cState} - ${currentCentre.pin || '221001'}`) : `${cDistrict}, ${cState}`;
+  const cAddress = currentCentre ? (currentCentre.address || `${cDistrict}, ${cState}`) : `${cDistrict}, ${cState}`;
   const directorName = currentCentre ? (currentCentre.director_name || 'Dr. Ramesh Kumar') : 'Dr. Ramesh Kumar';
-  const directorPhoto = currentCentre ? (currentCentre.director_photo || currentCentre.photo_url || '') : '';
-  const validityText = 'Lifetime Recognition / Session 2026-27';
-
-  const directorPhotoHtml = directorPhoto
-    ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
-    : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
 
   // Retrieve distinct subjects for Yearly-Wise vs Semester-Wise evaluation
   const subjects = getCourseCurriculumSubjects(course, mrkEvalPattern, mrkTerm);
@@ -2922,21 +3052,46 @@ function updateMrkPreview() {
   const refNo = `PESC-MRK-2026-${cleanNum}`;
   const issueDate = '04-10-2026';
 
+  const studentPhotoHtml = photo
+    ? `<img src="${esc(photo)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">`
+    : `<div style="text-align:center; padding:4px;"><div style="font-size:1.6rem;">👤</div><span style="font-size:0.55rem; font-weight:700; color:#64748b; display:block; line-height:1;">Student Photo</span></div>`;
+
   $('#mrkPreviewContainer').innerHTML = `
     ${renderOfficialCouncilHeader({
       studentCode: code,
       rollNo: code,
       refNo: refNo,
-      issueDate: issueDate
+      issueDate: issueDate,
+      issuePlace: cAddress || 'Regional Council Office, Shahgarh, Azamgarh UP',
+      headOffice: 'Shahgarh, Azamgarh UP 276001'
     })}
 
-    <!-- Marksheet Ribbon Title -->
-    <div style="text-align:center; margin:10px 0 14px;">
-      <div style="display:inline-block; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#ffffff; font-size:1.45rem; font-weight:900; letter-spacing:2px; padding:6px 36px; border-radius:6px; box-shadow:0 3px 8px rgba(10,42,94,0.3); border:2px solid #d4af37;">
-        STATEMENT OF MARKS
+    <!-- Top Section: QR Code on Left, Ribbon in Center, Student Photo on Right (Opposite) -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin:10px 0 16px; gap:12px;">
+      <!-- Left: QR Code -->
+      <div style="border:2px solid #072a60; padding:6px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(cleanNum)}" alt="Verification QR" style="width:82px; height:82px; display:block;">
+        <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">
+          SCAN TO VERIFY
+        </div>
       </div>
-      <div style="font-size:0.75rem; font-weight:800; color:#0a2a5e; letter-spacing:1px; margin-top:4px;">
-        ${isSemester ? 'SEMESTER EXAMINATION EVALUATION: ' + esc(mrkTerm).toUpperCase() : 'ANNUAL EXAMINATION EVALUATION: ' + esc(mrkTerm).toUpperCase()}
+
+      <!-- Center: Ribbon Title -->
+      <div style="flex:1; text-align:center; padding:0 6px;">
+        <div style="display:inline-block; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#ffffff; font-size:1.45rem; font-weight:900; letter-spacing:2px; padding:6px 36px; border-radius:6px; box-shadow:0 3px 8px rgba(10,42,94,0.3); border:2px solid #d4af37;">
+          STATEMENT OF MARKS
+        </div>
+        <div style="font-size:0.75rem; font-weight:800; color:#0a2a5e; letter-spacing:1px; margin-top:4px;">
+          ${isSemester ? 'SEMESTER EXAMINATION EVALUATION: ' + esc(mrkTerm).toUpperCase() : 'ANNUAL EXAMINATION EVALUATION: ' + esc(mrkTerm).toUpperCase()}
+        </div>
+      </div>
+
+      <!-- Right: Student Photo -->
+      <div style="border:2px solid #072a60; padding:3px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
+        <div style="width:76px; height:92px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
+          ${studentPhotoHtml}
+        </div>
+        <div style="font-size:0.52rem; font-weight:900; color:#072a60; margin-top:2px; letter-spacing:0.3px;">PESC VERIFIED</div>
       </div>
     </div>
 
@@ -2968,36 +3123,51 @@ function updateSemCertPreview() {
   const name = opt.dataset.name;
   const code = opt.dataset.code;
   const course = opt.dataset.course;
+  const photo = opt.dataset.photo || '';
 
   const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
   const cCode = currentCentre ? (currentCentre.centre_code || 'PESC00001') : 'PESC00001';
-  const cDistrict = currentCentre ? (currentCentre.district || 'Varanasi') : 'Varanasi';
+  const cDistrict = currentCentre ? (currentCentre.district || 'Azamgarh') : 'Azamgarh';
   const cState = currentCentre ? (currentCentre.state || 'Uttar Pradesh') : 'Uttar Pradesh';
-  const cAddress = currentCentre ? (currentCentre.address || `${cDistrict}, ${cState} - ${currentCentre.pin || '221001'}`) : `${cDistrict}, ${cState}`;
+  const cAddress = currentCentre ? (currentCentre.address || `${cDistrict}, ${cState}`) : `${cDistrict}, ${cState}`;
   const directorName = currentCentre ? (currentCentre.director_name || 'Dr. Ramesh Kumar') : 'Dr. Ramesh Kumar';
-  const directorPhoto = currentCentre ? (currentCentre.director_photo || currentCentre.photo_url || '') : '';
-  const validityText = 'Lifetime Recognition / Session 2026-27';
-
-  const directorPhotoHtml = directorPhoto
-    ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
-    : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
 
   const cleanNum = (code.match(/\d+/) ? code.match(/\d+/)[0] : '00008').padStart(5, '0');
   const refNo = `PESC-SEM-2026-${cleanNum}`;
   const issueDate = '04-10-2026';
+
+  const studentPhotoHtml = photo
+    ? `<img src="${esc(photo)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">`
+    : `<div style="text-align:center; padding:4px;"><div style="font-size:1.6rem;">👤</div><span style="font-size:0.55rem; font-weight:700; color:#64748b; display:block; line-height:1;">Student Photo</span></div>`;
 
   $('#semCertPreview').innerHTML = `
     ${renderOfficialCouncilHeader({
       studentCode: code,
       rollNo: code,
       refNo: refNo,
-      issueDate: issueDate
+      issueDate: issueDate,
+      issuePlace: cAddress || 'Regional Council Office, Shahgarh, Azamgarh UP',
+      headOffice: 'Shahgarh, Azamgarh UP 276001'
     })}
 
-    <!-- Certificate Title Ribbon -->
-    <div style="text-align:center; margin:10px 0 16px;">
-      <div style="display:inline-block; background:linear-gradient(135deg, #0a2a5e, #047857); color:#ffffff; font-size:1.45rem; font-weight:900; letter-spacing:2px; padding:6px 36px; border-radius:6px; box-shadow:0 3px 8px rgba(10,42,94,0.3); border:2px solid #d4af37;">
-        CUMULATIVE SEMESTER DIPLOMA CERTIFICATE
+    <!-- Top Section: QR Code on Left, Ribbon in Center, Student Photo on Right -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin:10px 0 16px; gap:12px;">
+      <div style="border:2px solid #072a60; padding:6px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(cleanNum)}" alt="Verification QR" style="width:82px; height:82px; display:block;">
+        <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">
+          SCAN TO VERIFY
+        </div>
+      </div>
+      <div style="flex:1; text-align:center; padding:0 6px;">
+        <div style="display:inline-block; background:linear-gradient(135deg, #0a2a5e, #047857); color:#ffffff; font-size:1.45rem; font-weight:900; letter-spacing:2px; padding:6px 36px; border-radius:6px; box-shadow:0 3px 8px rgba(10,42,94,0.3); border:2px solid #d4af37;">
+          CUMULATIVE SEMESTER DIPLOMA CERTIFICATE
+        </div>
+      </div>
+      <div style="border:2px solid #072a60; padding:3px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
+        <div style="width:76px; height:92px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
+          ${studentPhotoHtml}
+        </div>
+        <div style="font-size:0.52rem; font-weight:900; color:#072a60; margin-top:2px; letter-spacing:0.3px;">PESC VERIFIED</div>
       </div>
     </div>
 
@@ -3028,6 +3198,50 @@ function updateSemCertPreview() {
     })}
   `;
 }
+
+// Global Handlers for Council Multi-Stage Dual Approval & Centre Issuance Strategy
+window.requestDualApproval = async function(studentId, type) {
+  try {
+    const res = await api('/api/centre/request-dual-approval', 'POST', { student_id: studentId, type: type });
+    if (res && res.error) {
+      alert(res.error);
+    } else {
+      alert('Dual approval request sent successfully to Head Office and Regional Coordinator!');
+      if (type === 'certificate' && typeof updateCertPreview === 'function') updateCertPreview();
+      else if (type === 'marksheet' && typeof updateMrkPreview === 'function') updateMrkPreview();
+    }
+  } catch (err) {
+    alert('Failed to request approval: ' + (err.message || err));
+  }
+};
+
+window.signAndIssueCert = async function(certId) {
+  try {
+    const res = await api(`/api/centre/certificates/${certId}/sign-issue`, 'POST', {});
+    if (res && res.error) {
+      alert(res.error);
+    } else {
+      alert('Certificate successfully signed with Centre Seal and officially issued to student!');
+      if (typeof updateCertPreview === 'function') updateCertPreview();
+    }
+  } catch (err) {
+    alert('Failed to issue certificate: ' + (err.message || err));
+  }
+};
+
+window.signAndIssueMrk = async function(mrkId) {
+  try {
+    const res = await api(`/api/centre/marksheets/${mrkId}/sign-issue`, 'POST', {});
+    if (res && res.error) {
+      alert(res.error);
+    } else {
+      alert('Marksheet successfully signed with Centre Seal and officially issued to student!');
+      if (typeof updateMrkPreview === 'function') updateMrkPreview();
+    }
+  } catch (err) {
+    alert('Failed to issue marksheet: ' + (err.message || err));
+  }
+};
 
 // ID Card Preview
 let idCardStyle = 'council';

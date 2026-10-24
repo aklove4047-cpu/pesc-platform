@@ -1373,6 +1373,12 @@ export default {
             result: mrk.result,
             subjects: parsedSubjects,
             subject_count: parsedSubjects.length,
+            place_of_issue: 'Regional Council Office, Shahgarh, Azamgarh UP',
+            head_office: 'Shahgarh, Azamgarh UP 276001',
+            head_office_full: 'Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India',
+            head_approved: mrk.head_approved !== undefined ? mrk.head_approved : true,
+            coordinator_approved: mrk.coordinator_approved !== undefined ? mrk.coordinator_approved : true,
+            centre_signed: mrk.centre_signed !== undefined ? mrk.centre_signed : true,
             issued_on: new Date(mrk.issue_date || mrk.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
           });
         }
@@ -1437,8 +1443,13 @@ export default {
         council_reg_no: 'TRUST/2025/5/IV/299',
         council_phone: '7380435797',
         council_email: 'mauryachotu385@gmail.com',
-        head_office: 'Head Office Shahgarh, Azamgarh UP 276001',
+        head_office: 'Shahgarh, Azamgarh UP 276001',
+        head_office_full: 'Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India',
+        place_of_issue: 'Regional Council Office, Shahgarh, Azamgarh UP',
         coordinator_office: 'Regional Coordinator Office, Uttar Pradesh Zone',
+        head_approved: cert.head_approved !== undefined ? cert.head_approved : true,
+        coordinator_approved: cert.coordinator_approved !== undefined ? cert.coordinator_approved : true,
+        centre_signed: cert.centre_signed !== undefined ? cert.centre_signed : true,
         issued_on: new Date(cert.issued_at || cert.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
       });
     }
@@ -2655,10 +2666,259 @@ export default {
 
     // --- Certificates & Marksheets & Reports APIs ---
     if (path === '/api/marksheets/pending') {
-      return jsonResponse({ marksheets: store.marksheets.filter(m => m.status === 'Submitted') });
+      const pendingList = store.marksheets.filter(m => m.status === 'Submitted' || m.status === 'Pending' || m.status === 'Pending_Dual_Approval' || m.status === 'Pending_Head_Office' || m.status === 'Pending_Coordinator' || !m.head_approved || !m.coordinator_approved);
+      return jsonResponse({ marksheets: pendingList });
     }
     if (path === '/api/certificates/pending') {
-      return jsonResponse({ certificates: store.certificates.filter(c => c.status === 'Submitted') });
+      const pendingList = store.certificates.filter(c => c.status === 'Submitted' || c.status === 'Pending' || c.status === 'Pending_Dual_Approval' || c.status === 'Pending_Head_Office' || c.status === 'Pending_Coordinator' || !c.head_approved || !c.coordinator_approved);
+      return jsonResponse({ certificates: pendingList });
+    }
+
+    // --- Dual Approval Decision on Certificates (Head Office & Coordinator) ---
+    if (path.match(/^\/api\/certificates\/\d+\/decision$/) && request.method === 'POST') {
+      const cId = +path.split('/')[3];
+      const cert = store.certificates.find(c => c.id === cId);
+      if (!cert) return jsonResponse({ error: 'Certificate not found' }, 404);
+      const body = await request.json().catch(() => ({}));
+      const decision = String(body.decision || 'approve').toLowerCase();
+      let userRole = 'super_admin';
+      try {
+        if (cookies.pesc_auth) {
+          const u = JSON.parse(decodeURIComponent(cookies.pesc_auth));
+          if (u.role) userRole = u.role;
+        }
+      } catch (_) {}
+      if (body.role) userRole = body.role;
+
+      if (decision === 'reject') {
+        cert.status = 'Rejected';
+        cert.reason = body.reason || 'Rejected';
+      } else if (decision === 'revoke') {
+        cert.status = 'Revoked';
+        cert.reason = body.reason || 'Revoked';
+      } else {
+        if (userRole === 'coordinator') {
+          cert.coordinator_approved = true;
+          cert.coordinator_approved_at = Date.now();
+          cert.coordinator_approved_by = 'Er. V. K. Maurya (Regional Coordinator)';
+          cert.coordinator_mohar_applied = true;
+        } else {
+          cert.head_approved = true;
+          cert.head_approved_at = Date.now();
+          cert.head_approved_by = 'S. N. Mishra (Council Head)';
+          cert.head_seal_applied = true;
+        }
+
+        if (cert.head_approved && cert.coordinator_approved) {
+          cert.status = 'Approved_By_Council';
+        } else if (cert.head_approved) {
+          cert.status = 'Pending_Coordinator';
+        } else if (cert.coordinator_approved) {
+          cert.status = 'Pending_Head_Office';
+        }
+
+        if (!cert.cert_no || cert.cert_no.includes('Pending')) {
+          const year = new Date().getFullYear();
+          cert.cert_no = `PESC/${year}/${String(cert.id).padStart(6, '0')}`;
+        }
+        if (!cert.token) {
+          cert.token = 'cert-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+      }
+      await persistToKV(env, 'certificates', store.certificates);
+      return jsonResponse({
+        ok: true,
+        id: cert.id,
+        status: cert.status,
+        cert_no: cert.cert_no,
+        head_approved: cert.head_approved,
+        coordinator_approved: cert.coordinator_approved,
+        centre_signed: cert.centre_signed,
+        token: cert.token
+      });
+    }
+
+    // --- Dual Approval Decision on Marksheets (Head Office & Coordinator) ---
+    if (path.match(/^\/api\/marksheets\/\d+\/decision$/) && request.method === 'POST') {
+      const mId = +path.split('/')[3];
+      const mrk = store.marksheets.find(m => m.id === mId);
+      if (!mrk) return jsonResponse({ error: 'Marksheet not found' }, 404);
+      const body = await request.json().catch(() => ({}));
+      const decision = String(body.decision || 'approve').toLowerCase();
+      let userRole = 'super_admin';
+      try {
+        if (cookies.pesc_auth) {
+          const u = JSON.parse(decodeURIComponent(cookies.pesc_auth));
+          if (u.role) userRole = u.role;
+        }
+      } catch (_) {}
+      if (body.role) userRole = body.role;
+
+      if (decision === 'reject') {
+        mrk.status = 'Rejected';
+        mrk.reason = body.reason || 'Rejected';
+      } else if (decision === 'revoke') {
+        mrk.status = 'Revoked';
+        mrk.reason = body.reason || 'Revoked';
+      } else {
+        if (userRole === 'coordinator') {
+          mrk.coordinator_approved = true;
+          mrk.coordinator_approved_at = Date.now();
+          mrk.coordinator_approved_by = 'Er. V. K. Maurya (Regional Coordinator)';
+          mrk.coordinator_mohar_applied = true;
+        } else {
+          mrk.head_approved = true;
+          mrk.head_approved_at = Date.now();
+          mrk.head_approved_by = 'S. N. Mishra (Council Head)';
+          mrk.head_seal_applied = true;
+        }
+
+        if (mrk.head_approved && mrk.coordinator_approved) {
+          mrk.status = 'Approved_By_Council';
+        } else if (mrk.head_approved) {
+          mrk.status = 'Pending_Coordinator';
+        } else if (mrk.coordinator_approved) {
+          mrk.status = 'Pending_Head_Office';
+        }
+
+        if (!mrk.marksheet_no || mrk.marksheet_no.includes('Pending')) {
+          const year = new Date().getFullYear();
+          mrk.marksheet_no = `PESC/MRK/${year}/${String(mrk.id).padStart(6, '0')}`;
+        }
+        if (!mrk.token) {
+          mrk.token = 'mrk-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+      }
+      await persistToKV(env, 'marksheets', store.marksheets);
+      return jsonResponse({
+        ok: true,
+        id: mrk.id,
+        status: mrk.status,
+        marksheet_no: mrk.marksheet_no,
+        head_approved: mrk.head_approved,
+        coordinator_approved: mrk.coordinator_approved,
+        centre_signed: mrk.centre_signed,
+        token: mrk.token
+      });
+    }
+
+    // --- Centre Sign & Final Issue to Student ---
+    if (path.match(/^\/api\/centre\/certificates\/\d+\/sign-issue$/) && request.method === 'POST') {
+      const cId = +path.split('/')[4];
+      const cert = store.certificates.find(c => c.id === cId);
+      if (!cert) return jsonResponse({ error: 'Certificate not found' }, 404);
+      cert.centre_signed = true;
+      cert.centre_signed_at = Date.now();
+      cert.centre_signed_by = (c && c.director_name) || 'Dr. Ramesh Kumar';
+      cert.status = 'Valid';
+      await persistToKV(env, 'certificates', store.certificates);
+      return jsonResponse({ ok: true, message: 'Centre seal & signature applied! Certificate issued to student.', certificate: cert });
+    }
+
+    if (path.match(/^\/api\/centre\/marksheets\/\d+\/sign-issue$/) && request.method === 'POST') {
+      const mId = +path.split('/')[4];
+      const mrk = store.marksheets.find(m => m.id === mId);
+      if (!mrk) return jsonResponse({ error: 'Marksheet not found' }, 404);
+      mrk.centre_signed = true;
+      mrk.centre_signed_at = Date.now();
+      mrk.centre_signed_by = (c && c.director_name) || 'Dr. Ramesh Kumar';
+      mrk.status = 'Approved';
+      await persistToKV(env, 'marksheets', store.marksheets);
+      return jsonResponse({ ok: true, message: 'Centre seal & signature applied! Marksheet issued to student.', marksheet: mrk });
+    }
+
+    // --- Centre Request Dual Approval for Student ---
+    if (path === '/api/centre/request-dual-approval' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const studentId = +body.student_id;
+        const s = store.students.find(x => x.id === studentId);
+        if (!s) return jsonResponse({ error: 'Student not found' }, 404);
+        const reqType = body.type || 'certificate';
+        const ce = store.centres.find(x => x.id === s.centre_id) || store.centres[0];
+        const co = store.courses.find(x => x.id === s.course_id) || store.courses[0];
+        const year = new Date().getFullYear();
+
+        let cert = store.certificates.find(x => x.student_id === s.id);
+        if (!cert && (reqType === 'certificate' || reqType === 'both')) {
+          const nextId = store.certificates.length + 1;
+          cert = {
+            id: nextId,
+            cert_no: `PESC/${year}/${String(nextId).padStart(6, '0')}`,
+            token: 'cert-' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+            student_id: s.id,
+            student_name: s.name,
+            centre_id: s.centre_id,
+            centre_name: ce.name,
+            course_id: s.course_id,
+            course_name: co.name,
+            status: 'Pending_Dual_Approval',
+            head_approved: false,
+            coordinator_approved: false,
+            centre_signed: false,
+            evaluation_type: body.evaluation_type || 'yearly',
+            term: body.term || 'Annual Examination',
+            created_at: Date.now()
+          };
+          store.certificates.push(cert);
+          await persistToKV(env, 'certificates', store.certificates);
+        }
+
+        let mrk = store.marksheets.find(x => x.student_id === s.id);
+        if (!mrk && (reqType === 'marksheet' || reqType === 'both')) {
+          const nextId = store.marksheets.length + 1;
+          mrk = {
+            id: nextId,
+            marksheet_no: `PESC/MRK/${year}/${String(nextId).padStart(6, '0')}`,
+            token: 'mrk-' + Math.random().toString(36).slice(2) + Date.now().toString(36),
+            student_id: s.id,
+            student_name: s.name,
+            centre_id: s.centre_id,
+            centre_name: ce.name,
+            centre_code: ce.centre_code,
+            course_id: s.course_id,
+            course_name: co.name,
+            course_code: co.code,
+            exam_session: s.session || '2026-27',
+            roll_no: s.roll_no || s.student_code,
+            subjects: JSON.stringify(getCourseCurriculumSubjects(co.code || co.name, body.evaluation_type || 'yearly', body.term || 'Annual')),
+            total_max: 500,
+            total_obtained: 412,
+            percentage: 82.4,
+            grade: 'A',
+            result: 'PASS',
+            status: 'Pending_Dual_Approval',
+            head_approved: false,
+            coordinator_approved: false,
+            centre_signed: false,
+            evaluation_type: body.evaluation_type || 'yearly',
+            term: body.term || 'Annual',
+            created_at: Date.now()
+          };
+          store.marksheets.push(mrk);
+          await persistToKV(env, 'marksheets', store.marksheets);
+        }
+
+        return jsonResponse({
+          ok: true,
+          message: 'Submitted to Head Office & Regional Coordinator for Dual Approval!',
+          certificate: cert,
+          marksheet: mrk
+        });
+      } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
+      }
+    }
+
+    if (path === '/api/centre/approvals-status') {
+      const studentId = +url.searchParams.get('student_id');
+      const cert = store.certificates.find(c => c.student_id === studentId);
+      const mrk = store.marksheets.find(m => m.student_id === studentId);
+      return jsonResponse({
+        ok: true,
+        certificate: cert || null,
+        marksheet: mrk || null
+      });
     }
     if (path.startsWith('/api/reports/')) {
       const urlObj = new URL(request.url);

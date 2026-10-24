@@ -59,16 +59,18 @@ function renderOfficialCouncilHeader(opts = {}) {
     <!-- Double Line Divider matching ======================================== -->
     <div style="border-top:3.5px double #072a60; margin:6px 0 8px; width:100%;"></div>
 
-    <!-- Two-Column Official Header Metadata -->
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; font-size:0.82rem; font-weight:900; color:#000000; text-align:left; line-height:1.45; margin-bottom:10px;">
+    <!-- Two-Column Official Header Metadata (Issue Date, Issue Place & Main Head Office) -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; font-size:0.82rem; font-weight:800; color:#000000; text-align:left; line-height:1.45; margin-bottom:10px; background:rgba(248,250,252,0.9); padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1;">
       <div>
-        <div>REGD. NO. (COUNCIL): <span style="font-family:monospace; font-weight:900;">TRUST/2025/5/IV/299</span></div>
-        <div>Student Reg. No: <span style="font-family:monospace; font-weight:900;">${esc(studentCode)}</span></div>
-        <div>Roll Number: <span style="font-family:monospace; font-weight:900;">${esc(rollNo)}</span></div>
+        <div><b>REGD. NO. (COUNCIL):</b> <span style="font-family:monospace; font-weight:900;">TRUST/2025/5/IV/299</span></div>
+        <div><b>Student Reg. No:</b> <span style="font-family:monospace; font-weight:900;">${esc(studentCode)}</span></div>
+        <div><b>Roll Number:</b> <span style="font-family:monospace; font-weight:900;">${esc(rollNo)}</span></div>
+        <div><b>Place of Issue (स्थान):</b> <span style="font-weight:900; color:#072a60;">${esc(opts.issuePlace || 'Regional Council Office, Shahgarh, Azamgarh UP')}</span></div>
       </div>
       <div style="text-align:right;">
-        <div>Ref No: <span style="font-family:monospace; font-weight:900;">${esc(refNo)}</span></div>
-        <div>Date of Issue: <span style="font-weight:900;">${esc(issueDate)}</span></div>
+        <div><b>Ref No:</b> <span style="font-family:monospace; font-weight:900;">${esc(refNo)}</span></div>
+        <div><b>Date of Issue (तिथि):</b> <span style="font-weight:900; color:#047857;">${esc(issueDate)}</span></div>
+        <div><b>Main Head Office:</b> <span style="font-weight:900;">Shahgarh, Azamgarh UP 276001</span></div>
       </div>
     </div>
   `;
@@ -146,11 +148,18 @@ function renderOfficialCouncilFooter(opts = {}) {
       </div>
     </div>
 
-    <!-- Official Helpline & Address Bar -->
-    <div style="margin-top:16px; border-top:1.5px solid #072a60; padding-top:6px; text-align:center;">
-      <div style="font-size:0.82rem; font-weight:900; color:#000000; letter-spacing:0.3px; margin-bottom:8px;">
-        | Helpline: 7380435797 | Email: mauryachotu385@gmail.com | Head Office Shahgarh, Azamgarh UP 276001
+    <!-- Official Head Office, Place of Issue & Contact Bar -->
+    <div style="margin-top:16px; border-top:2px solid #072a60; padding-top:8px; text-align:center; background:rgba(248,250,252,0.7); border-radius:6px; padding:8px 12px; margin-bottom:10px;">
+      <div style="font-size:0.84rem; font-weight:900; color:#072a60; letter-spacing:0.3px; margin-bottom:3px;">
+        🏛️ <b>MAIN HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
       </div>
+      <div style="font-size:0.78rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
+        📍 <b>PLACE OF ISSUE:</b> Central Examination Board &amp; Regional Office, Uttar Pradesh &nbsp;|&nbsp; <b>Helpline:</b> +91 7380435797 &nbsp;|&nbsp; <b>Email:</b> mauryachotu385@gmail.com
+      </div>
+      <div style="font-size:0.72rem; font-weight:700; color:#475569;">
+        Official Recognized Autonomous Certification &bull; Validated under Indian Trust Act (Regd. No: TRUST/2025/5/IV/299)
+      </div>
+    </div>
 
       <!-- Accreditation Badges Row -->
       <div style="display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap; padding:2px 0;">

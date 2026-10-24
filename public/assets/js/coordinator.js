@@ -412,10 +412,10 @@ guard(async () => {
       };
 
       window.quickApproveMrk = (id) => {
-        if (!confirm('Approve this marksheet?')) return;
+        if (!confirm('Approve this marksheet with Regional Coordinator Mohar & Signature?')) return;
         guard(async () => {
-          const res = await api(`/api/marksheets/${id}/decision`, { method: 'POST', body: { decision: 'approve' } });
-          toast(`✅ Marksheet Approved! No: ${res.marksheet_no}`);
+          const res = await api(`/api/marksheets/${id}/decision`, { method: 'POST', body: { decision: 'approve', role: 'coordinator' } });
+          toast(`✅ Marksheet Approved with Coordinator Mohar! No: ${res.marksheet_no || id}`);
           // reload the card detail
           document.querySelectorAll('[id^="detail_"]').forEach(d => { d.dataset.loaded = ''; d.style.display = 'none'; });
           document.querySelectorAll('[id^="arrow_"]').forEach(a => a.textContent = '▼');
@@ -425,17 +425,17 @@ guard(async () => {
         const reason = prompt('Rejection reason:');
         if (!reason) return;
         guard(async () => {
-          await api(`/api/marksheets/${id}/decision`, { method: 'POST', body: { decision: 'reject', reason } });
+          await api(`/api/marksheets/${id}/decision`, { method: 'POST', body: { decision: 'reject', role: 'coordinator', reason } });
           toast('Marksheet rejected.');
           document.querySelectorAll('[id^="detail_"]').forEach(d => { d.dataset.loaded = ''; d.style.display = 'none'; });
           document.querySelectorAll('[id^="arrow_"]').forEach(a => a.textContent = '▼');
         });
       };
       window.quickApproveCert = (id) => {
-        if (!confirm('Approve and issue Certificate?')) return;
+        if (!confirm('Approve and issue Certificate with Regional Coordinator Mohar & Signature?')) return;
         guard(async () => {
-          const res = await api(`/api/certificates/${id}/decision`, { method: 'POST', body: { decision: 'approve' } });
-          toast(`✅ Certificate Issued! No: ${res.cert_no}`);
+          const res = await api(`/api/certificates/${id}/decision`, { method: 'POST', body: { decision: 'approve', role: 'coordinator' } });
+          toast(`✅ Certificate Approved with Coordinator Mohar! No: ${res.cert_no || id}`);
           document.querySelectorAll('[id^="detail_"]').forEach(d => { d.dataset.loaded = ''; d.style.display = 'none'; });
           document.querySelectorAll('[id^="arrow_"]').forEach(a => a.textContent = '▼');
         });
@@ -444,7 +444,7 @@ guard(async () => {
         const reason = prompt('Rejection reason:');
         if (!reason) return;
         guard(async () => {
-          await api(`/api/certificates/${id}/decision`, { method: 'POST', body: { decision: 'reject', reason } });
+          await api(`/api/certificates/${id}/decision`, { method: 'POST', body: { decision: 'reject', role: 'coordinator', reason } });
           toast('Certificate rejected.');
           document.querySelectorAll('[id^="detail_"]').forEach(d => { d.dataset.loaded = ''; d.style.display = 'none'; });
           document.querySelectorAll('[id^="arrow_"]').forEach(a => a.textContent = '▼');
