@@ -601,6 +601,8 @@ guard(async () => {
     Dashboard: async () => {
       const data = await api('/api/student/profile');
       const s = data.student;
+      window._currentStudent = s;
+      window._currentStudentPhoto = s.photo || s.photo_url || (me.user && (me.user.photo || me.user.photo_url)) || '';
       const mrkData = await api('/api/student/marksheets').catch(() => ({ marksheets: [] }));
       const certData = await api('/api/student/certificates').catch(() => ({ certificates: [] }));
       const idcData = await api('/api/student/id-card').catch(() => ({ id_card: {} }));
@@ -735,7 +737,10 @@ guard(async () => {
               <span class="badge active">🪪 STUDENT IDENTITY CARD</span>
               <h3 style="margin:4px 0 0; color:var(--navy);">Official Institutional Identity Card (पहचान पत्र)</h3>
             </div>
-            <button onclick="tabsEl.querySelectorAll('button')[6]?.click()" class="btn gold sm" style="font-weight:800; padding:8px 18px;">🖨️ Open Full Dual-Sided Card</button>
+            <div style="display:flex; gap:8px;">
+              <button onclick="showStudentSelfUploadPhotoModal()" class="btn sm" style="background:#7c3aed; color:#fff; font-weight:700;">📷 Upload Photo</button>
+              <button onclick="tabsEl.querySelectorAll('button')[6]?.click()" class="btn gold sm" style="font-weight:800; padding:8px 18px;">🖨️ Open Full Dual-Sided Card</button>
+            </div>
           </div>
 
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
@@ -746,8 +751,8 @@ guard(async () => {
                 <div style="font-size:0.65rem; color:#fde047; font-weight:700;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</div>
               </div>
               <div style="padding:14px; display:flex; gap:12px; align-items:center;">
-                <div style="width:72px; height:88px; background:#f1f5f9; border-radius:6px; border:1.5px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-size:2.2rem;">
-                  🎓
+                <div style="width:72px; height:88px; background:#f1f5f9; border-radius:6px; border:1.5px solid #cbd5e1; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                  ${(s.photo || s.photo_url || me.user.photo || me.user.photo_url) ? `<img src="${esc(s.photo || s.photo_url || me.user.photo || me.user.photo_url)}" style="width:100%; height:100%; object-fit:cover;">` : `<span style="font-size:2.2rem;">🎓</span>`}
                 </div>
                 <div style="font-size:0.8rem; line-height:1.5; flex:1;">
                   <div style="font-size:1rem; font-weight:800; color:#0a2a5e;">${esc(s.name)}</div>
@@ -905,8 +910,8 @@ guard(async () => {
 
             <!-- Candidate Photo Box -->
             <div style="text-align:center;">
-              <div style="width:120px; height:140px; border:2px dashed #94a3b8; border-radius:8px; margin:0 auto; display:grid; place-items:center; background:#f1f5f9;">
-                <div style="font-size:2.8rem;">🎓</div>
+              <div style="width:120px; height:140px; border:2px dashed #94a3b8; border-radius:8px; margin:0 auto; display:grid; place-items:center; background:#f1f5f9; overflow:hidden;">
+                ${(ac.photo || ac.photo_url || me.user.photo || me.user.photo_url) ? `<img src="${esc(ac.photo || ac.photo_url || me.user.photo || me.user.photo_url)}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="font-size:2.8rem;">🎓</div>`}
               </div>
               <span style="font-size:0.75rem; color:#64748b; margin-top:4px; display:block;">Verified Digital Photo</span>
             </div>
@@ -1063,6 +1068,11 @@ guard(async () => {
         ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
         : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
 
+      const sPhoto = me.user.photo || me.user.photo_url || m.student_photo || '';
+      const studentPhotoHtml = sPhoto
+        ? `<img src="${esc(sPhoto)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">`
+        : `<div style="text-align:center; padding:4px;"><div style="font-size:1.6rem;">👤</div><span style="font-size:0.55rem; font-weight:700; color:#64748b; display:block; line-height:1;">Student Photo</span></div>`;
+
       viewEl.innerHTML = `
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
@@ -1081,16 +1091,34 @@ guard(async () => {
               studentCode: m.student_code || me.user.student_code || me.user.roll_no || 'PESC-26-00008',
               rollNo: m.roll_no || me.user.roll_no || me.user.student_code || 'PESC-00008',
               refNo: m.marksheet_no || 'PESC-MRK-2026-0007',
-              issueDate: date(m.issue_date || m.created_at) || '04-10-2026'
+              issueDate: date(m.issue_date || m.created_at) || '04-10-2026',
+              issuePlace: cAddress || 'Regional Council Office, Shahgarh, Azamgarh UP',
+              headOffice: 'Shahgarh, Azamgarh UP 276001'
             })}
 
-            <!-- Marksheet Ribbon Title -->
-            <div style="text-align:center; margin:10px 0 14px;">
-              <div style="display:inline-block; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#ffffff; font-size:1.45rem; font-weight:900; letter-spacing:2px; padding:6px 36px; border-radius:6px; box-shadow:0 3px 8px rgba(10,42,94,0.3); border:2px solid #d4af37;">
-                STATEMENT OF MARKS
+            <!-- Top Section: QR Code on Left, Ribbon in Center, Student Photo on Right (Opposite) -->
+            <div style="display:flex; align-items:center; justify-content:space-between; margin:10px 0 16px; gap:12px;">
+              <div style="border:2px solid #072a60; padding:6px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(m.roll_no || m.student_code || 'PESC')}" alt="Verification QR" style="width:82px; height:82px; display:block;">
+                <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">SCAN TO VERIFY</div>
               </div>
-              <div style="font-size:0.75rem; font-weight:800; color:#0a2a5e; letter-spacing:1px; margin-top:4px;">
-                OFFICIAL EVALUATION ASSESSMENT · SESSION ${esc(m.exam_session || '2026-27')}
+
+              <!-- Center: Marksheet Ribbon Title -->
+              <div style="flex:1; text-align:center; padding:0 6px;">
+                <div style="display:inline-block; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#ffffff; font-size:1.45rem; font-weight:900; letter-spacing:2px; padding:6px 36px; border-radius:6px; box-shadow:0 3px 8px rgba(10,42,94,0.3); border:2px solid #d4af37;">
+                  STATEMENT OF MARKS
+                </div>
+                <div style="font-size:0.75rem; font-weight:800; color:#0a2a5e; letter-spacing:1px; margin-top:4px;">
+                  OFFICIAL EVALUATION ASSESSMENT · SESSION ${esc(m.exam_session || '2026-27')}
+                </div>
+              </div>
+
+              <!-- Right: Student Photo -->
+              <div style="border:2px solid #072a60; padding:3px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
+                <div style="width:76px; height:92px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
+                  ${studentPhotoHtml}
+                </div>
+                <div style="font-size:0.52rem; font-weight:900; color:#072a60; margin-top:2px; letter-spacing:0.3px;">PESC VERIFIED</div>
               </div>
             </div>
 
@@ -1141,12 +1169,16 @@ guard(async () => {
       const directorPhotoHtml = directorPhoto
         ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
         : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
+      const sPhotoCert = me.user.photo || me.user.photo_url || c.student_photo || '';
+      const studentPhotoCertHtml = sPhotoCert
+        ? `<img src="${esc(sPhotoCert)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">`
+        : `<div style="text-align:center; padding:4px;"><div style="font-size:1.6rem;">👤</div><span style="font-size:0.55rem; font-weight:700; color:#64748b; display:block; line-height:1;">Student Photo</span></div>`;
 
       viewEl.innerHTML = `
         <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
             <div>
-              <h2 style="margin:0 0 4px; color:#064e3b;">Course Completion Certificate</h2>
+              <h2 style="margin:0 0 4px; color:#064e3b;">Official Certificate of Completion</h2>
               <p class="muted" style="margin:0;">Status: ${badge(c.status)} · Certificate No: <b style="color:var(--navy); font-family:monospace;">${esc(c.cert_no || 'Processing')}</b></p>
             </div>
             <div style="display:flex; gap:10px;">
@@ -1161,24 +1193,34 @@ guard(async () => {
               studentCode: me.user.student_code || me.user.roll_no || c.student_code || 'PESC-26-00008',
               rollNo: me.user.roll_no || me.user.student_code || c.student_code || 'PESC-00008',
               refNo: c.cert_no || 'PESC-CERT-2026-0007',
-              issueDate: date(c.issued_at) || '04-10-2026'
+              issueDate: date(c.issued_at) || '04-10-2026',
+              issuePlace: cAddress || 'Regional Council Office, Shahgarh, Azamgarh UP',
+              headOffice: 'Shahgarh, Azamgarh UP 276001'
             })}
 
-            <!-- Certificate Title Ribbon & Student Photo -->
-            <div style="position:relative; margin:10px 0 16px;">
-              <!-- Student Photo on Right -->
-              <div style="position:absolute; right:10px; top:0; width:76px; height:92px; border:2px solid #0a2a5e; border-radius:4px; overflow:hidden; background:#f8fafc; box-shadow:0 2px 6px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center;">
-                <div style="text-align:center; padding:4px;"><div style="font-size:1.6rem;">👤</div><span style="font-size:0.55rem; font-weight:700; color:#64748b; display:block; line-height:1;">Student Photo</span></div>
+            <!-- Top Section: QR Code on Left, Ribbon in Center, Student Photo on Right -->
+            <div style="display:flex; align-items:center; justify-content:space-between; margin:10px 0 16px; gap:12px;">
+              <div style="border:2px solid #072a60; padding:6px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(c.token || c.student_code || 'PESC')}" alt="Verification QR" style="width:82px; height:82px; display:block;">
+                <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">SCAN TO VERIFY</div>
               </div>
 
-              <!-- Centered Ribbon Title -->
-              <div style="text-align:center; max-width:440px; margin:0 auto; padding-right:50px;">
+              <!-- Center: Ribbon Title -->
+              <div style="flex:1; text-align:center; padding:0 6px;">
                 <div style="display:inline-block; background:linear-gradient(135deg, #065f46, #047857); color:#ffffff; font-size:1.55rem; font-weight:900; letter-spacing:3px; padding:6px 40px; border-radius:6px; box-shadow:0 3px 8px rgba(4,120,87,0.3); border:2px solid #d4af37;">
                   CERTIFICATE
                 </div>
                 <div style="font-size:0.75rem; font-weight:800; color:#064e3b; letter-spacing:1px; margin-top:4px;">
                   ANNUAL VOCATIONAL &amp; TECHNICAL EVALUATION
                 </div>
+              </div>
+
+              <!-- Right: Student Photo -->
+              <div style="border:2px solid #072a60; padding:3px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
+                <div style="width:76px; height:92px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
+                  ${studentPhotoCertHtml}
+                </div>
+                <div style="font-size:0.52rem; font-weight:900; color:#072a60; margin-top:2px; letter-spacing:0.3px;">PESC VERIFIED</div>
               </div>
             </div>
 
@@ -1325,9 +1367,9 @@ guard(async () => {
               <div style="padding:16px 14px; display:flex; gap:14px; align-items:center;">
                 <!-- Student Photo Box -->
                 <div style="text-align:center;">
-                  <div style="width:84px; height:104px; background:#f1f5f9; border-radius:8px; border:2px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-size:2.6rem; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
-                    🎓
-                    <div style="position:absolute; bottom:-6px; right:-6px; width:22px; height:22px; background:#16a34a; color:#fff; border-radius:50%; display:grid; place-items:center; font-size:0.75rem; font-weight:bold; border:2px solid #fff;">✓</div>
+                  <div style="width:84px; height:104px; background:#f1f5f9; border-radius:8px; border:2px solid #cbd5e1; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                    ${(idc.photo || idc.photo_url || me.user.photo || me.user.photo_url) ? `<img src="${esc(idc.photo || idc.photo_url || me.user.photo || me.user.photo_url)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">` : `<span style="font-size:2.6rem;">🎓</span>`}
+                    <div style="position:absolute; bottom:-4px; right:-4px; width:22px; height:22px; background:#16a34a; color:#fff; border-radius:50%; display:grid; place-items:center; font-size:0.75rem; font-weight:bold; border:2px solid #fff;">✓</div>
                   </div>
                   <span style="font-size:0.65rem; color:#64748b; font-weight:700; margin-top:4px; display:block;">Verified</span>
                 </div>
@@ -1457,3 +1499,91 @@ guard(async () => {
 
   tabs(tabsEl, Object.keys(R), (k) => R[k]());
 });
+
+window.showStudentSelfUploadPhotoModal = function() {
+  const existing = document.getElementById('studentSelfPhotoModal');
+  if (existing) existing.remove();
+
+  const currentPhoto = window._currentStudentPhoto || (window._currentStudent && (window._currentStudent.photo || window._currentStudent.photo_url)) || '';
+
+  const modal = document.createElement('div');
+  modal.id = 'studentSelfPhotoModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.65);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(5px);padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#ffffff;border-radius:16px;padding:26px 28px;max-width:440px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.3);border:1.5px solid #e2e8f0;font-family:sans-serif;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:42px;height:42px;border-radius:10px;background:#ede9fe;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">📷</div>
+          <div>
+            <h3 style="margin:0;font-size:1.15rem;color:#0f172a;font-weight:800;">Upload Passport Photo</h3>
+            <p style="margin:2px 0 0;font-size:0.8rem;color:#64748b;">Marksheet, Certificate &amp; ID Card Photo</p>
+          </div>
+        </div>
+        <button type="button" id="btnCloseSelfPhotoModal" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#64748b;">✕</button>
+      </div>
+
+      <div style="text-align:center;margin-bottom:20px;">
+        <div id="selfModalPhotoPreview" style="width:110px;height:130px;margin:0 auto 12px;border:2px dashed #cbd5e1;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f8fafc;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          ${currentPhoto ? `<img src="${esc(currentPhoto)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:3rem;color:#94a3b8;">👤</span>`}
+        </div>
+        <label class="btn sm" style="background:#0284c7;color:#fff;cursor:pointer;display:inline-block;padding:8px 18px;font-weight:700;border-radius:6px;">
+          📁 Choose Photo File (फोटो चुनें)
+          <input type="file" id="selfModalPhotoFileInput" accept="image/*" style="display:none;">
+        </label>
+        <p style="margin:8px 0 0;font-size:0.75rem;color:#64748b;">Passport size photo (JPG, PNG, WEBP) max 2MB.<br>Yahi photo aapke Marksheet, Certificate aur ID Card par print hogi.</p>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button type="button" id="btnCancelSelfPhotoModal" class="btn alt sm">Cancel</button>
+        <button type="button" id="btnSaveSelfStudentPhoto" class="btn sm" style="background:#16a34a;color:#fff;font-weight:800;padding:8px 24px;border-radius:6px;box-shadow:0 2px 6px rgba(22,163,74,0.3);">💾 Save &amp; Update Photo</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  let selectedBase64 = currentPhoto;
+
+  modal.querySelector('#btnCloseSelfPhotoModal').onclick = () => modal.remove();
+  modal.querySelector('#btnCancelSelfPhotoModal').onclick = () => modal.remove();
+
+  modal.querySelector('#selfModalPhotoFileInput').onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Photo size should be less than 2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      selectedBase64 = ev.target.result;
+      modal.querySelector('#selfModalPhotoPreview').innerHTML = `<img src="${selectedBase64}" style="width:100%;height:100%;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  modal.querySelector('#btnSaveSelfStudentPhoto').onclick = async () => {
+    if (!selectedBase64) {
+      alert('Please choose an image file first');
+      return;
+    }
+    const btn = modal.querySelector('#btnSaveSelfStudentPhoto');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      await api('/api/student/upload-photo', {
+        method: 'POST',
+        body: { photo: selectedBase64 }
+      });
+      window._currentStudentPhoto = selectedBase64;
+      toast('✅ Photo uploaded and updated successfully!');
+      modal.remove();
+      setTimeout(() => location.reload(), 600);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = '💾 Save & Update Photo';
+      alert('Failed to upload photo: ' + (err.message || err));
+    }
+  };
+};
+

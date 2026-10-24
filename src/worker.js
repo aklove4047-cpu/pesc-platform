@@ -1496,6 +1496,7 @@ export default {
         institute_address: cAddress,
         director_name: dName,
         director_photo: dPhoto,
+        student_photo: student.photo || student.photo_url || '',
         validity: 'Lifetime Validity / Session 2026-27',
         run_by: 'PURVANCHAL EDUCATION AND SKILL COUNCIL | RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD',
         registration: 'REGISTERED UNDER INDIAN TRUST ACT || NITI AAYOG (NGO DARPAN), GOVT. OF INDIA || AN ISO 9001:2015 CERTIFIED COUNCIL || MSME REGISTERED ORGANISATION || https://pescouncil.in',
@@ -3230,6 +3231,7 @@ export default {
               centre_code: c.centre_code,
               name: candidateName,
               email: (body.email || `${rollNo.toLowerCase()}@student.pescouncil.in`).toLowerCase(),
+              photo: body.photo_url || body.photo || '',
               photo_url: body.photo_url || body.photo || '',
               gender: body.gender || 'Male',
               mobile: body.mobile || body.student_whatsapp || '',
@@ -3302,11 +3304,39 @@ export default {
         return jsonResponse({ students: stus });
       }
 
+      if (path.match(/\/api\/centre\/students\/\d+\/photo$/) && request.method === 'POST') {
+        const sId = +path.split('/')[4];
+        const stu = store.students.find(s => s.id === sId && s.centre_id === c.id);
+        if (!stu) return jsonResponse({ error: 'Student not found' }, 404);
+        const body = await request.json();
+        const photoData = String(body.photo || body.photo_url || '').trim();
+        if (!photoData) return jsonResponse({ error: 'Photo data is required' }, 400);
+        stu.photo = photoData;
+        stu.photo_url = photoData;
+        await persistToKV(env, 'students', store.students);
+        return jsonResponse({ ok: true, message: 'Student photo saved successfully!', photo: photoData, student: stu });
+      }
+
       if (path.match(/\/api\/centre\/students\/\d+$/)) {
         const sId = +path.split('/')[4];
         const stu = store.students.find(s => s.id === sId && s.centre_id === c.id);
         if (!stu) return jsonResponse({ error: 'Student not found' }, 404);
-        return jsonResponse({ ok: true, student: stu });
+        if (request.method === 'GET') {
+          return jsonResponse({ ok: true, student: stu });
+        }
+        if (request.method === 'PUT' || request.method === 'POST') {
+          const body = await request.json();
+          if (body.name !== undefined) stu.name = String(body.name).trim();
+          if (body.father_name !== undefined) stu.father_name = String(body.father_name).trim();
+          if (body.mobile !== undefined) stu.mobile = String(body.mobile).trim();
+          if (body.email !== undefined) stu.email = String(body.email).trim().toLowerCase();
+          if (body.photo !== undefined || body.photo_url !== undefined) {
+            stu.photo = String(body.photo || body.photo_url || '').trim();
+            stu.photo_url = stu.photo;
+          }
+          await persistToKV(env, 'students', store.students);
+          return jsonResponse({ ok: true, message: 'Student details & photo saved successfully!', student: stu });
+        }
       }
 
       if (path === '/api/centre/courses') {
@@ -3618,6 +3648,16 @@ export default {
         return jsonResponse({ error: 'No student found or not logged in' }, 404);
       }
 
+      if ((path === '/api/student/upload-photo' || path === '/api/student/photo') && request.method === 'POST') {
+        const body = await request.json();
+        const photoData = String(body.photo || body.photo_url || '').trim();
+        if (!photoData) return jsonResponse({ error: 'Photo is required' }, 400);
+        student.photo = photoData;
+        student.photo_url = photoData;
+        await persistToKV(env, 'students', store.students);
+        return jsonResponse({ ok: true, message: 'Your photo was uploaded successfully!', photo: photoData });
+      }
+
       const cert = store.certificates.find(x => x.student_id === student.id);
       const mrk = store.marksheets.find(x => x.student_id === student.id);
       const course = store.courses.find(x => x.id === student.course_id) || store.courses[0];
@@ -3625,6 +3665,8 @@ export default {
 
       const enrichedStudent = {
         ...student,
+        photo: student.photo || student.photo_url || '',
+        photo_url: student.photo || student.photo_url || '',
         course_name: course.name,
         course_code: course.code,
         duration_months: course.duration_months || 12,

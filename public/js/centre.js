@@ -878,7 +878,7 @@ const views = {
           <div style="flex:1; min-width:240px;">
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Enrolled Candidate (छात्र चुनें):</label>
             <select id="certStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
             </select>
           </div>
 
@@ -952,7 +952,7 @@ const views = {
           <div style="flex:1; min-width:240px;">
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate (छात्र चुनें):</label>
             <select id="mrkStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
             </select>
           </div>
 
@@ -1010,7 +1010,7 @@ const views = {
           <div style="flex:1; max-width:360px;">
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Choose Student:</label>
             <select id="semCertStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}">${esc(s.name)} (${esc(s.student_code)})</option>`).join('')}
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)})</option>`).join('')}
             </select>
           </div>
           <button class="btn gold" onclick="window.print()">🖨️ Print Semester Certificate</button>
@@ -1100,7 +1100,7 @@ const views = {
           <div style="flex:1; max-width:320px;">
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Student:</label>
             <select id="idCardStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-father="${esc(s.father_name || 'Father')}" data-mobile="${esc(s.mobile || '')}">${esc(s.name)} (${esc(s.student_code)})</option>`).join('')}
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-father="${esc(s.father_name || 'Father')}" data-mobile="${esc(s.mobile || '')}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)})</option>`).join('')}
             </select>
           </div>
 
@@ -1914,6 +1914,12 @@ function renderStudentTable(students) {
   if (!students.length) return '<p class="muted" style="text-align:center; padding:20px;">No students enrolled yet.</p>';
   window._currentStudents = students;
   return table([
+    ['Photo', (r) => {
+      const p = r.photo || r.photo_url;
+      return p
+        ? `<div style="width:38px; height:46px; border-radius:4px; overflow:hidden; border:1px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.1); cursor:pointer;" onclick="showUploadStudentPhotoModal(${r.id})" title="Click to change photo"><img src="${esc(p)}" style="width:100%; height:100%; object-fit:cover;"></div>`
+        : `<div style="width:38px; height:46px; border-radius:4px; border:1.5px dashed #cbd5e1; display:flex; align-items:center; justify-content:center; background:#f8fafc; font-size:1.1rem; color:#94a3b8; cursor:pointer;" onclick="showUploadStudentPhotoModal(${r.id})" title="Upload Photo">📷</div>`;
+    }],
     ['Code', (r) => `<b style="font-family:monospace; color:#0f172a;">${esc(r.student_code)}</b>`],
     ['Candidate Name', (r) => `<b>${esc(r.name)}</b>`],
     ['Course', (r) => esc(r.course || r.course_name || 'Diploma')],
@@ -1925,8 +1931,9 @@ function renderStudentTable(students) {
     }],
     ['Actions', (r) => `
       <div style="display:flex; gap:4px; flex-wrap:wrap;">
+        <button class="btn sm" style="background:#7c3aed; color:#fff; font-weight:700;" onclick="showUploadStudentPhotoModal(${r.id})">📷 Photo</button>
         <button class="btn sm" style="background:#0284c7; color:#fff;" onclick="quickViewStudent(${r.id})">👁️ View</button>
-        <button class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="showAdmissionFormModal(${r.id})">📄 Admission Form</button>
+        <button class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="showAdmissionFormModal(${r.id})">📄 Form</button>
         <button class="btn sm alt" onclick="printReceipt(${r.id})">🧾 Receipt</button>
         <button class="btn sm gold" onclick="switchModule('CertificatePrinting')">🎓 Cert</button>
       </div>
@@ -3243,6 +3250,96 @@ window.signAndIssueMrk = async function(mrkId) {
   }
 };
 
+window.showUploadStudentPhotoModal = function(studentId) {
+  const existing = document.getElementById('uploadStudentPhotoModal');
+  if (existing) existing.remove();
+
+  const students = window._currentStudents || [];
+  const s = students.find(x => x.id === studentId) || { id: studentId, name: 'Student Candidate', student_code: 'PESC00001' };
+  const currentPhoto = s.photo || s.photo_url || '';
+
+  const modal = document.createElement('div');
+  modal.id = 'uploadStudentPhotoModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.65);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(5px);padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#ffffff;border-radius:16px;padding:26px 28px;max-width:440px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.3);border:1.5px solid #e2e8f0;font-family:sans-serif;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:42px;height:42px;border-radius:10px;background:#ede9fe;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">📷</div>
+          <div>
+            <h3 style="margin:0;font-size:1.15rem;color:#0f172a;font-weight:800;">Upload Student Photo</h3>
+            <p style="margin:2px 0 0;font-size:0.8rem;color:#64748b;">${esc(s.name)} (${esc(s.student_code)})</p>
+          </div>
+        </div>
+        <button type="button" id="btnClosePhotoModal" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#64748b;">✕</button>
+      </div>
+
+      <div style="text-align:center;margin-bottom:20px;">
+        <div id="modalPhotoPreview" style="width:110px;height:130px;margin:0 auto 12px;border:2px dashed #cbd5e1;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f8fafc;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          ${currentPhoto ? `<img src="${esc(currentPhoto)}" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:3rem;color:#94a3b8;">👤</span>`}
+        </div>
+        <label class="btn sm" style="background:#0284c7;color:#fff;cursor:pointer;display:inline-block;padding:8px 18px;font-weight:700;border-radius:6px;">
+          📁 Choose Photo File (फोटो चुनें)
+          <input type="file" id="modalPhotoFileInput" accept="image/*" style="display:none;">
+        </label>
+        <p style="margin:8px 0 0;font-size:0.75rem;color:#64748b;">Passport size photo (JPG, PNG, WEBP) · Certificate &amp; Marksheet par yahi photo dikhegi</p>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button type="button" id="btnCancelPhotoModal" class="btn alt sm">Cancel</button>
+        <button type="button" id="btnSaveStudentPhoto" class="btn sm" style="background:#16a34a;color:#fff;font-weight:800;padding:8px 24px;border-radius:6px;box-shadow:0 2px 6px rgba(22,163,74,0.3);">💾 Save &amp; Attach Photo</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  let selectedBase64 = currentPhoto;
+
+  modal.querySelector('#btnClosePhotoModal').onclick = () => modal.remove();
+  modal.querySelector('#btnCancelPhotoModal').onclick = () => modal.remove();
+
+  modal.querySelector('#modalPhotoFileInput').onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Photo size should be less than 2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      selectedBase64 = ev.target.result;
+      modal.querySelector('#modalPhotoPreview').innerHTML = `<img src="${selectedBase64}" style="width:100%;height:100%;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  modal.querySelector('#btnSaveStudentPhoto').onclick = async () => {
+    if (!selectedBase64) {
+      alert('Please choose an image file first');
+      return;
+    }
+    const btn = modal.querySelector('#btnSaveStudentPhoto');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      const res = await api(`/api/centre/students/${studentId}/photo`, {
+        method: 'POST',
+        body: { photo: selectedBase64 }
+      });
+      s.photo = selectedBase64;
+      s.photo_url = selectedBase64;
+      toast('✅ Student photo saved successfully!');
+      modal.remove();
+      if (typeof views.MyStudents === 'function') views.MyStudents();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = '💾 Save & Attach Photo';
+      alert('Failed to save photo: ' + (err.message || err));
+    }
+  };
+};
+
 // ID Card Preview
 let idCardStyle = 'council';
 function setIdCardStyle(st) {
@@ -3262,6 +3359,7 @@ function updateIdCardPreview() {
   const course = opt.dataset.course;
   const father = opt.dataset.father;
   const mobile = opt.dataset.mobile || '9876543210';
+  const photo = opt.dataset.photo || '';
   const cName = currentCentre ? currentCentre.name : 'Authorized Computer Academy';
 
   const headerTitle = idCardStyle === 'council' ? 'PURVANCHAL EDUCATION &amp; SKILL COUNCIL' : esc(cName).toUpperCase();
@@ -3273,8 +3371,8 @@ function updateIdCardPreview() {
         <div style="font-size:0.65rem; color:#fde047;">STUDENT IDENTITY CARD · 2026-27</div>
       </div>
       <div style="padding:14px; display:flex; gap:12px; align-items:center;">
-        <div style="width:72px; height:84px; background:#e2e8f0; border-radius:6px; border:1px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-size:2rem;">
-          👤
+        <div style="width:72px; height:86px; background:#e2e8f0; border-radius:6px; border:1px solid #cbd5e1; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+          ${photo ? `<img src="${esc(photo)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">` : `<span style="font-size:2.2rem;">👤</span>`}
         </div>
         <div style="font-size:0.8rem; line-height:1.5;">
           <div style="font-size:0.95rem; font-weight:800; color:#0f172a;">${esc(name)}</div>
