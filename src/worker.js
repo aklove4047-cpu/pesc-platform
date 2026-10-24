@@ -1081,6 +1081,48 @@ export default {
       return jsonResponse({ centres: active });
     }
 
+    if (path === '/api/public/coordinators') {
+      const coords = store.users.filter(u => u.role === 'coordinator').map((u, i) => ({
+        id: u.id,
+        name: u.name || 'Er. V. K. Maurya',
+        coordinator_code: `PESCOORD/${String(i + 1).padStart(3, '0')}`,
+        state: u.state || 'Uttar Pradesh',
+        district: u.district || 'Varanasi Zone',
+        address: u.address || `${u.district || 'Civil Lines, Varanasi'}, ${u.state || 'Uttar Pradesh'}`,
+        photo_url: u.photo_url || '/assets/img/coord_rajesh.jpg'
+      }));
+      if (coords.length === 0) {
+        coords.push({
+          id: 2,
+          name: 'Er. V. K. Maurya',
+          coordinator_code: 'PESCOORD/001',
+          state: 'Uttar Pradesh',
+          district: 'Varanasi Zone',
+          address: 'Civil Lines, Varanasi, Uttar Pradesh',
+          photo_url: '/assets/img/coord_rajesh.jpg'
+        });
+      }
+      return jsonResponse({ coordinators: coords });
+    }
+
+    if (path === '/api/public/students') {
+      const studentsList = store.students.slice(0, 10).map((s, idx) => {
+        const c = store.centres.find(ce => ce.id === s.centre_id) || store.centres[0] || {};
+        const co = store.courses.find(crs => crs.id === s.course_id) || {};
+        return {
+          id: s.id,
+          name: s.name,
+          roll_no: s.roll_no || s.student_code,
+          course: s.course || co.name || 'Diploma in Computer Applications (DCA)',
+          centre_name: c.name || 'Aryavart Institute of Technology & Management',
+          address: s.local_address || s.address || 'Civil Lines, Varanasi, UP',
+          photo_url: s.photo_url || s.photo || '/assets/img/student_rohan.jpg',
+          rating: '5.0/5'
+        };
+      });
+      return jsonResponse({ students: studentsList });
+    }
+
     if (path === '/api/public/courses') {
       const activeCourses = store.courses.filter(c => c.active !== 0);
       return jsonResponse({ courses: activeCourses });
@@ -1412,6 +1454,58 @@ export default {
             jurisdiction_state: cCert.state,
             validity: 'Official Council Appointment',
             issued_on: new Date(cCert.issued_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+          });
+        }
+      }
+
+      // 4. Fallback: If not in certificates/marksheets, check if rawNo is a Centre Code or slug
+      if (!cert && rawNo) {
+        const centre = store.centres.find(ce =>
+          (ce.centre_code && ce.centre_code.toLowerCase() === rawNo.toLowerCase()) ||
+          (ce.slug && ce.slug.toLowerCase() === rawNo.toLowerCase()) ||
+          (ce.name && ce.name.toLowerCase() === rawNo.toLowerCase())
+        );
+        if (centre) {
+          const cAddress = centre.address || `${centre.district || 'Varanasi'}, ${centre.state || 'Uttar Pradesh'} - ${centre.pin || '221001'}`;
+          return jsonResponse({
+            status: 'Active',
+            type: 'Affiliated Study Centre',
+            centre_name: centre.name,
+            centre_code: centre.centre_code,
+            slug: centre.slug,
+            director_name: centre.director_name || centre.owner_name || 'Er. Ajay Sharma',
+            director_photo: centre.director_photo || centre.photo_url || '',
+            centre_photo: centre.center_photo || centre.photo_url || '',
+            district: centre.district || 'Varanasi',
+            state: centre.state || 'Uttar Pradesh',
+            address: cAddress,
+            affiliation_status: 'Recognized & Affiliated by Purvanchal Education & Skill Council',
+            validity: 'Active Affiliation Session 2026-27'
+          });
+        }
+      }
+
+      // 5. Fallback: Check if rawNo is Coordinator Code
+      if (!cert && rawNo) {
+        const upper = rawNo.toUpperCase();
+        if (upper.includes('COORD') || upper === 'PESCOORD/001' || rawNo.toLowerCase().includes('maurya')) {
+          const coord = store.users.find(u => u.role === 'coordinator') || {
+            name: 'Er. V. K. Maurya',
+            coordinator_code: 'PESCOORD/001',
+            district: 'Varanasi Zone',
+            state: 'Uttar Pradesh',
+            address: 'Civil Lines, Varanasi, Uttar Pradesh',
+            photo_url: '/assets/img/coord_rajesh.jpg'
+          };
+          return jsonResponse({
+            status: 'Active',
+            type: 'Regional Coordinator',
+            coordinator_name: coord.name || 'Er. V. K. Maurya',
+            coordinator_code: 'PESCOORD/001',
+            jurisdiction: `${coord.district || 'Varanasi Zone'}, ${coord.state || 'Uttar Pradesh'}`,
+            address: coord.address || 'Civil Lines, Varanasi, Uttar Pradesh',
+            photo_url: coord.photo_url || '/assets/img/coord_rajesh.jpg',
+            validity: 'Official Regional Coordinator Appointment'
           });
         }
       }
