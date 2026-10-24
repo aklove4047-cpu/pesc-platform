@@ -16,19 +16,7 @@ const store = {
   users: [...initialBundle.users],
   applications: [...initialBundle.applications],
   centre_courses: [...initialBundle.centre_courses],
-  coordinator_certificates: [
-    {
-      id: 1,
-      user_id: 2,
-      cert_no: 'PESC/COORD/UP/2026/0001',
-      token: 'coord-cert-token-0001',
-      state: 'Uttar Pradesh',
-      status: 'Valid',
-      issued_at: Date.now() - 30 * 864e5,
-      valid_until: Date.now() + 3 * 365 * 864e5,
-      created_at: Date.now() - 30 * 864e5,
-    }
-  ],
+  coordinator_certificates: [],
   site_settings: {
     logo_url: '',
     council_title: 'pescouncil.in',
@@ -491,11 +479,35 @@ function getOrCreateWorkerCoordCert(userId) {
   return cert;
 }
 
+const DATA_VERSION = 'v2_clean_2026';
 let kvLoaded = false;
 async function syncFromKV(env) {
   if (!env || !env.PESC_KV || kvLoaded) return;
   try {
-    const [c, a, s, u, certs, mrks, courses, settings, notices] = await Promise.all([
+    const currentVersion = await env.PESC_KV.get('data_version');
+    if (currentVersion !== DATA_VERSION) {
+      // Overwrite KV with clean fresh state
+      await Promise.all([
+        env.PESC_KV.put('data_version', DATA_VERSION),
+        env.PESC_KV.put('centres', JSON.stringify([])),
+        env.PESC_KV.put('applications', JSON.stringify([])),
+        env.PESC_KV.put('students', JSON.stringify([])),
+        env.PESC_KV.put('certificates', JSON.stringify([])),
+        env.PESC_KV.put('marksheets', JSON.stringify([])),
+        env.PESC_KV.put('coordinator_certificates', JSON.stringify([])),
+        env.PESC_KV.put('users', JSON.stringify(store.users)),
+      ]);
+      store.centres = [];
+      store.applications = [];
+      store.students = [];
+      store.certificates = [];
+      store.marksheets = [];
+      store.coordinator_certificates = [];
+      kvLoaded = true;
+      return;
+    }
+
+    const [c, a, s, u, certs, mrks, courses, settings, notices, coordCerts] = await Promise.all([
       env.PESC_KV.get('centres', 'json'),
       env.PESC_KV.get('applications', 'json'),
       env.PESC_KV.get('students', 'json'),
@@ -505,20 +517,13 @@ async function syncFromKV(env) {
       env.PESC_KV.get('courses', 'json'),
       env.PESC_KV.get('site_settings', 'json'),
       env.PESC_KV.get('notices', 'json'),
+      env.PESC_KV.get('coordinator_certificates', 'json'),
     ]);
-    if (Array.isArray(c) && c.length) {
-      c.forEach(item => {
-        if (!store.centres.some(x => x.id === item.id || (x.slug && x.slug === item.slug))) {
-          store.centres.push(item);
-        }
-      });
+    if (Array.isArray(c)) {
+      store.centres = c;
     }
-    if (Array.isArray(a) && a.length) {
-      a.forEach(item => {
-        if (!store.applications.some(x => x.id === item.id || x.app_no === item.app_no)) {
-          store.applications.push(item);
-        }
-      });
+    if (Array.isArray(a)) {
+      store.applications = a;
     }
     if (Array.isArray(s)) {
       store.students = s;
@@ -538,12 +543,11 @@ async function syncFromKV(env) {
     if (Array.isArray(notices) && notices.length) {
       store.notices = notices;
     }
+    if (Array.isArray(coordCerts)) {
+      store.coordinator_certificates = coordCerts;
+    }
     if (Array.isArray(u) && u.length) {
-      u.forEach(item => {
-        if (!store.users.some(x => x.id === item.id || (x.email && x.email === item.email))) {
-          store.users.push(item);
-        }
-      });
+      store.users = u;
     }
     kvLoaded = true;
   } catch (_) {}
