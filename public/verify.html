@@ -46,21 +46,51 @@
   <script>
     guard(async () => {
       const path = location.pathname;
-      const token = encodeURIComponent(path.split('/').pop());
+      const urlParams = new URLSearchParams(location.search);
+      let rawToken = urlParams.get('token') || urlParams.get('cert_no') || urlParams.get('code') || urlParams.get('roll_no') || urlParams.get('marksheet_no') || '';
+      if (!rawToken) {
+        const parts = path.split('/').filter(Boolean);
+        if (parts.length > 1 && parts[parts.length - 1] !== 'verify') {
+          rawToken = parts[parts.length - 1];
+        }
+      }
+      rawToken = (rawToken || '').trim();
+
+      if (!rawToken) {
+        $('#r').innerHTML = `
+          <div style="padding:24px; background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:12px; text-align:left;">
+            <h3 style="color:#0a2a5e; margin:0 0 10px;">🔍 Verify Candidate Credential</h3>
+            <p class="muted" style="margin-bottom:16px;">Enter Certificate Number, Roll Number, Marksheet Number, or Verification Token:</p>
+            <form onsubmit="event.preventDefault(); const v=this.q.value.trim(); if(v) location.href='/verify/' + encodeURIComponent(v);" style="display:flex; gap:10px; flex-wrap:wrap;">
+              <input name="q" placeholder="e.g. PESC-26-00008, PESC/2026/000001, or cert-token" required style="flex:1; min-width:240px; padding:10px 14px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+              <button class="btn gold" style="font-weight:800; padding:10px 20px;">Verify Now</button>
+            </form>
+          </div>
+        `;
+        return;
+      }
+
+      const token = encodeURIComponent(rawToken);
       let d;
 
       if (path.includes('/marksheet/')) {
-        d = await api('/api/public/verify/marksheet/' + token);
+        d = await api('/api/public/verify/marksheet/' + token).catch(() => null);
+      } else if (path.includes('/coordinator/')) {
+        d = await api('/api/public/verify/coordinator/' + token).catch(() => null);
       } else {
-        d = await api('/api/public/verify/' + token);
+        d = await api('/api/public/verify/' + token).catch(() => null);
       }
 
       if (!d || d.status === 'Not Found') {
         $('#r').innerHTML = `
-          <div style="padding:20px; background:#fef2f2; border:1px solid #fecaca; border-radius:12px;">
+          <div style="padding:24px; background:#fef2f2; border:1px solid #fecaca; border-radius:12px;">
             <div style="font-size:3rem; margin-bottom:8px;">❌</div>
-            <h3 style="color:#b91c1c;">Invalid or Record Not Found</h3>
-            <p class="muted">The requested document token or identifier was not found in the council's database. Please check the token or contact the issuing authority.</p>
+            <h3 style="color:#b91c1c; margin:0 0 6px;">Invalid or Record Not Found</h3>
+            <p class="muted" style="margin-bottom:16px;">Identifier <b>"${esc(rawToken)}"</b> was not found in the council's central registry. Please verify the roll number or certificate token.</p>
+            <form onsubmit="event.preventDefault(); const v=this.q.value.trim(); if(v) location.href='/verify/' + encodeURIComponent(v);" style="display:flex; gap:10px; flex-wrap:wrap; max-width:480px; margin:0 auto;">
+              <input name="q" value="${esc(rawToken)}" placeholder="Enter Roll Number or Certificate No." required style="flex:1; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              <button class="btn gold sm" style="font-weight:700;">Search Again</button>
+            </form>
           </div>
         `;
         return;

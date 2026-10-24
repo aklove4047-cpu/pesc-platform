@@ -988,6 +988,13 @@ export default {
       return new Response(xml, { headers: { 'content-type': 'application/xml; charset=utf-8' } });
     }
 
+    // 2b. Universal Verification Page Routing: Intercept any /verify and /verify/* requests to serve verify.html
+    if ((path === '/verify' || path.startsWith('/verify/')) && !path.startsWith('/api/')) {
+      const newUrl = new URL(request.url);
+      newUrl.pathname = '/verify.html';
+      return env.ASSETS.fetch(new Request(newUrl, request));
+    }
+
     // 3. Subdomain Routing: If request is to a franchise subdomain (e.g. navyacomputer.pescouncil.in, shriramcomputer.pescouncil.in)
     const tenantInfo = slugOf(host);
     const centreFromSlug = tenantInfo.kind === 'tenant' ? resolveSlug(tenantInfo.slug) : null;
@@ -1287,13 +1294,103 @@ export default {
       }
     }
 
-    // --- Certificate Verification ---
-    if (path === '/api/public/verify' || path.startsWith('/api/certificates/verify/') || path.startsWith('/api/public/verify/certificate/')) {
+    // --- Certificate Verification & Universal Verification ---
+    if ((path === '/api/public/verify' || path.startsWith('/api/public/verify/') || path.startsWith('/api/certificates/verify/') || path.startsWith('/api/public/verify/certificate/'))
+        && !path.startsWith('/api/public/verify/marksheet/') && !path.startsWith('/api/public/verify/coordinator/')) {
       const rawNo = decodeURIComponent(url.searchParams.get('cert_no') || url.searchParams.get('token') || path.split('/').pop() || '').trim();
-      const cert = store.certificates.find(c =>
-        c.cert_no.toLowerCase() === rawNo.toLowerCase() ||
+      let cert = store.certificates.find(c =>
+        (c.cert_no && c.cert_no.toLowerCase() === rawNo.toLowerCase()) ||
         (c.token && c.token.toLowerCase() === rawNo.toLowerCase())
       );
+
+      // 1. Fallback: Check if rawNo is a student code or roll number
+      if (!cert && rawNo) {
+        const student = store.students.find(s =>
+          (s.student_code && s.student_code.toLowerCase() === rawNo.toLowerCase()) ||
+          (s.roll_no && s.roll_no.toLowerCase() === rawNo.toLowerCase())
+        );
+        if (student) {
+          cert = store.certificates.find(c => c.student_id === student.id);
+        }
+      }
+
+      // 2. Fallback: If not in certificates, check if rawNo is a marksheet token/no/roll
+      if (!cert && rawNo) {
+        const mrk = store.marksheets.find(m =>
+          (m.marksheet_no && m.marksheet_no.toLowerCase() === rawNo.toLowerCase()) ||
+          (m.roll_no && m.roll_no.toLowerCase() === rawNo.toLowerCase()) ||
+          (m.token && m.token.toLowerCase() === rawNo.toLowerCase())
+        );
+        if (mrk) {
+          const student = store.students.find(s => s.id === mrk.student_id) || {};
+          const course = store.courses.find(co => co.id === mrk.course_id) || {};
+          const centre = store.centres.find(ce => ce.id === mrk.centre_id) || {};
+
+          let parsedSubjects = [];
+          try { parsedSubjects = JSON.parse(mrk.subjects || '[]'); } catch (_) {}
+          if (!parsedSubjects || !parsedSubjects.length) {
+            parsedSubjects = getCourseCurriculumSubjects(course.code || course.name, mrk.evaluation_type, mrk.term);
+          }
+
+          const cAddress = centre.address || `${centre.district || 'Varanasi'}, ${centre.state || 'Uttar Pradesh'} - ${centre.pin || '221001'}`;
+          const dName = centre.director_name || 'Dr. Ramesh Kumar';
+          const dPhoto = centre.director_photo || centre.photo_url || '';
+
+          return jsonResponse({
+            status: mrk.status || 'Approved',
+            type: 'Marksheet',
+            evaluation_type: mrk.evaluation_type || 'yearly',
+            term: mrk.term || (mrk.evaluation_type === 'semester' ? 'Semester 1' : 'Annual'),
+            marksheet_no: mrk.marksheet_no,
+            token: mrk.token,
+            holder: student.name || 'Candidate',
+            father_name: student.father_name || 'N/A',
+            roll_no: mrk.roll_no,
+            student_code: student.student_code || mrk.roll_no,
+            course: course.name || 'Diploma in Computer Application',
+            course_code: course.code || 'DCA',
+            session: mrk.exam_session || 'Annual 2026-27',
+            centre: centre.name || 'Authorized Training Centre',
+            institute_name: centre.name || 'Authorized Training Centre',
+            centre_code: centre.centre_code || 'PESC',
+            institute_address: cAddress,
+            director_name: dName,
+            director_photo: dPhoto,
+            validity: 'Lifetime Validity / Session 2026-27',
+            total_obtained: mrk.total_obtained,
+            total_max: mrk.total_max,
+            percentage: mrk.percentage,
+            grade: mrk.grade,
+            result: mrk.result,
+            subjects: parsedSubjects,
+            subject_count: parsedSubjects.length,
+            issued_on: new Date(mrk.issue_date || mrk.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+          });
+        }
+      }
+
+      // 3. Fallback: If not in certificates or marksheets, check if coordinator certificate
+      if (!cert && rawNo) {
+        const cCert = (store.coordinator_certificates || []).find(c =>
+          (c.cert_no && c.cert_no.toLowerCase() === rawNo.toLowerCase()) ||
+          (c.token && c.token.toLowerCase() === rawNo.toLowerCase())
+        );
+        if (cCert) {
+          const u = store.users.find(x => x.id === cCert.user_id) || { name: 'Regional Coordinator', state: cCert.state };
+          return jsonResponse({
+            status: cCert.status,
+            type: 'Regional / State Coordinator Appointment Certificate',
+            certificate_no: cCert.cert_no,
+            token: cCert.token,
+            coordinator_name: u.name,
+            email: u.email,
+            jurisdiction_state: cCert.state,
+            validity: 'Official Council Appointment',
+            issued_on: new Date(cCert.issued_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+          });
+        }
+      }
+
       if (!cert) return jsonResponse({ status: 'Not Found' }, 404);
 
       const student = store.students.find(s => s.id === cert.student_id) || {};
@@ -1399,7 +1496,7 @@ export default {
     }
 
     // --- Coordinator Certificate Verification ---
-    if (path === '/api/public/verify/coordinator' || path.startsWith('/api/public/verify/coordinator/') || path.startsWith('/verify/coordinator/')) {
+    if (path === '/api/public/verify/coordinator' || path.startsWith('/api/public/verify/coordinator/')) {
       const rawNo = decodeURIComponent(url.searchParams.get('token') || url.searchParams.get('cert_no') || path.split('/').pop() || '').trim();
       const cert = (store.coordinator_certificates || []).find(c =>
         (c.cert_no && c.cert_no.toLowerCase() === rawNo.toLowerCase()) ||
