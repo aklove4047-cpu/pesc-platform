@@ -1547,7 +1547,7 @@ const views = {
                       <small style="color:#64748b; display:block; margin-top:2px;">📍 ${esc(r.district || '')}, ${esc(r.state || '')} · 📞 ${esc(r.contact_phone || 'N/A')}</small>
                     </td>
                     <td style="padding:10px 12px; white-space:nowrap;">
-                      <b style="font-size:1.15rem; color:#15803d;">₹${(r.amount_paise / 100).toLocaleString('en-IN')}</b>
+                      <b style="font-size:1.15rem; color:#15803d;">₹${(r.amount_rupees !== undefined ? r.amount_rupees : (r.amount_paise ? r.amount_paise / 100 : 0)).toLocaleString('en-IN')}</b>
                     </td>
                     <td style="padding:10px 12px;">
                       <span style="display:inline-block; padding:3px 8px; border-radius:6px; background:#eff6ff; color:#1d4ed8; font-weight:700; font-size:0.8rem; text-transform:uppercase;">
@@ -1563,7 +1563,7 @@ const views = {
                       ${esc(r.notes || '—')}
                     </td>
                     <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
-                      <button class="btn sm success" data-a="approve_topup" data-id="${r.id}" data-name="${esc(r.centre_name)}" data-amount="${(r.amount_paise / 100)}" style="font-weight:800; padding:7px 14px; margin-right:6px; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer;">
+                      <button class="btn sm success" data-a="approve_topup" data-id="${r.id}" data-name="${esc(r.centre_name)}" data-amount="${(r.amount_rupees !== undefined ? r.amount_rupees : (r.amount_paise ? r.amount_paise / 100 : 0))}" style="font-weight:800; padding:7px 14px; margin-right:6px; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer;">
                         ✅ Approve &amp; Credit
                       </button>
                       <button class="btn sm danger" data-a="reject_topup" data-id="${r.id}" data-name="${esc(r.centre_name)}" style="font-weight:700; padding:7px 12px; background:#ef4444; color:#fff; border:none; border-radius:6px; cursor:pointer;">
@@ -1617,20 +1617,23 @@ const views = {
                 </tr>
               </thead>
               <tbody>
-                ${requests.filter(r => r.status !== 'pending').slice(0, 25).map(r => `
+                ${requests.filter(r => String(r.status || '').toLowerCase() !== 'pending').slice(0, 25).map(r => {
+                  const reqAmt = (r.amount_rupees !== undefined ? r.amount_rupees : (r.amount_paise ? r.amount_paise / 100 : 0));
+                  const isApproved = String(r.status || '').toLowerCase() === 'approved';
+                  return `
                   <tr style="border-bottom:1px solid #f1f5f9;">
                     <td style="padding:8px 10px; color:#64748b;">${r.reviewed_at ? new Date(r.reviewed_at).toLocaleString('en-IN') : new Date(r.created_at).toLocaleString('en-IN')}</td>
                     <td style="padding:8px 10px;"><b>${esc(r.centre_name)}</b> (${esc(r.centre_code)})</td>
-                    <td style="padding:8px 10px; font-weight:700; color:#15803d;">₹${(r.amount_paise / 100).toLocaleString('en-IN')}</td>
+                    <td style="padding:8px 10px; font-weight:700; color:#15803d;">₹${reqAmt.toLocaleString('en-IN')}</td>
                     <td style="padding:8px 10px; font-family:monospace;">${esc(r.payment_mode)} / ${esc(r.utr_number || '—')}</td>
                     <td style="padding:8px 10px;">
-                      <span style="padding:2px 8px; border-radius:4px; font-weight:800; font-size:0.75rem; text-transform:uppercase; ${r.status === 'approved' ? 'background:#dcfce7; color:#166534;' : 'background:#fee2e2; color:#991b1b;'}">
-                        ${r.status === 'approved' ? '✓ APPROVED & CREDITED' : '✗ REJECTED'}
+                      <span style="padding:2px 8px; border-radius:4px; font-weight:800; font-size:0.75rem; text-transform:uppercase; ${isApproved ? 'background:#dcfce7; color:#166534;' : 'background:#fee2e2; color:#991b1b;'}">
+                        ${isApproved ? '✓ APPROVED & CREDITED' : '✗ REJECTED'}
                       </span>
                     </td>
                     <td style="padding:8px 10px; color:#64748b;">${esc(r.rejection_reason || r.notes || '—')}</td>
                   </tr>
-                `).join('')}
+                `;}).join('')}
               </tbody>
             </table>
           </div>

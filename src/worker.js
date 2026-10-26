@@ -2496,6 +2496,82 @@ export default {
         });
       }
 
+      if (path === '/api/admin/wallet-topups') {
+        return jsonResponse({ requests: store.wallet_topups || [] });
+      }
+
+      if (path.match(/\/api\/admin\/wallet-topups\/\d+\/approve/) && request.method === 'POST') {
+        const topupId = +path.split('/')[4];
+        const topup = (store.wallet_topups || []).find(t => t.id === topupId);
+        if (!topup) return jsonResponse({ error: 'Top-up request not found' }, 404);
+        topup.status = 'Approved';
+        topup.approved_at = Date.now();
+        const targetC = store.centres.find(ce => ce.id === topup.centre_id);
+        if (targetC) {
+          targetC.wallet_balance = (targetC.wallet_balance || 0) + topup.amount_rupees;
+          targetC.wallet_paise = (targetC.wallet_paise || 0) + topup.amount_paise;
+          if (!Array.isArray(targetC.wallet_ledger)) targetC.wallet_ledger = [];
+          targetC.wallet_ledger.unshift({
+            id: Date.now(),
+            kind: 'credit',
+            type: 'credit',
+            amount: topup.amount_rupees,
+            amount_paise: topup.amount_paise,
+            balance_after: targetC.wallet_balance,
+            description: `Wallet Top-Up Approved (${topup.payment_mode || 'UPI'} - ${topup.utr_number || 'Direct'})`,
+            note: `Wallet Top-Up Approved (${topup.payment_mode || 'UPI'} - ${topup.utr_number || 'Direct'})`,
+            reference: topup.utr_number || `TOPUP-${topup.id}`,
+            created_at: Date.now(),
+            date: new Date().toLocaleDateString('en-IN')
+          });
+          await persistToKV(env, 'centres', store.centres);
+        }
+        await persistToKV(env, 'wallet_topups', store.wallet_topups);
+        return jsonResponse({ ok: true, message: `Approved ₹${topup.amount_rupees} top-up for ${targetC ? targetC.name : 'Centre'}!` });
+      }
+
+      if (path.match(/\/api\/admin\/wallet-topups\/\d+\/reject/) && request.method === 'POST') {
+        const topupId = +path.split('/')[4];
+        const topup = (store.wallet_topups || []).find(t => t.id === topupId);
+        if (!topup) return jsonResponse({ error: 'Top-up request not found' }, 404);
+        topup.status = 'Rejected';
+        await persistToKV(env, 'wallet_topups', store.wallet_topups);
+        return jsonResponse({ ok: true, message: 'Top-up request rejected.' });
+      }
+
+      if (path.match(/\/api\/admin\/wallets\/\d+\/adjust/) && request.method === 'POST') {
+        const centreId = +path.split('/')[4];
+        const body = await request.json().catch(() => ({}));
+        const amt = +body.amount_rupees || 0;
+        const targetC = store.centres.find(ce => ce.id === centreId);
+        if (targetC) {
+          if (body.kind === 'debit') {
+            targetC.wallet_balance = Math.max(0, (targetC.wallet_balance || 0) - amt);
+            targetC.wallet_paise = Math.max(0, (targetC.wallet_paise || 0) - (amt * 100));
+          } else {
+            targetC.wallet_balance = (targetC.wallet_balance || 0) + amt;
+            targetC.wallet_paise = (targetC.wallet_paise || 0) + (amt * 100);
+          }
+          if (!Array.isArray(targetC.wallet_ledger)) targetC.wallet_ledger = [];
+          targetC.wallet_ledger.unshift({
+            id: Date.now(),
+            kind: body.kind === 'debit' ? 'debit' : 'credit',
+            type: body.kind === 'debit' ? 'debit' : 'credit',
+            amount: amt,
+            amount_paise: amt * 100,
+            balance_after: targetC.wallet_balance,
+            description: body.reason || `Head Office Manual Wallet Adjustment (${body.kind.toUpperCase()})`,
+            note: body.reason || `Head Office Manual Wallet Adjustment (${body.kind.toUpperCase()})`,
+            reference: `ADJ-${Date.now()}`,
+            created_at: Date.now(),
+            date: new Date().toLocaleDateString('en-IN')
+          });
+          await persistToKV(env, 'centres', store.centres);
+          return jsonResponse({ ok: true, balance: targetC.wallet_balance, message: `Wallet adjusted successfully! Current balance: ₹${targetC.wallet_balance}` });
+        }
+        return jsonResponse({ error: 'Centre not found' }, 404);
+      }
+
       if (path === '/api/admin/notices') {
         if (request.method === 'POST') {
           try {
@@ -3769,7 +3845,7 @@ export default {
       }
 
       
-    // --- Wallet Top-Up Endpoints (Centre & Admin) ---
+    // --- Wallet Top-Up Endpoints (Centre) ---
     if (path === '/api/centre/wallet/request-topup' && request.method === 'POST') {
       const body = await request.json().catch(() => ({}));
       const amount = Math.max(100, +body.amount_rupees || 1000);
@@ -3788,88 +3864,22 @@ export default {
       if (!Array.isArray(store.wallet_topups)) store.wallet_topups = [];
       store.wallet_topups.unshift(newTopup);
       await persistToKV(env, 'wallet_topups', store.wallet_topups);
-      return jsonResponse({ ok: true, message: `Wallet top-up request for ₹${amount} submitted to Head Office for approval.`, request: newTopup });
+
+      const whatsAppNumber = (store.site_settings && store.site_settings.whatsapp_number) ? store.site_settings.whatsapp_number.replace(/[^0-9]/g, '') : '919876543210';
+      const msg = encodeURIComponent(`*PESC Centre Wallet Top-Up Request*\nCentre: ${c.name} (${c.centre_code})\nAmount: ₹${amount}\nMode: ${newTopup.payment_mode}\nUTR / Ref: ${newTopup.utr_number}\n\nPlease verify and credit our wallet.`);
+      const whatsappUrl = `https://wa.me/${whatsAppNumber}?text=${msg}`;
+
+      return jsonResponse({
+        ok: true,
+        message: `Wallet top-up request for ₹${amount} submitted to Head Office for approval.`,
+        request: newTopup,
+        whatsapp_url: whatsappUrl
+      });
     }
 
     if (path === '/api/centre/wallet/topup-requests') {
       const reqs = (store.wallet_topups || []).filter(t => t.centre_id === c.id);
       return jsonResponse({ requests: reqs });
-    }
-
-    if (path === '/api/admin/wallet-topups') {
-      return jsonResponse({ requests: store.wallet_topups || [] });
-    }
-
-    if (path.match(/\/api\/admin\/wallet-topups\/\d+\/approve/) && request.method === 'POST') {
-      const topupId = +path.split('/')[4];
-      const topup = (store.wallet_topups || []).find(t => t.id === topupId);
-      if (!topup) return jsonResponse({ error: 'Top-up request not found' }, 404);
-      topup.status = 'Approved';
-      topup.approved_at = Date.now();
-      const targetC = store.centres.find(ce => ce.id === topup.centre_id);
-      if (targetC) {
-        targetC.wallet_balance = (targetC.wallet_balance || 0) + topup.amount_rupees;
-        targetC.wallet_paise = (targetC.wallet_paise || 0) + topup.amount_paise;
-        if (!Array.isArray(targetC.wallet_ledger)) targetC.wallet_ledger = [];
-        targetC.wallet_ledger.unshift({
-          id: Date.now(),
-          kind: 'credit',
-          type: 'credit',
-          amount: topup.amount_rupees,
-          amount_paise: topup.amount_paise,
-          balance_after: targetC.wallet_balance,
-          description: `Wallet Top-Up Approved (${topup.payment_mode || 'UPI'} - ${topup.utr_number || 'Direct'})`,
-          note: `Wallet Top-Up Approved (${topup.payment_mode || 'UPI'} - ${topup.utr_number || 'Direct'})`,
-          reference: topup.utr_number || `TOPUP-${topup.id}`,
-          created_at: Date.now(),
-          date: new Date().toLocaleDateString('en-IN')
-        });
-        await persistToKV(env, 'centres', store.centres);
-      }
-      await persistToKV(env, 'wallet_topups', store.wallet_topups);
-      return jsonResponse({ ok: true, message: `Approved ₹${topup.amount_rupees} top-up for ${targetC ? targetC.name : 'Centre'}!` });
-    }
-
-    if (path.match(/\/api\/admin\/wallet-topups\/\d+\/reject/) && request.method === 'POST') {
-      const topupId = +path.split('/')[4];
-      const topup = (store.wallet_topups || []).find(t => t.id === topupId);
-      if (!topup) return jsonResponse({ error: 'Top-up request not found' }, 404);
-      topup.status = 'Rejected';
-      await persistToKV(env, 'wallet_topups', store.wallet_topups);
-      return jsonResponse({ ok: true, message: 'Top-up request rejected.' });
-    }
-
-    if (path.match(/\/api\/admin\/wallets\/\d+\/adjust/) && request.method === 'POST') {
-      const centreId = +path.split('/')[4];
-      const body = await request.json().catch(() => ({}));
-      const amt = +body.amount_rupees || 0;
-      const targetC = store.centres.find(ce => ce.id === centreId);
-      if (targetC) {
-        if (body.kind === 'debit') {
-          targetC.wallet_balance = Math.max(0, (targetC.wallet_balance || 0) - amt);
-          targetC.wallet_paise = Math.max(0, (targetC.wallet_paise || 0) - (amt * 100));
-        } else {
-          targetC.wallet_balance = (targetC.wallet_balance || 0) + amt;
-          targetC.wallet_paise = (targetC.wallet_paise || 0) + (amt * 100);
-        }
-        if (!Array.isArray(targetC.wallet_ledger)) targetC.wallet_ledger = [];
-        targetC.wallet_ledger.unshift({
-          id: Date.now(),
-          kind: body.kind === 'debit' ? 'debit' : 'credit',
-          type: body.kind === 'debit' ? 'debit' : 'credit',
-          amount: amt,
-          amount_paise: amt * 100,
-          balance_after: targetC.wallet_balance,
-          description: body.reason || `Head Office Manual Wallet Adjustment (${body.kind.toUpperCase()})`,
-          note: body.reason || `Head Office Manual Wallet Adjustment (${body.kind.toUpperCase()})`,
-          reference: `ADJ-${Date.now()}`,
-          created_at: Date.now(),
-          date: new Date().toLocaleDateString('en-IN')
-        });
-        await persistToKV(env, 'centres', store.centres);
-        return jsonResponse({ ok: true, balance: targetC.wallet_balance, message: `Wallet adjusted successfully! Current balance: ₹${targetC.wallet_balance}` });
-      }
-      return jsonResponse({ error: 'Centre not found' }, 404);
     }
 
     if (path === '/api/centre/wallet') {

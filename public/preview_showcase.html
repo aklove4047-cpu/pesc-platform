@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PESC Official Certificates & Marksheets Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&family=Rozha+One&family=Tiro+Devanagari+Hindi&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/style.css">
+  <style>
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 30px 16px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .header-bar {
+      text-align: center;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #071a33, #0b254a);
+      border: 2px solid #d4af37;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .header-bar h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      color: #fde047;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+    }
+    .header-bar p {
+      margin: 6px 0 0;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }
+    .doc-section {
+      margin-bottom: 50px;
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 24px 20px;
+      border: 1px solid #334155;
+    }
+    .doc-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fef08a;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .doc-wrapper {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-bar">
+      <h1>PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h1>
+      <p>Official Student Marksheet &amp; Certificate Live Layouts (No Ashok Stambh · 3D Golden Ribbon Design)</p>
+    </div>
+
+    <!-- Section 1: Certificate of Completion -->
+    <div class="doc-section" id="sectionCertificate">
+      <div class="doc-title">
+        <span>📜</span> 1. Student Certificate of Completion (प्रमाण पत्र)
+      </div>
+      <div class="doc-wrapper" id="certContainer"></div>
+    </div>
+
+    <!-- Section 2: Marksheet / Statement of Marks -->
+    <div class="doc-section" id="sectionMarksheet">
+      <div class="doc-title">
+        <span>📊</span> 2. Student Marksheet (अंकतालिका / Statement of Marks)
+      </div>
+      <div class="doc-wrapper" id="mrkContainer"></div>
+    </div>
+
+    <!-- Section 3: ATC Affiliation Certificate -->
+    <div class="doc-section" id="sectionAffiliation">
+      <div class="doc-title">
+        <span>🏛️</span> 3. Authorized Training Centre Affiliation Certificate (सम्बद्धता प्रमाण पत्र)
+      </div>
+      <div class="doc-wrapper" id="affContainer"></div>
+    </div>
+
+    <!-- Section 4: Regional Coordinator Appointment Certificate -->
+    <div class="doc-section" id="sectionCoordinator">
+      <div class="doc-title">
+        <span>👔</span> 4. Regional Coordinator Appointment Certificate (समन्वयक नियुक्ति प्रमाण पत्र)
+      </div>
+      <div class="doc-wrapper" id="coordContainer"></div>
+    </div>
+  </div>
+
+  <script src="./assets/js/official_templates.js"></script>
+  <script>
+    const sampleStudent = {
+      id: 7,
+      name: 'PREETI SHARMA',
+      father_name: 'RAM SHARMA',
+      mother_name: 'GEETA SHARMA',
+      dob: '15/07/2003',
+      gender: 'Female',
+      student_code: 'PESC-26-00007',
+      roll_no: '2026007',
+      cert_no: 'PESC/CERT/2026/0007',
+      course_name: 'DIPLOMA IN COMPUTER APPLICATIONS (DCA)',
+      course: 'DCA',
+      percentage: '86.40',
+      grade: 'A+',
+      duration_months: 12,
+      photo_url: '',
+      address: 'Near Civil Lines, Varanasi, Uttar Pradesh - 221002'
+    };
+
+    const sampleCentre = {
+      id: 1,
+      name: 'Shakya Computer Institute',
+      hindi_name: 'शाक्य कंप्यूटर इंस्टीट्यूट',
+      centre_code: 'PESC00001',
+      director_name: 'Ashwani Shakya',
+      director_photo: '',
+      photo_url: '',
+      address: 'Lakshman Nagla Road, Kurwali, Mainpuri, Uttar Pradesh - 205263',
+      district: 'Mainpuri',
+      state: 'Uttar Pradesh',
+      session: '2026 - 2029 (3 Academic Years)',
+      status: 'Active',
+      authorized_courses: 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
+      coordinator_name: 'Ayush',
+      coordinator_territory: 'Eastern UP Zone',
+      seal_url: '/assets/img/seal_centre_director.svg',
+      signature_url: '/assets/img/sign_centre_director.svg',
+      coordinator_seal_url: '/assets/img/seal_coordinator.svg',
+      coordinator_signature_url: '/assets/img/sign_coordinator.svg',
+      council_seal_url: '/assets/img/seal_council_head.svg',
+      council_signature_url: '/assets/img/sign_council_head.svg'
+    };
+
+    const sampleSubjects = [
+      { code: 'DCA-101', name: 'Computer Fundamentals & Operating Systems (Windows/Linux)', max: 100, min: 40, obt: 88, grade: 'A+' },
+      { code: 'DCA-102', name: 'Office Automation & Document Formatting (MS Word, Excel, PPT)', max: 100, min: 40, obt: 84, grade: 'A' },
+      { code: 'DCA-103', name: 'Database Management Systems & SQL Fundamentals', max: 100, min: 40, obt: 86, grade: 'A+' },
+      { code: 'DCA-104', name: 'Financial Accounting with TallyPrime ERP & GST Billing', max: 100, min: 40, obt: 82, grade: 'A' },
+      { code: 'DCA-105', name: 'Internet, Cyber Security & Web Applications Design', max: 100, min: 40, obt: 92, grade: 'A+' }
+    ];
+
+    document.getElementById('certContainer').innerHTML = OfficialTemplates.renderCertificateHtml({
+      student: sampleStudent,
+      centre: sampleCentre,
+      courseName: 'DIPLOMA IN COMPUTER APPLICATIONS (DCA)',
+      percentage: '86.40',
+      grade: 'A+',
+      duration: '1 Year',
+      fromDate: '01-08-2025',
+      toDate: '15-08-2026',
+      issueDate: '27-10-2026'
+    });
+
+    document.getElementById('mrkContainer').innerHTML = OfficialTemplates.renderMarksheetHtml({
+      student: sampleStudent,
+      centre: sampleCentre,
+      courseName: 'DIPLOMA IN COMPUTER APPLICATIONS (DCA)',
+      subjects: sampleSubjects,
+      duration: '1 Year',
+      percentage: '86.40',
+      grade: 'A+',
+      issueDate: '27-10-2026'
+    });
+
+    document.getElementById('affContainer').innerHTML = OfficialTemplates.renderAffiliationCertificateHtml({
+      ...sampleCentre,
+      cert_no: 'PESC-AFF-2026-0001'
+    });
+
+    document.getElementById('coordContainer').innerHTML = OfficialTemplates.renderCoordinatorAppointmentCertificateHtml({
+      id: 1,
+      name: 'Ayush',
+      qualification: 'B.Sc / Computer Science',
+      aadhar_no: 'XXXX-XXXX-4954',
+      mobile: '+91 93355 04556',
+      territory: 'Eastern UP Zone (Mainpuri / Varanasi)',
+      address: 'Jayati Road, Mainpuri, Uttar Pradesh - 205263',
+      cert_no: 'PESC/COORD/UTT/2026/0001',
+      issued_at: Date.now(),
+      valid_until: Date.now() + (3 * 365 * 24 * 3600 * 1000)
+    });
+  </script>
+</body>
+</html>
