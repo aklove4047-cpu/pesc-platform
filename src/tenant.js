@@ -11,7 +11,7 @@ const resolveSlug = (slug) => {
   const noHyphens = s.replace(/[-_]/g, '');
   c = db.prepare("SELECT * FROM centres WHERE REPLACE(REPLACE(LOWER(slug), '-', ''), '_', '')=?").get(noHyphens);
   if (c) return c;
-  // 3. Try removing common suffixes (e.g. navyacomputer -> navya, zenith-tech -> zenith)
+  // 3. Try removing common suffixes (e.g. aryavart -> aryavart-institute-of-technology-management, zenith-tech -> zenith)
   const stripped = s.replace(/[-_]?(?:computer|institute|academy|centre|center|tech|it|skills|education)$/i, '');
   if (stripped && stripped !== s && stripped.length >= 3) {
     c = db.prepare("SELECT * FROM centres WHERE LOWER(slug)=? OR REPLACE(REPLACE(LOWER(slug), '-', ''), '_', '')=?").get(stripped, stripped.replace(/[-_]/g, ''));
@@ -51,7 +51,7 @@ function slugOf(hostHeader) {
     }
   }
 
-  // 3. Local development subdomains (e.g., navya.localhost, shriramcomputer.localhost)
+  // 3. Local development subdomains (e.g., aryavart.localhost, shriramcomputer.localhost)
   if (host.endsWith('.localhost')) {
     const sub = host.slice(0, -('.localhost'.length));
     if (sub.includes('.')) return { kind: 'invalid' };

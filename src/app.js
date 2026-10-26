@@ -38,6 +38,8 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.use('/assets', express.static(PUB, { index: false }));
+// HTML pages link /css, /js and /img directly (Cloudflare serves them from public/); mirror that on Express.
+['css', 'js', 'img'].forEach((d) => app.use('/' + d, express.static(path.join(PUB, d), { index: false, maxAge: cfg.isProd ? '7d' : 0 })));
 const page = (f) => (req, res) => res.sendFile(path.join(PUB, f));
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -108,22 +110,11 @@ function renderCentreSite(centre, req) {
           "postalCode": cPin,
           "addressCountry": "IN"
         },
-        "geo": {
-          "@type": "GeoCoordinates",
-          "latitude": "25.3176",
-          "longitude": "82.9739"
-        },
         "priceRange": "₹500 - ₹12,000",
         "parentOrganization": {
-          "@type": "GovernmentOrganization",
+          "@type": "Organization",
           "name": "Purvanchal Education & Skill Council (PESC)",
           "url": "https://pescouncil.in"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.9",
-          "reviewCount": "168",
-          "bestRating": "5"
         }
       },
       {
@@ -213,7 +204,7 @@ app.get('/c/:slug', (req, res) => {
   return res.status(404).sendFile(path.join(PUB, 'index.html'));
 });
 
-// Direct slug redirect: e.g. /navya -> https://navya.pescouncil.in/
+// Direct slug redirect: e.g. /aryavart-institute-of-technology-management -> https://aryavart-institute-of-technology-management.pescouncil.in/
 app.get('/:slug([a-zA-Z0-9_-]+)', (req, res, next) => {
   const slug = req.params.slug.toLowerCase().trim();
   const reserved = ['portal', 'admin', 'coordinator', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz', 'assets', 'api', 'courses'];

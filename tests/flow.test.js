@@ -29,6 +29,7 @@ const setupLink = (email) => { const n = db.prepare("SELECT payload FROM notific
 const apply = (o) => call('POST', '/api/public/apply', { body: { owner_name: 'Ravi Kumar', centre_name: 'Navya Computer Centre', mobile: '9876543210', email: 'ravi@example.com', address: '12 Main Road', state: 'Uttar Pradesh', district: 'Farrukhabad', pin: '209625', slug: 'navya', terms: true, ...o } });
 
 let admin, A = {}, B = {};
+const fund = (paise = 1000000) => db.prepare('UPDATE wallets SET balance_paise=?').run(paise); // fees are charged from the wallet now
 test.before(async () => {
   db.prepare("INSERT INTO users(email,name,role,password_hash,status,created_at) VALUES('admin@pesc.test','Admin','super_admin',?,'active',?)").run(await argon2.hash('AdminPass#12345'), Date.now());
   db.prepare("INSERT INTO courses(code,name,duration_months,fee_paise) VALUES('DCA','Diploma in Computer Applications',12,600000)").run();
@@ -86,6 +87,7 @@ test('unknown subdomain 404, suspended restricted, reserved goes to main', async
 });
 
 test('students are tenant scoped; certificates issue, verify, revoke', async () => {
+  fund();
   const course = db.prepare('SELECT id FROM courses').get();
   assert.equal((await call('POST', `/api/admin/centres/${A.centre.id}/courses`, { cookie: admin, body: { course_ids: [course.id] } })).status, 200);
   const s = await call('POST', '/api/centre/students', { host: A.host, cookie: A.cookie, body: { name: 'Anil Kumar', mobile: '9000000001', course_id: course.id } });
@@ -108,6 +110,7 @@ test('students are tenant scoped; certificates issue, verify, revoke', async () 
 });
 
 test('payments: signature, idempotency, amount check, ledger', async () => {
+  db.prepare('DELETE FROM wallet_transactions').run(); db.prepare('UPDATE wallets SET balance_paise=0').run(); // start this test from a clean ledger
   const o = await call('POST', '/api/centre/wallet/recharge', { host: A.host, cookie: A.cookie, body: { amount_rupees: 500 } }); assert.equal(o.status, 201);
   const send = (payload, key = 'testsecret') => { const raw = JSON.stringify(payload); return call('POST', '/api/webhooks/payment', { raw, headers: { 'x-signature': crypto.createHmac('sha256', key).update(raw).digest('hex') } }); };
   const ev = { provider_ref: o.json.provider_ref, status: 'paid', amount_paise: 50000 };
@@ -130,6 +133,7 @@ test('provisioning failure is recoverable (resume, no duplicates)', async () => 
 });
 
 test('marksheets: submit, approve, public verification, and PDF generation', async () => {
+  fund();
   const student = db.prepare('SELECT id, student_code FROM students LIMIT 1').get();
   const submitRes = await call('POST', '/api/marksheets/submit', {
     host: A.host,
@@ -186,6 +190,7 @@ test('marksheets: submit, approve, public verification, and PDF generation', asy
 });
 
 test('student panel: account setup, login, profile, and digital ID card', async () => {
+  fund();
   const student = db.prepare('SELECT id, student_code FROM students LIMIT 1').get();
   // Centre provisions student account
   const accRes = await call('POST', `/api/centre/students/${student.id}/account`, {
@@ -288,5 +293,122 @@ test('centre switch requires target centre admin password', async () => {
   });
   assert.equal(okPass.status, 200);
   assert.equal(okPass.json.centre.id, B.centre.id);
+});
+
+
+test('fees: charged from wallet, refunded on reject, blocked when balance is short, admin can change them', async () => {
+  const course = db.prepare('SELECT id FROM courses').get();
+  const bal = () => db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(A.centre.id).balance_paise;
+  fund(100000); // Rs 1000
+  const list = await call('GET', '/api/centre/fees', { host: A.host, cookie: A.cookie });
+  assert.equal(list.status, 200);
+  assert.deepEqual(Object.fromEntries(list.json.fees.map((f) => [f.item, f.amount_paise])), { admission: 3500, certificate: 20000, marksheet: 15000 });
+
+  // admission: Rs 35 debited, ledger entry written
+  const s = await call('POST', '/api/centre/students', { host: A.host, cookie: A.cookie, body: { name: 'Fee Student', course_id: course.id } });
+  assert.equal(s.status, 201); assert.equal(bal(), 100000 - 3500);
+  assert.ok(db.prepare("SELECT 1 FROM wallet_transactions WHERE reference=?").get(`fee:admission:${s.json.id}`));
+
+  // certificate: Rs 200 debited on request, refunded in full when rejected (and only once)
+  const c = await call('POST', '/api/centre/certificates', { host: A.host, cookie: A.cookie, body: { student_id: s.json.id } });
+  assert.equal(c.status, 201); assert.equal(bal(), 100000 - 3500 - 20000);
+  assert.equal((await call('POST', `/api/certificates/${c.json.id}/decision`, { cookie: admin, body: { decision: 'reject', reason: 'Incomplete records' } })).status, 200);
+  assert.equal(bal(), 100000 - 3500);
+  assert.equal((await call('POST', `/api/certificates/${c.json.id}/decision`, { cookie: admin, body: { decision: 'reject', reason: 'again' } })).status, 409);
+  assert.equal(bal(), 100000 - 3500);
+
+  // marksheet: Rs 150 debited, refunded on reject
+  const m = await call('POST', '/api/marksheets/submit', { host: A.host, cookie: A.cookie, body: { student_id: s.json.id, exam_session: '2026', subjects: [{ code: 'D1', name: 'Fundamentals', max_theory: 70, obt_theory: 50, max_practical: 30, obt_practical: 20 }] } });
+  assert.equal(m.status, 201); assert.equal(bal(), 100000 - 3500 - 15000);
+  assert.equal((await call('POST', `/api/marksheets/${m.json.id}/decision`, { cookie: admin, body: { decision: 'reject', reason: 'Marks mismatch' } })).status, 200);
+  assert.equal(bal(), 100000 - 3500);
+
+  // Head Office changes a fee; centres cannot
+  assert.ok([403, 404].includes((await call('PUT', '/api/admin/fees', { host: A.host, cookie: A.cookie, body: { item: 'certificate', amount_rupees: 1 } })).status)); // admin API is not reachable from a centre
+  assert.equal((await call('PUT', '/api/admin/fees', { cookie: admin, body: { item: 'certificate', amount_rupees: -5 } })).status, 400);
+  assert.equal((await call('PUT', '/api/admin/fees', { cookie: admin, body: { item: 'certificate', amount_rupees: 250 } })).status, 200);
+  const c2 = await call('POST', '/api/centre/certificates', { host: A.host, cookie: A.cookie, body: { student_id: s.json.id } });
+  assert.equal(c2.status, 201); assert.equal(bal(), 100000 - 3500 - 25000);
+
+  // short balance: 402, and the admission is rolled back completely (no student, no wallet movement)
+  fund(1000);
+  const before = db.prepare('SELECT COUNT(*) n FROM students').get().n;
+  const blocked = await call('POST', '/api/centre/students', { host: A.host, cookie: A.cookie, body: { name: 'Blocked', course_id: course.id } });
+  assert.equal(blocked.status, 402); assert.match(blocked.json.error, /Insufficient wallet balance/);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM students').get().n, before); assert.equal(bal(), 1000);
+});
+
+test('offline wallet top-up: UTR submission, pre-filled WhatsApp link, admin 1-click approval and balance credit', async () => {
+  const bal = () => db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(A.centre.id).balance_paise;
+  fund(20000); // Start with Rs 200
+  assert.equal(bal(), 20000);
+
+  // 1. Centre fetches Head Office payment settings (UPI & WhatsApp)
+  const setRes = await call('GET', '/api/centre/wallet/payment-settings', { host: A.host, cookie: A.cookie });
+  assert.equal(setRes.status, 200);
+  assert.ok(setRes.json.settings.upi_id);
+  assert.ok(setRes.json.settings.whatsapp_number);
+
+  // 2. Centre submits offline top-up request for Rs 500 (50000 paise) with UTR
+  const topupRes = await call('POST', '/api/centre/wallet/request-topup', {
+    host: A.host,
+    cookie: A.cookie,
+    body: {
+      amount_rupees: 500,
+      payment_mode: 'upi',
+      utr_number: 'UTR998877665544',
+      notes: 'Paid via PhonePe QR'
+    }
+  });
+  assert.equal(topupRes.status, 201);
+  assert.equal(topupRes.json.request.amount_paise, 50000);
+  assert.equal(topupRes.json.request.status, 'pending');
+  assert.equal(topupRes.json.request.utr_number, 'UTR998877665544');
+  assert.ok(topupRes.json.whatsapp_url);
+  assert.match(topupRes.json.whatsapp_url, /https:\/\/wa\.me\//);
+  assert.match(topupRes.json.whatsapp_url, /UTR998877665544/);
+
+  const reqId = topupRes.json.request.id;
+
+  // 3. Admin views incoming pending top-up requests
+  const adminList = await call('GET', '/api/admin/wallet-topups?status=pending', { cookie: admin });
+  assert.equal(adminList.status, 200);
+  const found = adminList.json.requests.find((r) => r.id === reqId);
+  assert.ok(found);
+  assert.equal(found.utr_number, 'UTR998877665544');
+  assert.equal(found.centre_id, A.centre.id);
+
+  // 4. Admin 1-click approves the top-up request
+  const approveRes = await call('POST', `/api/admin/wallet-topups/${reqId}/approve`, { cookie: admin });
+  assert.equal(approveRes.status, 200);
+  assert.equal(approveRes.json.credited_rupees, 500);
+
+  // 5. Wallet balance credited: Rs 200 + Rs 500 = Rs 700 (70000 paise)
+  assert.equal(bal(), 70000);
+
+  // 6. Double approval attempt is prevented (409 Conflict)
+  const doubleApprove = await call('POST', `/api/admin/wallet-topups/${reqId}/approve`, { cookie: admin });
+  assert.equal(doubleApprove.status, 409);
+  assert.equal(bal(), 70000);
+
+  // 7. Ledger entry written in wallet_transactions
+  const tx = db.prepare('SELECT * FROM wallet_transactions WHERE reference LIKE ?').get(`TOPUP-REQ-${reqId}-%`);
+  assert.ok(tx);
+  assert.equal(tx.amount_paise, 50000);
+
+  // 8. Admin updates Head Office payment settings
+  const updSettings = await call('PUT', '/api/admin/headoffice-payment-settings', {
+    cookie: admin,
+    body: {
+      upi_id: 'pescheadoffice@okhdfcbank',
+      upi_name: 'PES Council Central',
+      whatsapp_number: '919876543210'
+    }
+  });
+  assert.equal(updSettings.status, 200);
+
+  const freshSettings = await call('GET', '/api/centre/wallet/payment-settings', { host: A.host, cookie: A.cookie });
+  assert.equal(freshSettings.json.settings.upi_id, 'pescheadoffice@okhdfcbank');
+  assert.equal(freshSettings.json.settings.whatsapp_number, '919876543210');
 });
 

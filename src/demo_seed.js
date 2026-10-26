@@ -22,18 +22,18 @@ const argon2 = require('./hash');
   }
 
   // Centre Owner
-  let owner = db.prepare('SELECT id FROM users WHERE email=?').get('owner@navya.test');
+  let owner = db.prepare('SELECT id FROM users WHERE email=?').get('director@aryavart.ac.in');
   if (!owner) {
     const r = db.prepare("INSERT INTO users(email,name,role,password_hash,status,created_at) VALUES(?,?,'centre_owner',?,'active',?)")
-      .run('owner@navya.test', 'Ravi Verma', ownerHash, Date.now());
+      .run('director@aryavart.ac.in', 'Ravi Verma', ownerHash, Date.now());
     owner = { id: r.lastInsertRowid };
   }
 
   // Centre
-  let centre = db.prepare('SELECT id FROM centres WHERE slug=?').get('navya');
+  let centre = db.prepare('SELECT id FROM centres WHERE slug=?').get('aryavart-institute-of-technology-management');
   if (!centre) {
     const r = db.prepare("INSERT INTO centres(centre_code,name,slug,owner_user_id,coordinator_id,state,district,status,created_at) VALUES(?,?,?,?,?,?,?,'active',?)")
-      .run('PESC00001', 'Navya Computer Institute', 'navya', owner.id, coord.id, 'Uttar Pradesh', 'Varanasi', Date.now());
+      .run('PESC00001', 'Aryavart Institute of Technology & Management', 'aryavart-institute-of-technology-management', owner.id, coord.id, 'Uttar Pradesh', 'Varanasi', Date.now());
     centre = { id: r.lastInsertRowid };
     db.prepare('UPDATE users SET centre_id=? WHERE id=?').run(centre.id, owner.id);
   }

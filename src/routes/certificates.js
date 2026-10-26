@@ -4,6 +4,7 @@ const PDFDocument = require('pdfkit');
 const QR = require('qrcode');
 const db = require('../db');
 const cfg = require('../config');
+const fees = require('../fees');
 const { requireRole, requireAuth } = require('../auth');
 const { HttpError, now, rand, str, h, audit, next: counter, nextCertificateNo } = require('../lib');
 
@@ -29,7 +30,7 @@ router.post('/:id/decision', requireRole('super_admin', 'admin', 'coordinator'),
       db.prepare("UPDATE certificates SET status='Revoked', reason=?, decided_by=? WHERE id=?").run(reason, req.user.id, c.id);
     } else {
       if (c.status !== 'Pending') throw new HttpError(409, `Certificate is already ${c.status}`);
-      if (d === 'reject') db.prepare("UPDATE certificates SET status='Rejected', reason=?, decided_by=? WHERE id=?").run(reason, req.user.id, c.id);
+      if (d === 'reject') { db.prepare("UPDATE certificates SET status='Rejected', reason=?, decided_by=? WHERE id=?").run(reason, req.user.id, c.id); fees.refund(c.centre_id, 'certificate', c.id, req.user.id); }
       else {
         const no = nextCertificateNo();
         db.prepare("UPDATE certificates SET status='Valid', cert_no=?, token=?, issued_at=?, decided_by=? WHERE id=?").run(no, rand(24), now(), req.user.id, c.id);

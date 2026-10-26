@@ -36,14 +36,15 @@ const handleApply = h(async (req, res) => {
   if (db.prepare("SELECT 1 FROM franchise_applications WHERE (email=? OR mobile=?) AND status NOT IN ('Rejected','Cancelled')").get(a.email, a.mobile))
     throw new HttpError(409, 'An application with this email or mobile already exists');
   if (db.prepare('SELECT 1 FROM users WHERE email=?').get(a.email)) throw new HttpError(409, 'This email is already registered');
+  const photo_url = b.photo_url || b.photo || b.director_photo || null;
   const appNo = `PESC-APP-${new Date().getFullYear()}-${String(counter('application')).padStart(6, '0')}`;
   let rowId;
   try {
-    const r = db.prepare(`INSERT INTO franchise_applications(app_no,owner_name,centre_name,mobile,email,address,state,district,pin,slug,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,'Submitted',?)`)
-      .run(appNo, a.owner_name, a.centre_name, a.mobile, a.email, a.address, a.state, a.district, a.pin, a.slug, now());
+    const r = db.prepare(`INSERT INTO franchise_applications(app_no,owner_name,centre_name,mobile,email,address,state,district,pin,slug,photo_url,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,'Submitted',?)`)
+      .run(appNo, a.owner_name, a.centre_name, a.mobile, a.email, a.address, a.state, a.district, a.pin, a.slug, photo_url, now());
     rowId = r.lastInsertRowid;
   } catch (e) { if (String(e.code).startsWith('SQLITE_CONSTRAINT')) throw new HttpError(409, 'Subdomain is not available'); throw e; }
-  res.status(201).json({ id: rowId, application_no: appNo, status: 'Submitted' });
+  res.status(201).json({ id: rowId, application_no: appNo, status: 'Submitted', photo_url });
 });
 
 router.post('/apply', handleApply);

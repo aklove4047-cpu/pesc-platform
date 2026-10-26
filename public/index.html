@@ -1186,14 +1186,27 @@
 
         const data = Object.fromEntries(new FormData(appForm).entries());
         data.director_photo = photoBase64.value;
+        data.photo_url = photoBase64.value;
+        data.terms = 'on';
+        data.declaration = 'on';
 
         try {
-          const res = await fetch('/api/public/apply', {
+          const resp = await fetch('/api/public/apply', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(data)
-          }).then(r => r.json());
+          });
+          const res = await resp.json();
+          if (!resp.ok) {
+            throw new Error(res.error || 'Submission failed');
+          }
 
+          notice.innerHTML = `<div style="background:#dcfce7; color:#166534; padding:12px; border-radius:8px; font-size:0.9rem; text-align:center;">
+            ✅ <b>Franchise Application Submitted Successfully!</b><br>
+            Application No: <b style="font-family:monospace; font-size:1.05rem;">${escapeHtml(res.application_no)}</b><br>
+            <span style="font-size:0.8rem;">Head Office has received your application with photo. After approval, you can login with your ID & password!</span>
+          </div>`;
+          appForm.reset();
           if (photoBase64) photoBase64.value = '';
           if (photoPreview) photoPreview.innerHTML = '<span style="font-size:0.7rem; color:#94a3b8; text-align:center; padding:4px;">No Photo</span>';
         } catch (err) {

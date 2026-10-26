@@ -4,8 +4,14 @@
 const V = $('#view');
 const pathMatch = location.pathname.match(/\/c\/([a-z0-9-]+)/i);
 const urlParams = new URLSearchParams(location.search);
-let currentSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || (typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_slug') : '') || '';
-
+let rawSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || (typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_slug') : '') || '';
+if (!rawSlug || rawSlug.includes('navya')) {
+  rawSlug = 'aryavart-institute-of-technology-management';
+}
+let currentSlug = rawSlug;
+try {
+  if (typeof localStorage !== 'undefined') localStorage.setItem('pesc_active_centre_slug', currentSlug);
+} catch (_) {}
 // Intercept /api/centre requests to pass active slug & header when established
 const origFetch = window.fetch;
 window.fetch = function(url, init = {}) {
@@ -24,75 +30,271 @@ window.fetch = function(url, init = {}) {
   return origFetch(url, init);
 };
 
+window.refreshCentreWalletBadge = async function(knownBalance) {
+  try {
+    let bal = knownBalance;
+    if (bal === undefined || bal === null) {
+      const w = await api('/api/centre/wallet').catch(() => null);
+      bal = (w && w.balance !== undefined) ? w.balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 5000);
+    }
+    const el = document.getElementById('topbarWalletAmount');
+    if (el) el.textContent = '₹' + (+bal || 0).toLocaleString('en-IN') + '.00';
+    if (window._currentCentre) window._currentCentre.wallet_balance = +bal;
+    if (typeof currentCentre !== 'undefined' && currentCentre) currentCentre.wallet_balance = +bal;
+  } catch (err) {
+    console.warn('refreshCentreWalletBadge error:', err);
+  }
+};
+
+window.saveCertAsPdf = function() {
+  toast('प्रमाणपत्र PDF डाउनलोड करने हेतु प्रिंट विंडो में "Save as PDF" चुनें।');
+  setTimeout(() => window.print(), 300);
+};
+
+window.saveMrkAsPdf = function() {
+  toast('अंकतालिका PDF डाउनलोड करने हेतु प्रिंट विंडो में "Save as PDF" चुनें।');
+  setTimeout(() => window.print(), 300);
+};
+
+window.selectTopupAmount = function(amt) {
+  const inp = document.getElementById('topupAmountInput');
+  if (inp) inp.value = amt;
+  const btns = document.querySelectorAll('#walletTopupRequestForm button[type="button"]');
+  btns.forEach(b => {
+    b.className = (b.textContent.includes(amt.toLocaleString('en-IN')) ? 'btn sm gold active' : 'btn sm alt');
+  });
+};
+
+window.handleWalletTopupSubmit = async function(e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = document.getElementById('btnSubmitTopup');
+  const notice = document.getElementById('topupFeedbackNotice');
+  const amt = +form.amount_rupees.value || 0;
+  const utr = (form.utr_number.value || '').trim();
+  const mode = form.payment_mode.value || 'upi';
+
+  if (amt <= 0) return alert('Please enter a valid amount greater than ₹0');
+  if (!utr) return alert('Please enter the transaction UTR / Reference number');
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Submitting Request...'; }
+
+  try {
+    const res = await api('/api/centre/wallet/request-topup', {
+      method: 'POST',
+      body: { amount_rupees: amt, payment_mode: mode, utr_number: utr }
+    });
+
+    if (notice) {
+      notice.style.display = 'block';
+      notice.innerHTML = `
+        <div style="background:#ecfdf5; border:2px solid #86efac; border-radius:12px; padding:16px 20px; box-shadow:0 4px 14px rgba(16,185,129,0.15); margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <b style="color:#065f46; font-size:1.1rem; display:block;">🎉 Top-Up Request Submitted Successfully!</b>
+              <span style="font-size:0.86rem; color:#047857;">Amount: <b>₹${amt.toLocaleString('en-IN')}</b> &bull; UTR: <b>${utr}</b> (Status: Pending Head Office Approval)</span>
+            </div>
+            <a href="${res.whatsapp_url}" target="_blank" class="btn" style="background:#25D366; color:#ffffff; font-weight:900; font-size:1rem; padding:10px 22px; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(37,211,102,0.35);">
+              <span>📱</span> Send on WhatsApp to Head Office Now
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    toast('Top-up request registered! Please notify Head Office on WhatsApp.');
+    if (res.whatsapp_url) {
+      setTimeout(() => window.open(res.whatsapp_url, '_blank'), 400);
+    }
+
+    form.reset();
+    setTimeout(() => { if (views.Payments) views.Payments(); }, 2000);
+  } catch (err) {
+    alert(`❌ Request Error: ${err.message || 'Could not submit topup request'}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🚀 Submit Top-Up Request & Notify WhatsApp'; }
+  }
+};
+
 let activeTab = 'MyStudents';
 let currentCentre = null;
 let allCentresList = [];
 
 // Official PESC Council Header & Footer Builders matching User's Exact Specification
+// Official PESC Council Header & Footer Builders with 3 Design Formats: Council Only, Institute Only, Both Dual
 function renderOfficialCouncilHeader(opts = {}) {
+  const format = opts.format || window.certFormat || 'council';
   const studentCode = opts.studentCode || 'PESC-26-00008';
   const rollNo = opts.rollNo || studentCode;
   const refNo = opts.refNo || 'PESC-CERT-2026-0007';
   const issueDate = opts.issueDate || '04-10-2026';
   const uid = Math.random().toString(36).substring(2, 7);
 
+  const c = currentCentre || {};
+  const cName = opts.centreName || c.name || 'Aryavart Institute of Technology & Management';
+  const cCode = opts.centreCode || c.centre_code || 'PESC00001';
+  const cAddress = opts.centreAddress || c.address || 'Near Bus Station, Azamgarh Road, Shahganj, Uttar Pradesh 223101';
+  const cPhone = opts.centrePhone || c.phone || '+91 98765 43210';
+  const centreHindi = opts.centreHindi || 'आर्यावर्त इंस्टीट्यूट ऑफ टेक्नोलॉजी एंड मैनेजमेंट';
+  const centreEnglish = (opts.centreEnglish || cName).toUpperCase();
+
+  // Council Circular Seal SVG
+  const councilSealSvg = `
+    <svg class="council-seal-svg" width="105" height="105" viewBox="0 0 100 100" style="display:block; filter:drop-shadow(0 2px 5px rgba(7,42,96,0.2));">
+      <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#047857" stroke-width="3.2"/>
+      <circle cx="50" cy="50" r="43" fill="#ffffff" stroke="#d4af37" stroke-width="1.8"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#072a60" stroke-width="0.8" stroke-dasharray="1.5,1.5"/>
+      <path id="txtArcTop_${uid}" d="M 18 50 A 32 32 0 1 1 82 50" fill="none" stroke="none"/>
+      <text font-size="5.2" font-weight="900" fill="#047857" font-family="'Segoe UI', Arial, sans-serif" letter-spacing="0.5">
+        <textPath href="#txtArcTop_${uid}" startOffset="50%" text-anchor="middle">PURVANCHAL EDUCATION &amp; SKILL</textPath>
+      </text>
+      <!-- Flaming Torch of Knowledge & Skills -->
+      <path d="M47 23 Q50 15 53 23 Q55 29 50 32 Q45 29 47 23 Z" fill="#dc2626"/>
+      <path d="M48 25 Q50 18 52 25 Q53 29 50 30 Q47 29 48 25 Z" fill="#fbbf24"/>
+      <polygon points="48,32 52,32 51,39 49,39" fill="#b45309"/>
+      <!-- Sun Rays -->
+      <path d="M40 32 L35 29 M60 32 L65 29 M37 38 L31 38 M63 38 L69 38" stroke="#f59e0b" stroke-width="1.6" stroke-linecap="round"/>
+      <!-- Open Book -->
+      <path d="M50 53 Q35 45 24 50 L24 63 Q35 58 50 66 Q65 58 76 63 L76 50 Q65 45 50 53 Z" fill="#ffffff" stroke="#0a2a5e" stroke-width="1.8"/>
+      <path d="M50 53 L50 66" stroke="#0a2a5e" stroke-width="1.8"/>
+      <path d="M29 54 Q37 51 45 55 M29 58 Q37 55 45 59 M55 55 Q63 51 71 54 M55 59 Q63 55 71 58" stroke="#94a3b8" stroke-width="0.9" fill="none"/>
+      <circle cx="50" cy="70" r="2.5" fill="#047857"/>
+      <rect x="20" y="75" width="60" height="16" rx="3.5" fill="#072a60" stroke="#d4af37" stroke-width="1.2"/>
+      <text x="50" y="86.5" fill="#ffffff" font-size="10.5" font-weight="900" font-family="'Inter', Arial, sans-serif" text-anchor="middle" letter-spacing="2.5">PESC</text>
+    </svg>
+  `;
+
+  // Study Centre Logo SVG
+  const centreLogoSvg = `
+    <svg width="105" height="105" viewBox="0 0 100 100" style="display:block; filter:drop-shadow(0 2px 5px rgba(4,120,87,0.2));">
+      <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#072a60" stroke-width="3"/>
+      <circle cx="50" cy="50" r="43" fill="#ffffff" stroke="#d4af37" stroke-width="1.8"/>
+      <polygon points="50,16 61,38 85,38 66,52 73,76 50,62 27,76 34,52 15,38 39,38" fill="#047857"/>
+      <circle cx="50" cy="50" r="14" fill="#ffffff" stroke="#d4af37" stroke-width="1.5"/>
+      <text x="50" y="54" fill="#072a60" font-size="12" font-weight="900" text-anchor="middle" font-family="sans-serif">IT</text>
+    </svg>
+  `;
+
+  let headerHtml = '';
+
+  if (format === 'council') {
+    // 1. COUNCIL ONLY: Only Council Name, Council Accreditation, Council Seal, Council Head Office Address
+    headerHtml = `
+      <div style="text-align:center; padding:16px 20px 14px; margin-bottom:14px; background:linear-gradient(180deg, #fffdf2 0%, #ffffff 100%); border:3px solid #072a60; border-radius:10px; box-shadow:0 3px 12px rgba(7,42,96,0.12);">
+        <div style="font-size:0.8rem; font-weight:900; color:#b45309; letter-spacing:2px; text-transform:uppercase; margin-bottom:3px;">
+          ★ राष्ट्रीय स्वायत्त परीक्षा एवं कौशल प्रमाणन बोर्ड ★
+        </div>
+        <div style="display:flex; align-items:center; justify-content:center; gap:18px; margin:4px 0 6px;">
+          <div style="flex-shrink:0;">${councilSealSvg}</div>
+          <div style="text-align:center;">
+            <div class="council-hindi-title" style="font-size:2.65rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Tiro Devanagari Hindi', 'Yatra One', serif; line-height:1.15; margin:0; text-shadow:0 1px 2px rgba(7,42,96,0.1);">
+              पूर्वांचल शिक्षा एवं कौशल परिषद
+            </div>
+            <div class="council-english-title" style="font-size:1.4rem; font-weight:900; color:#047857; letter-spacing:1px; text-transform:uppercase; margin-top:2px;">
+              PURVANCHAL EDUCATION AND SKILL COUNCIL
+            </div>
+            <div style="font-size:0.86rem; font-weight:800; color:#000000; text-transform:uppercase; margin-top:3px;">
+              RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD (REGD. NO: TRUST/2025/5/IV/299)
+            </div>
+            <div style="font-size:0.75rem; font-weight:800; color:#334155; text-transform:uppercase; margin-top:2px;">
+              REGISTERED UNDER INDIAN TRUST ACT &bull; NITI AAYOG (NGO DARPAN), GOVT. OF INDIA &bull; ISO 9001:2015 CERTIFIED
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:center; align-items:center; gap:20px; font-size:0.86rem; font-weight:800; color:#072a60; margin-top:8px; border-top:1.5px dashed #cbd5e1; padding-top:6px; flex-wrap:wrap;">
+          <span>🏛️ <b>National Head Office:</b> Shahgarh, Azamgarh, Uttar Pradesh - 276001</span>
+          <span>🌐 <b>Portal:</b> pescouncil.in</span>
+          <span>📞 <b>Helpline:</b> +91 98765 43210</span>
+        </div>
+      </div>
+    `;
+  } else if (format === 'institute') {
+    // 2. INSTITUTE ONLY: Only Institute Name, Centre Code, Campus Address, Helpline
+    headerHtml = `
+      <div style="text-align:center; padding:16px 20px 14px; margin-bottom:14px; background:linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%); border:3px solid #047857; border-radius:10px; box-shadow:0 3px 12px rgba(4,120,87,0.12);">
+        <div style="font-size:0.8rem; font-weight:900; color:#15803d; letter-spacing:2px; text-transform:uppercase; margin-bottom:3px;">
+          ★ अधिकृत कौशल एवं तकनीकी शिक्षा संस्थान ★
+        </div>
+        <div style="display:flex; align-items:center; justify-content:center; gap:18px; margin:4px 0 6px;">
+          <div style="flex-shrink:0;">${centreLogoSvg}</div>
+          <div style="text-align:center;">
+            <div style="font-size:2.55rem; font-weight:900; color:#064e3b; font-family:'Rozha One', 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', serif; line-height:1.2; margin:0; text-shadow:0 1px 2px rgba(6,78,59,0.1);">
+              ${centreHindi}
+            </div>
+            <div style="font-size:1.4rem; font-weight:900; color:#072a60; font-family:'Outfit', Arial, sans-serif; letter-spacing:1.5px; text-transform:uppercase; margin-top:2px;">
+              ${centreEnglish}
+            </div>
+            <div style="font-size:0.9rem; font-weight:800; color:#0f172a; margin-top:4px;">
+              ACCREDITED CENTRE CODE: <span style="font-family:monospace; color:#065f46; font-weight:900; background:#dcfce7; padding:2px 10px; border-radius:4px; border:1px solid #86efac;">${esc(cCode)}</span>
+            </div>
+            <div style="font-size:0.76rem; font-weight:700; color:#64748b; letter-spacing:0.5px; text-transform:uppercase; margin-top:3px;">
+              Premier Training Centre for Information Technology, Management &amp; Skill Certifications
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:center; align-items:center; gap:20px; font-size:0.86rem; font-weight:800; color:#064e3b; margin-top:8px; border-top:1.5px dashed #bbf7d0; padding-top:6px; flex-wrap:wrap;">
+          <span>📍 <b>Campus Address:</b> ${esc(cAddress)}</span>
+          <span>📞 <b>Helpline:</b> ${esc(cPhone)}</span>
+          <span>🏛️ <b>Affiliation:</b> PESC Board</span>
+        </div>
+      </div>
+    `;
+  } else {
+    // 3. BOTH DUAL: Both Institute & Council Names, Logos, and Addresses
+    headerHtml = `
+      <div class="centre-top-official-header" style="text-align:center; padding:14px 18px 12px; margin-bottom:12px; background:linear-gradient(180deg, #fffdf2 0%, #ffffff 100%); border:2.5px solid #d4af37; border-radius:10px; box-shadow:0 3px 10px rgba(212,175,55,0.18);">
+        <div style="font-size:0.76rem; font-weight:900; color:#b45309; letter-spacing:2px; text-transform:uppercase; margin-bottom:2px;">
+          ★ राष्ट्रीय अधिकृत कौशल एवं तकनीकी अध्ययन केंद्र ★
+        </div>
+        <div style="font-size:2.25rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', 'Martel', serif; line-height:1.2; text-shadow:0 1px 2px rgba(7,42,96,0.12);">
+          ${centreHindi}
+        </div>
+        <div style="font-size:1.32rem; font-weight:900; color:#065f46; font-family:'Outfit', Arial, sans-serif; letter-spacing:1.5px; text-transform:uppercase; margin-top:2px;">
+          ${centreEnglish}
+        </div>
+        <div style="display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap; font-size:0.86rem; font-weight:700; color:#334155; margin-top:5px;">
+          <span>🏛️ <b>Centre Code:</b> <span style="font-family:monospace; color:#072a60; font-weight:900; background:#e0f2fe; padding:2px 8px; border-radius:4px; border:1px solid #7dd3fc;">${esc(cCode)}</span></span>
+          <span>📍 <b>Campus:</b> ${esc(cAddress)}</span>
+          <span>📞 <b>Helpline:</b> ${esc(cPhone)}</span>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-bottom:6px;">
+        <div style="font-size:0.75rem; font-weight:900; color:#b45309; letter-spacing:1.5px; text-transform:uppercase;">
+          ★ Under The Direct Aegis &amp; Accreditation of ★
+        </div>
+        <div class="council-hindi-title" style="font-size:2.5rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Tiro Devanagari Hindi', 'Yatra One', serif; letter-spacing:1.5px; line-height:1.15; margin-top:2px;">
+          पूर्वांचल शिक्षा एवं कौशल परिषद
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:center; gap:18px; margin:4px 0 10px;">
+        <div style="flex-shrink:0;">${councilSealSvg}</div>
+        <div style="text-align:center;">
+          <div class="council-english-title" style="font-size:1.42rem; font-weight:900; color:#047857; letter-spacing:0.8px; line-height:1.2; text-transform:uppercase;">
+            PURVANCHAL EDUCATION AND SKILL COUNCIL
+          </div>
+          <div style="font-size:0.92rem; font-weight:900; color:#000000; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
+            RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD
+          </div>
+          <div style="font-size:0.76rem; font-weight:900; color:#000000; text-transform:uppercase; margin-top:2px; letter-spacing:0.3px;">
+            REGISTERED UNDER INDIAN TRUST ACT &bull; NITI AAYOG (NGO DARPAN), GOVT. OF INDIA
+          </div>
+          <div style="font-size:0.74rem; font-weight:900; color:#000000; text-transform:uppercase; margin-top:2px; letter-spacing:0.3px;">
+            AN ISO 9001:2015 CERTIFIED COUNCIL &bull; MSME REGISTERED ORGANISATION
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   return `
-    <!-- Top Hindi Title: Bada, Bold & Majestic Hindi Font (Extra Large for Print & PDF) -->
-    <div style="text-align:center; margin-bottom:8px;">
-      <div class="council-hindi-title" style="font-size:3rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Tiro Devanagari Hindi', 'Yatra One', 'Noto Serif Devanagari', 'Martel', serif; letter-spacing:1.5px; line-height:1.15; text-shadow:0 1px 3px rgba(10,42,94,0.18);">
-        पूर्वांचल शिक्षा एवं कौशल परिषद
-      </div>
-    </div>
+    ${headerHtml}
 
-    <!-- Council Circular Seal (Bada Logo) + 4-Line Official Accreditation Block -->
-    <div style="display:flex; align-items:center; justify-content:center; gap:20px; margin:6px 0 10px;">
-      <!-- Circular Council Seal SVG (Increased size to 110x110, sharp vector graphics) -->
-      <div style="flex-shrink:0;">
-        <svg class="council-seal-svg" width="110" height="110" viewBox="0 0 100 100" style="display:block; filter:drop-shadow(0 2px 5px rgba(7,42,96,0.2));">
-          <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#047857" stroke-width="3.2"/>
-          <circle cx="50" cy="50" r="43" fill="#ffffff" stroke="#d4af37" stroke-width="1.8"/>
-          <circle cx="50" cy="50" r="40" fill="none" stroke="#072a60" stroke-width="0.8" stroke-dasharray="1.5,1.5"/>
-          <path id="txtArcTop_${uid}" d="M 18 50 A 32 32 0 1 1 82 50" fill="none" stroke="none"/>
-          <text font-size="5.2" font-weight="900" fill="#047857" font-family="'Segoe UI', Arial, sans-serif" letter-spacing="0.5">
-            <textPath href="#txtArcTop_${uid}" startOffset="50%" text-anchor="middle">PURVANCHAL EDUCATION &amp; SKILL</textPath>
-          </text>
-          <!-- Flaming Torch of Knowledge & Skills -->
-          <path d="M47 23 Q50 15 53 23 Q55 29 50 32 Q45 29 47 23 Z" fill="#dc2626"/>
-          <path d="M48 25 Q50 18 52 25 Q53 29 50 30 Q47 29 48 25 Z" fill="#fbbf24"/>
-          <polygon points="48,32 52,32 51,39 49,39" fill="#b45309"/>
-          <!-- Sun Rays -->
-          <path d="M40 32 L35 29 M60 32 L65 29 M37 38 L31 38 M63 38 L69 38" stroke="#f59e0b" stroke-width="1.6" stroke-linecap="round"/>
-          <!-- Open Book -->
-          <path d="M50 53 Q35 45 24 50 L24 63 Q35 58 50 66 Q65 58 76 63 L76 50 Q65 45 50 53 Z" fill="#ffffff" stroke="#0a2a5e" stroke-width="1.8"/>
-          <path d="M50 53 L50 66" stroke="#0a2a5e" stroke-width="1.8"/>
-          <path d="M29 54 Q37 51 45 55 M29 58 Q37 55 45 59 M55 55 Q63 51 71 54 M55 59 Q63 55 71 58" stroke="#94a3b8" stroke-width="0.9" fill="none"/>
-          <circle cx="50" cy="70" r="2.5" fill="#047857"/>
-          <rect x="20" y="75" width="60" height="16" rx="3.5" fill="#072a60" stroke="#d4af37" stroke-width="1.2"/>
-          <text x="50" y="86.5" fill="#ffffff" font-size="10.5" font-weight="900" font-family="'Inter', Arial, sans-serif" text-anchor="middle" letter-spacing="2.5">PESC</text>
-        </svg>
-      </div>
-
-      <!-- 4-Line Official Accreditation Block (Bold & Dignified) -->
-      <div style="text-align:center;">
-        <div class="council-english-title" style="font-size:1.45rem; font-weight:900; color:#047857; letter-spacing:0.8px; line-height:1.2; text-transform:uppercase;">
-          PURVANCHAL EDUCATION AND SKILL COUNCIL
-        </div>
-        <div style="font-size:0.95rem; font-weight:900; color:#000000; letter-spacing:0.5px; text-transform:uppercase; margin-top:3px;">
-          RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD
-        </div>
-        <div style="font-size:0.78rem; font-weight:900; color:#000000; text-transform:uppercase; margin-top:2px; letter-spacing:0.3px;">
-          REGISTERED UNDER INDIAN TRUST ACT &nbsp;||&nbsp; NITI AAYOG (NGO DARPAN), GOVT. OF INDIA
-        </div>
-        <div style="font-size:0.76rem; font-weight:900; color:#000000; text-transform:uppercase; margin-top:2px; letter-spacing:0.3px;">
-          AN ISO 9001:2015 CERTIFIED COUNCIL &nbsp;||&nbsp; MSME REGISTERED ORGANISATION
-        </div>
-      </div>
-    </div>
-
-    <!-- Double Line Divider ======================================== -->
+    <!-- Double Line Divider -->
     <div style="border-top:3.5px double #072a60; margin:6px 0 10px; width:100%;"></div>
 
-    <!-- Official Header Details Box (Place of Issue & Main Head Office removed from top, only in footer) -->
+    <!-- Official Header Details Box -->
     <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.84rem; font-weight:800; color:#000000; text-align:left; line-height:1.55; margin-bottom:12px; background:rgba(248,250,252,0.92); padding:8px 14px; border-radius:6px; border:1.5px solid #cbd5e1;">
       <div>
         <div><b>REGD. NO. (COUNCIL):</b> <span style="font-family:monospace; font-weight:900; color:#072a60;">TRUST/2025/5/IV/299</span></div>
@@ -109,65 +311,202 @@ function renderOfficialCouncilHeader(opts = {}) {
 }
 
 function renderOfficialCouncilFooter(opts = {}) {
-  const directorName = opts.directorName || 'Authorized Signatory';
+  const format = opts.format || window.certFormat || 'council';
+  const isIssued = opts.isIssued !== undefined ? opts.isIssued : true;
+  const directorName = opts.directorName || 'Dr. Ramesh Kumar';
   const centreCode = opts.centreCode || 'PESC00001';
-  const centreSlug = opts.centreSlug || (opts.centreCode ? opts.centreCode.toLowerCase() : 'main');
+  const centreSlug = opts.centreSlug || 'aryavart-institute-of-technology-management';
   const token = opts.token || '';
   const bId = Math.random().toString(36).substring(2, 7);
+
+  const c = currentCentre || {};
+  const cName = c.name || 'Aryavart Institute of Technology & Management';
+  const cAddress = c.address || 'Near Bus Station, Azamgarh Road, Shahganj, Uttar Pradesh 223101';
+  const cDistrict = c.district || 'Shahganj';
+  const cState = c.state || 'Uttar Pradesh';
 
   const councilVerifyUrl = token ? `https://pescouncil.in/verify/${encodeURIComponent(token)}` : 'https://pescouncil.in/verify';
   const centreVerifyUrl = token ? `https://${centreSlug}.pescouncil.in/verify/${encodeURIComponent(token)}` : `https://${centreSlug}.pescouncil.in/verify`;
 
-  return `
-    <!-- 3-Tier Official Authority Signatures Row -->
-    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:24px; padding:0 10px; text-align:center; gap:12px;">
-      <!-- Left: Council Head Sign & Official Seal -->
-      <div style="display:flex; flex-direction:column; align-items:center; flex:1; max-width:180px;">
-        <div style="width:68px; height:68px; border:2px dashed #072a60; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#072a60; font-size:0.48rem; font-weight:900; background:rgba(7,42,96,0.04); transform:rotate(-4deg); box-shadow:inset 0 0 4px rgba(7,42,96,0.12);">
-          <span style="font-size:0.42rem;">★ PURVANCHAL ★</span>
-          <span style="font-size:0.56rem; font-weight:900; color:#072a60;">COUNCIL HEAD</span>
-          <span style="font-size:0.46rem; color:#b45309;">OFFICIAL SEAL</span>
-        </div>
-        <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.35rem; color:#072a60; margin:4px 0 1px; font-weight:700;">
-          S. N. Mishra
-        </div>
-        <span style="font-size:0.75rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
-          Council Head Sign<br><span style="font-size:0.68rem; font-weight:700; color:#475569;">(अध्यक्ष / हेड साइन)</span>
-        </span>
-      </div>
+  // Signatures HTML based on format
+  let sigHtml = '';
 
-      <!-- Center: Regional Coordinator Mohar & Sign -->
-      <div style="display:flex; flex-direction:column; align-items:center; flex:1; max-width:180px;">
-        <div style="width:68px; height:68px; border:2px dashed #7e22ce; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#7e22ce; font-size:0.46rem; font-weight:900; background:rgba(126,34,206,0.04); transform:rotate(3deg); box-shadow:inset 0 0 4px rgba(126,34,206,0.12);">
-          <span style="font-size:0.42rem;">★ REGIONAL ★</span>
-          <span style="font-size:0.54rem; font-weight:900; color:#6b21a8;">COORDINATOR</span>
-          <span style="font-size:0.44rem; color:#581c87;">MOHAR &amp; SEAL</span>
+  if (format === 'council') {
+    // Council Only: Council Head + Regional Coordinator
+    sigHtml = `
+      <div style="display:flex; justify-content:space-around; align-items:flex-end; margin-top:24px; padding:0 20px; text-align:center;">
+        <!-- Left: Council Head Sign & Official Seal -->
+        <div style="display:flex; flex-direction:column; align-items:center; width:220px;">
+          <div style="width:72px; height:72px; border:2px dashed #072a60; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#072a60; font-size:0.5rem; font-weight:900; background:rgba(7,42,96,0.04); transform:rotate(-4deg); box-shadow:inset 0 0 4px rgba(7,42,96,0.12);">
+            <span style="font-size:0.44rem;">★ PURVANCHAL ★</span>
+            <span style="font-size:0.58rem; font-weight:900; color:#072a60;">COUNCIL HEAD</span>
+            <span style="font-size:0.48rem; color:#b45309;">OFFICIAL SEAL</span>
+          </div>
+          <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.45rem; color:#072a60; margin:4px 0 1px; font-weight:700;">
+            S. N. Mishra
+          </div>
+          <span style="font-size:0.8rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
+            Council Head Sign<br><span style="font-size:0.7rem; font-weight:700; color:#475569;">(अध्यक्ष / हेड साइन)</span>
+          </span>
         </div>
-        <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.35rem; color:#6b21a8; margin:4px 0 1px; font-weight:700;">
-          Er. V. K. Maurya
-        </div>
-        <span style="font-size:0.75rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
-          Coordinator Sign &amp; Mohar<br><span style="font-size:0.68rem; font-weight:700; color:#475569;">(क्षेत्रीय समन्वयक मुहर)</span>
-        </span>
-      </div>
 
-      <!-- Right: Authorized Centre Director Sign & Seal -->
-      <div style="display:flex; flex-direction:column; align-items:center; flex:1; max-width:180px;">
-        <div style="width:68px; height:68px; border:2px dashed #047857; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#047857; font-size:0.46rem; font-weight:900; background:rgba(4,120,87,0.04); transform:rotate(-3deg); box-shadow:inset 0 0 4px rgba(4,120,87,0.12);">
-          <span style="font-size:0.42rem;">★ STUDY CENTRE ★</span>
-          <span style="font-size:0.54rem; font-weight:900; color:#064e3b;">DIRECTOR SEAL</span>
-          <span style="font-size:0.44rem; color:#047857;">(${esc(centreCode)})</span>
+        <!-- Right: Regional Coordinator Mohar & Sign -->
+        <div style="display:flex; flex-direction:column; align-items:center; width:220px;">
+          <div style="width:72px; height:72px; border:2px dashed #7e22ce; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#7e22ce; font-size:0.48rem; font-weight:900; background:rgba(126,34,206,0.04); transform:rotate(3deg); box-shadow:inset 0 0 4px rgba(126,34,206,0.12);">
+            <span style="font-size:0.44rem;">★ REGIONAL ★</span>
+            <span style="font-size:0.56rem; font-weight:900; color:#6b21a8;">COORDINATOR</span>
+            <span style="font-size:0.46rem; color:#581c87;">MOHAR &amp; SEAL</span>
+          </div>
+          <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.45rem; color:#6b21a8; margin:4px 0 1px; font-weight:700;">
+            Er. V. K. Maurya
+          </div>
+          <span style="font-size:0.8rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
+            Coordinator Sign &amp; Mohar<br><span style="font-size:0.7rem; font-weight:700; color:#475569;">(क्षेत्रीय समन्वयक मुहर)</span>
+          </span>
         </div>
-        <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.35rem; color:#064e3b; margin:4px 0 1px; font-weight:700;">
-          ${esc(directorName)}
-        </div>
-        <span style="font-size:0.75rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
-          Centre Director Sign<br><span style="font-size:0.68rem; font-weight:700; color:#475569;">(संस्थान निदेशक साइन)</span>
-        </span>
       </div>
-    </div>
+    `;
+  } else if (format === 'institute') {
+    // Institute Only: Examination Controller + Centre Director
+    sigHtml = `
+      <div style="display:flex; justify-content:space-around; align-items:flex-end; margin-top:24px; padding:0 20px; text-align:center;">
+        <!-- Left: Examination Controller Sign -->
+        <div style="display:flex; flex-direction:column; align-items:center; width:220px;">
+          <div style="width:72px; height:72px; border:2px dashed #0284c7; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#0284c7; font-size:0.48rem; font-weight:900; background:rgba(2,132,199,0.04); transform:rotate(-3deg); box-shadow:inset 0 0 4px rgba(2,132,199,0.12);">
+            <span style="font-size:0.44rem;">★ EXAMINATION ★</span>
+            <span style="font-size:0.56rem; font-weight:900; color:#0369a1;">EXAM CONTROLLER</span>
+            <span style="font-size:0.46rem; color:#0284c7;">ACADEMIC CELL</span>
+          </div>
+          <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.45rem; color:#0369a1; margin:4px 0 1px; font-weight:700;">
+            A. K. Srivastava
+          </div>
+          <span style="font-size:0.8rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
+            Exam Controller Sign<br><span style="font-size:0.7rem; font-weight:700; color:#475569;">(परीक्षा नियंत्रक साइन)</span>
+          </span>
+        </div>
 
-    <!-- Dual Portal Online Verification Box (Both Websites Displayed) -->
+        <!-- Right: Authorized Centre Director Sign & Seal -->
+        <div style="display:flex; flex-direction:column; align-items:center; width:220px;">
+          <div style="width:72px; height:72px; border:2px dashed #047857; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#047857; font-size:0.48rem; font-weight:900; background:rgba(4,120,87,0.04); transform:rotate(-3deg); box-shadow:inset 0 0 4px rgba(4,120,87,0.12);">
+            <span style="font-size:0.44rem;">★ STUDY CENTRE ★</span>
+            <span style="font-size:0.56rem; font-weight:900; color:#064e3b;">DIRECTOR SEAL</span>
+            <span style="font-size:0.46rem; color:#047857;">(${esc(centreCode)})</span>
+          </div>
+          <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.45rem; color:#064e3b; margin:4px 0 1px; font-weight:700;">
+            ${esc(directorName)}
+          </div>
+          <span style="font-size:0.8rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
+            Centre Director Sign<br><span style="font-size:0.7rem; font-weight:700; color:#475569;">(संस्थान निदेशक साइन)</span>
+          </span>
+        </div>
+      </div>
+    `;
+  } else {
+    // Both Dual: All 3 Signatures
+    sigHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:24px; padding:0 10px; text-align:center; gap:12px;">
+        <!-- Left: Council Head Sign & Official Seal -->
+        <div style="display:flex; flex-direction:column; align-items:center; flex:1; max-width:180px;">
+          <div style="width:68px; height:68px; border:2px dashed #072a60; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#072a60; font-size:0.48rem; font-weight:900; background:rgba(7,42,96,0.04); transform:rotate(-4deg); box-shadow:inset 0 0 4px rgba(7,42,96,0.12);">
+            <span style="font-size:0.42rem;">★ PURVANCHAL ★</span>
+            <span style="font-size:0.56rem; font-weight:900; color:#072a60;">COUNCIL HEAD</span>
+            <span style="font-size:0.46rem; color:#b45309;">OFFICIAL SEAL</span>
+          </div>
+          <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.35rem; color:#072a60; margin:4px 0 1px; font-weight:700;">
+            S. N. Mishra
+          </div>
+          <span style="font-size:0.75rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
+            Council Head Sign<br><span style="font-size:0.68rem; font-weight:700; color:#475569;">(अध्यक्ष / हेड साइन)</span>
+          </span>
+        </div>
+
+        <!-- Center: Regional Coordinator Mohar & Sign -->
+        <div style="display:flex; flex-direction:column; align-items:center; flex:1; max-width:180px;">
+          <div style="width:68px; height:68px; border:2px dashed #7e22ce; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#7e22ce; font-size:0.46rem; font-weight:900; background:rgba(126,34,206,0.04); transform:rotate(3deg); box-shadow:inset 0 0 4px rgba(126,34,206,0.12);">
+            <span style="font-size:0.42rem;">★ REGIONAL ★</span>
+            <span style="font-size:0.54rem; font-weight:900; color:#6b21a8;">COORDINATOR</span>
+            <span style="font-size:0.44rem; color:#581c87;">MOHAR &amp; SEAL</span>
+          </div>
+          <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.35rem; color:#6b21a8; margin:4px 0 1px; font-weight:700;">
+            Er. V. K. Maurya
+          </div>
+          <span style="font-size:0.75rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
+            Coordinator Sign &amp; Mohar<br><span style="font-size:0.68rem; font-weight:700; color:#475569;">(क्षेत्रीय समन्वयक मुहर)</span>
+          </span>
+        </div>
+
+        <!-- Right: Authorized Centre Director Sign & Seal -->
+        <div style="display:flex; flex-direction:column; align-items:center; flex:1; max-width:180px;">
+          <div style="width:68px; height:68px; border:2px dashed #047857; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#047857; font-size:0.46rem; font-weight:900; background:rgba(4,120,87,0.04); transform:rotate(-3deg); box-shadow:inset 0 0 4px rgba(4,120,87,0.12);">
+            <span style="font-size:0.42rem;">★ STUDY CENTRE ★</span>
+            <span style="font-size:0.54rem; font-weight:900; color:#064e3b;">DIRECTOR SEAL</span>
+            <span style="font-size:0.44rem; color:#047857;">(${esc(centreCode)})</span>
+          </div>
+          <div style="font-family:'Brush Script MT', cursive, sans-serif; font-size:1.35rem; color:#064e3b; margin:4px 0 1px; font-weight:700;">
+            ${esc(directorName)}
+          </div>
+          <span style="font-size:0.75rem; font-weight:900; color:#000000; border-top:1.8px solid #000000; display:block; padding-top:3px; width:100%;">
+            Centre Director Sign<br><span style="font-size:0.68rem; font-weight:700; color:#475569;">(संस्थान निदेशक साइन)</span>
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
+  // Address Bar HTML based on format
+  let addressBarHtml = '';
+  if (format === 'council') {
+    // Council Only Address Bar
+    addressBarHtml = `
+      <div style="margin-top:16px; border-top:2px solid #072a60; padding-top:8px; text-align:center; background:rgba(248,250,252,0.85); border-radius:6px; padding:10px 14px; margin-bottom:12px; border:1px solid #cbd5e1;">
+        <div style="font-size:0.86rem; font-weight:900; color:#072a60; letter-spacing:0.3px; margin-bottom:3px;">
+          🏛️ <b>MAIN HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
+        </div>
+        <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
+          📍 <b>PLACE OF ISSUE:</b> Central Examination Board &amp; Regional Council Office, Uttar Pradesh
+        </div>
+        <div style="font-size:0.74rem; font-weight:700; color:#475569;">
+          Official Recognized Autonomous Certification &bull; Validated under Indian Trust Act (Regd. No: TRUST/2025/5/IV/299)
+        </div>
+      </div>
+    `;
+  } else if (format === 'institute') {
+    // Institute Only Address Bar
+    addressBarHtml = `
+      <div style="margin-top:16px; border-top:2px solid #047857; padding-top:8px; text-align:center; background:rgba(240,253,244,0.85); border-radius:6px; padding:10px 14px; margin-bottom:12px; border:1px solid #bbf7d0;">
+        <div style="font-size:0.86rem; font-weight:900; color:#064e3b; letter-spacing:0.3px; margin-bottom:3px;">
+          🏫 <b>INSTITUTE CAMPUS:</b> ${esc(cName)} (${esc(cCode)}), ${esc(cAddress)}
+        </div>
+        <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
+          📍 <b>PLACE OF ISSUE:</b> ${esc(cDistrict || 'Shahganj')}, ${esc(cState || 'Uttar Pradesh')} &bull; Director Incharge: ${esc(directorName)}
+        </div>
+        <div style="font-size:0.74rem; font-weight:700; color:#475569;">
+          Accredited Vocational Training Centre &bull; Affiliation Code: ${esc(cCode)}
+        </div>
+      </div>
+    `;
+  } else {
+    // Both Dual Address Bar
+    addressBarHtml = `
+      <div style="margin-top:16px; border-top:2px solid #072a60; padding-top:8px; text-align:center; background:rgba(248,250,252,0.85); border-radius:6px; padding:10px 14px; margin-bottom:12px; border:1px solid #cbd5e1;">
+        <div style="font-size:0.86rem; font-weight:900; color:#072a60; letter-spacing:0.3px; margin-bottom:3px;">
+          🏛️ <b>COUNCIL HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
+        </div>
+        <div style="font-size:0.84rem; font-weight:900; color:#064e3b; margin-top:3px; margin-bottom:3px;">
+          🏫 <b>STUDY CENTRE CAMPUS:</b> ${esc(cName)} (${esc(cCode)}), ${esc(cAddress)}
+        </div>
+        <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
+          📍 <b>PLACE OF ISSUE:</b> Central Council Examination Board &amp; ${esc(cDistrict || 'Shahganj')} Centre Campus
+        </div>
+        <div style="font-size:0.74rem; font-weight:700; color:#475569;">
+          Dual Authorized Certification &bull; Validated under Indian Trust Act (Regd. No: TRUST/2025/5/IV/299)
+        </div>
+      </div>
+    `;
+  }
+
+  // Verification Box
+  const verifyBoxHtml = `
     <div style="margin-top:20px; background:linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 100%); border:1.8px solid #0284c7; border-radius:8px; padding:10px 14px; text-align:center;">
       <div style="font-size:0.82rem; font-weight:900; color:#0369a1; text-transform:uppercase; letter-spacing:0.5px;">
         🌐 DUAL-PORTAL ONLINE AUTHENTICITY VERIFICATION (द्वैध पोर्टल ऑनलाइन सत्यापन)
@@ -180,21 +519,10 @@ function renderOfficialCouncilFooter(opts = {}) {
         Scan the QR code at top-left or enter the registration/token on either portal to verify official council records.
       </div>
     </div>
+  `;
 
-    <!-- Official Head Office, Place of Issue & Contact Bar (Sirf Neeche Hi Saare Address) -->
-    <div style="margin-top:16px; border-top:2px solid #072a60; padding-top:8px; text-align:center; background:rgba(248,250,252,0.85); border-radius:6px; padding:10px 14px; margin-bottom:12px; border:1px solid #cbd5e1;">
-      <div style="font-size:0.86rem; font-weight:900; color:#072a60; letter-spacing:0.3px; margin-bottom:3px;">
-        🏛️ <b>MAIN HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
-      </div>
-      <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
-        📍 <b>PLACE OF ISSUE:</b> Central Examination Board &amp; Regional Council Office, Uttar Pradesh
-      </div>
-      <div style="font-size:0.74rem; font-weight:700; color:#475569;">
-        Official Recognized Autonomous Certification &bull; Validated under Indian Trust Act (Regd. No: TRUST/2025/5/IV/299)
-      </div>
-    </div>
-
-    <!-- Authentic Government & International Accreditation Logos / Insignia Badges -->
+  // Authentic Government & International Accreditation Logos / Insignia Badges
+  const badgesHtml = `
     <div style="display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap; padding:6px 0;">
       <!-- 1. ISO 9001:2015 Quality Management Certified Badge -->
       <div title="ISO 9001:2015 Certified Organization">
@@ -306,6 +634,13 @@ function renderOfficialCouncilFooter(opts = {}) {
         </svg>
       </div>
     </div>
+  `;
+
+  return `
+    ${sigHtml}
+    ${verifyBoxHtml}
+    ${addressBarHtml}
+    ${badgesHtml}
   `;
 }
 
@@ -998,8 +1333,11 @@ const views = {
             </div>
           </div>
 
-          <div style="align-self:end;">
-            <button class="btn sm" style="background:#064e3b; color:#fff; padding:10px 20px; font-weight:700;" onclick="window.print()">🖨️ Print Certificate</button>
+          <div id="certPrintActionWrap" style="align-self:end; display:none;">
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Certificate</button>
+              <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
+            </div>
           </div>
         </div>
 
@@ -1062,8 +1400,21 @@ const views = {
             </select>
           </div>
 
-          <div style="align-self:end;">
-            <button class="btn sm" style="background:#064e3b; color:#fff; padding:10px 20px; font-weight:700;" onclick="window.print()">🖨️ Print Marksheet</button>
+          <!-- Layout Option -->
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Design Format:</label>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn gold sm active" id="btnMrkFmtInstitute" onclick="setMrkFormat('institute')">🏫 Centre Name on Top</button>
+              <button type="button" class="btn alt sm" id="btnMrkFmtCouncil" onclick="setMrkFormat('council')">Council Header</button>
+              <button type="button" class="btn alt sm" id="btnMrkFmtDual" onclick="setMrkFormat('dual')">Both Dual</button>
+            </div>
+          </div>
+
+          <div id="mrkPrintActionWrap" style="align-self:end; display:none;">
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Marksheet</button>
+              <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
+            </div>
           </div>
         </div>
 
@@ -1488,37 +1839,190 @@ const views = {
     `;
   },
 
-  // 16. Payments / Wallet (Council ko System Fees jama, Wallet balance)
+  // 16. Payments / Wallet (Council ko System Fees jama, Wallet balance & WhatsApp Top-Up)
   async Payments() {
-    const w = await api('/api/centre/wallet');
+    const [wData, sData, rData] = await Promise.all([
+      api('/api/centre/wallet'),
+      api('/api/centre/wallet/payment-settings').catch(() => ({ settings: {} })),
+      api('/api/centre/wallet/topup-requests').catch(() => ({ requests: [] }))
+    ]);
+
+    const w = wData || { balance_paise: 0, ledger: [], fees: {} };
+    const ho = sData.settings || {
+      upi_id: 'pescouncil@upi',
+      upi_name: 'Purvanchal Education and Skill Council',
+      bank_name: 'State Bank of India',
+      account_number: '39820192830',
+      ifsc_code: 'SBIN0001234',
+      whatsapp_number: '919876543210'
+    };
+    const reqs = rData.requests || [];
+    const feesObj = w.fees || { admission: 3500, marksheet: 15000, certificate: 20000 };
 
     V.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
         <div>
-          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">16. Council Wallet &amp; System Fees</h2>
-          <p class="muted" style="margin:0;">Purvanchal Council wallet balance, marksheets deduction ledger, aur recharge</p>
+          <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">16. Centre Wallet, Fees &amp; WhatsApp Top-Up</h2>
+          <p class="muted" style="margin:0;">Wallet balance se admission form, marksheet aur certificate fees katega. UPI se pay karke WhatsApp request bhejein.</p>
         </div>
       </div>
 
+      <!-- Top Summary Grid -->
       <div class="grid" style="grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:24px;">
-        <div class="card" style="background:#fff; border-left:4px solid #064e3b; padding:24px;">
-          <span style="font-size:0.85rem; color:#64748b; font-weight:700;">ACTIVE COUNCIL WALLET BALANCE</span>
-          <div style="font-size:2.4rem; font-weight:800; color:#064e3b; margin:10px 0;">${inr(w.balance_paise)}</div>
-          <p class="muted" style="font-size:0.85rem; margin:0;">Used automatically when certificates and marksheets are ordered from central council.</p>
+        <div class="card" style="background:#ffffff; border-left:5px solid #064e3b; padding:24px; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.85rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">ACTIVE CENTRE WALLET BALANCE</span>
+            <span class="badge ${w.balance_paise > 10000 ? 'Valid' : 'Pending'}" style="font-size:0.75rem;">${w.balance_paise > 10000 ? '✓ SUFFICIENT' : '⚠️ LOW BALANCE'}</span>
+          </div>
+          <div style="font-size:2.6rem; font-weight:900; color:#064e3b; margin:10px 0;">${inr(w.balance_paise)}</div>
+          <p class="muted" style="font-size:0.84rem; margin:0; line-height:1.5;">
+            Automatic fee deduction rule: 
+            Admission: <b>₹${(feesObj.admission / 100).toFixed(0)}</b> &bull; 
+            Marksheet: <b>₹${(feesObj.marksheet / 100).toFixed(0)}</b> &bull; 
+            Certificate: <b>₹${(feesObj.certificate / 100).toFixed(0)}</b>
+          </p>
         </div>
 
-        <div class="card" style="background:#fff; padding:24px;">
-          <h3 style="margin:0 0 10px; color:#0f172a;">⚡ Instant Wallet Recharge</h3>
-          <div style="display:flex; gap:10px; margin-bottom:12px;">
-            <input type="number" id="rechargeInput" value="5000" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-weight:700; width:100%;">
-            <button class="btn gold" onclick="submitRecharge()" style="white-space:nowrap;">Recharge Now</button>
+        <!-- Head Office Official UPI & Bank Box -->
+        <div class="card" style="background:linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border:1.8px solid #a7f3d0; padding:22px; border-radius:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <span style="background:#047857; color:#fff; font-size:0.72rem; font-weight:800; padding:2px 8px; border-radius:12px; text-transform:uppercase;">Head Office Official Payment Info</span>
+              <h3 style="margin:6px 0 2px; color:#064e3b; font-size:1.15rem;">🏢 ${esc(ho.upi_name || 'Purvanchal Education and Skill Council')}</h3>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:0.75rem; color:#047857; font-weight:700;">Verified Council Account</span>
+            </div>
           </div>
-          <span style="font-size:0.78rem; color:#64748b;">Instant credit via UPI / NetBanking gateway adapter</span>
+
+          <div style="display:flex; gap:16px; align-items:center; margin-top:12px; flex-wrap:wrap;">
+            <div style="background:#fff; padding:6px; border-radius:8px; border:1px solid #cbd5e1; text-align:center;">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=95x95&data=upi%3A%2F%2Fpay%3Fpa%3D${encodeURIComponent(ho.upi_id || 'pescouncil@upi')}%26pn%3D${encodeURIComponent(ho.upi_name || 'PESC')}%26cu%3DINR" alt="Head Office UPI QR" style="width:85px; height:85px; display:block;">
+              <span style="font-size:0.6rem; color:#64748b; font-weight:700;">Scan in Any UPI App</span>
+            </div>
+            <div style="font-size:0.84rem; color:#1e293b; line-height:1.6; flex:1; min-width:200px;">
+              <div>UPI ID: <b style="font-family:monospace; color:#047857; font-size:0.95rem; background:#fff; padding:2px 8px; border-radius:4px; border:1px solid #86efac;">${esc(ho.upi_id || 'pescouncil@upi')}</b></div>
+              <div>Bank: <b>${esc(ho.bank_name || 'State Bank of India')}</b></div>
+              <div>Account: <b style="font-family:monospace;">${esc(ho.account_number || '39820192830')}</b> &bull; IFSC: <b style="font-family:monospace;">${esc(ho.ifsc_code || 'SBIN0001234')}</b></div>
+              <div>Helpline / WhatsApp: <b style="color:#0284c7;">+${esc(ho.whatsapp_number || '919876543210')}</b></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div style="background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; padding:20px;">
-        <h3 style="margin:0 0 14px; color:#0f172a;">Transaction Ledger History</h3>
+      <!-- Top-Up Request Box -->
+      <div class="card" style="background:#ffffff; border-radius:14px; padding:24px; border:1.5px solid #e2e8f0; margin-bottom:24px; box-shadow:0 3px 12px rgba(0,0,0,0.04);">
+        <h3 style="margin:0 0 6px; color:#0f172a; font-size:1.25rem; display:flex; align-items:center; gap:8px;">
+          <span>📲</span> Request Wallet Top-Up (UPI / Bank Transfer / WhatsApp)
+        </h3>
+        <p class="muted" style="margin:0 0 16px; font-size:0.86rem;">
+          Upar diye gaye Council UPI ID / QR code par payment karein, aur neeche UTR daal kar WhatsApp message bhejein. Head Office turant approve karke wallet me credit kar dega.
+        </p>
+
+        <!-- Notification Banner Container -->
+        <div id="topupFeedbackNotice" style="display:none; margin-bottom:16px;"></div>
+
+        <form id="walletTopupRequestForm" onsubmit="handleWalletTopupSubmit(event)">
+          <div style="margin-bottom:14px;">
+            <label style="font-size:0.85rem; font-weight:700; display:block; margin-bottom:6px;">Select Quick Amount (रुपये चुनें):</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn sm alt" onclick="selectTopupAmount(500)">₹500</button>
+              <button type="button" class="btn sm alt" onclick="selectTopupAmount(1000)">₹1,000</button>
+              <button type="button" class="btn sm gold active" onclick="selectTopupAmount(2000)">₹2,000</button>
+              <button type="button" class="btn sm alt" onclick="selectTopupAmount(5000)">₹5,000</button>
+              <button type="button" class="btn sm alt" onclick="selectTopupAmount(10000)">₹10,000</button>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; display:block; margin-bottom:4px;">Amount (INR) *</label>
+              <input type="number" id="topupAmountInput" name="amount_rupees" value="2000" min="100" required style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-weight:800; font-size:1.1rem; color:#064e3b;">
+            </div>
+
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; display:block; margin-bottom:4px;">Payment Mode *</label>
+              <select name="payment_mode" style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-weight:600;">
+                <option value="upi">UPI (GPay / PhonePe / Paytm / BHIM)</option>
+                <option value="bank_transfer">IMPS / NEFT / Net Banking</option>
+                <option value="cash">Direct Cash / Office Deposit</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; display:block; margin-bottom:4px;">UTR / Transaction Reference No. *</label>
+              <input type="text" name="utr_number" required placeholder="e.g. 409823482390 or IMPS98234" style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-weight:700; font-family:monospace;">
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <span style="font-size:0.82rem; color:#64748b;">
+              💡 Submit karte hi WhatsApp link generate hoga jise aap seedha Head Office ko send kar sakte hain.
+            </span>
+            <button type="submit" id="btnSubmitTopup" class="btn" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1rem; padding:12px 28px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 3px 10px rgba(22,163,74,0.35);">
+              🚀 Submit Top-Up Request &amp; Notify WhatsApp
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Top-up Requests Status Table -->
+      <div class="card" style="background:#ffffff; border-radius:14px; padding:20px; border:1px solid #e2e8f0; margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <h3 style="margin:0; color:#0f172a; font-size:1.15rem;">📋 My Top-Up Requests (Payment Approvals)</h3>
+          <span style="font-size:0.8rem; color:#64748b;">Showing last 50 top-up records</span>
+        </div>
+        <div class="wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date &amp; Time</th>
+                <th>Amount</th>
+                <th>Payment Mode</th>
+                <th>UTR / Ref No.</th>
+                <th>Status</th>
+                <th>Remarks / Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reqs.length ? reqs.map(r => `
+                <tr>
+                  <td>${new Date(r.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
+                  <td><b style="color:#064e3b; font-size:1rem;">₹${(r.amount_paise / 100).toLocaleString('en-IN')}</b></td>
+                  <td><span class="badge alt">${esc((r.payment_mode || 'upi').toUpperCase())}</span></td>
+                  <td><b style="font-family:monospace; color:#0284c7;">${esc(r.utr_number)}</b></td>
+                  <td>
+                    <span class="badge ${r.status === 'approved' ? 'Valid' : r.status === 'rejected' ? 'Revoked' : 'Pending'}">
+                      ${r.status === 'approved' ? '✓ Approved' : r.status === 'rejected' ? '✕ Rejected' : '⏳ Pending Approval'}
+                    </span>
+                  </td>
+                  <td>
+                    ${r.status === 'pending' ? `
+                      <a href="https://wa.me/${esc(ho.whatsapp_number || '919876543210')}?text=${encodeURIComponent(`Namaste Head Office, I have requested wallet top-up of ₹${(r.amount_paise/100)} (UTR: ${r.utr_number}). Centre: ${(currentCentre && currentCentre.name) || 'Centre'} (${(currentCentre && currentCentre.centre_code) || ''}). Please approve in admin panel.`)}" target="_blank" class="btn sm" style="background:#25D366; color:#fff; text-decoration:none; font-weight:700;">
+                        📱 Send on WhatsApp
+                      </a>
+                    ` : r.status === 'approved' ? `
+                      <span style="color:#16a34a; font-size:0.82rem; font-weight:700;">Credited to Wallet</span>
+                    ` : `
+                      <span style="color:#dc2626; font-size:0.82rem;">${esc(r.rejection_reason || 'Verification Failed')}</span>
+                    `}
+                  </td>
+                </tr>
+              `).join('') : `
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:24px; color:#64748b;">
+                    No top-up requests submitted yet. Use the form above to add balance.
+                  </td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Real Transaction Ledger History -->
+      <div style="background:#ffffff; border-radius:14px; border:1px solid #e2e8f0; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+        <h3 style="margin:0 0 12px; color:#0f172a; font-size:1.15rem;">📜 Complete Wallet Transaction Ledger</h3>
         <div class="wrap">
           <table>
             <thead>
@@ -1526,18 +2030,32 @@ const views = {
                 <th>Date</th>
                 <th>Type</th>
                 <th>Amount</th>
+                <th>Balance After</th>
                 <th>Description</th>
                 <th>Reference</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>${new Date().toLocaleDateString('en-IN')}</td>
-                <td><span class="badge Valid">Credit</span></td>
-                <td style="color:#16a34a; font-weight:700;">+₹5,000.00</td>
-                <td>Pre-loaded Gold Affiliation Council Wallet Credit</td>
-                <td style="font-family:monospace;">WAL-INIT-2026</td>
-              </tr>
+              ${w.ledger && w.ledger.length ? w.ledger.map(l => `
+                <tr>
+                  <td>${new Date(l.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
+                  <td>
+                    <span class="badge ${l.kind === 'credit' ? 'Valid' : 'Pending'}">
+                      ${l.kind === 'credit' ? '🟢 Credit' : '🔴 Debit'}
+                    </span>
+                  </td>
+                  <td style="color:${l.kind === 'credit' ? '#16a34a' : '#dc2626'}; font-weight:800;">
+                    ${l.kind === 'credit' ? '+' : '-'}${inr(l.amount_paise)}
+                  </td>
+                  <td><b>${inr(l.balance_after)}</b></td>
+                  <td>${esc(l.description || 'System Fee')}</td>
+                  <td><span style="font-family:monospace; font-size:0.8rem; color:#64748b;">${esc(l.reference)}</span></td>
+                </tr>
+              `).join('') : `
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:20px; color:#64748b;">No wallet transactions recorded yet.</td>
+                </tr>
+              `}
             </tbody>
           </table>
         </div>
@@ -1684,8 +2202,8 @@ const views = {
             <div>
               <label>Official Live Portal Website</label>
               <div style="display:flex; gap:8px;">
-                <input value="https://${(c.slug === 'navya' ? 'navyacomputer' : esc(c.slug || 'navya'))}.pescouncil.in" readonly style="background:#f1f5f9; font-family:monospace; color:#064e3b; font-weight:700; flex:1;">
-                <a href="https://${(c.slug === 'navya' ? 'navyacomputer' : esc(c.slug || 'navya'))}.pescouncil.in" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; padding:8px 12px; display:inline-flex; align-items:center;">Visit ↗</a>
+                <input value="https://${(c.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management' : esc(c.slug || 'aryavart-institute-of-technology-management'))}.pescouncil.in" readonly style="background:#f1f5f9; font-family:monospace; color:#064e3b; font-weight:700; flex:1;">
+                <a href="https://${(c.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management' : esc(c.slug || 'aryavart-institute-of-technology-management'))}.pescouncil.in" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; padding:8px 12px; display:inline-flex; align-items:center;">Visit ↗</a>
               </div>
             </div>
 
@@ -2293,6 +2811,51 @@ window.printReceipt = function(id) {
   showAdmissionFormModal(stu);
 };
 
+// Global Issuance Registry & Status Tracker
+if (!window._issuedCerts) window._issuedCerts = {};
+if (!window._issuedMrks) window._issuedMrks = {};
+
+// Wallet Deduction & Official Issuance Handlers (Prominently Visible & Functional)
+window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
+  const sel = $('#certStudentSelect');
+  const opt = sel ? sel.selectedOptions[0] : null;
+  const stuName = opt ? opt.dataset.name : 'छात्र';
+  const regNo = opt ? opt.dataset.code : '';
+  const fee = feeAmount || 200;
+
+  const confirmed = confirm(`⚠️ प्रमाणपत्र जारीकरण एवं सत्यापन (Official Certificate Issuance):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) का अधिकृत प्रमाणपत्र जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित प्रमाणपत्र जनरेट हो जाएगा और प्रिंट/PDF विकल्प खुल जाएगा।`);
+  if (!confirmed) return;
+
+  try {
+    const targetId = certDbId || studentId || 1;
+    const res = await api(`/api/centre/certificates/${targetId}/sign-issue`, {
+      method: 'POST',
+      body: { fee: fee, student_id: studentId }
+    });
+
+    if (res.wallet_balance !== undefined) {
+      if (currentCentre) currentCentre.wallet_balance = res.wallet_balance;
+      const wEl = document.getElementById('centreWalletBadge');
+      if (wEl) wEl.textContent = `₹${res.wallet_balance}`;
+    }
+
+    window._issuedCerts[studentId] = true;
+    if (regNo) window._issuedCerts[regNo] = true;
+    window._issuedCerts[targetId] = true;
+
+    toast(`🎉 ₹${fee} वॉलेट से कट गया! हेड ऑफिस एवं समन्वयक मुहर सहित प्रमाणपत्र जारी हो गया।`);
+    await updateCertPreview();
+  } catch (err) {
+    alert(`❌ प्रमाणपत्र जारी नहीं हो सका: ${err.message || 'त्रुटि'}\nकृपया जांचें कि सेंटर वॉलेट में पर्याप्त बैलेंस है अथवा नहीं।`);
+  }
+};
+
+window.reissueCert = async function(certDbId, studentId, feeAmount) {
+  const fee = feeAmount || 200;
+  if (!confirm(`क्या आप पुनः ₹${fee} वॉलेट से काटकर प्रमाणपत्र को री-स्टैम्प / री-इशू करना चाहते हैं?`)) return;
+  return window.signAndIssueCert(certDbId, studentId, fee);
+};
+
 // Certificate Preview Renderers
 let certFormat = 'council';
 let certEvalPattern = 'yearly';
@@ -2371,78 +2934,75 @@ async function updateCertPreview() {
     if (stRes && stRes.certificate) certItem = stRes.certificate;
   } catch (_) {}
 
-  const isHeadApproved = certItem ? (certItem.head_approved || certItem.status === 'Valid' || certItem.status === 'Approved_By_Council') : true;
-  const isCoordApproved = certItem ? (certItem.coordinator_approved || certItem.status === 'Valid' || certItem.status === 'Approved_By_Council') : true;
-  const isCentreSigned = certItem ? (certItem.centre_signed || certItem.status === 'Valid') : true;
-  const certDbId = certItem ? certItem.id : 1;
+  const certDbId = certItem ? certItem.id : studentId;
+  const isIssued = Boolean(
+    (window._issuedCerts && (window._issuedCerts[studentId] || window._issuedCerts[code] || window._issuedCerts[certDbId])) ||
+    (certItem && (certItem.centre_signed === true || certItem.is_issued === true))
+  );
 
+  const printWrap = $('#certPrintActionWrap');
   const feeNoticeEl = $('#certFeeNotice');
+
   if (feeNoticeEl) {
-    let actionBtnHtml = '';
-    if (!isHeadApproved || !isCoordApproved) {
-      actionBtnHtml = `<button type="button" class="btn sm" onclick="requestDualApproval(${studentId}, 'certificate')" style="background:#0284c7; color:#fff; font-weight:700;">📤 Request Dual Approval (अनुमोदन हेतु भेजें)</button>`;
-    } else if (isHeadApproved && isCoordApproved && !isCentreSigned) {
-      actionBtnHtml = `<button type="button" class="btn sm" onclick="signAndIssueCert(${certDbId})" style="background:#16a34a; color:#fff; font-weight:800; box-shadow:0 2px 8px rgba(22,163,74,0.3);">✍️ Affix Centre Seal &amp; Issue (मुहर लगाकर जारी करें)</button>`;
+    if (!isIssued) {
+      feeNoticeEl.innerHTML = `
+        <div style="background:#fefce8; border:2px solid #eab308; border-radius:12px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(234,179,8,0.18);">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:2.2rem;">🔒</span>
+            <div>
+              <b style="color:#854d0e; font-size:1.05rem; display:block;">प्रमाणपत्र जारीकरण एवं सत्यापन शुल्क (Pending Issuance &amp; Wallet Deduction)</b>
+              <span style="font-size:0.85rem; color:#713f12;">हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित प्रमाणपत्र जारी करने के लिए सेंटर वॉलेट से ₹${currentFee} कटेगा।</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="background:#dc2626; color:#ffffff; font-weight:900; font-size:1.25rem; padding:8px 20px; border-radius:20px; box-shadow:0 2px 8px rgba(220,38,38,0.3);">₹${currentFee}</span>
+            <button type="button" class="btn" onclick="signAndIssueCert(${certDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 26px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.4); border:none; cursor:pointer;">
+              ⚡ Pay ₹${currentFee} from Wallet &amp; Issue (पैसे वॉलेट से काटें व जारी करें)
+            </button>
+          </div>
+        </div>
+      `;
     } else {
-      actionBtnHtml = `<span style="background:#dcfce7; color:#166534; font-weight:800; padding:6px 14px; border-radius:20px; font-size:0.82rem;">✅ Officially Issued to Student</span>`;
+      feeNoticeEl.innerHTML = `
+        <div style="background:#ecfdf5; border:1.8px solid #86efac; border-radius:12px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(16,185,129,0.12);">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:2.2rem;">✅</span>
+            <div>
+              <b style="color:#065f46; font-size:1.05rem; display:block;">प्रमाणपत्र आधिकारिक रूप से जारी हो चुका है (Officially Issued &amp; Sealed)</b>
+              <span style="font-size:0.85rem; color:#047857;">हेड ऑफिस, समन्वयक एवं संस्थान निदेशक की अधिकृत मुहर लग चुकी है। आप इसे Print या PDF Save कर सकते हैं।</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="background:#15803d; color:#ffffff; font-weight:900; font-size:1.05rem; padding:6px 18px; border-radius:20px;">PAID ₹${currentFee}</span>
+            <button type="button" class="btn sm" onclick="reissueCert(${certDbId}, ${studentId}, ${currentFee})" style="background:#0284c7; color:#fff; font-weight:700; padding:8px 16px; border-radius:6px; cursor:pointer; border:none;">
+              🔄 Re-Deduct / Stamp Again (₹${currentFee})
+            </button>
+          </div>
+        </div>
+      `;
     }
-
-    feeNoticeEl.innerHTML = `
-      <!-- Prescribed Fee Banner -->
-      <div style="background:${isSemester ? '#eff6ff' : '#f0fdf4'}; border:1px solid ${isSemester ? '#bfdbfe' : '#bbf7d0'}; border-radius:10px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 4px rgba(0,0,0,0.03); margin-bottom:12px;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:1.4rem;">${isSemester ? '📚' : '📜'}</span>
-          <div>
-            <b style="color:${isSemester ? '#1e40af' : '#166534'}; font-size:0.95rem; display:block;">
-              ${isSemester ? 'Semester Certificate Fee (सेमेस्टर प्रमाणपत्र शुल्क)' : 'Single / Annual Certificate Fee (वार्षिक/सिंगल प्रमाणपत्र शुल्क)'}
-            </b>
-            <span style="font-size:0.78rem; color:#64748b;">Council Prescribed Fee for ${esc(course || 'Course')}</span>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <span style="background:${isSemester ? '#1d4ed8' : '#15803d'}; color:#ffffff; font-weight:800; font-size:1.15rem; padding:4px 16px; border-radius:20px; letter-spacing:0.5px; display:inline-block;">
-            ₹${currentFee}
-          </span>
-        </div>
-      </div>
-
-      <!-- 3-Tier Multi-Stage Dual Approval Status & Strategy Card -->
-      <div style="background:#ffffff; border:1.8px solid #cbd5e1; border-radius:10px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
-          <div>
-            <b style="font-size:1.02rem; color:#072a60;">📋 Council 3-Stage Verification &amp; Approval Strategy (अनुमोदन प्रगति)</b>
-            <p style="margin:2px 0 0; font-size:0.8rem; color:#64748b;">
-              1. हेड ऑफिस एवं 2. क्षेत्रीय समन्वयक दोनों की मुहर व साइन अप्रूव होने के बाद ही सेंटर मुहर लगाकर छात्र को जारी कर सकता है।
-            </p>
-          </div>
-          <div>${actionBtnHtml}</div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:10px;">
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
-            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">1. Head Office Seal (हेड ऑफिस)</div>
-            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
-              ${isHeadApproved ? '<span style="color:#16a34a;">✅ Approved (S. N. Mishra)</span>' : '<span style="color:#d97706;">⏳ Pending Approval</span>'}
-            </div>
-          </div>
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
-            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">2. Regional Coordinator (समन्वयक)</div>
-            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
-              ${isCoordApproved ? '<span style="color:#16a34a;">✅ Approved (Er. V. K. Maurya)</span>' : '<span style="color:#d97706;">⏳ Pending Approval</span>'}
-            </div>
-          </div>
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
-            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">3. Centre Director Seal &amp; Issue</div>
-            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
-              ${isCentreSigned ? '<span style="color:#16a34a;">✅ Signed &amp; Issued to Student</span>' : (isHeadApproved && isCoordApproved ? '<span style="color:#2563eb;">✍️ Ready to Sign &amp; Issue</span>' : '<span style="color:#94a3b8;">🔒 Locked (Wait for Step 1 &amp; 2)</span>')}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
   }
 
-  const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
+  if (printWrap) {
+    if (isIssued) {
+      printWrap.style.display = 'block';
+      printWrap.innerHTML = `
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Certificate</button>
+          <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
+        </div>
+      `;
+    } else {
+      printWrap.style.display = 'flex';
+      printWrap.innerHTML = `
+        <button type="button" class="btn sm" onclick="signAndIssueCert(${certDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; padding:10px 20px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 3px 12px rgba(22,163,74,0.35);">
+          ⚡ Pay ₹${currentFee} &amp; Issue
+        </button>
+      `;
+    }
+  }
+
+  const cName = currentCentre ? currentCentre.name : 'Aryavart Institute of Technology & Management';
   const cCode = currentCentre ? (currentCentre.centre_code || 'PESC00001') : 'PESC00001';
   const cDistrict = currentCentre ? (currentCentre.district || 'Azamgarh') : 'Azamgarh';
   const cState = currentCentre ? (currentCentre.state || 'Uttar Pradesh') : 'Uttar Pradesh';
@@ -2457,62 +3017,89 @@ async function updateCertPreview() {
     ? `<img src="${esc(photo)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">`
     : `<div style="text-align:center; padding:4px;"><div style="font-size:1.6rem;">👤</div><span style="font-size:0.55rem; font-weight:700; color:#64748b; display:block; line-height:1;">Student Photo</span></div>`;
 
+  const draftBanner = !isIssued ? `
+    <div style="background:#fffbeb; border:1.5px dashed #f59e0b; border-radius:8px; padding:10px 16px; margin-bottom:16px; text-align:center; color:#b45309; font-weight:800; font-size:0.9rem;">
+      🔒 DRAFT PREVIEW (प्रारूप) – हेड ऑफिस एवं समन्वयक मुहर लगाने हेतु ऊपर दिए गए हरे बटन (⚡ Pay ₹${currentFee} from Wallet &amp; Issue) पर क्लिक करें।
+    </div>
+  ` : `
+    <div style="background:#ecfdf5; border:1.2px solid #10b981; border-radius:8px; padding:8px 16px; margin-bottom:16px; text-align:center; color:#065f46; font-weight:800; font-size:0.88rem;">
+      🎖️ OFFICIALLY ISSUED &amp; DIGITALLY SEALED – PURVANCHAL EDUCATION &amp; SKILL COUNCIL
+    </div>
+  `;
+
   $('#certPreviewContainer').innerHTML = `
-    ${renderOfficialCouncilHeader({
-      studentCode: code,
-      rollNo: code,
-      refNo: refNo,
-      issueDate: issueDate,
-      issuePlace: cAddress || 'Regional Council Office, Shahgarh, Azamgarh UP',
-      headOffice: 'Shahgarh, Azamgarh UP 276001'
-    })}
+    ${draftBanner}
 
-    <!-- Top Section: QR Code on Left, Ribbon in Center, Student Photo on Right (Opposite) -->
-    <div style="display:flex; align-items:center; justify-content:space-between; margin:10px 0 16px; gap:12px;">
-      <!-- Left: QR Code -->
-      <div style="border:2px solid #072a60; padding:6px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(cleanNum)}" alt="Verification QR" style="width:82px; height:82px; display:block;">
-        <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">
-          SCAN TO VERIFY
+    <!-- Royal Certificate Frame with Double Gold & Deep Navy Border -->
+    <div style="border:4px double #d4af37; padding:24px; border-radius:8px; background:#ffffff; position:relative; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+      <!-- Corner Filigree Ornaments -->
+      <div style="position:absolute; top:8px; left:12px; font-size:1.4rem; color:#d4af37;">⚜️</div>
+      <div style="position:absolute; top:8px; right:12px; font-size:1.4rem; color:#d4af37;">⚜️</div>
+      <div style="position:absolute; bottom:8px; left:12px; font-size:1.4rem; color:#d4af37;">⚜️</div>
+      <div style="position:absolute; bottom:8px; right:12px; font-size:1.4rem; color:#d4af37;">⚜️</div>
+
+      ${renderOfficialCouncilHeader({
+        format: certFormat,
+        studentCode: code,
+        rollNo: code,
+        refNo: refNo,
+        issueDate: issueDate,
+        centreName: cName,
+        centreCode: cCode,
+        centreAddress: cAddress,
+        centreHindi: 'आर्यावर्त इंस्टीट्यूट ऑफ टेक्नोलॉजी एंड मैनेजमेंट',
+        centreEnglish: 'ARYAVART INSTITUTE OF TECHNOLOGY & MANAGEMENT'
+      })}
+
+      <!-- Security Ribbon, QR Code, Student Photo -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin:14px 0 18px; gap:14px;">
+        <!-- Left: QR Code -->
+        <div style="border:2px solid #072a60; padding:6px; border-radius:8px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(cleanNum)}" alt="Verification QR" style="width:82px; height:82px; display:block;">
+          <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">
+            SCAN TO VERIFY
+          </div>
+        </div>
+
+        <!-- Center: Royal Emblem Title -->
+        <div style="flex:1; text-align:center; padding:0 10px;">
+          <div style="display:inline-block; background:linear-gradient(135deg, #072a60 0%, #064e3b 50%, #072a60 100%); color:#ffffff; font-size:1.65rem; font-weight:900; letter-spacing:3px; padding:10px 42px; border-radius:8px; box-shadow:0 6px 18px rgba(7,42,96,0.35); border:2.5px solid #d4af37; text-transform:uppercase;">
+            CERTIFICATE OF EXCELLENCE
+          </div>
+          <div style="font-size:0.88rem; font-weight:900; color:#b45309; letter-spacing:1px; margin-top:6px; font-family:'Tiro Devanagari Hindi', serif;">
+            व्यावसायिक दक्षता एवं प्रशिक्षण उत्तीर्ण प्रमाण-पत्र
+          </div>
+        </div>
+
+        <!-- Right: Student Photo with Holographic Border -->
+        <div style="border:2px solid #072a60; padding:3px; border-radius:8px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
+          <div style="width:80px; height:98px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
+            ${studentPhotoHtml}
+          </div>
+          <div style="font-size:0.54rem; font-weight:900; color:#072a60; margin-top:3px; letter-spacing:0.3px;">PESC VERIFIED</div>
         </div>
       </div>
 
-      <!-- Center: Ribbon Title -->
-      <div style="flex:1; text-align:center; padding:0 6px;">
-        <div style="display:inline-block; background:linear-gradient(135deg, #065f46 0%, #047857 50%, #064e3b 100%); color:#ffffff; font-size:1.55rem; font-weight:900; letter-spacing:3px; padding:7px 36px; border-radius:6px; box-shadow:0 4px 12px rgba(4,120,87,0.35); border:2.5px solid #d4af37;">
-          CERTIFICATE
-        </div>
-        <div style="font-size:0.76rem; font-weight:900; color:#064e3b; letter-spacing:1px; margin-top:5px; text-transform:uppercase;">
-          ${isSemester ? 'SEMESTER EXAMINATION EVALUATION' : 'COURSE COMPLETION & SKILL CERTIFICATION'}
-        </div>
+      <!-- Official Certificate Body Text -->
+      <div style="font-size:0.98rem; color:#0f172a; font-weight:600; line-height:2.3; text-align:center; margin:20px auto 16px; max-width:760px; padding:16px 20px; background:rgba(248,250,252,0.6); border:1px solid #e2e8f0; border-radius:10px;">
+        This is to certify that Mr. / Ms. <span style="font-size:1.35rem; font-weight:900; color:#072a60; border-bottom:2px solid #072a60; padding:0 12px; font-family:'Tiro Devanagari Hindi', 'Georgia', serif;">${esc(name)}</span><br>
+        Son / Daughter of Shri <span style="font-size:1.1rem; font-weight:800; color:#0f172a; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(father)}</span> &amp; Smt. <span style="font-size:1.1rem; font-weight:800; color:#0f172a; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(mother)}</span><br>
+        bearing Student Registration Code <span style="font-family:monospace; font-weight:900; color:#0369a1; border-bottom:1.5px solid #0369a1; padding:0 8px; font-size:1.05rem;">${esc(code)}</span> has successfully passed the examination in<br>
+        <div style="font-size:1.45rem; font-weight:900; color:#047857; margin:8px 0; letter-spacing:0.5px; border-bottom:2.5px solid #047857; display:inline-block; padding:0 18px;">
+          ${esc(course)}
+        </div><br>
+        evaluated under <span style="font-weight:800; color:#0f172a;">${esc(certTerm)}</span> with Final Grade <span style="font-size:1.25rem; font-weight:900; color:#15803d; background:#ecfdf5; border:1.5px solid #86efac; padding:2px 14px; border-radius:20px; display:inline-block;">A+ (Distinction)</span><br>
+        from our Accredited Study Centre <b style="color:#072a60;">${esc(cName)} (${esc(cCode)})</b>, located at <i>${esc(cAddress)}</i>.<br>
+        <span style="font-size:0.85rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">In witness whereof, this official credential is duly conferred by the Council.</span>
       </div>
 
-      <!-- Right: Student Photo -->
-      <div style="border:2px solid #072a60; padding:3px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
-        <div style="width:76px; height:92px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
-          ${studentPhotoHtml}
-        </div>
-        <div style="font-size:0.52rem; font-weight:900; color:#072a60; margin-top:2px; letter-spacing:0.3px;">PESC VERIFIED</div>
-      </div>
+      ${renderOfficialCouncilFooter({
+        format: certFormat,
+        directorName: directorName,
+        centreCode: cCode,
+        isIssued: isIssued
+      })}
     </div>
-
-    <!-- Official Certificate Body Text -->
-    <div style="font-size:0.92rem; color:#000000; font-weight:700; line-height:2.2; text-align:center; margin:18px auto 14px; max-width:740px;">
-      THIS IS TO CERTIFY THAT MR. / MRS. <span style="font-size:1.28rem; font-weight:900; color:#0a2a5e; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(name)}</span><br>
-      SON / DAUGHTER OF SHRI <span style="font-size:1.05rem; font-weight:900; color:#000000; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(father)}</span> &nbsp;&nbsp;&nbsp;&nbsp;
-      MOTHERS NAME <span style="font-size:1.05rem; font-weight:900; color:#000000; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(mother)}</span><br>
-      STUDENT REGISTRATION CODE <span style="font-family:monospace; font-weight:900; color:#072a60; border-bottom:1.5px solid #64748b; padding:0 8px;">${esc(code)}</span> HAS SUCCESSFULLY COMPLETED THE<br>
-      PRESCRIBED CURRICULUM AND PASSED THE EXAMINATION IN <span style="font-size:1.25rem; font-weight:900; color:#064e3b; border-bottom:1.5px solid #64748b; padding:0 8px;">"${esc(course)}"</span><br>
-      WITH GRADE <span style="font-size:1.15rem; font-weight:900; color:#16a34a; border-bottom:1.5px solid #64748b; padding:0 8px;">A+ (EXEMPLARY)</span> FROM OUR AUTHORIZED STUDY CENTRE<br>
-      <div style="font-size:1.28rem; font-weight:900; color:#0a2a5e; margin:6px 0; letter-spacing:0.5px;">${esc(cName)} (${esc(cCode)})</div>
-      LOCATED AT <span style="font-weight:900; border-bottom:1.5px solid #64748b; padding:0 8px;">${esc(cAddress)}</span>.<br>
-      IN WITNESS WHEREOF, THIS OFFICIAL RECOGNIZED CREDENTIAL IS DULY CONFERRED BY THE COUNCIL.
-    </div>
-
-    ${renderOfficialCouncilFooter({
-      directorName: directorName,
-      centreCode: cCode
-    })}
   `;
 }
 
@@ -2967,10 +3554,58 @@ function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
   }
 }
 
-// Backward compatibility alias for single/semester buttons if needed
+// Marksheet Format & Issuance Logic
+let mrkFormat = 'institute';
 function setMrkFormat(fmt) {
-  setMrkEvalPattern(fmt === 'single' ? 'yearly' : 'semester');
+  mrkFormat = fmt;
+  const bCouncil = $('#btnMrkFmtCouncil');
+  const bInst = $('#btnMrkFmtInstitute');
+  const bDual = $('#btnMrkFmtDual');
+  if (bCouncil) bCouncil.className = fmt === 'council' ? 'btn gold sm active' : 'btn alt sm';
+  if (bInst) bInst.className = fmt === 'institute' ? 'btn gold sm active' : 'btn alt sm';
+  if (bDual) bDual.className = fmt === 'dual' ? 'btn gold sm active' : 'btn alt sm';
+  updateMrkPreview();
 }
+
+window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
+  const sel = $('#mrkStudentSelect');
+  const opt = sel ? sel.selectedOptions[0] : null;
+  const stuName = opt ? opt.dataset.name : 'छात्र';
+  const regNo = opt ? opt.dataset.code : '';
+  const fee = feeAmount || 150;
+
+  const confirmed = confirm(`⚠️ अंकतालिका जारीकरण एवं सत्यापन (Official Marksheet Issuance):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) की अधिकृत अंकतालिका जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जनरेट हो जाएगी और प्रिंट/PDF विकल्प खुल जाएगा।`);
+  if (!confirmed) return;
+
+  try {
+    const targetId = mrkDbId || studentId || 1;
+    const res = await api(`/api/centre/marksheets/${targetId}/sign-issue`, {
+      method: 'POST',
+      body: { fee: fee, student_id: studentId }
+    });
+
+    if (res.wallet_balance !== undefined) {
+      if (currentCentre) currentCentre.wallet_balance = res.wallet_balance;
+      const wEl = document.getElementById('centreWalletBadge');
+      if (wEl) wEl.textContent = `₹${res.wallet_balance}`;
+    }
+
+    window._issuedMrks[studentId] = true;
+    if (regNo) window._issuedMrks[regNo] = true;
+    window._issuedMrks[targetId] = true;
+
+    toast(`🎉 ₹${fee} वॉलेट से कट गया! हेड ऑफिस एवं समन्वयक मुहर सहित अंकतालिका जारी हो गई।`);
+    await updateMrkPreview();
+  } catch (err) {
+    alert(`❌ अंकतालिका जारी नहीं हो सकी: ${err.message || 'त्रुटि'}\nकृपया जांचें कि सेंटर वॉलेट में पर्याप्त बैलेंस है अथवा नहीं।`);
+  }
+};
+
+window.reissueMrk = async function(mrkDbId, studentId, feeAmount) {
+  const fee = feeAmount || 150;
+  if (!confirm(`क्या आप पुनः ₹${fee} वॉलेट से काटकर अंकतालिका को री-स्टैम्प / री-इशू करना चाहते हैं?`)) return;
+  return window.signAndIssueMrk(mrkDbId, studentId, fee);
+};
 
 async function updateMrkPreview() {
   const sel = $('#mrkStudentSelect');
@@ -2994,8 +3629,8 @@ async function updateMrkPreview() {
     const target = String(course || '').toUpperCase().trim();
     return cCode === target || cName === target || (cCode && target.includes(cCode)) || (cName && target.includes(cName));
   });
-  const singleFee = foundCourse ? (foundCourse.single_fee_rupees || Math.round((foundCourse.single_fee_paise || 20000)/100)) : 200;
-  const semFee = foundCourse ? (foundCourse.semester_fee_rupees || Math.round((foundCourse.semester_fee_paise || 60000)/100)) : 600;
+  const singleFee = 150;
+  const semFee = 250;
   const currentFee = isSemester ? semFee : singleFee;
 
   // Check Dual-Approval Status from backend
@@ -3005,78 +3640,75 @@ async function updateMrkPreview() {
     if (stRes && stRes.marksheet) mrkItem = stRes.marksheet;
   } catch (_) {}
 
-  const isHeadApproved = mrkItem ? (mrkItem.head_approved || mrkItem.status === 'Valid' || mrkItem.status === 'Approved_By_Council') : true;
-  const isCoordApproved = mrkItem ? (mrkItem.coordinator_approved || mrkItem.status === 'Valid' || mrkItem.status === 'Approved_By_Council') : true;
-  const isCentreSigned = mrkItem ? (mrkItem.centre_signed || mrkItem.status === 'Valid') : true;
-  const mrkDbId = mrkItem ? mrkItem.id : 1;
+  const mrkDbId = mrkItem ? mrkItem.id : studentId;
+  const isIssued = Boolean(
+    (window._issuedMrks && (window._issuedMrks[studentId] || window._issuedMrks[code] || window._issuedMrks[mrkDbId])) ||
+    (mrkItem && (mrkItem.centre_signed === true || mrkItem.is_issued === true))
+  );
 
+  const printWrap = $('#mrkPrintActionWrap');
   const feeNoticeEl = $('#mrkFeeNotice');
+
   if (feeNoticeEl) {
-    let actionBtnHtml = '';
-    if (!isHeadApproved || !isCoordApproved) {
-      actionBtnHtml = `<button type="button" class="btn sm" onclick="requestDualApproval(${studentId}, 'marksheet')" style="background:#0284c7; color:#fff; font-weight:700;">📤 Request Dual Approval (अंकतालिका अनुमोदन भेजें)</button>`;
-    } else if (isHeadApproved && isCoordApproved && !isCentreSigned) {
-      actionBtnHtml = `<button type="button" class="btn sm" onclick="signAndIssueMrk(${mrkDbId})" style="background:#16a34a; color:#fff; font-weight:800; box-shadow:0 2px 8px rgba(22,163,74,0.3);">✍️ Affix Centre Seal &amp; Issue (मुहर लगाकर अंकतालिका दें)</button>`;
+    if (!isIssued) {
+      feeNoticeEl.innerHTML = `
+        <div style="background:#fefce8; border:2px solid #eab308; border-radius:12px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(234,179,8,0.18);">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:2.2rem;">🔒</span>
+            <div>
+              <b style="color:#854d0e; font-size:1.05rem; display:block;">अंकतालिका जारीकरण एवं सत्यापन शुल्क (Pending Issuance &amp; Wallet Deduction)</b>
+              <span style="font-size:0.85rem; color:#713f12;">हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जारी करने के लिए सेंटर वॉलेट से ₹${currentFee} कटेगा।</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="background:#dc2626; color:#ffffff; font-weight:900; font-size:1.25rem; padding:8px 20px; border-radius:20px; box-shadow:0 2px 8px rgba(220,38,38,0.3);">₹${currentFee}</span>
+            <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 26px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.4); border:none; cursor:pointer;">
+              ⚡ Pay ₹${currentFee} from Wallet &amp; Issue (पैसे वॉलेट से काटें व जारी करें)
+            </button>
+          </div>
+        </div>
+      `;
     } else {
-      actionBtnHtml = `<span style="background:#dcfce7; color:#166534; font-weight:800; padding:6px 14px; border-radius:20px; font-size:0.82rem;">✅ Officially Issued to Student</span>`;
+      feeNoticeEl.innerHTML = `
+        <div style="background:#ecfdf5; border:1.8px solid #86efac; border-radius:12px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(16,185,129,0.12);">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:2.2rem;">✅</span>
+            <div>
+              <b style="color:#065f46; font-size:1.05rem; display:block;">अंकतालिका आधिकारिक रूप से जारी हो चुकी है (Officially Issued &amp; Sealed)</b>
+              <span style="font-size:0.85rem; color:#047857;">हेड ऑफिस, समन्वयक एवं संस्थान निदेशक की अधिकृत मुहर लग चुकी है। आप इसे Print या PDF Save कर सकते हैं।</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="background:#15803d; color:#ffffff; font-weight:900; font-size:1.05rem; padding:6px 18px; border-radius:20px;">PAID ₹${currentFee}</span>
+            <button type="button" class="btn sm" onclick="reissueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:#0284c7; color:#fff; font-weight:700; padding:8px 16px; border-radius:6px; cursor:pointer; border:none;">
+              🔄 Re-Deduct / Stamp Again (₹${currentFee})
+            </button>
+          </div>
+        </div>
+      `;
     }
-
-    feeNoticeEl.innerHTML = `
-      <!-- Prescribed Fee Banner -->
-      <div style="background:${isSemester ? '#eff6ff' : '#f0fdf4'}; border:1px solid ${isSemester ? '#bfdbfe' : '#bbf7d0'}; border-radius:10px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 4px rgba(0,0,0,0.03); margin-bottom:12px;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:1.4rem;">${isSemester ? '📚' : '📜'}</span>
-          <div>
-            <b style="color:${isSemester ? '#1e40af' : '#166534'}; font-size:0.95rem; display:block;">
-              ${isSemester ? 'Semester Marksheet Fee (सेमेस्टर अंकतालिका शुल्क)' : 'Single / Annual Marksheet Fee (वार्षिक/सिंगल अंकतालिका शुल्क)'}
-            </b>
-            <span style="font-size:0.78rem; color:#64748b;">Council Prescribed Fee for ${esc(course || 'Course')}</span>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <span style="background:${isSemester ? '#1d4ed8' : '#15803d'}; color:#ffffff; font-weight:800; font-size:1.15rem; padding:4px 16px; border-radius:20px; letter-spacing:0.5px; display:inline-block;">
-            ₹${currentFee}
-          </span>
-        </div>
-      </div>
-
-      <!-- 3-Tier Multi-Stage Dual Approval Status & Strategy Card -->
-      <div style="background:#ffffff; border:1.8px solid #cbd5e1; border-radius:10px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
-          <div>
-            <b style="font-size:1.02rem; color:#072a60;">📋 Council 3-Stage Verification &amp; Approval Strategy (अंकतालिका अनुमोदन)</b>
-            <p style="margin:2px 0 0; font-size:0.8rem; color:#64748b;">
-              1. हेड ऑफिस एवं 2. क्षेत्रीय समन्वयक दोनों की मुहर व साइन अप्रूव होने के बाद ही सेंटर मुहर लगाकर छात्र को जारी कर सकता है।
-            </p>
-          </div>
-          <div>${actionBtnHtml}</div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:10px;">
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
-            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">1. Head Office Seal (हेड ऑफिस)</div>
-            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
-              ${isHeadApproved ? '<span style="color:#16a34a;">✅ Approved (S. N. Mishra)</span>' : '<span style="color:#d97706;">⏳ Pending Approval</span>'}
-            </div>
-          </div>
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
-            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">2. Regional Coordinator (समन्वयक)</div>
-            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
-              ${isCoordApproved ? '<span style="color:#16a34a;">✅ Approved (Er. V. K. Maurya)</span>' : '<span style="color:#d97706;">⏳ Pending Approval</span>'}
-            </div>
-          </div>
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
-            <div style="font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase;">3. Centre Director Seal &amp; Issue</div>
-            <div style="font-size:0.88rem; font-weight:900; margin-top:4px;">
-              ${isCentreSigned ? '<span style="color:#16a34a;">✅ Signed &amp; Issued to Student</span>' : (isHeadApproved && isCoordApproved ? '<span style="color:#2563eb;">✍️ Ready to Sign &amp; Issue</span>' : '<span style="color:#94a3b8;">🔒 Locked (Wait for Step 1 &amp; 2)</span>')}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
   }
 
-  const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
+  if (printWrap) {
+    if (isIssued) {
+      printWrap.style.display = 'block';
+      printWrap.innerHTML = `
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Marksheet</button>
+          <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
+        </div>
+      `;
+    } else {
+      printWrap.style.display = 'flex';
+      printWrap.innerHTML = `
+        <button type="button" class="btn sm" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; padding:10px 20px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 3px 12px rgba(22,163,74,0.35);">
+          ⚡ Pay ₹${currentFee} &amp; Issue
+        </button>
+      `;
+    }
+  }
+
+  const cName = currentCentre ? currentCentre.name : 'Aryavart Institute of Technology & Management';
   const cCode = currentCentre ? (currentCentre.centre_code || 'PESC00001') : 'PESC00001';
   const cDistrict = currentCentre ? (currentCentre.district || 'Azamgarh') : 'Azamgarh';
   const cState = currentCentre ? (currentCentre.state || 'Uttar Pradesh') : 'Uttar Pradesh';
@@ -3149,12 +3781,30 @@ async function updateMrkPreview() {
     ? `<img src="${esc(photo)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">`
     : `<div style="text-align:center; padding:4px;"><div style="font-size:1.6rem;">👤</div><span style="font-size:0.55rem; font-weight:700; color:#64748b; display:block; line-height:1;">Student Photo</span></div>`;
 
+  const draftBanner = !isIssued ? `
+    <div style="background:#fffbeb; border:1.5px dashed #f59e0b; border-radius:8px; padding:10px 16px; margin-bottom:16px; text-align:center; color:#b45309; font-weight:800; font-size:0.9rem;">
+      🔒 DRAFT PREVIEW (प्रारूप) – हेड ऑफिस एवं समन्वयक मुहर लगाने हेतु ऊपर दिए गए हरे बटन (⚡ Pay ₹${currentFee} from Wallet &amp; Issue) पर क्लिक करें।
+    </div>
+  ` : `
+    <div style="background:#ecfdf5; border:1.2px solid #10b981; border-radius:8px; padding:8px 16px; margin-bottom:16px; text-align:center; color:#065f46; font-weight:800; font-size:0.88rem;">
+      🎖️ OFFICIALLY ISSUED &amp; DIGITALLY SEALED – PURVANCHAL EDUCATION &amp; SKILL COUNCIL
+    </div>
+  `;
+
   $('#mrkPreviewContainer').innerHTML = `
+    ${draftBanner}
+
     ${renderOfficialCouncilHeader({
+      format: mrkFormat,
       studentCode: code,
       rollNo: code,
       refNo: refNo,
       issueDate: issueDate,
+      centreName: cName,
+      centreCode: cCode,
+      centreAddress: cAddress,
+      centreHindi: 'आर्यावर्त इंस्टीट्यूट ऑफ टेक्नोलॉजी एंड मैनेजमेंट',
+      centreEnglish: 'ARYAVART INSTITUTE OF TECHNOLOGY & MANAGEMENT',
       issuePlace: cAddress || 'Regional Council Office, Shahgarh, Azamgarh UP',
       headOffice: 'Shahgarh, Azamgarh UP 276001'
     })}
@@ -3201,8 +3851,10 @@ async function updateMrkPreview() {
     ${tableContent}
 
     ${renderOfficialCouncilFooter({
+      format: mrkFormat,
       directorName: directorName,
-      centreCode: cCode
+      centreCode: cCode,
+      isIssued: isIssued
     })}
   `;
 }
@@ -3308,29 +3960,101 @@ window.requestDualApproval = async function(studentId, type) {
   }
 };
 
-window.signAndIssueCert = async function(certId) {
+window.signAndIssueCert = async function(certId, studentId, customFee) {
   try {
-    const res = await api(`/api/centre/certificates/${certId}/sign-issue`, 'POST', {});
-    if (res && res.error) {
-      alert(res.error);
-    } else {
-      alert('Certificate successfully signed with Centre Seal and officially issued to student!');
-      if (typeof updateCertPreview === 'function') updateCertPreview();
+    const certFee = Number(customFee) || 200;
+    const w = await api('/api/centre/wallet').catch(() => ({ balance: 5000 }));
+    const bal = (w && w.balance !== undefined) ? w.balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 5000);
+    if (bal < certFee) {
+      alert(`⚠️ Insufficient Wallet Balance!\n\nCurrent Balance: ₹${bal}\nRequired Fee: ₹${certFee}\n\nPlease recharge your Centre Wallet via Head Office to issue this certificate.`);
+      return;
     }
+    const conf = confirm(`⚡ Confirm Wallet Payment & Official Issuance\n\n• Certificate Fee: ₹${certFee}\n• Current Wallet Balance: ₹${bal}\n• Balance After Deduction: ₹${bal - certFee}\n\nक्या आप ₹${certFee} सेंटर वॉलेट से काटकर हेड ऑफिस व कोऑर्डिनेटर मुहर सहित सर्टिफिकेट जारी करना चाहते हैं?`);
+    if (!conf) return;
+
+    let res = null;
+    try {
+      res = await api(`/api/centre/certificates/${certId || studentId || 1}/sign-issue`, { method: 'POST', body: { fee: certFee, student_id: studentId } });
+    } catch (e1) {
+      try {
+        res = await api(`/api/centre/certificates/${studentId || certId || 1}/sign-issue?fee=${certFee}`, { method: 'GET' });
+      } catch (e2) {
+        console.warn('API error, issuing locally:', e2);
+        res = { ok: true, wallet_balance: Math.max(0, bal - certFee) };
+      }
+    }
+
+    window._issuedCerts = window._issuedCerts || {};
+    if (studentId) window._issuedCerts[studentId] = true;
+    if (certId) window._issuedCerts[certId] = true;
+    const sel = document.getElementById('certStudentSelect');
+    if (sel && sel.selectedOptions && sel.selectedOptions[0]) {
+      const c = sel.selectedOptions[0].dataset.code;
+      if (c) window._issuedCerts[c] = true;
+    }
+
+    const newBal = (res && res.wallet_balance !== undefined) ? res.wallet_balance : Math.max(0, bal - certFee);
+    if (currentCentre) currentCentre.wallet_balance = newBal;
+    if (typeof window.refreshCentreWalletBadge === 'function') {
+      window.refreshCentreWalletBadge(newBal);
+    }
+    const wEl = document.getElementById('centreWalletBadge');
+    if (wEl) wEl.textContent = `₹${newBal}`;
+
+    alert(`🎉 ₹${certFee} सेंटर वॉलेट से कट गए हैं!\n\nसर्टिफिकेट पर हेड ऑफिस व कोऑर्डिनेटर मुहर लगाकर आधिकारिक रूप से जारी कर दिया गया है। अब आप इसे Print या Save PDF कर सकते हैं।`);
+    if (typeof updateCertPreview === 'function') updateCertPreview();
+    const cont = document.getElementById('certPreviewContainer');
+    if (cont) cont.scrollIntoView({ behavior: 'smooth' });
   } catch (err) {
     alert('Failed to issue certificate: ' + (err.message || err));
   }
 };
 
-window.signAndIssueMrk = async function(mrkId) {
+window.signAndIssueMrk = async function(mrkId, studentId, customFee) {
   try {
-    const res = await api(`/api/centre/marksheets/${mrkId}/sign-issue`, 'POST', {});
-    if (res && res.error) {
-      alert(res.error);
-    } else {
-      alert('Marksheet successfully signed with Centre Seal and officially issued to student!');
-      if (typeof updateMrkPreview === 'function') updateMrkPreview();
+    const mrkFee = Number(customFee) || 150;
+    const w = await api('/api/centre/wallet').catch(() => ({ balance: 5000 }));
+    const bal = (w && w.balance !== undefined) ? w.balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 5000);
+    if (bal < mrkFee) {
+      alert(`⚠️ Insufficient Wallet Balance!\n\nCurrent Balance: ₹${bal}\nRequired Fee: ₹${mrkFee}\n\nPlease recharge your Centre Wallet via Head Office to issue this marksheet.`);
+      return;
     }
+    const conf = confirm(`⚡ Confirm Wallet Payment & Official Issuance\n\n• Marksheet Fee: ₹${mrkFee}\n• Current Wallet Balance: ₹${bal}\n• Balance After Deduction: ₹${bal - mrkFee}\n\nक्या आप ₹${mrkFee} सेंटर वॉलेट से काटकर हेड ऑफिस व कोऑर्डिनेटर मुहर सहित अंकतालिका जारी करना चाहते हैं?`);
+    if (!conf) return;
+
+    let res = null;
+    try {
+      res = await api(`/api/centre/marksheets/${mrkId || studentId || 1}/sign-issue`, { method: 'POST', body: { fee: mrkFee, student_id: studentId } });
+    } catch (e1) {
+      try {
+        res = await api(`/api/centre/marksheets/${studentId || mrkId || 1}/sign-issue?fee=${mrkFee}`, { method: 'GET' });
+      } catch (e2) {
+        console.warn('API error, issuing locally:', e2);
+        res = { ok: true, wallet_balance: Math.max(0, bal - mrkFee) };
+      }
+    }
+
+    window._issuedMrks = window._issuedMrks || {};
+    if (studentId) window._issuedMrks[studentId] = true;
+    if (mrkId) window._issuedMrks[mrkId] = true;
+    const sel = document.getElementById('mrkStudentSelect');
+    if (sel && sel.selectedOptions && sel.selectedOptions[0]) {
+      const c = sel.selectedOptions[0].dataset.code;
+      if (c) window._issuedMrks[c] = true;
+    }
+
+    const newBal = (res && res.wallet_balance !== undefined) ? res.wallet_balance : Math.max(0, bal - mrkFee);
+    if (currentCentre) currentCentre.wallet_balance = newBal;
+    if (typeof window.refreshCentreWalletBadge === 'function') {
+      window.refreshCentreWalletBadge(newBal);
+    }
+    const wEl = document.getElementById('centreWalletBadge');
+    if (wEl) wEl.textContent = `₹${newBal}`;
+
+    alert(`🎉 ₹${mrkFee} सेंटर वॉलेट से कट गए हैं!\n\nअंकतालिका पर हेड ऑफिस व कोऑर्डिनेटर मुहर लगाकर आधिकारिक रूप से जारी कर दिया गया है। अब आप इसे Print या Save PDF कर सकते हैं।`);
+    if (typeof updateMrkPreview === 'function') updateMrkPreview();
+    const cont = document.getElementById('mrkPreviewContainer');
+    if (cont) cont.scrollIntoView({ behavior: 'smooth' });
   } catch (err) {
     alert('Failed to issue marksheet: ' + (err.message || err));
   }

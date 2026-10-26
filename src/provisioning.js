@@ -13,9 +13,18 @@ const STEPS = [
   ['create_owner', (a) => db.transaction(() => {
     const email = a.email.toLowerCase();
     const u = db.prepare('SELECT * FROM users WHERE email=?').get(email);
-    if (!u) { db.prepare("INSERT INTO users(email,name,mobile,role,status,created_at) VALUES(?,?,?,'centre_owner','pending_setup',?)").run(email, a.owner_name, a.mobile, now()); return 'owner created'; }
+    const bcrypt = require('bcryptjs');
+    const defaultHash = bcrypt.hashSync('Centre@123', 10);
+    const photo = a.photo_url || null;
+    if (!u) {
+      db.prepare("INSERT INTO users(email,name,mobile,role,status,password_hash,photo_url,created_at) VALUES(?,?,?,'centre_owner','active',?,?,?)")
+        .run(email, a.owner_name, a.mobile, defaultHash, photo, now());
+      return 'owner created';
+    }
     if (u.role !== 'centre_owner') throw new Error('Email belongs to a non-owner account');
     if (u.centre_id && u.centre_id !== a.centre_id) throw new Error('Owner already linked to another centre');
+    db.prepare("UPDATE users SET status='active', password_hash=COALESCE(password_hash, ?), photo_url=COALESCE(?, photo_url) WHERE id=?")
+      .run(defaultHash, photo, u.id);
     return 'owner exists';
   })()],
   ['create_centre', (a) => db.transaction(() => {
@@ -23,8 +32,14 @@ const STEPS = [
     if (resolveSlug(a.slug)) throw new Error('Slug already taken');
     const owner = db.prepare('SELECT id FROM users WHERE email=?').get(a.email.toLowerCase());
     const code = nextCentreCode();
-    const r = db.prepare("INSERT INTO centres(centre_code,name,slug,owner_user_id,state,district,address,pin,status,created_at) VALUES(?,?,?,?,?,?,?,?,'provisioning',?)")
-      .run(code, a.centre_name, a.slug, owner.id, a.state, a.district, a.address, a.pin, now());
+    // Auto-assign coordinator (matching state or first active coordinator)
+    const coord = db.prepare("SELECT id FROM users WHERE role='coordinator' AND (state=? OR status='active') ORDER BY id ASC LIMIT 1").get(a.state);
+    const coordId = coord ? coord.id : null;
+    const certNo = `PESC/ATC/2026/${code}`;
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+    const r = db.prepare(`INSERT INTO centres(centre_code,name,slug,owner_user_id,coordinator_id,state,district,address,pin,director_name,director_photo,phone,email,affiliation_cert_no,affiliation_issue_date,affiliation_valid_thru,affiliation_session,status,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'provisioning',?)`)
+      .run(code, a.centre_name, a.slug, owner.id, coordId, a.state, a.district, a.address, a.pin, a.owner_name, a.photo_url || null, a.mobile, a.email, certNo, todayStr, '31-03-2029', '2026 - 2029 (3 Academic Years)', now());
     db.prepare('UPDATE franchise_applications SET centre_id=? WHERE id=?').run(r.lastInsertRowid, a.id);
     db.prepare('UPDATE users SET centre_id=? WHERE id=?').run(r.lastInsertRowid, owner.id);
     return code;
@@ -47,7 +62,12 @@ const STEPS = [
     if (!j || j.tenant !== a.slug) throw new Error('HTTPS reachable but tenant not resolved');
     return 'https + routing ok';
   }],
-  ['activate', (a) => { db.prepare("UPDATE centres SET status='active' WHERE id=?").run(getApp(a.id).centre_id); return 'centre active'; }],
+  ['activate', (a) => {
+    const cid = getApp(a.id).centre_id;
+    db.prepare("UPDATE centres SET status='active' WHERE id=?").run(cid);
+    db.prepare("UPDATE users SET status='active' WHERE centre_id=?").run(cid);
+    return 'centre active';
+  }],
   ['send_setup_link', (a) => db.transaction(() => {
     const u = db.prepare('SELECT * FROM users WHERE email=?').get(a.email.toLowerCase());
     const token = rand(32);
@@ -125,4 +145,4 @@ async function approve(appId, ctx) {
   })();
   return runJob(job.id, ctx);
 }
-module.exports = { approve };
+module.exports = { approve, runJob };

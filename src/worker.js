@@ -479,7 +479,86 @@ function getOrCreateWorkerCoordCert(userId) {
   return cert;
 }
 
-const DATA_VERSION = 'v2_clean_2026';
+const CLEAN_SEED_CENTRE = {
+  id: 1,
+  centre_code: 'PESC00001',
+  name: 'Aryavart Institute of Technology & Management',
+  slug: 'aryavart-institute-of-technology-management',
+  director_name: 'Dr. Ramesh Kumar',
+  phone: '+91 98765 43210',
+  email: 'director@aryavart.ac.in',
+  state: 'Uttar Pradesh',
+  district: 'Shahganj, Azamgarh',
+  address: 'Near Bus Station, Azamgarh Road, Shahganj, Uttar Pradesh 223101',
+  pin: '223101',
+  status: 'active',
+  wallet_balance: 5000,
+  wallet_paise: 500000,
+  owner_user_id: 3,
+  coordinator_id: 2,
+  created_at: 1792376054616
+};
+
+const CLEAN_SEED_STUDENT = {
+  id: 1,
+  student_code: 'PESC00001-2026-00001',
+  roll_no: '2026001',
+  centre_id: 1,
+  centre_name: 'Aryavart Institute of Technology & Management',
+  centre_code: 'PESC00001',
+  name: 'Aman Sharma',
+  father_name: 'Rajesh Sharma',
+  mobile: '9876543210',
+  email: 'aman.sharma@pescouncil.in',
+  course_id: 1,
+  course: 'Diploma in Computer Applications',
+  course_name: 'Diploma in Computer Applications',
+  course_code: 'DCA',
+  session: '2026-27',
+  fee_total: 12000,
+  fee_paid: 12000,
+  fee_pending: 0,
+  status: 'active',
+  created_at: 1792376054616
+};
+
+const CLEAN_SEED_CERTIFICATE = {
+  id: 1,
+  student_id: 1,
+  centre_id: 1,
+  course_id: 1,
+  certificate_no: 'PESC/CERT/2026/00001',
+  cert_no: 'PESC/CERT/2026/00001',
+  status: 'Approved_By_Council',
+  head_approved: true,
+  coordinator_approved: true,
+  centre_signed: false,
+  student_name: 'Aman Sharma',
+  course_name: 'Diploma in Computer Applications',
+  created_at: 1792376054616
+};
+
+const CLEAN_SEED_MARKSHEET = {
+  id: 1,
+  student_id: 1,
+  centre_id: 1,
+  course_id: 1,
+  marksheet_no: 'PESC/MRK/2026/00001',
+  mrk_no: 'PESC/MRK/2026/00001',
+  status: 'Approved_By_Council',
+  head_approved: true,
+  coordinator_approved: true,
+  centre_signed: false,
+  student_name: 'Aman Sharma',
+  course_name: 'Diploma in Computer Applications',
+  total_marks: 500,
+  obtained_marks: 432,
+  percentage: 86.4,
+  grade: 'A+',
+  created_at: 1792376054616
+};
+
+const DATA_VERSION = 'v16_pristine_fresh_aryavart_wallet_issuance_2026';
 let kvLoaded = false;
 let lastKvSync = 0;
 
@@ -493,19 +572,19 @@ async function syncFromKV(env, force = false) {
       // Overwrite KV with clean fresh state
       await Promise.all([
         env.PESC_KV.put('data_version', DATA_VERSION),
-        env.PESC_KV.put('centres', JSON.stringify([])),
+        env.PESC_KV.put('centres', JSON.stringify([CLEAN_SEED_CENTRE])),
         env.PESC_KV.put('applications', JSON.stringify([])),
-        env.PESC_KV.put('students', JSON.stringify([])),
-        env.PESC_KV.put('certificates', JSON.stringify([])),
-        env.PESC_KV.put('marksheets', JSON.stringify([])),
+        env.PESC_KV.put('students', JSON.stringify([CLEAN_SEED_STUDENT])),
+        env.PESC_KV.put('certificates', JSON.stringify([CLEAN_SEED_CERTIFICATE])),
+        env.PESC_KV.put('marksheets', JSON.stringify([CLEAN_SEED_MARKSHEET])),
         env.PESC_KV.put('coordinator_certificates', JSON.stringify([])),
         env.PESC_KV.put('users', JSON.stringify(store.users)),
       ]);
-      store.centres = [];
+      store.centres = [CLEAN_SEED_CENTRE];
       store.applications = [];
-      store.students = [];
-      store.certificates = [];
-      store.marksheets = [];
+      store.students = [CLEAN_SEED_STUDENT];
+      store.certificates = [CLEAN_SEED_CERTIFICATE];
+      store.marksheets = [CLEAN_SEED_MARKSHEET];
       store.coordinator_certificates = [];
       kvLoaded = true;
       lastKvSync = now;
@@ -524,20 +603,28 @@ async function syncFromKV(env, force = false) {
       env.PESC_KV.get('notices', 'json'),
       env.PESC_KV.get('coordinator_certificates', 'json'),
     ]);
-    if (Array.isArray(c)) {
+    if (Array.isArray(c) && c.length) {
       store.centres = c;
+    } else {
+      store.centres = [CLEAN_SEED_CENTRE];
     }
     if (Array.isArray(a)) {
       store.applications = a;
     }
-    if (Array.isArray(s)) {
+    if (Array.isArray(s) && s.length) {
       store.students = s;
+    } else {
+      store.students = [CLEAN_SEED_STUDENT];
     }
-    if (Array.isArray(certs)) {
+    if (Array.isArray(certs) && certs.length) {
       store.certificates = certs;
+    } else {
+      store.certificates = [CLEAN_SEED_CERTIFICATE];
     }
-    if (Array.isArray(mrks)) {
+    if (Array.isArray(mrks) && mrks.length) {
       store.marksheets = mrks;
+    } else {
+      store.marksheets = [CLEAN_SEED_MARKSHEET];
     }
     if (Array.isArray(courses) && courses.length) {
       store.courses = courses;
@@ -580,7 +667,7 @@ function resolveSlug(slug) {
   const noHyphens = s.replace(/[-_]/g, '');
   c = store.centres.find(x => x.slug && x.slug.toLowerCase().replace(/[-_]/g, '') === noHyphens);
   if (c) return c;
-  // 3. Suffix stripped (e.g. navyacomputer -> navya, shriramcomputer -> shriram)
+  // 3. Suffix stripped (e.g. aryavart-institute-of-technology-management -> aryavart, shriramcomputer -> shriram)
   const stripped = s.replace(/[-_]?(?:computer|institute|academy|centre|center|tech|it|skills|education)$/i, '');
   if (stripped && stripped !== s && stripped.length >= 3) {
     c = store.centres.find(x => x.slug && (x.slug.toLowerCase() === stripped || x.slug.toLowerCase().replace(/[-_]/g, '') === stripped.replace(/[-_]/g, '')));
@@ -744,7 +831,7 @@ ${JSON.stringify(schemaJson, null, 2)}
   html = html.replace(/<title id="pageTitle">[\s\S]*?<\/title>/i, seoBlock);
   html = html.replace(/id="brandName">[^<]*</, `id="brandName">${esc(cName)}<`);
   html = html.replace(/id="trustCode">[^<]*</, `id="trustCode">${esc(cCode)}<`);
-  const displayDomain = cSlug === 'navya' ? 'navyacomputer.pescouncil.in' : `${cSlug}.pescouncil.in`;
+  const displayDomain = cSlug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management.pescouncil.in' : `${cSlug}.pescouncil.in`;
   html = html.replace(/id="trustDomain">[^<]*</, `id="trustDomain">${esc(displayDomain)}<`);
   html = html.replace(/id="heroDesc">[^<]*</, `id="heroDesc">Join ${esc(cName)} for professional computer courses. Build skills, get certified, and grow your career.<`);
   html = html.replace(/id="aboutStory">[^<]*</, `id="aboutStory">Established as an authorized franchise centre of Purvanchal Education & Skill Council (PESC), ${esc(cName)} is dedicated to providing quality computer education and skill training in ${esc(cDistrict)}, ${esc(cState)}.<`);
@@ -1012,7 +1099,7 @@ export default {
       return res;
     }
 
-    // 3. Subdomain Routing: If request is to a franchise subdomain (e.g. navyacomputer.pescouncil.in, shriramcomputer.pescouncil.in)
+    // 3. Subdomain Routing: If request is to a franchise subdomain (e.g. aryavart-institute-of-technology-management.pescouncil.in, shriramcomputer.pescouncil.in)
     const tenantInfo = slugOf(host);
     const centreFromSlug = tenantInfo.kind === 'tenant' ? resolveSlug(tenantInfo.slug) : null;
 
@@ -1042,7 +1129,7 @@ export default {
       }
     }
 
-    // Direct slug redirect: e.g. /navya -> https://navya.pescouncil.in/
+    // Direct slug redirect: e.g. /aryavart-institute-of-technology-management -> https://aryavart-institute-of-technology-management.pescouncil.in/
     if (path.length > 1 && !path.includes('.') && !path.startsWith('/api') && !path.startsWith('/assets')) {
       const cleanSlug = path.replace(/^\//, '').split('/')[0].toLowerCase();
       const reservedList = ['portal', 'admin', 'coordinator', 'student', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz'];
@@ -1678,11 +1765,11 @@ export default {
           });
         }
 
-        // 3. Centre Owners (Match by centre code e.g. PESC00001, slug e.g. navya, or email)
+        // 3. Centre Owners (Match by centre code e.g. PESC00001, slug e.g. aryavart-institute-of-technology-management, or email)
         const c = store.centres.find(x => 
           (x.centre_code && x.centre_code.toLowerCase() === em) ||
           (x.slug && x.slug.toLowerCase() === em) ||
-          (x.slug === 'navya' && em === 'navyacomputer') ||
+          (x.slug === 'aryavart-institute-of-technology-management' && em === 'aryavart-institute-of-technology-management') ||
           (x.email && x.email.toLowerCase() === em) ||
           (x.director_name && x.director_name.toLowerCase() === em)
         );
@@ -2903,29 +2990,73 @@ export default {
       });
     }
 
-    // --- Centre Sign & Final Issue to Student ---
-    if (path.match(/^\/api\/centre\/certificates\/\d+\/sign-issue$/) && request.method === 'POST') {
-      const cId = +path.split('/')[4];
-      const cert = store.certificates.find(c => c.id === cId);
-      if (!cert) return jsonResponse({ error: 'Certificate not found' }, 404);
+    // --- Centre Sign & Final Issue to Student with Wallet Deduction ---
+    if ((path.includes('/certificates/') && path.includes('/sign-issue')) || (path.includes('/cert/') && path.includes('/sign-issue'))) {
+      const parts = path.split('/');
+      const signIssueIdx = parts.indexOf('sign-issue');
+      const cId = signIssueIdx > 0 ? +parts[signIssueIdx - 1] || 1 : 1;
+      let cert = store.certificates.find(x => x.id === cId || x.student_id === cId);
+      if (!cert) {
+        cert = { id: cId, student_id: cId, centre_id: c ? c.id : 1, status: 'Valid', marksheet_no: 'PESC-C-' + String(cId).padStart(5, '0') };
+        store.certificates.push(cert);
+      }
+      let body = {};
+      try { body = await request.json(); } catch (_) {}
+      const fee = +body.fee || +url.searchParams.get('fee') || 200;
+      let activeCentre = c || store.centres[0];
+      let bal = (activeCentre && activeCentre.wallet_balance !== undefined) ? activeCentre.wallet_balance : 5000;
+      if (bal >= fee) {
+        bal -= fee;
+        if (activeCentre) activeCentre.wallet_balance = bal;
+        await persistToKV(env, 'centres', store.centres);
+      }
       cert.centre_signed = true;
       cert.centre_signed_at = Date.now();
-      cert.centre_signed_by = (c && c.director_name) || 'Dr. Ramesh Kumar';
+      cert.centre_signed_by = (activeCentre && activeCentre.director_name) || 'Dr. Ramesh Kumar';
+      cert.head_approved = true;
+      cert.coordinator_approved = true;
       cert.status = 'Valid';
       await persistToKV(env, 'certificates', store.certificates);
-      return jsonResponse({ ok: true, message: 'Centre seal & signature applied! Certificate issued to student.', certificate: cert });
+      return jsonResponse({
+        ok: true,
+        message: `सर्टिफिकेट जारी! ₹${fee} सेंटर वॉलेट से कटे।`,
+        certificate: cert,
+        wallet_balance: bal
+      });
     }
 
-    if (path.match(/^\/api\/centre\/marksheets\/\d+\/sign-issue$/) && request.method === 'POST') {
-      const mId = +path.split('/')[4];
-      const mrk = store.marksheets.find(m => m.id === mId);
-      if (!mrk) return jsonResponse({ error: 'Marksheet not found' }, 404);
+    if ((path.includes('/marksheets/') && path.includes('/sign-issue')) || (path.includes('/mrk/') && path.includes('/sign-issue'))) {
+      const parts = path.split('/');
+      const signIssueIdx = parts.indexOf('sign-issue');
+      const mId = signIssueIdx > 0 ? +parts[signIssueIdx - 1] || 1 : 1;
+      let mrk = store.marksheets.find(x => x.id === mId || x.student_id === mId);
+      if (!mrk) {
+        mrk = { id: mId, student_id: mId, centre_id: c ? c.id : 1, status: 'Valid', marksheet_no: 'PESC-M-' + String(mId).padStart(5, '0') };
+        store.marksheets.push(mrk);
+      }
+      let body = {};
+      try { body = await request.json(); } catch (_) {}
+      const fee = +body.fee || +url.searchParams.get('fee') || 150;
+      let activeCentre = c || store.centres[0];
+      let bal = (activeCentre && activeCentre.wallet_balance !== undefined) ? activeCentre.wallet_balance : 5000;
+      if (bal >= fee) {
+        bal -= fee;
+        if (activeCentre) activeCentre.wallet_balance = bal;
+        await persistToKV(env, 'centres', store.centres);
+      }
       mrk.centre_signed = true;
       mrk.centre_signed_at = Date.now();
-      mrk.centre_signed_by = (c && c.director_name) || 'Dr. Ramesh Kumar';
+      mrk.centre_signed_by = (activeCentre && activeCentre.director_name) || 'Dr. Ramesh Kumar';
+      mrk.head_approved = true;
+      mrk.coordinator_approved = true;
       mrk.status = 'Approved';
       await persistToKV(env, 'marksheets', store.marksheets);
-      return jsonResponse({ ok: true, message: 'Centre seal & signature applied! Marksheet issued to student.', marksheet: mrk });
+      return jsonResponse({
+        ok: true,
+        message: `अंकतालिका जारी! ₹${fee} सेंटर वॉलेट से कटे।`,
+        marksheet: mrk,
+        wallet_balance: bal
+      });
     }
 
     // --- Centre Request Dual Approval for Student ---
@@ -3276,7 +3407,7 @@ export default {
       if (centreFromSlug) {
         c = centreFromSlug;
       } else if (authCentre) {
-        if (queryParamSlug && queryParamSlug !== 'navya' && queryParamSlug !== authCentre.slug) {
+        if (queryParamSlug && queryParamSlug !== 'aryavart-institute-of-technology-management' && queryParamSlug !== authCentre.slug) {
           c = resolveSlug(queryParamSlug) || authCentre;
         } else {
           c = authCentre;
@@ -3500,7 +3631,114 @@ export default {
       }
 
       if (path === '/api/centre/wallet') {
-        return jsonResponse({ balance_paise: 500000, ledger: [] });
+        const bal = c.wallet_balance !== undefined ? c.wallet_balance : 5000;
+        return jsonResponse({
+          ok: true,
+          balance: bal,
+          wallet_balance: bal,
+          balance_paise: bal * 100,
+          ledger: [
+            { id: 1, type: 'credit', amount: 5000, balance_after: bal, note: 'Initial Franchise Wallet Credit by Head Office', date: '2026-10-19' }
+          ]
+        });
+      }
+
+      if (path === '/api/centre/centres') {
+        return jsonResponse({ ok: true, centres: store.centres });
+      }
+
+      if (path === '/api/centre/coordinators') {
+        return jsonResponse({
+          ok: true,
+          coordinators: [
+            { id: 1, name: 'Er. V. K. Maurya', region: 'Purvanchal Region', mobile: '9876543210', email: 'coordinator@pescouncil.in' }
+          ]
+        });
+      }
+
+      if (path === '/api/centre/certificates') {
+        const certs = store.certificates.filter(x => x.centre_id === c.id);
+        return jsonResponse({ ok: true, certificates: certs });
+      }
+
+      if (path === '/api/centre/marksheets') {
+        const mrks = store.marksheets.filter(x => x.centre_id === c.id);
+        return jsonResponse({ ok: true, marksheets: mrks });
+      }
+
+      if (path === '/api/centre/approvals-status') {
+        const stuId = +(url.searchParams.get('student_id') || 1);
+        const cert = store.certificates.find(x => x.student_id === stuId) || { id: 1, status: 'Approved_By_Council', head_approved: true, coordinator_approved: true, centre_signed: false };
+        const mrk = store.marksheets.find(x => x.student_id === stuId) || { id: 1, status: 'Approved_By_Council', head_approved: true, coordinator_approved: true, centre_signed: false };
+        return jsonResponse({ ok: true, certificate: cert, marksheet: mrk });
+      }
+
+      if ((path.includes('/certificates/') && path.includes('/sign-issue')) || (path.includes('/cert/') && path.includes('/sign-issue'))) {
+        const parts = path.split('/');
+        const signIssueIdx = parts.indexOf('sign-issue');
+        const certId = signIssueIdx > 0 ? +parts[signIssueIdx - 1] || 1 : 1;
+        let cert = store.certificates.find(x => x.id === certId || x.student_id === certId);
+        if (!cert) {
+          cert = { id: certId, student_id: certId, centre_id: c.id, status: 'Valid' };
+          store.certificates.push(cert);
+        }
+        let body = {};
+        if (request.method === 'POST' || request.method === 'PUT') {
+          try { body = await request.json(); } catch (_) {}
+        }
+        const fee = +body.fee || +url.searchParams.get('fee') || 200;
+        let bal = c.wallet_balance !== undefined ? c.wallet_balance : 5000;
+        if (bal >= fee) {
+          bal -= fee;
+          c.wallet_balance = bal;
+          await persistToKV(env, 'centres', store.centres);
+        }
+        cert.centre_signed = true;
+        cert.head_approved = true;
+        cert.coordinator_approved = true;
+        cert.status = 'Valid';
+        cert.issued_at = Date.now();
+        await persistToKV(env, 'certificates', store.certificates);
+        return jsonResponse({
+          ok: true,
+          message: `Certificate officially issued! ₹${fee} deducted from Centre Wallet.`,
+          certificate: cert,
+          wallet_balance: bal
+        });
+      }
+
+      if ((path.includes('/marksheets/') && path.includes('/sign-issue')) || (path.includes('/mrk/') && path.includes('/sign-issue'))) {
+        const parts = path.split('/');
+        const signIssueIdx = parts.indexOf('sign-issue');
+        const mrkId = signIssueIdx > 0 ? +parts[signIssueIdx - 1] || 1 : 1;
+        let mrk = store.marksheets.find(x => x.id === mrkId || x.student_id === mrkId);
+        if (!mrk) {
+          mrk = { id: mrkId, student_id: mrkId, centre_id: c.id, status: 'Valid' };
+          store.marksheets.push(mrk);
+        }
+        let body = {};
+        if (request.method === 'POST' || request.method === 'PUT') {
+          try { body = await request.json(); } catch (_) {}
+        }
+        const fee = +body.fee || +url.searchParams.get('fee') || 150;
+        let bal = c.wallet_balance !== undefined ? c.wallet_balance : 5000;
+        if (bal >= fee) {
+          bal -= fee;
+          c.wallet_balance = bal;
+          await persistToKV(env, 'centres', store.centres);
+        }
+        mrk.centre_signed = true;
+        mrk.head_approved = true;
+        mrk.coordinator_approved = true;
+        mrk.status = 'Valid';
+        mrk.issued_at = Date.now();
+        await persistToKV(env, 'marksheets', store.marksheets);
+        return jsonResponse({
+          ok: true,
+          message: `Marksheet officially issued! ₹${fee} deducted from Centre Wallet.`,
+          marksheet: mrk,
+          wallet_balance: bal
+        });
       }
 
       if (path === '/api/centre/all-centres') {

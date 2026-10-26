@@ -102,6 +102,8 @@ CREATE TABLE IF NOT EXISTS provisioning_logs(
   id INTEGER PRIMARY KEY, job_id INTEGER NOT NULL REFERENCES provisioning_jobs(id), step TEXT NOT NULL,
   ok INTEGER NOT NULL, detail TEXT, at INTEGER NOT NULL, UNIQUE(job_id, step));
 CREATE TABLE IF NOT EXISTS counters(name TEXT PRIMARY KEY, value INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS fee_policy(item TEXT PRIMARY KEY, amount_paise INTEGER NOT NULL CHECK(amount_paise >= 0), updated_by INTEGER, updated_at INTEGER);
+INSERT OR IGNORE INTO fee_policy(item, amount_paise) VALUES ('admission', 3500), ('certificate', 20000), ('marksheet', 15000);
 CREATE TABLE IF NOT EXISTS courses(
   id INTEGER PRIMARY KEY, code TEXT UNIQUE NOT NULL, name TEXT NOT NULL, duration_months INTEGER NOT NULL,
   fee_paise INTEGER NOT NULL DEFAULT 0, total_marks INTEGER NOT NULL DEFAULT 100, pass_marks INTEGER NOT NULL DEFAULT 33,
@@ -166,6 +168,33 @@ CREATE TABLE IF NOT EXISTS payment_transactions(
   id INTEGER PRIMARY KEY, centre_id INTEGER NOT NULL REFERENCES centres(id), provider_ref TEXT UNIQUE NOT NULL,
   amount_paise INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','paid','failed')),
   purpose TEXT NOT NULL DEFAULT 'wallet_recharge', created_at INTEGER NOT NULL, paid_at INTEGER);
+CREATE TABLE IF NOT EXISTS wallet_topup_requests(
+  id INTEGER PRIMARY KEY,
+  centre_id INTEGER NOT NULL REFERENCES centres(id),
+  amount_paise INTEGER NOT NULL CHECK(amount_paise > 0),
+  payment_mode TEXT NOT NULL DEFAULT 'upi',
+  utr_number TEXT NOT NULL,
+  receipt_url TEXT,
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+  rejection_reason TEXT,
+  reviewed_by INTEGER REFERENCES users(id),
+  reviewed_at INTEGER,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_topup_centre ON wallet_topup_requests(centre_id, status);
+CREATE TABLE IF NOT EXISTS headoffice_payment_settings(
+  id INTEGER PRIMARY KEY,
+  upi_id TEXT NOT NULL DEFAULT 'pescouncil@upi',
+  upi_name TEXT NOT NULL DEFAULT 'Purvanchal Education and Skill Council',
+  qr_code_image TEXT DEFAULT '/img/pesc-logo.png',
+  bank_name TEXT DEFAULT 'State Bank of India',
+  account_number TEXT DEFAULT '39820192830',
+  ifsc_code TEXT DEFAULT 'SBIN0001234',
+  whatsapp_number TEXT NOT NULL DEFAULT '919876543210'
+);
+INSERT OR IGNORE INTO headoffice_payment_settings(id, upi_id, upi_name, bank_name, account_number, ifsc_code, whatsapp_number)
+  VALUES (1, 'pescouncil@upi', 'Purvanchal Education and Skill Council', 'State Bank of India', '39820192830', 'SBIN0001234', '919876543210');
 CREATE TABLE IF NOT EXISTS audit_logs(
   id INTEGER PRIMARY KEY, user_id INTEGER, role TEXT, action TEXT NOT NULL, entity TEXT, entity_id TEXT,
   result TEXT NOT NULL DEFAULT 'ok', reason TEXT, ip TEXT, at INTEGER NOT NULL);
@@ -271,6 +300,18 @@ try { rawDb.exec("ALTER TABLE marksheets ADD COLUMN term TEXT DEFAULT 'Annual';"
 try { rawDb.exec("ALTER TABLE certificates ADD COLUMN evaluation_type TEXT DEFAULT 'yearly';"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE certificates ADD COLUMN term TEXT DEFAULT 'Annual';"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE courses ADD COLUMN subjects TEXT DEFAULT '[]';"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE franchise_applications ADD COLUMN photo_url TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN director_photo TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN hindi_name TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN affiliation_cert_no TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN affiliation_issue_date TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN affiliation_valid_thru TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN affiliation_session TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN mother_name TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN category TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN blood_group TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN address TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN qualifications TEXT DEFAULT '{}';"); } catch (_) {}
 
 // Default standard subjects for accredited courses
 const DEFAULT_COURSE_SUBJECTS = {

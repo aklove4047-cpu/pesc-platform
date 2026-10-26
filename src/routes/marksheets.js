@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const fees = require('../fees');
 const PDFDocument = require('pdfkit');
 const QR = require('qrcode');
 const db = require('../db');
@@ -8,7 +9,7 @@ const { HttpError, now, rand, str, h, audit, next: counter, nextMarksheetNo } = 
 
 const SEL = `SELECT m.*, s.name AS student_name, s.student_code, s.father_name, s.dob,
   co.name AS course_name, co.code AS course_code, co.duration_months,
-  ce.name AS centre_name, ce.centre_code, ce.coordinator_id
+  ce.name AS centre_name, ce.centre_code, ce.coordinator_id, ce.district AS centre_district, ce.state AS centre_state, ce.address AS centre_address
   FROM marksheets m
   JOIN students s ON s.id=m.student_id
   JOIN courses co ON co.id=m.course_id
@@ -89,7 +90,7 @@ const submitMarksheet = (req, res) => {
   const result = hasFail || percentage < 33 ? 'FAIL' : 'PASS';
 
   const rowId = db.transaction(() => {
-    return db.prepare(`
+    const newId = db.prepare(`
       INSERT INTO marksheets(
         student_id, centre_id, course_id, exam_session, roll_no,
         subjects, total_max, total_obtained, percentage, grade, result,
@@ -100,6 +101,8 @@ const submitMarksheet = (req, res) => {
       JSON.stringify(sanitizedSubjects), totalMax, totalObtained, percentage, grade, result,
       req.user.id, evaluationType, term, now()
     ).lastInsertRowid;
+    fees.charge(cid, 'marksheet', newId, req.user.id);
+    return newId;
   })();
 
   audit(req, 'marksheet.submit', 'marksheet', rowId);
@@ -131,6 +134,7 @@ router.post('/:id/decision', requireRole('super_admin', 'admin', 'coordinator'),
       if (m.status !== 'Pending') throw new HttpError(409, `Marksheet is already ${m.status}`);
       if (d === 'reject') {
         db.prepare("UPDATE marksheets SET status='Rejected', reason=?, decided_by=? WHERE id=?").run(reason, req.user.id, m.id);
+        fees.refund(m.centre_id, 'marksheet', m.id, req.user.id);
       } else {
         const no = nextMarksheetNo();
         db.prepare("UPDATE marksheets SET status='Approved', marksheet_no=?, token=?, issue_date=?, decided_by=? WHERE id=?")
@@ -198,18 +202,22 @@ router.get('/:id/pdf', requireAuth, h(async (req, res) => {
   doc.rect(15, 15, W - 30, H - 30).lineWidth(2).stroke('#0a2a5e');
   doc.rect(19, 19, W - 38, H - 38).lineWidth(0.8).stroke('#d4af37');
 
-  // Header Banner
-  doc.rect(20, 20, W - 40, 92).fill('#0a2a5e');
+  // Header Banner - Centre Name on Top
+  doc.rect(20, 20, W - 40, 92).fill('#064e3b');
+  doc.fillColor('#fcd34d').fontSize(8.5).font('Helvetica-Bold')
+    .text('★ AUTHORIZED VOCATIONAL & TECHNICAL STUDY CENTRE ★', 20, 25, { align: 'center', width: W - 40 });
   doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold')
-    .text('PURVANCHAL EDUCATION AND SKILL COUNCIL', 20, 26, { align: 'center', width: W - 40 });
-  doc.fontSize(9.5).font('Helvetica-Bold')
-    .fillColor('#fcd34d')
-    .text('RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD', 20, 44, { align: 'center', width: W - 40 });
-  doc.fontSize(7.5).font('Helvetica-Bold')
+    .text((m.centre_name || 'AUTHORIZED STUDY CENTRE').toUpperCase(), 20, 37, { align: 'center', width: W - 40 });
+  doc.fontSize(8.5).font('Helvetica-Bold')
+    .fillColor('#a7f3d0')
+    .text(`ACCREDITED CENTRE CODE: ${m.centre_code || 'PESC00001'}  ||  ${m.centre_address || `${m.centre_district || 'Regional'}, ${m.centre_state || 'U.P.'}`}`, 20, 56, { align: 'center', width: W - 40 });
+  doc.fontSize(8).font('Helvetica-Bold')
+    .fillColor('#fef08a')
+    .text('UNDER THE AEGIS OF PURVANCHAL EDUCATION AND SKILL COUNCIL (PESC)', 20, 70, { align: 'center', width: W - 40 });
+  doc.fontSize(7).font('Helvetica')
     .fillColor('#e0e7ff')
-    .text('REGISTERED UNDER INDIAN TRUST ACT  ||  NITI AAYOG (NGO DARPAN), GOVT. OF INDIA', 20, 58, { align: 'center', width: W - 40 })
-    .text('AN ISO 9001:2015 CERTIFIED COUNCIL  ||  MSME REGISTERED ORGANISATION', 20, 70, { align: 'center', width: W - 40 })
-    .text('REGD. NO. (COUNCIL): TRUST/2025/5/IV/299  ||  https://pescouncil.in', 20, 82, { align: 'center', width: W - 40 });
+    .text('REGISTERED UNDER INDIAN TRUST ACT  ||  NITI AAYOG (NGO DARPAN), GOVT. OF INDIA  ||  ISO 9001:2015 CERTIFIED', 20, 82, { align: 'center', width: W - 40 })
+    .text('REGD. NO. (COUNCIL): TRUST/2025/5/IV/299  ||  https://pescouncil.in', 20, 93, { align: 'center', width: W - 40 });
 
   // Document Title Bar
   const isSem = m.evaluation_type === 'semester';
@@ -332,10 +340,18 @@ router.get('/:id/pdf', requireAuth, h(async (req, res) => {
     .text('COUNCIL SEAL', W / 2 - 30, footerY + 40, { align: 'center', width: 60 })
     .text('OFFICIAL', W / 2 - 30, footerY + 52, { align: 'center', width: 60 });
 
-  // Signatures
+  // Dual Signatures: Left = Centre Superintendent, Right = Controller of Examinations
+  doc.moveTo(tableX + 130, footerY + 60).lineTo(tableX + 260, footerY + 60).lineWidth(0.8).stroke('#334155');
+  doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#064e3b')
+    .text('Centre Superintendent / Director', tableX + 120, footerY + 65, { align: 'center', width: 150 });
+  doc.fontSize(7).font('Helvetica').fillColor('#64748b')
+    .text(`(${m.centre_code || 'Study Centre'})`, tableX + 120, footerY + 77, { align: 'center', width: 150 });
+
   doc.moveTo(W - 170, footerY + 60).lineTo(W - 40, footerY + 60).lineWidth(0.8).stroke('#334155');
-  doc.fontSize(9).font('Helvetica-Bold').fillColor('#0a2a5e')
+  doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0a2a5e')
     .text('Controller of Examinations', W - 180, footerY + 65, { align: 'center', width: 150 });
+  doc.fontSize(7).font('Helvetica').fillColor('#64748b')
+    .text('(Central Board, PESC)', W - 180, footerY + 77, { align: 'center', width: 150 });
   // Official contact footer bar
   doc.moveTo(20, H - 28).lineTo(W - 20, H - 28).lineWidth(0.8).stroke('#cbd5e1');
   doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#0a2a5e')

@@ -14,7 +14,12 @@ async function seedDatabase() {
 
   // 1. Super Admin
   const adminEmail = (process.env.SEED_ADMIN_EMAIL || 'admin@pescouncil.in').toLowerCase();
-  const adminPw = process.env.SEED_ADMIN_PASSWORD || 'Admin#12345678';
+  const isProd = process.env.NODE_ENV === 'production';
+  const adminPw = process.env.SEED_ADMIN_PASSWORD || (isProd ? '' : 'Admin#12345678');
+  if (isProd && adminPw.length < 12) {
+    console.error('SEED SKIPPED: set SEED_ADMIN_PASSWORD (12+ characters) in production. No default password is used.');
+    return;
+  }
   let admin = db.prepare('SELECT id FROM users WHERE email=?').get(adminEmail);
   if (!admin) {
     const r = db.prepare("INSERT INTO users(email,name,role,password_hash,status,created_at) VALUES(?,?, 'super_admin', ?, 'active', ?)")
@@ -39,6 +44,9 @@ async function seedDatabase() {
   coursesData.forEach(c => insCourse.run(...c));
   const defaultCourse = db.prepare("SELECT id FROM courses WHERE code='DCA'").get() || db.prepare('SELECT id FROM courses LIMIT 1').get();
 
+  // Demo accounts use publicly known passwords: never create them in production unless SEED_DEMO=true.
+  if (isProd && process.env.SEED_DEMO !== 'true') { console.log('Production: seeded super admin + course catalog only (no demo data).'); return; }
+
   // 3. Regional State Coordinator
   const coordEmail = 'coord@pescouncil.in';
   let coord = db.prepare('SELECT id FROM users WHERE email=?').get(coordEmail);
@@ -49,24 +57,24 @@ async function seedDatabase() {
     console.log(`Created Coordinator: ${coordEmail}`);
   }
 
-  // 4. Franchise Centre 1 (Navya Computer Institute, Varanasi)
-  const owner1Email = 'owner@navya.test';
+  // 4. Franchise Centre 1 (Aryavart Institute of Technology & Management, Varanasi)
+  const owner1Email = 'director@aryavart.ac.in';
   let owner1 = db.prepare('SELECT id FROM users WHERE email=?').get(owner1Email);
   if (!owner1) {
     const r = db.prepare("INSERT INTO users(email,name,role,password_hash,status,created_at) VALUES(?,?,'centre_owner',?,'active',?)")
-      .run(owner1Email, 'Ravi Verma (Centre Director)', await argon2.hash('OwnerPass#12345'), Date.now());
+      .run(owner1Email, 'Dr. Ramesh Kumar (Centre Director)', await argon2.hash('OwnerPass#12345'), Date.now());
     owner1 = { id: r.lastInsertRowid };
   }
-  let centre1 = db.prepare('SELECT id FROM centres WHERE slug=?').get('navya');
+  let centre1 = db.prepare('SELECT id FROM centres WHERE slug=?').get('aryavart-institute-of-technology-management');
   if (!centre1) {
     const r = db.prepare("INSERT INTO centres(centre_code,name,slug,owner_user_id,coordinator_id,state,district,address,pin,status,created_at) VALUES(?,?,?,?,?,?,?,?,?,'active',?)")
-      .run('PESC00001', 'Navya Computer Institute', 'navya', owner1.id, coord.id, 'Uttar Pradesh', 'Varanasi', 'B-12, Lanka Road, Near BHU Gate, Varanasi', '221005', Date.now());
+      .run('PESC00001', 'Aryavart Institute of Technology & Management', 'aryavart-institute-of-technology-management', owner1.id, coord.id, 'Uttar Pradesh', 'Varanasi', 'Near Bus Station, Azamgarh Road, Shahganj, Uttar Pradesh 223101', '221005', Date.now());
     centre1 = { id: r.lastInsertRowid };
     db.prepare('UPDATE users SET centre_id=? WHERE id=?').run(centre1.id, owner1.id);
 
     // Initial centre wallet balance: ₹50,000.00
     db.prepare("INSERT OR REPLACE INTO wallets(centre_id,balance_paise) VALUES(?,?)").run(centre1.id, 5000000);
-    console.log(`Created Centre: Navya Computer Institute (PESC00001)`);
+    console.log(`Created Centre: Aryavart Institute of Technology & Management (PESC00001)`);
   }
 
   // Assign courses to centre 1

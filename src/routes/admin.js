@@ -43,8 +43,8 @@ router.post('/applications/:id/approve', h(async (req, res) => {
 }));
 
 router.post('/applications/:id/decision', h(async (req, res) => {
-  const d = str(req.body.decision, 10);
-  if (d === 'approve') {
+  const d = str(req.body.decision, 15).toLowerCase();
+  if (d === 'approve' || d === 'approved') {
     const r = await provisioning.approve(+req.params.id, req);
     return res.status(r.ok ? 200 : 502).json(r);
   }
@@ -191,19 +191,23 @@ router.put('/courses/:id/curriculum', (req, res) => {
   res.json({ ok: true, message: 'Curriculum & exam fees saved successfully' });
 });
 
-// Coordinators are created by super admin only; they receive a setup link, never a password.
+// Coordinators are created by super admin; initial password provided for immediate panel access.
 router.post('/coordinators', requireRole('super_admin'), (req, res) => {
   const email = str(req.body.email).toLowerCase(), name = str(req.body.name, 100), state = str(req.body.state, 60);
+  const mobile = str(req.body.mobile || req.body.phone, 20) || null;
+  const initialPassword = String(req.body.password || req.body.initial_password || 'Coord@123').trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !name) throw new HttpError(400, 'Name and valid email required');
   if (db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) throw new HttpError(409, 'Email already used');
-  const r = db.prepare("INSERT INTO users(email,name,role,state,status,created_at) VALUES(?,?,'coordinator',?,'pending_setup',?)").run(email, name, state, now());
+  const bcrypt = require('bcryptjs');
+  const hashed = bcrypt.hashSync(initialPassword, 10);
+  const r = db.prepare("INSERT INTO users(email,name,mobile,password_hash,role,state,status,created_at) VALUES(?,?,?,?,'coordinator',?,'active',?)").run(email, name, mobile, hashed, state, now());
   const token = rand(32);
   db.prepare('INSERT INTO setup_tokens(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(token), r.lastInsertRowid, now() + 48 * 3600e3);
   notify.queue('email', email, 'password_reset', { url: `${cfg.PUBLIC_URL}/setup?token=${token}` });
   // Automatically issue appointment certificate upon coordinator creation
   const cert = getOrCreateCoordinatorCert(r.lastInsertRowid, { id: r.lastInsertRowid, name, email, state });
   audit(req, 'coordinator.create', 'user', r.lastInsertRowid);
-  res.status(201).json({ id: r.lastInsertRowid, cert_no: cert ? cert.cert_no : null });
+  res.status(201).json({ id: r.lastInsertRowid, name, email, mobile, password: initialPassword, cert_no: cert ? cert.cert_no : null });
 });
 
 router.get('/coordinators', (req, res) => {
@@ -422,6 +426,16 @@ router.get('/wallets', (req, res) => {
   res.json({ wallets: rows });
 });
 
+router.get('/fees', (req, res) => res.json({ fees: require('../fees').all() }));
+router.put('/fees', (req, res) => {
+  const fees = require('../fees');
+  const item = str(req.body.item, 20);
+  const paise = Math.round(+req.body.amount_rupees * 100);
+  fees.setFee(item, paise, req.user.id);
+  audit(req, 'fees.update', 'fee_policy', null, 'ok', `${item}=${paise}`);
+  res.json({ ok: true, fees: fees.all() });
+});
+
 router.post('/wallets/:centre_id/adjust', (req, res) => {
   const cid = +req.params.centre_id;
   const kind = str(req.body.kind || req.body.type, 10);
@@ -442,6 +456,139 @@ router.post('/wallets/:centre_id/adjust', (req, res) => {
   })();
   audit(req, 'wallet.adjust', 'wallet', cid, 'ok', `${kind} ${amountPaise / 100} INR: ${reason}`);
   res.json({ ok: true, balance_paise: newBal });
+});
+
+// ─── Wallet Top-Up Requests Management (Head Office) ─────────────────────────
+router.get('/wallet-topups', (req, res) => {
+  const status = req.query.status;
+  let q = `
+    SELECT r.*, c.name AS centre_name, c.centre_code, c.district, c.state,
+      COALESCE(w.balance_paise, 0) AS current_balance_paise,
+      u.name AS reviewer_name
+    FROM wallet_topup_requests r
+    JOIN centres c ON c.id=r.centre_id
+    LEFT JOIN wallets w ON w.centre_id=c.id
+    LEFT JOIN users u ON u.id=r.reviewed_by
+  `;
+  const params = [];
+  if (status) {
+    q += ' WHERE r.status=?';
+    params.push(status);
+  }
+  q += " ORDER BY CASE WHEN r.status='pending' THEN 0 ELSE 1 END, r.id DESC LIMIT 100";
+  const rows = db.prepare(q).all(...params);
+  const pendingCount = (db.prepare("SELECT COUNT(*) AS c FROM wallet_topup_requests WHERE status='pending'").get() || {}).c || 0;
+  res.json({ requests: rows, pending_count: pendingCount });
+});
+
+router.post('/wallet-topups/:id/approve', (req, res) => {
+  const reqId = +req.params.id;
+  const topup = db.prepare(`
+    SELECT r.*, c.name AS centre_name, c.centre_code
+    FROM wallet_topup_requests r
+    JOIN centres c ON c.id=r.centre_id
+    WHERE r.id=?
+  `).get(reqId);
+
+  if (!topup) throw new HttpError(404, 'Top-up request not found');
+  if (topup.status !== 'pending') throw new HttpError(409, `Request is already ${topup.status}`);
+
+  const cid = topup.centre_id;
+  const amountPaise = topup.amount_paise;
+
+  const newBal = db.transaction(() => {
+    const w = db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(cid) || { balance_paise: 0 };
+    const updatedBal = w.balance_paise + amountPaise;
+
+    db.prepare('INSERT INTO wallets(centre_id, balance_paise) VALUES(?,?) ON CONFLICT(centre_id) DO UPDATE SET balance_paise=excluded.balance_paise')
+      .run(cid, updatedBal);
+
+    const ref = `TOPUP-REQ-${topup.id}-${Date.now().toString().slice(-4)}`;
+    const desc = `Top-Up Approved (UTR: ${topup.utr_number || 'N/A'}, Mode: ${(topup.payment_mode || 'upi').toUpperCase()})`;
+
+    db.prepare(`
+      INSERT INTO wallet_transactions(centre_id, kind, amount_paise, balance_after, reference, description, created_by, created_at)
+      VALUES(?, 'credit', ?, ?, ?, ?, ?, ?)
+    `).run(cid, amountPaise, updatedBal, ref, desc, req.user.id, now());
+
+    db.prepare(`
+      UPDATE wallet_topup_requests
+      SET status='approved', reviewed_by=?, reviewed_at=?
+      WHERE id=?
+    `).run(req.user.id, now(), reqId);
+
+    return updatedBal;
+  })();
+
+  audit(req, 'wallet_topup.approve', 'wallet_topup_requests', reqId, 'ok', `Approved ₹${amountPaise / 100} for ${topup.centre_name}`);
+  res.json({
+    ok: true,
+    id: reqId,
+    status: 'approved',
+    credited_rupees: amountPaise / 100,
+    credited_paise: amountPaise,
+    balance_paise: newBal,
+    centre_id: cid
+  });
+});
+
+router.post('/wallet-topups/:id/reject', (req, res) => {
+  const reqId = +req.params.id;
+  const reason = str(req.body.reason, 250) || 'Payment verification failed / UTR mismatch';
+  const topup = db.prepare('SELECT * FROM wallet_topup_requests WHERE id=?').get(reqId);
+
+  if (!topup) throw new HttpError(404, 'Top-up request not found');
+  if (topup.status !== 'pending') throw new HttpError(409, `Request is already ${topup.status}`);
+
+  db.prepare(`
+    UPDATE wallet_topup_requests
+    SET status='rejected', rejection_reason=?, reviewed_by=?, reviewed_at=?
+    WHERE id=?
+  `).run(reason, req.user.id, now(), reqId);
+
+  audit(req, 'wallet_topup.reject', 'wallet_topup_requests', reqId, 'ok', reason);
+  res.json({ ok: true, id: reqId, status: 'rejected', rejection_reason: reason });
+});
+
+// Head Office Payment Settings (Admin view and update)
+router.get('/headoffice-payment-settings', (req, res) => {
+  const settings = db.prepare('SELECT * FROM headoffice_payment_settings WHERE id=1').get() || {
+    upi_id: 'pescouncil@upi',
+    upi_name: 'Purvanchal Education and Skill Council',
+    qr_code_image: '/img/pesc-logo.png',
+    bank_name: 'State Bank of India',
+    account_number: '39820192830',
+    ifsc_code: 'SBIN0001234',
+    whatsapp_number: '919876543210'
+  };
+  res.json({ settings });
+});
+
+router.put('/headoffice-payment-settings', (req, res) => {
+  const b = req.body;
+  const upiId = str(b.upi_id, 80) || 'pescouncil@upi';
+  const upiName = str(b.upi_name, 100) || 'Purvanchal Education and Skill Council';
+  const bankName = str(b.bank_name, 100) || 'State Bank of India';
+  const accountNo = str(b.account_number, 50) || '';
+  const ifscCode = str(b.ifsc_code, 30) || '';
+  const qrImage = str(b.qr_code_image, 255) || '/img/pesc-logo.png';
+  const wa = str(b.whatsapp_number, 30) || '919876543210';
+
+  db.prepare(`
+    INSERT INTO headoffice_payment_settings(id, upi_id, upi_name, qr_code_image, bank_name, account_number, ifsc_code, whatsapp_number)
+    VALUES(1, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      upi_id=excluded.upi_id,
+      upi_name=excluded.upi_name,
+      qr_code_image=excluded.qr_code_image,
+      bank_name=excluded.bank_name,
+      account_number=excluded.account_number,
+      ifsc_code=excluded.ifsc_code,
+      whatsapp_number=excluded.whatsapp_number
+  `).run(upiId, upiName, qrImage, bankName, accountNo, ifscCode, wa);
+
+  audit(req, 'headoffice_payment.update', 'headoffice_payment_settings', 1, 'ok');
+  res.json({ ok: true });
 });
 
 // User Password Reset by Admin
@@ -699,9 +846,107 @@ router.put('/marksheets/:id', (req, res) => {
   res.json({ ok: true, percentage, grade, result });
 });
 
+// Centre Affiliation Certificate Endpoints (Admin)
+router.get('/centres/:id/affiliation-cert', (req, res) => {
+  const cid = +req.params.id;
+  const c = db.prepare('SELECT * FROM centres WHERE id=?').get(cid);
+  if (!c) throw new HttpError(404, 'Centre not found');
+
+  let owner = null;
+  if (c.owner_user_id) owner = db.prepare('SELECT id, name, email, mobile, photo_url FROM users WHERE id=?').get(c.owner_user_id);
+  if (!owner) owner = db.prepare("SELECT id, name, email, mobile, photo_url FROM users WHERE centre_id=? AND role='centre_owner'").get(cid);
+
+  // Fallback to franchise application photo
+  const app = db.prepare("SELECT photo_url, owner_name FROM franchise_applications WHERE centre_id=? OR (email=? AND status='Approved') ORDER BY id DESC LIMIT 1")
+    .get(cid, c.email || (owner ? owner.email : ''));
+
+  const director_photo = c.director_photo || (owner ? owner.photo_url : null) || (app ? app.photo_url : null) || null;
+
+  // Coordinator info (assigned or first active)
+  let coord = null;
+  if (c.coordinator_id) {
+    coord = db.prepare("SELECT id, name, email, mobile, state, seal_url, signature_url FROM users WHERE id=?").get(c.coordinator_id);
+  }
+  if (!coord) {
+    coord = db.prepare("SELECT id, name, email, mobile, state, seal_url, signature_url FROM users WHERE role='coordinator' AND (state=? OR status='active') ORDER BY id ASC LIMIT 1").get(c.state);
+  }
+  if (!coord) {
+    coord = db.prepare("SELECT id, name, email, mobile, state, seal_url, signature_url FROM users WHERE role='coordinator' ORDER BY id ASC LIMIT 1").get() || { name: 'Regional Coordinator', state: c.state };
+  }
+
+  // Head Office super admin
+  const ho = db.prepare("SELECT id, name, email, seal_url, signature_url FROM users WHERE role='super_admin' ORDER BY id ASC LIMIT 1").get() || {};
+
+  const courses = db.prepare(`SELECT co.code FROM courses co JOIN centre_courses cc ON cc.course_id=co.id WHERE cc.centre_id=? AND co.active=1`).all(cid);
+  const authorized_courses = courses.length ? courses.map(x => x.code).join(', ') : 'DCA, ADCA, TALLY, CCC, PGDCA, DTP';
+
+  const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+
+  res.json({
+    certificate: {
+      centre_id: c.id,
+      name: c.name,
+      centre_code: c.centre_code,
+      slug: c.slug,
+      director_name: c.director_name || (owner ? owner.name : 'Centre Director'),
+      director_photo,
+      address: c.address || `${c.district}, ${c.state}`,
+      district: c.district,
+      state: c.state,
+      pin: c.pin || '221001',
+      phone: c.phone || (owner ? owner.mobile : ''),
+      email: c.email || (owner ? owner.email : ''),
+      cert_no: c.affiliation_cert_no || `PESC/ATC/2026/${c.centre_code}`,
+      issue_date: c.affiliation_issue_date || todayStr,
+      valid_thru: c.affiliation_valid_thru || '31-03-2029',
+      session: c.affiliation_session || '2026 - 2029 (3 Academic Years)',
+      status: c.status === 'active' ? 'Authorized' : c.status,
+      authorized_courses,
+      coordinator: {
+        name: coord.name,
+        state: coord.state,
+        seal_url: coord.seal_url || null,
+        signature_url: coord.signature_url || null,
+      },
+      head_office: {
+        name: ho.name || 'Head Office',
+        seal_url: ho.seal_url || null,
+        signature_url: ho.signature_url || null,
+      }
+    }
+  });
+});
+
+router.post('/centres/:id/affiliation-cert', (req, res) => {
+  const cid = +req.params.id;
+  const b = req.body || {};
+  db.prepare(`UPDATE centres SET
+    affiliation_cert_no=COALESCE(?, affiliation_cert_no),
+    affiliation_issue_date=COALESCE(?, affiliation_issue_date),
+    affiliation_valid_thru=COALESCE(?, affiliation_valid_thru),
+    affiliation_session=COALESCE(?, affiliation_session),
+    director_photo=COALESCE(?, director_photo),
+    director_name=COALESCE(?, director_name),
+    name=COALESCE(?, name),
+    address=COALESCE(?, address)
+    WHERE id=?`).run(
+    b.cert_no || b.affiliation_cert_no || null,
+    b.issue_date || b.affiliation_issue_date || null,
+    b.valid_thru || b.affiliation_valid_thru || null,
+    b.session || b.affiliation_session || null,
+    b.director_photo || null,
+    b.director_name || null,
+    b.name || null,
+    b.address || null,
+    cid
+  );
+  audit(req, 'centre.affiliation_cert_update', 'centre', cid, 'ok');
+  res.json({ ok: true, message: 'Affiliation certificate details updated successfully!' });
+});
+
 // Admin Profile Endpoints
 router.get('/profile', (req, res) => {
-  let u = db.prepare('SELECT id, name, email, mobile, role, state, photo_url, created_at FROM users WHERE id=?').get(req.user.id);
+  let u = db.prepare('SELECT id, name, email, mobile, role, state, photo_url, seal_url, signature_url, created_at FROM users WHERE id=?').get(req.user.id);
   if (!u) u = req.user;
   res.json({
     profile: {
@@ -710,22 +955,37 @@ router.get('/profile', (req, res) => {
       head_office: 'Purvanchal Education & Skill Council, Head Office, Gorakhpur / Lucknow, UP',
       badge_id: 'PESC-HQ-001',
       state: u.state || 'National Headquarters (India)',
-      seal_url: null,
-      signature_url: null
+      seal_url: u.seal_url || null,
+      signature_url: u.signature_url || null,
+      photo_url: u.photo_url || null
     }
   });
 });
 
 router.post('/profile', (req, res) => {
-  const b = req.body;
+  const b = req.body || {};
   const name = str(b.name, 100);
   const email = str(b.email, 150);
   const mobile = str(b.mobile, 20);
   const photo_url = b.photo_url || null;
+  const seal_url = b.seal_url || null;
+  const signature_url = b.signature_url || null;
+  const state = str(b.state, 100);
+
   try {
-    db.prepare('UPDATE users SET name=COALESCE(?, name), email=COALESCE(?, email), mobile=COALESCE(?, mobile), photo_url=COALESCE(?, photo_url) WHERE id=?')
-      .run(name, email, mobile, photo_url, req.user.id);
-  } catch (_) {}
+    db.prepare(`UPDATE users SET
+      name=COALESCE(?, name),
+      email=COALESCE(?, email),
+      mobile=COALESCE(?, mobile),
+      photo_url=COALESCE(?, photo_url),
+      seal_url=COALESCE(?, seal_url),
+      signature_url=COALESCE(?, signature_url),
+      state=COALESCE(?, state)
+      WHERE id=?`)
+      .run(name || null, email || null, mobile || null, photo_url, seal_url, signature_url, state || null, req.user.id);
+  } catch (err) {
+    console.error('Admin profile update error:', err);
+  }
   audit(req, 'admin.profile_update', 'user', req.user.id, 'ok');
   res.json({ ok: true, message: 'Admin profile updated successfully!' });
 });
@@ -741,3 +1001,4 @@ router.post('/change-password', (req, res) => {
 });
 
 module.exports = router;
+

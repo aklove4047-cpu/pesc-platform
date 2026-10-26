@@ -215,7 +215,7 @@ function renderCentresShowcase(list) {
   }
   container.innerHTML = list.map(c => {
     const slug = (c.slug || '').toLowerCase();
-    const portalSubdomain = slug === 'navya' ? 'navyacomputer.pescouncil.in' : `${slug}.pescouncil.in`;
+    const portalSubdomain = slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management.pescouncil.in' : `${slug}.pescouncil.in`;
     const portalUrl = `https://${portalSubdomain}`;
     return `
       <div class="course-card" style="border-top: 5px solid #047857; display:flex; flex-direction:column; padding:22px; background:#fff; border-radius:14px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transition:transform 0.2s, box-shadow 0.2s;">
@@ -276,7 +276,7 @@ function renderCentres(list) {
     ['Centre Code', (r) => `<span style="font-family:monospace; font-weight:700;">${esc(r.centre_code || '-')}</span>`],
     ['District & State', (r) => `${esc(r.district)}, ${esc(r.state)}`],
     ['Official Website', (r) => {
-      const pSub = r.slug === 'navya' ? 'navyacomputer.pescouncil.in' : `${r.slug}.pescouncil.in`;
+      const pSub = r.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management.pescouncil.in' : `${r.slug}.pescouncil.in`;
       return `<a href="https://${pSub}" target="_blank" class="btn sm" style="background:#047857; color:#fff; text-decoration:none; font-weight:600; padding:4px 10px;">🌐 Open Portal ↗</a>`;
     }],
   ], list, 'No affiliated centres match your search criteria');

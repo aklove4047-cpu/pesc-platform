@@ -9,3 +9,4 @@ Thumbs.db
 cloudflared.exe
 *.zip
 build-zip.ps1
+.wrangler/

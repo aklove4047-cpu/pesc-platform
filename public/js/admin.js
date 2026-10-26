@@ -585,7 +585,7 @@ const views = {
           </div>
         </div>
       `],
-      ['Centre & Portal Website', (r) => `<b>${esc(r.centre_name)}</b><br><a href="https://${r.slug === 'navya' ? 'navyacomputer' : esc(r.slug)}.pescouncil.in" target="_blank" style="color:#047857; font-weight:700; text-decoration:none;">${r.slug === 'navya' ? 'navyacomputer' : esc(r.slug)}.pescouncil.in ↗</a> · <span class="muted">${esc(r.district)}</span>`],
+      ['Centre & Portal Website', (r) => `<b>${esc(r.centre_name)}</b><br><a href="https://${r.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management' : esc(r.slug)}.pescouncil.in" target="_blank" style="color:#047857; font-weight:700; text-decoration:none;">${r.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management' : esc(r.slug)}.pescouncil.in ↗</a> · <span class="muted">${esc(r.district)}</span>`],
       ['Status', (r) => badge(r.status)],
       ['Provisioning Status', (r) => r.job_id ? `${badge(r.job_status)}${r.job_error ? `<br><span class="muted">${esc(r.job_error)}</span>` : ''}<br>` + (r.log || []).map((l) => `<span class="muted">${l.ok ? '✓' : '✗'} ${esc(l.step)}: ${esc(l.detail)}</span>`).join('<br>') : '—'],
       ['Actions', (r) => `
@@ -633,7 +633,7 @@ const views = {
           </div>
         `],
         ['Official Portal', (r) => {
-          const pSub = r.slug === 'navya' ? 'navyacomputer.pescouncil.in' : `${r.slug}.pescouncil.in`;
+          const pSub = r.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management.pescouncil.in' : `${r.slug}.pescouncil.in`;
           return `<a href="https://${pSub}" target="_blank" style="color:#047857; font-family:monospace; font-weight:700; text-decoration:none;">${pSub} ↗</a>`;
         }],
         ['Location', (r) => `${esc(r.district)}, ${esc(r.state)}`],
@@ -1453,23 +1453,188 @@ const views = {
   },
 
   async Wallets() {
-    const { wallets } = await api('/api/admin/wallets');
+    const [{ wallets = [] }, { requests = [] }, { settings = {} }] = await Promise.all([
+      api('/api/admin/wallets'),
+      api('/api/admin/wallet-topups'),
+      api('/api/admin/headoffice-payment-settings')
+    ]);
+
+    const pendingRequests = requests.filter(r => r.status === 'pending');
+    const totalPendingPaise = pendingRequests.reduce((sum, r) => sum + (r.amount_paise || 0), 0);
+    const totalWalletsPaise = wallets.reduce((sum, w) => sum + (w.balance_paise || 0), 0);
+
     V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
         <div>
-          <h2>Centre Digital Wallets & Financial Balances</h2>
-          <p class="muted">Directly credit and monitor centre digital wallets for course affiliations & certificate issuance</p>
+          <h2 style="margin:0 0 4px; display:flex; align-items:center; gap:10px;">
+            💳 Franchise Wallet &amp; Monetization Control
+            ${pendingRequests.length > 0 ? `<span style="background:#ef4444; color:#fff; font-size:0.8rem; font-weight:800; padding:2px 10px; border-radius:12px; animation:pulse 2s infinite;">${pendingRequests.length} PENDING APPROVAL</span>` : ''}
+          </h2>
+          <p class="muted" style="margin:0;">Manage offline UPI top-up requests from centres, 1-click approvals, and monitor franchise digital wallet reserves</p>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn gold" data-a="edit_headoffice_payment" style="font-weight:700;">⚙️ Configure Payment QR &amp; WhatsApp</button>
         </div>
       </div>
-      ${table([
-        ['Code', (r) => `<b style="font-family:monospace;">${esc(r.centre_code)}</b>`],
-        ['Centre Name', (r) => `<b>${esc(r.centre_name)}</b><br><span class="muted">${esc(r.district)}, ${esc(r.state)}</span>`],
-        ['Wallet Balance', (r) => `<b style="font-size:1.15rem; color:#15803d;">${inr(r.balance_paise)}</b>`],
-        ['Status', (r) => badge(r.centre_status)],
-        ['Actions', (r) => `
-          <button class="btn sm gold" data-a="wallet_adj" data-id="${r.centre_id}" data-name="${esc(r.centre_name)}">⚡ Add / Credit Balance</button>
-        `],
-      ], wallets, 'No centre wallets found.')}
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid" style="grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:24px;">
+        <div class="stat" style="background:#fff; border-left:4px solid #ef4444; padding:16px; border-radius:10px; box-shadow:var(--shadow-sm);">
+          <span style="font-size:0.85rem; color:#64748b; font-weight:700; text-transform:uppercase;">Pending Top-Up Requests</span>
+          <b style="font-size:1.6rem; color:#ef4444;">${pendingRequests.length} <small style="font-size:0.9rem; font-weight:600;">(₹${(totalPendingPaise / 100).toLocaleString('en-IN')})</small></b>
+        </div>
+        <div class="stat" style="background:#fff; border-left:4px solid #16a34a; padding:16px; border-radius:10px; box-shadow:var(--shadow-sm);">
+          <span style="font-size:0.85rem; color:#64748b; font-weight:700; text-transform:uppercase;">Total Franchise Reserves</span>
+          <b style="font-size:1.6rem; color:#16a34a;">${inr(totalWalletsPaise)}</b>
+        </div>
+        <div class="stat" style="background:#fff; border-left:4px solid #2563eb; padding:16px; border-radius:10px; box-shadow:var(--shadow-sm);">
+          <span style="font-size:0.85rem; color:#64748b; font-weight:700; text-transform:uppercase;">Active Centre Wallets</span>
+          <b style="font-size:1.6rem; color:#2563eb;">${wallets.length}</b>
+        </div>
+        <div class="stat" style="background:#fff; border-left:4px solid #d4af37; padding:16px; border-radius:10px; box-shadow:var(--shadow-sm);">
+          <span style="font-size:0.85rem; color:#64748b; font-weight:700; text-transform:uppercase;">Head Office UPI</span>
+          <b style="font-size:1.15rem; color:#072a60; font-family:monospace;">${esc(settings.upi_id || 'pesc@upi')}</b>
+        </div>
+      </div>
+
+      <!-- Section 1: Pending Offline Top-Up Requests (WhatsApp / UTR) -->
+      <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:20px; margin-bottom:24px; box-shadow:var(--shadow-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+          <div>
+            <h3 style="margin:0 0 4px; color:#0f172a; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+              ⚡ Incoming Offline Top-Up Queue (Pending Approval)
+            </h3>
+            <p style="margin:0; font-size:0.85rem; color:#64748b;">
+              Franchise centres make UPI/bank transfers and submit UTR + notify via WhatsApp. Review UTR and approve to credit their wallet instantly.
+            </p>
+          </div>
+          <span style="font-size:0.85rem; font-weight:700; color:${pendingRequests.length > 0 ? '#ef4444' : '#16a34a'};">
+            ${pendingRequests.length} pending requests
+          </span>
+        </div>
+
+        ${pendingRequests.length === 0 ? `
+          <div style="text-align:center; padding:32px 16px; background:#f8fafc; border-radius:8px; border:1px dashed #cbd5e1;">
+            <div style="font-size:2.4rem; margin-bottom:8px;">✅</div>
+            <b style="color:#0f172a;">All top-up requests have been reviewed and processed!</b>
+            <p style="color:#64748b; font-size:0.85rem; margin:4px 0 0;">New wallet top-up requests submitted by centres via UPI/WhatsApp will appear here.</p>
+          </div>
+        ` : `
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+              <thead>
+                <tr style="background:#f1f5f9; text-align:left; border-bottom:2px solid #cbd5e1;">
+                  <th style="padding:10px 12px;">Requested At</th>
+                  <th style="padding:10px 12px;">Centre</th>
+                  <th style="padding:10px 12px;">Amount</th>
+                  <th style="padding:10px 12px;">Payment Mode</th>
+                  <th style="padding:10px 12px;">UTR / Ref No</th>
+                  <th style="padding:10px 12px;">Centre Notes</th>
+                  <th style="padding:10px 12px; text-align:right;">Head Office Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${pendingRequests.map(r => `
+                  <tr style="border-bottom:1px solid #e2e8f0; background:#fffdf5;">
+                    <td style="padding:10px 12px; font-size:0.82rem; color:#64748b; white-space:nowrap;">
+                      ${new Date(r.created_at).toLocaleString('en-IN')}<br>
+                      <small style="font-family:monospace; color:#94a3b8;">REQ-#${r.id}</small>
+                    </td>
+                    <td style="padding:10px 12px;">
+                      <b style="color:#072a60;">${esc(r.centre_name)}</b><br>
+                      <span style="font-family:monospace; font-size:0.8rem; background:#e2e8f0; padding:1px 6px; border-radius:4px;">${esc(r.centre_code)}</span>
+                      <small style="color:#64748b; display:block; margin-top:2px;">📍 ${esc(r.district || '')}, ${esc(r.state || '')} · 📞 ${esc(r.contact_phone || 'N/A')}</small>
+                    </td>
+                    <td style="padding:10px 12px; white-space:nowrap;">
+                      <b style="font-size:1.15rem; color:#15803d;">₹${(r.amount_paise / 100).toLocaleString('en-IN')}</b>
+                    </td>
+                    <td style="padding:10px 12px;">
+                      <span style="display:inline-block; padding:3px 8px; border-radius:6px; background:#eff6ff; color:#1d4ed8; font-weight:700; font-size:0.8rem; text-transform:uppercase;">
+                        ${esc(r.payment_mode)}
+                      </span>
+                    </td>
+                    <td style="padding:10px 12px;">
+                      <b style="font-family:monospace; font-size:0.95rem; background:#f1f5f9; padding:3px 8px; border-radius:4px; border:1px solid #cbd5e1; color:#0f172a; letter-spacing:0.5px;">
+                        ${esc(r.utr_number || 'N/A')}
+                      </b>
+                    </td>
+                    <td style="padding:10px 12px; font-size:0.85rem; color:#475569;">
+                      ${esc(r.notes || '—')}
+                    </td>
+                    <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
+                      <button class="btn sm success" data-a="approve_topup" data-id="${r.id}" data-name="${esc(r.centre_name)}" data-amount="${(r.amount_paise / 100)}" style="font-weight:800; padding:7px 14px; margin-right:6px; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer;">
+                        ✅ Approve &amp; Credit
+                      </button>
+                      <button class="btn sm danger" data-a="reject_topup" data-id="${r.id}" data-name="${esc(r.centre_name)}" style="font-weight:700; padding:7px 12px; background:#ef4444; color:#fff; border:none; border-radius:6px; cursor:pointer;">
+                        ❌ Reject
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+
+      <!-- Section 2: All Franchise Wallets & Direct Manual Balance Adjustment -->
+      <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:20px; margin-bottom:24px; box-shadow:var(--shadow-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+          <div>
+            <h3 style="margin:0 0 4px; color:#0f172a; font-size:1.2rem;">🏛️ Franchise Digital Wallets Directory</h3>
+            <p style="margin:0; font-size:0.85rem; color:#64748b;">Live wallet balances. Centres consume balance for Admission Forms (₹35), Marksheet Issuance (₹150), and Certificate Issuance (₹200).</p>
+          </div>
+        </div>
+
+        ${table([
+          ['Code', (r) => `<b style="font-family:monospace; font-size:0.95rem; color:#072a60;">${esc(r.centre_code)}</b>`],
+          ['Centre Name', (r) => `<b>${esc(r.centre_name)}</b><br><span class="muted" style="font-size:0.8rem;">📍 ${esc(r.district || '')}, ${esc(r.state || '')}</span>`],
+          ['Wallet Balance', (r) => `<b style="font-size:1.15rem; color:#15803d;">${inr(r.balance_paise)}</b>`],
+          ['Status', (r) => badge(r.centre_status)],
+          ['Actions', (r) => `
+            <button class="btn sm gold" data-a="wallet_adj" data-id="${r.centre_id}" data-name="${esc(r.centre_name)}" style="font-weight:700; padding:6px 14px;">
+              ⚡ Manual Balance Adjustment
+            </button>
+          `],
+        ], wallets, 'No centre wallets found.')}
+      </div>
+
+      <!-- Section 3: Processed Top-Up History Log -->
+      ${requests.filter(r => r.status !== 'pending').length > 0 ? `
+        <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:20px; box-shadow:var(--shadow-sm);">
+          <h3 style="margin:0 0 12px; color:#0f172a; font-size:1.1rem;">📜 Recent Top-Up Approvals &amp; Rejection History</h3>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.86rem;">
+              <thead>
+                <tr style="background:#f8fafc; text-align:left; border-bottom:2px solid #e2e8f0;">
+                  <th style="padding:8px 10px;">Processed On</th>
+                  <th style="padding:8px 10px;">Centre</th>
+                  <th style="padding:8px 10px;">Amount</th>
+                  <th style="padding:8px 10px;">UTR / Mode</th>
+                  <th style="padding:8px 10px;">Status</th>
+                  <th style="padding:8px 10px;">Notes / Rejection Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${requests.filter(r => r.status !== 'pending').slice(0, 25).map(r => `
+                  <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:8px 10px; color:#64748b;">${r.reviewed_at ? new Date(r.reviewed_at).toLocaleString('en-IN') : new Date(r.created_at).toLocaleString('en-IN')}</td>
+                    <td style="padding:8px 10px;"><b>${esc(r.centre_name)}</b> (${esc(r.centre_code)})</td>
+                    <td style="padding:8px 10px; font-weight:700; color:#15803d;">₹${(r.amount_paise / 100).toLocaleString('en-IN')}</td>
+                    <td style="padding:8px 10px; font-family:monospace;">${esc(r.payment_mode)} / ${esc(r.utr_number || '—')}</td>
+                    <td style="padding:8px 10px;">
+                      <span style="padding:2px 8px; border-radius:4px; font-weight:800; font-size:0.75rem; text-transform:uppercase; ${r.status === 'approved' ? 'background:#dcfce7; color:#166534;' : 'background:#fee2e2; color:#991b1b;'}">
+                        ${r.status === 'approved' ? '✓ APPROVED & CREDITED' : '✗ REJECTED'}
+                      </span>
+                    </td>
+                    <td style="padding:8px 10px; color:#64748b;">${esc(r.rejection_reason || r.notes || '—')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ''}
     `;
   },
 
@@ -1522,6 +1687,74 @@ function showModal(title, bodyHtml, onSave, maxWidth = '640px') {
       m.style.display = 'none';
     };
   }
+}
+
+function showHeadOfficePaymentSettingsModal(s) {
+  showModal('⚙️ Configure Head Office UPI, QR & WhatsApp Gateway', `
+    <form id="headofficePayForm" style="display:grid; gap:14px;">
+      <p style="color:#64748b; font-size:0.9rem; margin:0;">
+        These details will be shown to franchise centres when they request wallet top-up and scan the QR code to pay fees.
+      </p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <label>
+          <span style="font-weight:700; font-size:0.85rem;">Head Office UPI ID:</span>
+          <input type="text" name="upi_id" value="${esc(s.upi_id || 'pesc@upi')}" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; margin-top:4px;">
+        </label>
+        <label>
+          <span style="font-weight:700; font-size:0.85rem;">Account Payee / Merchant Name:</span>
+          <input type="text" name="upi_name" value="${esc(s.upi_name || 'Purvanchal Education and Skill Council')}" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; margin-top:4px;">
+        </label>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <label>
+          <span style="font-weight:700; font-size:0.85rem;">Head Office WhatsApp Number (with country code):</span>
+          <input type="text" name="whatsapp_number" value="${esc(s.whatsapp_number || '919415200000')}" placeholder="e.g. 919415200000" required style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; margin-top:4px;">
+          <small style="color:#64748b;">Centres will send automated top-up messages to this number</small>
+        </label>
+        <label>
+          <span style="font-weight:700; font-size:0.85rem;">QR Code Image URL (optional):</span>
+          <input type="text" name="qr_code_image" value="${esc(s.qr_code_image || '')}" placeholder="https://... or data:image/..." style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; margin-top:4px;">
+        </label>
+      </div>
+      <div style="border-top:1px solid #e2e8f0; padding-top:10px;">
+        <h4 style="margin:0 0 8px; font-size:0.95rem; color:#071a33;">Bank Account Details (for NEFT / IMPS / RTGS)</h4>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+          <label>
+            <span style="font-weight:700; font-size:0.82rem;">Bank Name:</span>
+            <input type="text" name="bank_name" value="${esc(s.bank_name || 'State Bank of India')}" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; margin-top:4px;">
+          </label>
+          <label>
+            <span style="font-weight:700; font-size:0.82rem;">Account Number:</span>
+            <input type="text" name="account_number" value="${esc(s.account_number || '')}" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; margin-top:4px;">
+          </label>
+          <label>
+            <span style="font-weight:700; font-size:0.82rem;">IFSC Code:</span>
+            <input type="text" name="ifsc_code" value="${esc(s.ifsc_code || '')}" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; margin-top:4px;">
+          </label>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+        <button type="submit" class="btn gold" style="font-weight:800; padding:10px 20px;">💾 Save Payment Settings</button>
+      </div>
+    </form>
+  `, async (fd) => {
+    const payload = {
+      upi_id: fd.get('upi_id'),
+      upi_name: fd.get('upi_name'),
+      whatsapp_number: fd.get('whatsapp_number'),
+      qr_code_image: fd.get('qr_code_image'),
+      bank_name: fd.get('bank_name'),
+      account_number: fd.get('account_number'),
+      ifsc_code: fd.get('ifsc_code')
+    };
+    await api('/api/admin/headoffice-payment-settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    toast('✅ Head Office payment settings updated successfully!');
+    show('Wallets');
+  }, '700px');
 }
 
 function showAdminIdCardModal(p) {
@@ -2279,6 +2512,25 @@ V.addEventListener('click', (e) => {
       const note = ask('Enter note/reason (e.g. Offline Payment / Promotion credit):') || 'Head Office Balance Credit';
       await post(`/api/admin/wallets/${id}/adjust`, { kind: 'credit', amount_rupees: +amt, reason: note });
       toast(`Successfully credited ₹${amt} to centre wallet!`);
+      show('Wallets');
+      return;
+    } else if (a === 'approve_topup') {
+      if (!confirm(`Are you sure you want to approve this offline top-up and credit ₹${b.dataset.amount} directly to ${b.dataset.name}'s wallet?`)) return;
+      await post(`/api/admin/wallet-topups/${id}/approve`);
+      toast(`✅ Approved! ₹${b.dataset.amount} successfully credited to ${b.dataset.name}'s wallet.`);
+      show('Wallets');
+      return;
+    } else if (a === 'reject_topup') {
+      const r = ask('Enter reason for rejecting this top-up request:') || 'UTR verification failed or payment not received';
+      if (!r) return;
+      await post(`/api/admin/wallet-topups/${id}/reject`, { reason: r });
+      toast('Top-up request rejected.');
+      show('Wallets');
+      return;
+    } else if (a === 'edit_headoffice_payment') {
+      const { settings } = await api('/api/admin/headoffice-payment-settings');
+      showHeadOfficePaymentSettingsModal(settings || {});
+      return;
     } else if (a === 'resetpw') {
       const np = ask(`Enter new password for ${b.dataset.name} (minimum 6 characters):`) || 'Pesc#2026';
       await post(`/api/admin/users/${id}/reset-password`, { password: np });
@@ -2985,13 +3237,36 @@ async function showAdminOfficialMarksheetModal(mrk) {
           PESC
         </div>
 
-        <!-- Official Council Header (Exact 6-Line Text Specification) -->
-        ${renderOfficialCouncilHeader({
-          studentCode: studentCode,
-          rollNo: rollNo,
-          refNo: marksheetNo,
-          issueDate: issueDateStr
-        })}
+        <!-- Prominent Top Centre Header: Centre Name at Top as required by Client -->
+        <div style="text-align:center; margin-bottom:14px; padding:16px 20px 12px; background:linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%); border:3px solid #047857; border-radius:10px; box-shadow:0 3px 12px rgba(4,120,87,0.12);">
+          <div style="font-size:0.8rem; font-weight:900; color:#15803d; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px;">
+            ★ AUTHORISED STUDY CENTRE &amp; EXAMINATION CENTRE ★
+          </div>
+          <div style="font-size:2.2rem; font-weight:900; color:#064e3b; font-family:'Outfit', Arial, sans-serif; letter-spacing:1px; line-height:1.2; text-transform:uppercase;">
+            ${esc(m.centre_name || 'ARYAVART INSTITUTE OF TECHNOLOGY & MANAGEMENT')}
+          </div>
+          <div style="font-size:0.92rem; font-weight:800; color:#0f172a; margin-top:4px;">
+            CENTRE CODE: <span style="font-family:monospace; color:#065f46; font-weight:900; background:#dcfce7; padding:2px 10px; border-radius:4px; border:1px solid #86efac;">${esc(m.centre_code || 'PESC00001')}</span>
+            &nbsp;·&nbsp; CAMPUS: <span>${esc(m.centre_address || (m.district ? `${m.district}, ${m.state}` : 'Uttar Pradesh, India'))}</span>
+          </div>
+          <div style="font-size:0.78rem; font-weight:800; color:#047857; letter-spacing:0.8px; text-transform:uppercase; margin-top:5px; border-top:1px dashed #cbd5e1; padding-top:4px;">
+            CONDUCTED UNDER THE AEGIS OF PURVANCHAL EDUCATION AND SKILL COUNCIL (GOVT. REGD. TRUST/2025/5/IV/299)
+          </div>
+        </div>
+
+        <!-- Registration & Document Details Bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.84rem; font-weight:800; color:#000000; text-align:left; line-height:1.55; margin-bottom:12px; background:rgba(248,250,252,0.92); padding:8px 14px; border-radius:6px; border:1.5px solid #cbd5e1;">
+          <div>
+            <div><b>REGD. NO. (COUNCIL):</b> <span style="font-family:monospace; font-weight:900; color:#072a60;">TRUST/2025/5/IV/299</span></div>
+            <div><b>Student Reg. No:</b> <span style="font-family:monospace; font-weight:900; color:#064e3b;">${esc(studentCode)}</span></div>
+            <div><b>Roll Number:</b> <span style="font-family:monospace; font-weight:900; color:#072a60;">${esc(rollNo)}</span></div>
+          </div>
+          <div style="text-align:right;">
+            <div><b>Document Ref No:</b> <span style="font-family:monospace; font-weight:900; color:#072a60;">${esc(marksheetNo)}</span></div>
+            <div><b>Date of Issue (तिथि):</b> <span style="font-weight:900; color:#047857;">${esc(issueDateStr)}</span></div>
+            <div><b>Board Scheme:</b> <span style="font-weight:900; color:#b45309;">Autonomous National Board</span></div>
+          </div>
+        </div>
 
         <!-- Marksheet Title Box -->
         <div style="text-align:center; margin:10px 0 14px;">

@@ -3,8 +3,23 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const inr = (paise) => '₹' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 const date = (ms) => ms ? new Date(ms).toLocaleDateString('en-IN') : '';
-async function api(path, { method = 'GET', body } = {}) {
-  const r = await fetch(path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
+async function api(path, opts = {}) {
+  let method = 'GET';
+  let body = undefined;
+  if (typeof opts === 'string') {
+    method = opts;
+    body = arguments[2];
+  } else if (opts && typeof opts === 'object') {
+    method = opts.method || 'GET';
+    body = opts.body;
+  }
+  const headers = body ? { 'Content-Type': 'application/json' } : {};
+  const r = await fetch(path, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+    credentials: 'same-origin'
+  });
   let d = {}; try { d = await r.json(); } catch {}
   if (!r.ok) { const e = new Error(d.error || `Error ${r.status}`); e.status = r.status; e.data = d; throw e; }
   return d;

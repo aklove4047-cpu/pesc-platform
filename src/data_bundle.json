@@ -3,14 +3,14 @@
     {
       "id": 1,
       "centre_code": "PESC00001",
-      "name": "Navya National Institute of Technology",
-      "slug": "navya",
+      "name": "Aryavart Institute of Technology & Management",
+      "slug": "aryavart-institute-of-technology-management",
       "owner_user_id": 3,
       "coordinator_id": 2,
       "state": "Uttar Pradesh",
-      "district": "Varanasi Central",
-      "address": null,
-      "pin": null,
+      "district": "Shahganj, Azamgarh",
+      "address": "Near Bus Station, Azamgarh Road, Shahganj, Uttar Pradesh 223101",
+      "pin": "223101",
       "status": "active",
       "valid_until": null,
       "settings": "{}",
@@ -20,7 +20,9 @@
       "logo_url": null,
       "director_name": "Dr. Ramesh Kumar",
       "phone": "+91 98765 43210",
-      "email": "director@navya.test"
+      "email": "director@aryavart.ac.in",
+      "wallet_balance": 0,
+      "wallet_paise": 0
     },
     {
       "id": 2,
@@ -42,7 +44,9 @@
       "logo_url": null,
       "director_name": null,
       "phone": null,
-      "email": null
+      "email": null,
+      "wallet_balance": 0,
+      "wallet_paise": 0
     },
     {
       "id": 3,
@@ -64,7 +68,9 @@
       "logo_url": null,
       "director_name": null,
       "phone": null,
-      "email": null
+      "email": null,
+      "wallet_balance": 0,
+      "wallet_paise": 0
     },
     {
       "id": 4,
@@ -86,7 +92,9 @@
       "logo_url": null,
       "director_name": null,
       "phone": null,
-      "email": null
+      "email": null,
+      "wallet_balance": 0,
+      "wallet_paise": 0
     },
     {
       "id": 5,
@@ -108,7 +116,9 @@
       "logo_url": null,
       "director_name": null,
       "phone": null,
-      "email": null
+      "email": null,
+      "wallet_balance": 0,
+      "wallet_paise": 0
     }
   ],
   "courses": [
@@ -2372,8 +2382,8 @@
     },
     {
       "id": 3,
-      "email": "director@navya.test",
-      "name": "Dr. Ramesh Kumar",
+      "email": "director@aryavart.ac.in",
+      "name": "Dr. Ramesh Kumar (Centre Director)",
       "mobile": "+91 98765 43210",
       "password_hash": "$2a$10$O0yQhfMGFOKs5CZsD2gzsuZTx2uSEMBAUuOvQ.DJXgQWX8ZG38FN2",
       "role": "centre_owner",

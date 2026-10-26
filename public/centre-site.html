@@ -1325,7 +1325,7 @@
             <div>
               <b style="font-size:1.15rem; color:#064e3b; display:block;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</b>
               <span style="font-size:0.8rem; color:#047857; font-weight:600;">Authorized Franchise Training Centre</span>
-              <div id="recCentreName" style="font-size:0.95rem; font-weight:800; color:#0f172a; margin-top:2px;">Navya Computer Institute</div>
+              <div id="recCentreName" style="font-size:0.95rem; font-weight:800; color:#0f172a; margin-top:2px;">Aryavart Institute of Technology & Management</div>
               <div id="recCentreCode" style="font-size:0.8rem; color:#64748b;">Centre Code: PESC00001</div>
             </div>
             <div style="text-align:right;">
@@ -1424,7 +1424,7 @@
       if (centreData && centreData.centre) {
         $('#modalCentreCode').value = centreData.centre.code || centreData.centre.centre_code;
         $('#demoCentreCode').textContent = centreData.centre.code || centreData.centre.centre_code;
-        const slug = centreData.centre.slug || 'navya';
+        const slug = centreData.centre.slug || 'aryavart-institute-of-technology-management';
         $('#directPortalLink').href = `/portal?centre=${encodeURIComponent(slug)}`;
       }
       centreModal.style.display = 'flex';
@@ -1504,7 +1504,7 @@
         const body = form(e.target);
         const res = await api('/api/auth/login', { method: 'POST', body });
         $('#modalCentreMsg').innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:6px; font-weight:700; text-align:center;">✓ Centre Login successful! Opening ERP Portal…</div>`;
-        const slug = (centreData && centreData.centre) ? centreData.centre.slug : 'navya';
+        const slug = (centreData && centreData.centre) ? centreData.centre.slug : 'aryavart-institute-of-technology-management';
         setTimeout(() => { location.href = `/portal?centre=${encodeURIComponent(slug)}`; }, 800);
       });
     };

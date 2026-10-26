@@ -27,6 +27,7 @@ function getStudent(req) {
 // Student Profile & Academic Overview
 router.get('/profile', (req, res) => {
   const s = getStudent(req);
+  s.photo = s.photo_url || s.photo || null;
   res.json({ student: s });
 });
 

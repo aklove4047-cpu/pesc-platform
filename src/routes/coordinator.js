@@ -219,9 +219,9 @@ router.post('/profile', (req, res) => {
   const name = str(b.name, 100);
   const mobile = str(b.mobile, 20);
   const email = str(b.email, 150);
-  const photo_url = str(b.photo_url, 1000) || null;
-  const seal_url = str(b.seal_url, 1000) || null;
-  const signature_url = str(b.signature_url, 1000) || null;
+  const photo_url = b.photo_url || null;
+  const seal_url = b.seal_url || null;
+  const signature_url = b.signature_url || null;
   const state = str(b.state, 100);
 
   // Ensure seal_url and signature_url columns exist (graceful)
@@ -258,8 +258,8 @@ router.post('/profile', (req, res) => {
 router.post('/change-password', (req, res) => {
   const { new_password } = req.body || {};
   if (!new_password || new_password.length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
-  // Simple hash for demo - in production use argon2
-  const hash = Buffer.from(new_password).toString('base64');
+  const bcrypt = require('bcryptjs');
+  const hash = bcrypt.hashSync(new_password, 10);
   db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.user.id);
   res.json({ ok: true, message: 'Password changed successfully!' });
 });
