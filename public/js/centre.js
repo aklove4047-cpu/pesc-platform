@@ -35,7 +35,7 @@ window.refreshCentreWalletBadge = async function(knownBalance) {
     let bal = knownBalance;
     if (bal === undefined || bal === null) {
       const w = await api('/api/centre/wallet').catch(() => null);
-      bal = (w && w.balance !== undefined) ? w.balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 5000);
+      bal = (w && w.balance !== undefined) ? w.balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 0);
     }
     const el = document.getElementById('topbarWalletAmount');
     if (el) el.textContent = '₹' + (+bal || 0).toLocaleString('en-IN') + '.00';
@@ -2036,22 +2036,27 @@ const views = {
               </tr>
             </thead>
             <tbody>
-              ${w.ledger && w.ledger.length ? w.ledger.map(l => `
+              ${w.ledger && w.ledger.length ? w.ledger.map(l => {
+                const isCredit = (l.kind === 'credit' || l.type === 'credit');
+                const amtPaise = l.amount_paise !== undefined ? l.amount_paise : ((l.amount || 0) * 100);
+                const balPaise = l.balance_after !== undefined ? (l.balance_after > 100000 ? l.balance_after : l.balance_after * 100) : 0;
+                const dateStr = l.created_at ? new Date(l.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : (l.date || 'Today');
+                return `
                 <tr>
-                  <td>${new Date(l.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
+                  <td>${dateStr}</td>
                   <td>
-                    <span class="badge ${l.kind === 'credit' ? 'Valid' : 'Pending'}">
-                      ${l.kind === 'credit' ? '🟢 Credit' : '🔴 Debit'}
+                    <span class="badge ${isCredit ? 'Valid' : 'Pending'}">
+                      ${isCredit ? '🟢 Credit' : '🔴 Debit'}
                     </span>
                   </td>
-                  <td style="color:${l.kind === 'credit' ? '#16a34a' : '#dc2626'}; font-weight:800;">
-                    ${l.kind === 'credit' ? '+' : '-'}${inr(l.amount_paise)}
+                  <td style="color:${isCredit ? '#16a34a' : '#dc2626'}; font-weight:800;">
+                    ${isCredit ? '+' : '-'}${inr(amtPaise)}
                   </td>
-                  <td><b>${inr(l.balance_after)}</b></td>
-                  <td>${esc(l.description || 'System Fee')}</td>
-                  <td><span style="font-family:monospace; font-size:0.8rem; color:#64748b;">${esc(l.reference)}</span></td>
+                  <td><b>${inr(balPaise)}</b></td>
+                  <td>${esc(l.description || l.note || 'System Fee')}</td>
+                  <td><span style="font-family:monospace; font-size:0.8rem; color:#64748b;">${esc(l.reference || 'REF-' + (l.id || '1'))}</span></td>
                 </tr>
-              `).join('') : `
+              `;}).join('') : `
                 <tr>
                   <td colspan="6" style="text-align:center; padding:20px; color:#64748b;">No wallet transactions recorded yet.</td>
                 </tr>
@@ -2396,7 +2401,7 @@ const views = {
     const cert = res.certificate || {};
 
     V.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px;">
+      <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px;">
         <div>
           <h2 style="margin:0 0 4px; font-size:1.6rem; color:#78350f;">🏆 18. Official Affiliation Certificate</h2>
           <p class="muted" style="margin:0;">Kendra Manyata Praman Patra issued by Purvanchal Education &amp; Skill Council (PESC)</p>
@@ -2406,99 +2411,8 @@ const views = {
         </div>
       </div>
 
-      <div class="card" style="padding:40px 30px; background:#f8fafc; border:1px solid #cbd5e1; box-shadow:var(--shadow-md);">
-        <!-- Royal Ornamental Certificate Frame -->
-        <div style="border: 8px double #d4af37; outline: 3px solid #b45309; outline-offset: 6px; border-radius: 14px; padding: 40px 48px; background: radial-gradient(circle, #ffffff 50%, #fffdf0 100%); position:relative; box-shadow:0 12px 30px rgba(212,175,55,0.2); text-align:center;">
-          
-          <!-- Watermark -->
-          <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0.04; pointer-events:none; font-size:20rem; font-weight:900; color:#0a2a5e;">P</div>
-
-          <!-- Top Emblem & Council Header -->
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #d4af37; padding-bottom: 18px; margin-bottom: 24px;">
-            <div style="text-align:left;">
-              <span style="font-size:0.8rem; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Govt. Recognized Autonomy</span>
-              <div style="font-size:0.85rem; color:#0a2a5e; font-weight:700;">ISO 9001:2015 Certified</div>
-              <div style="font-size:0.75rem; color:#64748b;">NITI Aayog Registered</div>
-            </div>
-            <div style="text-align:center;">
-              <div style="width:70px; height:70px; border-radius:50%; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#fde047; font-size:2.2rem; font-weight:900; display:grid; place-items:center; margin:0 auto 6px; border:3px solid #d4af37; box-shadow:0 4px 12px rgba(0,0,0,0.15);">P</div>
-              <h2 style="margin:0; font-size:1.6rem; color:#0a2a5e; letter-spacing:0.5px; font-weight:800;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h2>
-              <div style="font-size:1.05rem; color:#b45309; font-weight:700; margin-top:2px;">पूर्वांचल शिक्षा एवं कौशल परिषद</div>
-            </div>
-            <div style="text-align:right;">
-              <span style="font-size:0.78rem; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">ATC Accredit No.</span>
-              <div style="font-size:0.95rem; color:#b45309; font-family:monospace; font-weight:800;">${esc(cert.cert_no)}</div>
-              <div style="margin-top:4px;">
-                <span class="badge active" style="font-size:0.75rem;">✓ AUTHORIZED</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Title -->
-          <h1 style="color:#0a2a5e; font-size:2.2rem; margin:16px 0 6px; text-transform:uppercase; letter-spacing:1px; font-family:serif;">Certificate of Affiliation</h1>
-          <div style="font-size:1.1rem; color:#78350f; font-weight:600; margin-bottom:24px;">(सम्बद्धता एवं संस्था मान्यता प्रमाण पत्र)</div>
-
-          <!-- Body Description -->
-          <p style="font-size:1.1rem; color:#475569; line-height:1.8; margin:0 auto 20px; max-width:800px;">
-            This is to officially certify that the educational institution named below has met the council's academic infrastructure, faculty, and operational standards and is hereby granted official status as an <b>Authorized Training Centre (ATC)</b> of Purvanchal Education &amp; Skill Council:
-          </p>
-
-          <div style="margin:20px 0; padding:18px 24px; background:#f0fdf4; border:2px solid #86efac; border-radius:10px; display:inline-block; min-width:70%;">
-            <div style="display:flex; align-items:center; justify-content:center; gap:24px; text-align:left; flex-wrap:wrap;">
-              ${cert.director_photo ? `
-                <div style="text-align:center; flex-shrink:0;">
-                  <img src="${cert.director_photo}" style="width:90px; height:110px; object-fit:cover; border:2px solid #b45309; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.12); display:block; margin:0 auto 4px;" alt="Director Photo">
-                  <div style="font-size:0.7rem; color:#78350f; font-weight:700; text-transform:uppercase;">Director Photo</div>
-                </div>
-              ` : ''}
-              <div style="flex:1; min-width:240px;">
-                <h2 style="margin:0; font-size:1.85rem; color:#064e3b; font-weight:800; letter-spacing:0.5px;">${esc(cert.name)}</h2>
-                <div style="font-size:1.1rem; color:#0f172a; margin-top:6px; font-weight:600;">Director / Incharge: <span style="color:#0a2a5e;">${esc(cert.director_name)}</span></div>
-                <div style="font-size:0.95rem; color:#475569; margin-top:4px;">Address: ${esc(cert.address)}</div>
-              </div>
-            </div>
-          </div>
-
-          <div style="display:flex; justify-content:center; gap:20px; margin:20px 0; flex-wrap:wrap;">
-            <div style="background:#fef3c7; border:1px solid #fde68a; padding:8px 20px; border-radius:8px; font-size:0.95rem;">
-              <span style="color:#92400e; font-weight:700;">Centre Code:</span> <b style="font-family:monospace; color:#78350f; font-size:1.15rem;">${esc(cert.centre_code)}</b>
-            </div>
-            <div style="background:#fef3c7; border:1px solid #fde68a; padding:8px 20px; border-radius:8px; font-size:0.95rem;">
-              <span style="color:#92400e; font-weight:700;">Affiliation Period:</span> <b style="color:#78350f;">${esc(cert.session)}</b>
-            </div>
-            <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 20px; border-radius:8px; font-size:0.95rem;">
-              <span style="color:#166534; font-weight:700;">Status:</span> <b style="color:#15803d; text-transform:uppercase;">✓ ${esc(cert.status)}</b>
-            </div>
-          </div>
-
-          <p style="font-size:0.95rem; color:#64748b; margin:16px auto; max-width:760px; line-height:1.6;">
-            Authorized to conduct national vocational training, skill certifications, computer applications, and examinations for programs including: <b>${esc(cert.authorized_courses)}</b>.
-          </p>
-
-          <!-- Footer Signatures & Seal -->
-          <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px dashed #cbd5e1; padding-top:28px; margin-top:28px; font-size:0.9rem; color:#475569;">
-            <div style="text-align:center;">
-              <div style="font-weight:700; color:#0a2a5e;">Verified Online</div>
-              <div style="font-size:0.8rem; color:#64748b; font-family:monospace;">pescouncil.in/verify</div>
-              <div style="border-bottom:1.5px solid #334155; width:150px; margin:8px auto 4px;"></div>
-              <span>Council Verification Desk</span>
-            </div>
-
-            <div style="text-align:center;">
-              <div style="width:75px; height:75px; border-radius:50%; border:2px double #d4af37; margin:0 auto 4px; display:grid; place-items:center; background:#fefce8; color:#b45309; font-weight:900; font-size:0.75rem; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                COUNCIL<br>SEAL
-              </div>
-              <span style="font-weight:700; color:#78350f;">Official Seal of PESC</span>
-            </div>
-
-            <div style="text-align:center;">
-              <div style="font-weight:700; color:#0a2a5e;">Authorized Signatory</div>
-              <div style="font-size:0.8rem; color:#64748b;">PES Council, Head Office</div>
-              <div style="border-bottom:1.5px solid #334155; width:170px; margin:8px auto 4px;"></div>
-              <span>Director General / Registrar</span>
-            </div>
-          </div>
-        </div>
+      <div id="printCertArea">
+        ${window.OfficialTemplates && window.OfficialTemplates.renderAffiliationCertificateHtml ? window.OfficialTemplates.renderAffiliationCertificateHtml({ certificate: cert }) : 'Loading Certificate...'}
       </div>
     `;
   }
@@ -4606,7 +4520,11 @@ function initAuthForms() {
 guard(async () => {
   try {
     const meRes = await api('/api/auth/me').catch(() => null);
-    if (!meRes || !meRes.user || !['centre_owner', 'centre_staff', 'super_admin', 'admin', 'coordinator'].includes(meRes.user.role)) {
+    const searchParams = new URLSearchParams(window.location.search);
+    const forceLogin = searchParams.get('login') === '1' || searchParams.get('auth') === '1';
+
+    // If explicit login requested, or if not logged in as centre_owner / centre_staff, show login screen!
+    if (forceLogin || !meRes || !meRes.user || !['centre_owner', 'centre_staff'].includes(meRes.user.role)) {
       showCentreAuthScreen();
       return;
     }

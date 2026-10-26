@@ -579,7 +579,7 @@ const CLEAN_ADMIN_USER = {
 async function syncFromKV(env, force = false) {
   if (!env || !env.PESC_KV) return;
   const now = Date.now();
-  if (!force && kvLoaded && (now - lastKvSync < 5000)) return;
+  if (!force && kvLoaded) return;
   try {
     const currentVersion = await env.PESC_KV.get('data_version');
     if (currentVersion !== DATA_VERSION) {
@@ -1979,6 +1979,8 @@ export default {
             if (body.status !== undefined) targetC.status = String(body.status).trim();
 
             await persistToKV(env, 'centres', store.centres);
+            const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
+            const coordUser = (targetC.assigned_coordinator_id ? store.users.find(u => u.id === targetC.assigned_coordinator_id) : null) || store.users.find(u => u.role === 'coordinator') || {};
             return jsonResponse({
               ok: true,
               message: `Affiliation certificate for ${targetC.name} (${targetC.centre_code}) updated successfully!`,
@@ -1986,6 +1988,7 @@ export default {
                 cert_no: targetC.affiliation_cert_no || `PESC/ATC/2026/${targetC.centre_code}`,
                 centre_code: targetC.centre_code,
                 name: targetC.name,
+                hindi_name: targetC.hindi_name || targetC.name,
                 director_name: targetC.director_name || 'Centre Director',
                 director_photo: targetC.director_photo || targetC.photo_url || '',
                 address: targetC.address || `${targetC.district}, ${targetC.state}`,
@@ -1999,7 +2002,23 @@ export default {
                 session: targetC.affiliation_session || '2026 - 2029 (3 Academic Years)',
                 status: targetC.status || 'active',
                 authorized_courses: targetC.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
-                qr_url: `https://pescouncil.in/verify?code=${targetC.centre_code}`
+                qr_url: `https://pescouncil.in/verify?code=${targetC.centre_code}`,
+                council_seal_url: adminUser.seal_url || null,
+                council_signature_url: adminUser.signature_url || null,
+                coordinator_seal_url: coordUser.seal_url || targetC.coordinator_seal_url || null,
+                coordinator_signature_url: coordUser.signature_url || targetC.coordinator_signature_url || null,
+                coordinator_name: coordUser.name || targetC.coordinator_name || 'Regional Coordinator',
+                coordinator_territory: coordUser.territory || coordUser.state || targetC.state || 'Assigned Territory',
+                head_office: {
+                  seal_url: adminUser.seal_url || null,
+                  signature_url: adminUser.signature_url || null,
+                },
+                coordinator: {
+                  name: coordUser.name || targetC.coordinator_name || 'Regional Coordinator',
+                  seal_url: coordUser.seal_url || targetC.coordinator_seal_url || null,
+                  signature_url: coordUser.signature_url || targetC.coordinator_signature_url || null,
+                  territory: coordUser.territory || coordUser.state || targetC.state || 'Assigned Territory'
+                }
               }
             });
           } catch (err) {
@@ -2007,12 +2026,15 @@ export default {
           }
         }
 
+        const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
+        const coordUser = (targetC.assigned_coordinator_id ? store.users.find(u => u.id === targetC.assigned_coordinator_id) : null) || store.users.find(u => u.role === 'coordinator') || {};
         return jsonResponse({
           ok: true,
           certificate: {
             cert_no: targetC.affiliation_cert_no || `PESC/ATC/2026/${targetC.centre_code}`,
             centre_code: targetC.centre_code,
             name: targetC.name,
+            hindi_name: targetC.hindi_name || targetC.name,
             director_name: targetC.director_name || 'Centre Director',
             director_photo: targetC.director_photo || targetC.photo_url || '',
             address: targetC.address || `${targetC.district}, ${targetC.state}`,
@@ -2026,7 +2048,23 @@ export default {
             session: targetC.affiliation_session || '2026 - 2029 (3 Academic Years)',
             status: targetC.status || 'active',
             authorized_courses: targetC.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
-            qr_url: `https://pescouncil.in/verify?code=${targetC.centre_code}`
+            qr_url: `https://pescouncil.in/verify?code=${targetC.centre_code}`,
+            council_seal_url: adminUser.seal_url || null,
+            council_signature_url: adminUser.signature_url || null,
+            coordinator_seal_url: coordUser.seal_url || targetC.coordinator_seal_url || null,
+            coordinator_signature_url: coordUser.signature_url || targetC.coordinator_signature_url || null,
+            coordinator_name: coordUser.name || targetC.coordinator_name || 'Regional Coordinator',
+            coordinator_territory: coordUser.territory || coordUser.state || targetC.state || 'Assigned Territory',
+            head_office: {
+              seal_url: adminUser.seal_url || null,
+              signature_url: adminUser.signature_url || null,
+            },
+            coordinator: {
+              name: coordUser.name || targetC.coordinator_name || 'Regional Coordinator',
+              seal_url: coordUser.seal_url || targetC.coordinator_seal_url || null,
+              signature_url: coordUser.signature_url || targetC.coordinator_signature_url || null,
+              territory: coordUser.territory || coordUser.state || targetC.state || 'Assigned Territory'
+            }
           }
         });
       }
@@ -2388,6 +2426,7 @@ export default {
       if (path.startsWith('/api/admin/coordinators/') && path.endsWith('/cert')) {
         const coordId = +path.replace('/api/admin/coordinators/', '').replace('/cert', '');
         const coordUser = store.users.find(u => u.id === coordId) || store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'Vikram Singh', email: 'coord@pescouncil.in', state: 'Uttar Pradesh' };
+        const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
         const cert = getOrCreateWorkerCoordCert(coordUser.id, coordUser);
         return jsonResponse({
           certificate: {
@@ -2403,8 +2442,11 @@ export default {
             qualification: coordUser.qualification || 'Post Graduate / MCA',
             territory: coordUser.territory || coordUser.state || 'All Assigned Territories',
             photo_url: coordUser.photo_url || null,
-            seal_url: coordUser.seal_url || null,
-            signature_url: coordUser.signature_url || null,
+            // Head Office Authority Credentials (NOT coordinator's own):
+            seal_url: adminUser.seal_url || null,
+            signature_url: adminUser.signature_url || null,
+            council_seal_url: adminUser.seal_url || null,
+            council_signature_url: adminUser.signature_url || null,
             verification_url: `https://${host}/verify/coordinator/${cert.token}`,
           }
         });
@@ -2414,8 +2456,44 @@ export default {
         return jsonResponse({ applications: store.applications });
       }
 
+      if (path === '/api/admin/headoffice-payment-settings') {
+        if (request.method === 'POST') {
+          const body = await request.json().catch(() => ({}));
+          store.site_settings = store.site_settings || {};
+          if (body.upi_id) store.site_settings.upi_id = String(body.upi_id).trim();
+          if (body.upi_name) store.site_settings.upi_name = String(body.upi_name).trim();
+          if (body.bank_name) store.site_settings.bank_name = String(body.bank_name).trim();
+          if (body.bank_account) store.site_settings.bank_account = String(body.bank_account).trim();
+          if (body.bank_ifsc) store.site_settings.bank_ifsc = String(body.bank_ifsc).trim();
+          if (body.whatsapp_number) store.site_settings.whatsapp_number = String(body.whatsapp_number).trim();
+          if (body.qr_image_url !== undefined) store.site_settings.qr_image_url = String(body.qr_image_url).trim();
+          await persistToKV(env, 'site_settings', store.site_settings);
+          return jsonResponse({ ok: true, message: 'Payment settings updated successfully!', settings: store.site_settings });
+        }
+        const s = store.site_settings || {};
+        return jsonResponse({
+          settings: {
+            upi_id: s.upi_id || 'pescouncil@upi',
+            upi_name: s.upi_name || 'Purvanchal Education & Skill Council',
+            bank_name: s.bank_name || 'State Bank of India',
+            bank_account: s.bank_account || '39820192830',
+            bank_ifsc: s.bank_ifsc || 'SBIN0001234',
+            whatsapp_number: s.whatsapp_number || '+919876543210',
+            qr_image_url: s.qr_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi%3A%2F%2Fpay%3Fpa%3D${encodeURIComponent(s.upi_id || 'pescouncil@upi')}%26pn%3D${encodeURIComponent(s.upi_name || 'PESC')}`
+          }
+        });
+      }
+
       if (path === '/api/admin/wallets') {
-        return jsonResponse({ wallets: store.centres.map(c => ({ id: c.id, centre_code: c.centre_code, centre_name: c.name, balance_paise: 500000 })) });
+        return jsonResponse({
+          wallets: store.centres.map(c => ({
+            id: c.id,
+            centre_code: c.centre_code,
+            centre_name: c.name,
+            balance: c.wallet_balance !== undefined ? c.wallet_balance : (c.wallet_paise ? c.wallet_paise / 100 : 0),
+            balance_paise: c.wallet_paise !== undefined ? c.wallet_paise : (c.wallet_balance ? c.wallet_balance * 100 : 0)
+          }))
+        });
       }
 
       if (path === '/api/admin/notices') {
@@ -3392,6 +3470,7 @@ export default {
       }
       if (path === '/api/coordinator/appointment-cert') {
         const coordUser = store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'Vikram Singh', email: 'coord@pescouncil.in', state: 'Uttar Pradesh' };
+        const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
         const cert = getOrCreateWorkerCoordCert(coordUser.id);
         return jsonResponse({
           certificate: {
@@ -3400,9 +3479,13 @@ export default {
             email: coordUser.email,
             mobile: coordUser.mobile || null,
             photo_url: coordUser.photo_url || null,
-            seal_url: coordUser.seal_url || null,
-            signature_url: coordUser.signature_url || null,
+            // Head Office Authority (Central Governing Board):
+            seal_url: adminUser.seal_url || null,
+            signature_url: adminUser.signature_url || null,
+            council_seal_url: adminUser.seal_url || null,
+            council_signature_url: adminUser.signature_url || null,
             state: coordUser.state || cert.state || 'All Assigned Territories',
+            territory: coordUser.territory || coordUser.state || 'All Assigned Territories',
             verification_url: `https://${host}/verify/coordinator/${cert.token}`,
           }
         });
@@ -3456,8 +3539,8 @@ export default {
           students_count: stus.length,
           courses: store.courses.length,
           today_attendance_pct: 94,
-          wallet_paise: 50000000,
-          wallet_balance_inr: 500000,
+          wallet_paise: c.wallet_paise !== undefined ? c.wallet_paise : ((c.wallet_balance || 0) * 100),
+          wallet_balance_inr: c.wallet_balance !== undefined ? c.wallet_balance : 0,
           fee_paid_rupees: totalPaid,
           fee_pending_rupees: totalPending,
           certificates_count: certs.length,
@@ -3486,9 +3569,23 @@ export default {
               }, 402);
             }
 
-            // Deduct Rs. 35 from centre wallet
+            // Deduct Rs. 35 from centre wallet and record ledger entry
             c.wallet_balance = currentBal - regFeeRupees;
             c.wallet_paise = Math.max(0, ((c.wallet_paise !== undefined ? c.wallet_paise : currentBal * 100) - (regFeeRupees * 100)));
+            if (!Array.isArray(c.wallet_ledger)) c.wallet_ledger = [];
+            c.wallet_ledger.unshift({
+              id: Date.now(),
+              kind: 'debit',
+              type: 'debit',
+              amount: regFeeRupees,
+              amount_paise: regFeeRupees * 100,
+              balance_after: c.wallet_balance,
+              description: `Student Admission Registration Fee (${studentCode} - ${candidateName})`,
+              note: `Student Admission Registration Fee (${studentCode} - ${candidateName})`,
+              reference: studentCode,
+              created_at: Date.now(),
+              date: new Date().toLocaleDateString('en-IN')
+            });
             await persistToKV(env, 'centres', store.centres);
 
             const initialPassword = String(body.password || body.initial_password || 'Student@123').trim();
@@ -3713,6 +3810,20 @@ export default {
       if (targetC) {
         targetC.wallet_balance = (targetC.wallet_balance || 0) + topup.amount_rupees;
         targetC.wallet_paise = (targetC.wallet_paise || 0) + topup.amount_paise;
+        if (!Array.isArray(targetC.wallet_ledger)) targetC.wallet_ledger = [];
+        targetC.wallet_ledger.unshift({
+          id: Date.now(),
+          kind: 'credit',
+          type: 'credit',
+          amount: topup.amount_rupees,
+          amount_paise: topup.amount_paise,
+          balance_after: targetC.wallet_balance,
+          description: `Wallet Top-Up Approved (${topup.payment_mode || 'UPI'} - ${topup.utr_number || 'Direct'})`,
+          note: `Wallet Top-Up Approved (${topup.payment_mode || 'UPI'} - ${topup.utr_number || 'Direct'})`,
+          reference: topup.utr_number || `TOPUP-${topup.id}`,
+          created_at: Date.now(),
+          date: new Date().toLocaleDateString('en-IN')
+        });
         await persistToKV(env, 'centres', store.centres);
       }
       await persistToKV(env, 'wallet_topups', store.wallet_topups);
@@ -3741,6 +3852,20 @@ export default {
           targetC.wallet_balance = (targetC.wallet_balance || 0) + amt;
           targetC.wallet_paise = (targetC.wallet_paise || 0) + (amt * 100);
         }
+        if (!Array.isArray(targetC.wallet_ledger)) targetC.wallet_ledger = [];
+        targetC.wallet_ledger.unshift({
+          id: Date.now(),
+          kind: body.kind === 'debit' ? 'debit' : 'credit',
+          type: body.kind === 'debit' ? 'debit' : 'credit',
+          amount: amt,
+          amount_paise: amt * 100,
+          balance_after: targetC.wallet_balance,
+          description: body.reason || `Head Office Manual Wallet Adjustment (${body.kind.toUpperCase()})`,
+          note: body.reason || `Head Office Manual Wallet Adjustment (${body.kind.toUpperCase()})`,
+          reference: `ADJ-${Date.now()}`,
+          created_at: Date.now(),
+          date: new Date().toLocaleDateString('en-IN')
+        });
         await persistToKV(env, 'centres', store.centres);
         return jsonResponse({ ok: true, balance: targetC.wallet_balance, message: `Wallet adjusted successfully! Current balance: ₹${targetC.wallet_balance}` });
       }
@@ -3748,17 +3873,17 @@ export default {
     }
 
     if (path === '/api/centre/wallet') {
-        const bal = c.wallet_balance !== undefined ? c.wallet_balance : 5000;
-        return jsonResponse({
-          ok: true,
-          balance: bal,
-          wallet_balance: bal,
-          balance_paise: bal * 100,
-          ledger: [
-            { id: 1, type: 'credit', amount: 5000, balance_after: bal, note: 'Initial Franchise Wallet Credit by Head Office', date: '2026-10-19' }
-          ]
-        });
-      }
+      const bal = c.wallet_balance !== undefined ? c.wallet_balance : 0;
+      const balPaise = c.wallet_paise !== undefined ? c.wallet_paise : (bal * 100);
+      const ledger = Array.isArray(c.wallet_ledger) ? c.wallet_ledger : [];
+      return jsonResponse({
+        ok: true,
+        balance: bal,
+        wallet_balance: bal,
+        balance_paise: balPaise,
+        ledger: ledger
+      });
+    }
 
       if (path === '/api/centre/centres') {
         return jsonResponse({ ok: true, centres: store.centres });
@@ -3995,27 +4120,49 @@ export default {
         const coord = store.users.find(u => u.role === 'coordinator' && (u.id === c.assigned_coordinator_id || u.state === c.state)) || store.users.find(u => u.role === 'coordinator') || {};
         const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
         return jsonResponse({
+          ok: true,
           certificate: {
             cert_no: c.affiliation_cert_no || `PESC-AFF-2026-${String(c.id).padStart(4, '0')}`,
+            name: c.name,
             centre_name: c.name,
             hindi_name: c.hindi_name || c.name,
             centre_code: c.centre_code,
             slug: c.slug,
             director_name: c.director_name,
             director_photo: c.director_photo || c.photo_url || '',
+            photo_url: c.director_photo || c.photo_url || '',
             state: c.state,
             district: c.district,
             address: c.address,
+            pin: c.pin || '221001',
             phone: c.phone,
             email: c.email,
-            issue_date: c.affiliation_issue_date || '01-04-2026',
-            valid_thru: c.affiliation_valid_thru || '31-03-2028',
-            session: c.affiliation_session || '2026-2028',
+            issue_date: c.affiliation_issue_date || '01 April 2026',
+            valid_thru: c.affiliation_valid_thru || '31 March 2029',
+            session: c.affiliation_session || '2026 - 2029 (3 Academic Years)',
+            authorized_courses: c.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
+            status: c.status || 'active',
             coordinator_name: coord.name || 'Regional Coordinator',
-            coordinator_seal: coord.seal_url || c.coordinator_seal_url || '/assets/img/seal_coordinator.svg',
-            coordinator_signature: coord.signature_url || c.coordinator_signature_url || '/assets/img/sign_coordinator.svg',
-            head_office_seal: adminUser.seal_url || '/assets/img/seal_council_head.svg',
-            head_office_signature: adminUser.signature_url || '/assets/img/sign_council_head.svg',
+            coordinator_seal: coord.seal_url || c.coordinator_seal_url || null,
+            coordinator_seal_url: coord.seal_url || c.coordinator_seal_url || null,
+            coordinator_signature: coord.signature_url || c.coordinator_signature_url || null,
+            coordinator_signature_url: coord.signature_url || c.coordinator_signature_url || null,
+            coordinator_territory: coord.territory || coord.state || c.state || 'Assigned Territory',
+            council_seal_url: adminUser.seal_url || null,
+            council_signature_url: adminUser.signature_url || null,
+            head_office_seal: adminUser.seal_url || null,
+            head_office_signature: adminUser.signature_url || null,
+            head_office: {
+              seal_url: adminUser.seal_url || null,
+              signature_url: adminUser.signature_url || null,
+            },
+            coordinator: {
+              name: coord.name || 'Regional Coordinator',
+              seal_url: coord.seal_url || c.coordinator_seal_url || null,
+              signature_url: coord.signature_url || c.coordinator_signature_url || null,
+              territory: coord.territory || coord.state || c.state || 'Assigned Territory'
+            },
+            qr_url: `https://pescouncil.in/verify?code=${c.centre_code}`,
             verification_url: `https://${host}/verify/centre/${c.centre_code}`
           }
         });

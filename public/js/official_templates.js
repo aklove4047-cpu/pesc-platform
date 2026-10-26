@@ -864,12 +864,322 @@
     `;
   }
 
+  // =========================================================================
+  // TEMPLATE 5: AFFILIATION CERTIFICATE (Authorized Training Centre)
+  // =========================================================================
+  function renderAffiliationCertificateHtml(data) {
+    const cert = data.certificate || data.cert || data || {};
+    const centreHindi = cert.hindi_name || cert.name || 'प्रीति इंस्टीट्यूट ऑफ टेक्नोलॉजी';
+    const centreEnglish = (cert.name || 'PREETI INSTITUTE OF TECHNOLOGY').toUpperCase();
+    const certNo = cert.cert_no || cert.affiliation_cert_no || `PESC-AFF-2026-${cert.centre_code || '0001'}`;
+    const centreCode = cert.centre_code || 'PESC00001';
+    const directorName = cert.director_name || 'Centre Director';
+    const directorPhoto = cert.director_photo || cert.photo_url || '';
+    const address = cert.address || `${cert.district || 'Azamgarh'}, ${cert.state || 'Uttar Pradesh'}`;
+    const session = cert.session || cert.affiliation_session || '2026 - 2029 (3 Academic Years)';
+    const status = cert.status || 'Active';
+    const authorizedCourses = cert.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Nursery Teacher Training (NTT), Web Development, Graphic Design, Hardware & Networking';
+
+    const councilSeal = cert.council_seal_url || SEALS.councilSeal;
+    const councilSign = cert.council_signature_url || SEALS.councilSign;
+    const coordSeal = cert.coordinator_seal_url || SEALS.coordinatorSeal;
+    const coordSign = cert.coordinator_signature_url || SEALS.coordinatorSign;
+    const coordName = cert.coordinator_name || 'Regional Coordinator';
+    const coordTerritory = cert.coordinator_territory || cert.state || 'Uttar Pradesh';
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=https%3A%2F%2Fpescouncil.in%2Fverify%3Fcode%3D${encodeURIComponent(centreCode)}`;
+
+    return `
+      <div class="official-affiliation-certificate printable-area" style="width:100%; max-width:860px; margin:0 auto; background:#ffffff; border:8px double #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:26px 30px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 12px 36px rgba(0,0,0,0.15);">
+        
+        <!-- Watermark Background -->
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0.035; z-index:0;">
+          <img src="${councilSeal}" style="width:420px; height:420px;">
+        </div>
+
+        <div style="position:relative; z-index:1;">
+          <!-- Top Header -->
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #d4af37; padding-bottom:14px; margin-bottom:14px;">
+            <div style="text-align:left;">
+              <span style="font-size:0.75rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Govt. Recognized Autonomy</span>
+              <div style="font-size:0.85rem; color:#08244c; font-weight:900;">ISO 9001:2015 Certified</div>
+              <div style="font-size:0.75rem; color:#047857; font-weight:800;">NITI Aayog Registered</div>
+            </div>
+            
+            <div style="text-align:center;">
+              <div style="width:62px; height:62px; margin:0 auto 4px; display:flex; align-items:center; justify-content:center;">
+                <img src="${councilSeal}" style="width:60px; height:60px; object-fit:contain;">
+              </div>
+              <h2 style="margin:0; font-size:1.45rem; color:#08244c; letter-spacing:0.5px; font-weight:900; text-transform:uppercase;">
+                PURVANCHAL EDUCATION &amp; SKILL COUNCIL
+              </h2>
+              <div style="font-size:1.05rem; color:#854d0e; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; font-weight:900; margin-top:2px;">
+                पूर्वांचल शिक्षा एवं कौशल परिषद
+              </div>
+              <div style="font-size:0.75rem; color:#475569; font-weight:700; margin-top:2px;">
+                Autonomous National Council for Vocational &amp; Technical Education
+              </div>
+            </div>
+
+            <div style="text-align:right;">
+              <span style="font-size:0.75rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">ATC Accredit No.</span>
+              <div style="font-size:0.92rem; color:#854d0e; font-family:monospace; font-weight:900;">${esc(certNo)}</div>
+              <div style="margin-top:4px;">
+                <span style="background:#15803d; color:#ffffff; font-size:0.72rem; padding:3px 8px; border-radius:4px; font-weight:800;">✓ AUTHORIZED MANDATE</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3D Golden Ribbon: CERTIFICATE OF AFFILIATION -->
+          ${render3DGoldRibbon('CERTIFICATE', 'OF AFFILIATION')}
+          <div style="text-align:center; font-size:0.95rem; color:#854d0e; font-weight:800; margin:4px 0 14px;">
+            (सम्बद्धता एवं मान्यता प्रमाण पत्र)
+          </div>
+
+          <!-- Preamble -->
+          <p style="font-size:0.92rem; color:#334155; line-height:1.6; margin:0 auto 14px; text-align:center; max-width:760px;">
+            This is to officially certify that the educational institution named below has met the council's academic infrastructure, faculty, and operational standards and is hereby granted official status as an <b>Authorized Training Centre (ATC)</b>:
+          </p>
+
+          <!-- Centre Details Box -->
+          <div style="margin:14px auto; padding:16px 20px; background:#f0fdf4; border:2px solid #86efac; border-radius:12px; display:flex; align-items:center; gap:20px; box-shadow:0 3px 10px rgba(0,0,0,0.04);">
+            <div style="width:95px; height:118px; border:2.5px solid #d4af37; border-radius:6px; overflow:hidden; background:#ffffff; flex-shrink:0; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px rgba(0,0,0,0.12);">
+              ${directorPhoto ? `<img src="${directorPhoto}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="font-size:0.68rem; font-weight:800; color:#64748b; text-align:center; padding:4px;">DIRECTOR<br>PHOTO</div>`}
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:1.45rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.2;">
+                ${esc(centreHindi)}
+              </div>
+              <div style="font-size:1.15rem; font-weight:900; color:#064e3b; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">
+                ${esc(centreEnglish)}
+              </div>
+              <div style="font-size:0.86rem; color:#0f172a; margin-top:4px;">
+                <b>Director / Incharge:</b> <span style="color:#08244c; font-weight:800;">${esc(directorName)}</span>
+              </div>
+              <div style="font-size:0.82rem; color:#475569; margin-top:2px; line-height:1.4;">
+                <b>Centre Address:</b> ${esc(address)}
+              </div>
+            </div>
+          </div>
+
+          <!-- Meta Grid -->
+          <div style="display:flex; justify-content:center; gap:14px; margin:14px 0; flex-wrap:wrap;">
+            <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 16px; border-radius:8px; font-size:0.85rem;">
+              <span style="color:#92400e; font-weight:800;">Centre Code:</span> <b style="font-family:monospace; color:#78350f; font-size:0.95rem;">${esc(centreCode)}</b>
+            </div>
+            <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 16px; border-radius:8px; font-size:0.85rem;">
+              <span style="color:#92400e; font-weight:800;">Affiliation Period:</span> <b style="color:#78350f;">${esc(session)}</b>
+            </div>
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:6px 16px; border-radius:8px; font-size:0.85rem;">
+              <span style="color:#166534; font-weight:800;">Status:</span> <b style="color:#15803d; text-transform:uppercase;">✓ ${esc(status)}</b>
+            </div>
+          </div>
+
+          <!-- Authorized Courses -->
+          <p style="font-size:0.82rem; color:#475569; text-align:center; margin:10px auto; max-width:760px; line-height:1.5;">
+            Authorized to conduct national vocational training, skill certifications, and examinations for accredited courses:<br>
+            <b style="color:#08244c;">${esc(authorizedCourses)}</b>.
+          </p>
+
+          <!-- Bottom Row: Regional Coordinator + Council Seal/QR + Head Office Signatory -->
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px dashed #cbd5e1; padding-top:16px; margin-top:16px; font-size:0.78rem;">
+            <!-- Left: Regional Coordinator -->
+            <div style="text-align:center; width:220px;">
+              <div style="height:62px; position:relative; display:flex; align-items:center; justify-content:center;">
+                <img src="${coordSeal}" style="width:60px; height:60px; position:absolute; opacity:0.85;">
+                <img src="${coordSign}" style="width:85px; position:relative; z-index:2;">
+              </div>
+              <div style="border-top:1.5px solid #0f172a; padding-top:4px; font-weight:800; color:#08244c;">
+                Signature &amp; Stamp<br>Regional Coordinator (${esc(coordTerritory)})
+              </div>
+            </div>
+
+            <!-- Center: Council Seal & Verification QR -->
+            <div style="text-align:center; width:180px;">
+              <img src="${qrUrl}" style="width:62px; height:62px; border:1px solid #08244c; padding:2px; background:#fff; display:block; margin:0 auto 4px;">
+              <div style="font-size:0.68rem; font-weight:800; color:#08244c;">
+                Scan to Verify Online<br><span style="color:#64748b; font-family:monospace;">pescouncil.in/verify</span>
+              </div>
+            </div>
+
+            <!-- Right: Head Office Director General / Registrar -->
+            <div style="text-align:center; width:220px;">
+              <div style="height:62px; position:relative; display:flex; align-items:center; justify-content:center;">
+                <img src="${councilSeal}" style="width:60px; height:60px; position:absolute; opacity:0.85;">
+                <img src="${councilSign}" style="width:85px; position:relative; z-index:2;">
+              </div>
+              <div style="border-top:1.5px solid #0f172a; padding-top:4px; font-weight:800; color:#08244c;">
+                Director General / Controller<br>Purvanchal Education &amp; Skill Council
+              </div>
+            </div>
+          </div>
+
+          ${renderAccreditationBadgesHtml()}
+        </div>
+      </div>
+    `;
+  }
+
+  // =========================================================================
+  // TEMPLATE 6: REGIONAL COORDINATOR APPOINTMENT CERTIFICATE
+  // =========================================================================
+  function renderCoordinatorAppointmentCertificateHtml(data) {
+    const cert = data.certificate || data.cert || data || {};
+    const name = cert.name || 'Ayush';
+    const certNo = cert.cert_no || `PESC/COORD/2026/${String(cert.id || '0001').padStart(4, '0')}`;
+    const territory = cert.territory || cert.state || 'All Assigned Territories';
+    const qualification = cert.qualification || 'Higher Academic / Professional';
+    const aadharNo = cert.aadhar_no || 'Verified on Record';
+    const mobile = cert.mobile || '—';
+    const address = cert.address ? `${cert.address}, ${cert.district || ''}, ${cert.state || ''} - ${cert.pin || ''}` : (cert.state || 'Uttar Pradesh, India');
+    const photoUrl = cert.photo_url || '';
+    const issueDateStr = cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '01 April 2026';
+    const validUntilStr = cert.valid_until ? new Date(cert.valid_until).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '31 March 2029';
+
+    // Must be Head Office Seal and Head Office Director General Signature (NOT Coordinator's own signature)
+    const councilSeal = cert.council_seal_url || SEALS.councilSeal;
+    const councilSign = cert.council_signature_url || SEALS.councilSign;
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=https%3A%2F%2Fpescouncil.in%2Fverify%2Fcoordinator%2F${encodeURIComponent(cert.token || 'valid')}`;
+
+    return `
+      <div class="official-coord-certificate printable-area" style="width:100%; max-width:860px; margin:0 auto; background:#ffffff; border:8px double #d4af37; outline:3px solid #08244c; outline-offset:-5px; padding:26px 32px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 12px 36px rgba(0,0,0,0.15);">
+        
+        <!-- Watermark Background -->
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0.035; z-index:0;">
+          <img src="${councilSeal}" style="width:420px; height:420px;">
+        </div>
+
+        <div style="position:relative; z-index:1;">
+          <!-- Top Header -->
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #d4af37; padding-bottom:14px; margin-bottom:14px;">
+            <div style="text-align:left;">
+              <span style="font-size:0.75rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Govt. Recognized Autonomy</span>
+              <div style="font-size:0.85rem; color:#08244c; font-weight:900;">ISO 9001:2015 Certified</div>
+              <div style="font-size:0.75rem; color:#047857; font-weight:800;">NITI Aayog Registered</div>
+            </div>
+            
+            <div style="text-align:center;">
+              <div style="width:62px; height:62px; margin:0 auto 4px; display:flex; align-items:center; justify-content:center;">
+                <img src="${councilSeal}" style="width:60px; height:60px; object-fit:contain;">
+              </div>
+              <h2 style="margin:0; font-size:1.45rem; color:#08244c; letter-spacing:0.5px; font-weight:900; text-transform:uppercase;">
+                PURVANCHAL EDUCATION &amp; SKILL COUNCIL
+              </h2>
+              <div style="font-size:1.05rem; color:#854d0e; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; font-weight:900; margin-top:2px;">
+                पूर्वांचल शिक्षा एवं कौशल परिषद
+              </div>
+              <div style="font-size:0.75rem; color:#475569; font-weight:700; margin-top:2px;">
+                Autonomous National Council for Vocational &amp; Technical Education
+              </div>
+            </div>
+
+            <div style="text-align:right;">
+              <span style="font-size:0.75rem; color:#64748b; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Certificate No.</span>
+              <div style="font-size:0.92rem; color:#854d0e; font-family:monospace; font-weight:900;">${esc(certNo)}</div>
+              <div style="margin-top:4px;">
+                <span style="background:#15803d; color:#ffffff; font-size:0.72rem; padding:3px 8px; border-radius:4px; font-weight:800;">✓ AUTHORIZED MANDATE</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3D Golden Ribbon: REGIONAL COORDINATOR APPOINTMENT CERTIFICATE -->
+          ${render3DGoldRibbon('REGIONAL COORDINATOR', 'APPOINTMENT CERTIFICATE')}
+          <div style="text-align:center; font-size:0.95rem; color:#854d0e; font-weight:800; margin:4px 0 14px;">
+            (क्षेत्रीय / राज्य समन्वयक नियुक्ति प्रमाण पत्र)
+          </div>
+
+          <!-- Preamble -->
+          <p style="font-size:0.92rem; color:#334155; line-height:1.6; margin:0 auto 14px; text-align:center; max-width:760px;">
+            By virtue of the powers vested in the Central Governing Board of <b>Purvanchal Education &amp; Skill Council</b>, this is to officially proclaim that having met all institutional standards and executive criteria:
+          </p>
+
+          <!-- Coordinator Profile Box -->
+          <div style="margin:14px auto; padding:18px 22px; background:#f0fdf4; border:2px solid #86efac; border-radius:12px; display:flex; align-items:flex-start; gap:20px; box-shadow:0 3px 10px rgba(0,0,0,0.04);">
+            <div style="width:105px; height:125px; border:2.5px solid #d4af37; border-radius:6px; overflow:hidden; background:#ffffff; flex-shrink:0; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px rgba(0,0,0,0.12);">
+              ${photoUrl ? `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="font-size:3rem;">👔</div>`}
+            </div>
+            <div style="flex:1;">
+              <h2 style="margin:0; font-size:1.6rem; color:#064e3b; font-weight:900;">${esc(name)}</h2>
+              <div style="font-size:0.98rem; color:#08244c; font-weight:800; margin-top:2px;">
+                Designation: Regional / State Coordinator (क्षेत्रीय / राज्य समन्वयक)
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; margin-top:10px; font-size:0.84rem; color:#1e293b;">
+                <div><b>Assigned Territory:</b> <span style="color:#b45309; font-weight:800;">${esc(territory)}</span></div>
+                <div><b>Qualification:</b> <span style="font-weight:700;">${esc(qualification)}</span></div>
+                <div><b>Aadhaar / Gov ID:</b> <span style="font-family:monospace; font-weight:800; color:#0369a1;">${esc(aadharNo)}</span></div>
+                <div><b>Official Contact:</b> <span style="font-weight:700;">${esc(mobile)}</span></div>
+                <div style="grid-column:1 / -1; margin-top:2px;">
+                  <b>Official Residential / Office Address:</b><br>
+                  <span style="color:#334155; line-height:1.4;">${esc(address)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Authority Mandate -->
+          <p style="font-size:0.84rem; color:#475569; text-align:justify; margin:12px auto; max-width:760px; line-height:1.5;">
+            The designated coordinator is officially authorized and mandated to oversee authorized training centre accreditations, supervise academic examinations, verify candidate credentials, coordinate student enrolments, and represent the council in academic and promotional engagements across the assigned jurisdiction.
+          </p>
+
+          <!-- Meta Grid -->
+          <div style="display:flex; justify-content:center; gap:14px; margin:14px 0; flex-wrap:wrap;">
+            <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 16px; border-radius:8px; font-size:0.85rem;">
+              <span style="color:#92400e; font-weight:800;">Issue Date:</span> <b style="color:#78350f;">${issueDateStr}</b>
+            </div>
+            <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 16px; border-radius:8px; font-size:0.85rem;">
+              <span style="color:#92400e; font-weight:800;">Tenure / Validity:</span> <b style="color:#78350f;">${validUntilStr}</b>
+            </div>
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:6px 16px; border-radius:8px; font-size:0.85rem;">
+              <span style="color:#166534; font-weight:800;">Council Registry:</span> <b style="color:#15803d;">Active &amp; Verified</b>
+            </div>
+          </div>
+
+          <!-- Bottom Signatures: Head Office Authority ONLY -->
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px dashed #cbd5e1; padding-top:18px; margin-top:18px; font-size:0.82rem;">
+            <!-- Left: QR Code -->
+            <div style="text-align:center; width:180px;">
+              <img src="${qrUrl}" style="width:70px; height:70px; border:1px solid #08244c; padding:2px; background:#fff; display:block; margin:0 auto 4px;">
+              <div style="font-size:0.7rem; font-weight:800; color:#08244c;">
+                Scan to Verify Mandate<br><span style="color:#64748b; font-family:monospace;">pescouncil.in/verify</span>
+              </div>
+            </div>
+
+            <!-- Center: Head Office Council Mohar (Central Seal) -->
+            <div style="text-align:center; width:200px;">
+              <div style="height:65px; display:flex; align-items:center; justify-content:center;">
+                <img src="${councilSeal}" style="width:65px; height:65px; object-fit:contain;">
+              </div>
+              <div style="font-weight:800; color:#854d0e; margin-top:4px;">
+                Official Central Council Seal
+              </div>
+            </div>
+
+            <!-- Right: Head Office Director General / Registrar Signature -->
+            <div style="text-align:center; width:230px;">
+              <div style="height:65px; display:flex; align-items:center; justify-content:center;">
+                <img src="${councilSign}" style="width:95px; object-fit:contain;">
+              </div>
+              <div style="border-top:1.5px solid #0f172a; padding-top:4px; font-weight:800; color:#08244c;">
+                Director General / Registrar<br>Purvanchal Education &amp; Skill Council
+              </div>
+            </div>
+          </div>
+
+          ${renderAccreditationBadgesHtml()}
+        </div>
+      </div>
+    `;
+  }
+
   // Export
   global.OfficialTemplates = {
     renderAdmissionFormHtml,
     renderCertificateHtml,
     renderMarksheetHtml,
     renderStudentIdCardHtml,
+    renderAffiliationCertificateHtml,
+    renderCoordinatorAppointmentCertificateHtml,
     renderAccreditationBadgesHtml
   };
 

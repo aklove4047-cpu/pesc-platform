@@ -1453,15 +1453,16 @@ const views = {
   },
 
   async Wallets() {
-    const [{ wallets = [] }, { requests = [] }, { settings = {} }] = await Promise.all([
-      api('/api/admin/wallets'),
-      api('/api/admin/wallet-topups'),
-      api('/api/admin/headoffice-payment-settings')
+    const [{ wallets = [] }, { requests = [] }, paymentRes = {}] = await Promise.all([
+      api('/api/admin/wallets').catch(() => ({ wallets: [] })),
+      api('/api/admin/wallet-topups').catch(() => ({ requests: [] })),
+      api('/api/admin/headoffice-payment-settings').catch(() => ({ settings: {} }))
     ]);
+    const settings = paymentRes.settings || {};
 
-    const pendingRequests = requests.filter(r => r.status === 'pending');
-    const totalPendingPaise = pendingRequests.reduce((sum, r) => sum + (r.amount_paise || 0), 0);
-    const totalWalletsPaise = wallets.reduce((sum, w) => sum + (w.balance_paise || 0), 0);
+    const pendingRequests = requests.filter(r => String(r.status || '').toLowerCase() === 'pending');
+    const totalPendingPaise = pendingRequests.reduce((sum, r) => sum + (r.amount_paise || (r.amount_rupees ? r.amount_rupees * 100 : 0) || 0), 0);
+    const totalWalletsPaise = wallets.reduce((sum, w) => sum + (w.balance_paise || (w.balance ? w.balance * 100 : 0) || 0), 0);
 
     V.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
@@ -1815,92 +1816,16 @@ async function showAffiliationCertModal(cId) {
   const cert = res.certificate || {};
 
   showModal(`📜 Affiliation Certificate - ${cert.centre_code}`, `
-    <div style="background:#f8fafc; padding:20px; text-align:center;">
-      <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+    <div style="background:#f8fafc; padding:16px; text-align:center;">
+      <div class="no-print" style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <button type="button" onclick="showEditAffiliationCertModal(${cId})" class="btn sm" style="font-weight:700; background:#0284c7; color:#fff; border:none; cursor:pointer; padding:7px 14px; border-radius:6px;">✏️ Edit Certificate Details</button>
         <button type="button" onclick="window.print()" class="btn gold sm" style="font-weight:700; padding:7px 14px;">🖨️ Print Official Certificate</button>
       </div>
-      <div style="border: 6px double #d4af37; outline: 2px solid #b45309; outline-offset: 4px; border-radius: 12px; padding: 32px 36px; background: radial-gradient(circle, #ffffff 60%, #fffdf0 100%); position:relative; box-shadow:0 10px 25px rgba(212,175,55,0.15); text-align:center;">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #d4af37; padding-bottom: 14px; margin-bottom: 18px;">
-          <div style="text-align:left;">
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">Govt. Recognized Autonomy</span>
-            <div style="font-size:0.8rem; color:#0a2a5e; font-weight:700;">ISO 9001:2015 Certified</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="width:58px; height:58px; border-radius:50%; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#fde047; font-size:1.8rem; font-weight:900; display:grid; place-items:center; margin:0 auto 4px; border:2px solid #d4af37;">P</div>
-            <h2 style="margin:0; font-size:1.35rem; color:#0a2a5e; letter-spacing:0.5px; font-weight:800;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h2>
-            <div style="font-size:0.9rem; color:#b45309; font-weight:700;">पूर्वांचल शिक्षा एवं कौशल परिषद</div>
-          </div>
-          <div style="text-align:right;">
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase;">ATC Accredit No.</span>
-            <div style="font-size:0.85rem; color:#b45309; font-family:monospace; font-weight:800;">${esc(cert.cert_no)}</div>
-          </div>
-        </div>
-
-        <h1 style="color:#0a2a5e; font-size:1.7rem; margin:14px 0 4px; text-transform:uppercase; letter-spacing:1px; font-family:serif;">Certificate of Affiliation</h1>
-        <div style="font-size:0.92rem; color:#78350f; font-weight:600; margin-bottom:16px;">(सम्बद्धता एवं मान्यता प्रमाण पत्र)</div>
-
-        <p style="font-size:1rem; color:#475569; line-height:1.6; margin:0 auto 14px; max-width:720px;">
-          This is to officially certify that the educational institution named below has met the council's academic infrastructure, faculty, and operational standards and is hereby granted official status as an <b>Authorized Training Centre (ATC)</b>:
-        </p>
-
-        <div style="margin:16px 0; padding:16px 20px; background:#f0fdf4; border:2px solid #86efac; border-radius:8px; display:inline-block; min-width:70%;">
-          <div style="display:flex; align-items:center; justify-content:center; gap:20px; text-align:left; flex-wrap:wrap;">
-            ${cert.director_photo ? `
-              <div style="text-align:center; flex-shrink:0;">
-                <img src="${cert.director_photo}" style="width:85px; height:105px; object-fit:cover; border:2px solid #b45309; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.12); display:block; margin:0 auto 4px;" alt="Director Photo">
-                <div style="font-size:0.7rem; color:#78350f; font-weight:700; text-transform:uppercase;">Director Photo</div>
-              </div>
-            ` : `
-              <div style="width:85px; height:105px; border:2px dashed #94a3b8; border-radius:6px; display:grid; place-items:center; background:#f8fafc; color:#94a3b8; font-size:0.72rem; text-align:center; padding:4px; flex-shrink:0;">
-                No Photo<br><span style="font-size:0.65rem; color:#0284c7;">(Click Edit)</span>
-              </div>
-            `}
-            <div style="flex:1; min-width:240px;">
-              <h2 style="margin:0; font-size:1.45rem; color:#064e3b; font-weight:800; letter-spacing:0.5px;">${esc(cert.name)}</h2>
-              <div style="font-size:0.95rem; color:#0f172a; margin-top:4px; font-weight:600;">Director / Incharge: <span style="color:#0a2a5e;">${esc(cert.director_name)}</span></div>
-              <div style="font-size:0.86rem; color:#475569; margin-top:2px;">Address: ${esc(cert.address)}</div>
-            </div>
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:center; gap:16px; margin:14px 0; flex-wrap:wrap;">
-          <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 14px; border-radius:6px; font-size:0.88rem;">
-            <span style="color:#92400e; font-weight:700;">Centre Code:</span> <b style="font-family:monospace; color:#78350f; font-size:1rem;">${esc(cert.centre_code)}</b>
-          </div>
-          <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 14px; border-radius:6px; font-size:0.88rem;">
-            <span style="color:#92400e; font-weight:700;">Affiliation Period:</span> <b style="color:#78350f;">${esc(cert.session)}</b>
-          </div>
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:6px 14px; border-radius:6px; font-size:0.88rem;">
-            <span style="color:#166534; font-weight:700;">Status:</span> <b style="color:#15803d; text-transform:uppercase;">✓ ${esc(cert.status)}</b>
-          </div>
-        </div>
-
-        <p style="font-size:0.85rem; color:#64748b; margin:10px auto; max-width:700px; line-height:1.5;">
-          Authorized to conduct national vocational training, skill certifications, and examinations for courses: <b>${esc(cert.authorized_courses)}</b>.
-        </p>
-
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px dashed #cbd5e1; padding-top:20px; margin-top:20px; font-size:0.82rem; color:#475569;">
-          <div style="text-align:center;">
-            <div style="font-weight:700; color:#0a2a5e;">Verified Online</div>
-            <div style="font-size:0.75rem; color:#64748b; font-family:monospace;">pescouncil.in/verify</div>
-            <div style="border-bottom:1.5px solid #334155; width:130px; margin:6px auto 3px;"></div>
-            <span>Council Verification Desk</span>
-          </div>
-          <div style="text-align:center;">
-            <div style="width:60px; height:60px; border-radius:50%; border:2px double #d4af37; margin:0 auto 3px; display:grid; place-items:center; background:#fefce8; color:#b45309; font-weight:900; font-size:0.65rem;">COUNCIL<br>SEAL</div>
-            <span style="font-weight:700; color:#78350f;">Official Seal of PESC</span>
-          </div>
-          <div style="text-align:center;">
-            <div style="font-weight:700; color:#0a2a5e;">Authorized Signatory</div>
-            <div style="font-size:0.75rem; color:#64748b;">PES Council, Head Office</div>
-            <div style="border-bottom:1.5px solid #334155; width:150px; margin:6px auto 3px;"></div>
-            <span>Director General / Registrar</span>
-          </div>
-        </div>
+      <div id="printCertArea">
+        ${window.OfficialTemplates && window.OfficialTemplates.renderAffiliationCertificateHtml ? window.OfficialTemplates.renderAffiliationCertificateHtml({ certificate: cert }) : 'Loading Certificate...'}
       </div>
     </div>
-  `, null, '800px');
+  `, null, '920px');
 }
 
 async function showEditAffiliationCertModal(cId) {
@@ -2578,16 +2503,11 @@ function showAdminCoordCertModal(cert) {
   const existing = $('#coordCertModal');
   if (existing) existing.remove();
 
-  const issueDateStr = cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '01 April 2026';
-  const validUntilStr = cert.valid_until ? new Date(cert.valid_until).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '31 March 2029';
-  const verifyUrl = cert.verification_url || `https://pescouncil.in/verify/coordinator/${cert.token || 'valid'}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(verifyUrl)}`;
-
   const modal = document.createElement('div');
   modal.id = 'coordCertModal';
   modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; overflow-y:auto;';
   modal.innerHTML = `
-    <div style="background:#fff; border-radius:14px; max-width:980px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 50px rgba(0,0,0,0.3); position:relative;">
+    <div style="background:#fff; border-radius:14px; max-width:940px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 50px rgba(0,0,0,0.3); position:relative;">
       <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
         <div>
           <h3 style="margin:0; color:#0f172a;">Regional Coordinator Appointment Certificate</h3>
@@ -2598,126 +2518,8 @@ function showAdminCoordCertModal(cert) {
           <button class="btn sm danger" onclick="$('#coordCertModal').remove()">✕ Close</button>
         </div>
       </div>
-
-      <div id="printCertArea" style="border: 8px double #d4af37; outline: 3px solid #b45309; outline-offset: 6px; border-radius: 14px; padding: 36px 44px; background: radial-gradient(circle, #ffffff 50%, #fffdf2 100%); position:relative; box-shadow:0 12px 36px rgba(212,175,55,0.18); text-align:center; color:#1e293b;">
-        <!-- Watermark -->
-        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0.035; pointer-events:none; font-size:24rem; font-weight:900; color:#0a2a5e;">P</div>
-
-        <!-- Top Emblem & Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #d4af37; padding-bottom: 16px; margin-bottom: 22px;">
-          <div style="text-align:left;">
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Govt. Recognized Autonomy</span>
-            <div style="font-size:0.85rem; color:#0a2a5e; font-weight:700;">ISO 9001:2015 Certified</div>
-            <div style="font-size:0.75rem; color:#64748b;">NITI Aayog Registered</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="width:68px; height:68px; border-radius:50%; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#fde047; font-size:2.2rem; font-weight:900; display:grid; place-items:center; margin:0 auto 6px; border:3px solid #d4af37; box-shadow:0 4px 12px rgba(0,0,0,0.15);">P</div>
-            <h2 style="margin:0; font-size:1.6rem; color:#0a2a5e; letter-spacing:0.5px; font-weight:800; text-transform:uppercase;">PURVANCHAL EDUCATION &amp; SKILL COUNCIL</h2>
-            <div style="font-size:1.05rem; color:#b45309; font-weight:700; margin-top:2px;">पूर्वांचल शिक्षा एवं कौशल परिषद</div>
-            <div style="font-size:0.8rem; color:#475569; font-weight:600; margin-top:2px; letter-spacing:0.3px;">Autonomous National Council for Vocational &amp; Technical Education</div>
-          </div>
-          <div style="text-align:right;">
-            <span style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Certificate No.</span>
-            <div style="font-size:0.95rem; color:#b45309; font-family:monospace; font-weight:800;">${esc(cert.cert_no || 'PESC/COORD/2026/0001')}</div>
-            <div style="margin-top:4px;">
-              <span class="badge active" style="font-size:0.75rem; background:#15803d; color:#fff; padding:3px 8px; border-radius:4px; font-weight:700;">✓ AUTHORIZED MANDATE</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Certificate Title -->
-        <h1 style="color:#0a2a5e; font-size:2rem; margin:12px 0 4px; text-transform:uppercase; letter-spacing:1px; font-family:serif; font-weight:800;">
-          Regional Coordinator Appointment Certificate
-        </h1>
-        <div style="font-size:1.15rem; color:#78350f; font-weight:700; margin-bottom:20px;">
-          (क्षेत्रीय / राज्य समन्वयक नियुक्ति प्रमाण पत्र)
-        </div>
-
-        <!-- Preamble -->
-        <p style="font-size:1.05rem; color:#334155; line-height:1.7; margin:0 auto 16px; max-width:820px;">
-          By virtue of the powers vested in the Central Governing Board of <b>Purvanchal Education &amp; Skill Council</b>, this is to officially proclaim that having met all institutional standards and executive criteria:
-        </p>
-
-        <!-- Coordinator Details Box with Full Profile -->
-        <div style="margin:16px auto; padding:20px 26px; background:#f0fdf4; border:2px solid #86efac; border-radius:12px; display:inline-block; width:92%; box-sizing:border-box;">
-          <div style="display:flex; align-items:flex-start; justify-content:center; gap:24px; text-align:left; flex-wrap:wrap;">
-            <div style="text-align:center; flex-shrink:0;">
-              ${cert.photo_url
-                ? `<img src="${esc(cert.photo_url)}" style="width:105px; height:125px; object-fit:cover; border:2.5px solid #b45309; border-radius:6px; box-shadow:0 4px 10px rgba(0,0,0,0.12); display:block; margin:0 auto 6px;" alt="Coordinator Photo">`
-                : `<div style="width:105px; height:125px; background:#dbeafe; border:2px solid #93c5fd; border-radius:6px; display:grid; place-items:center; font-size:3.2rem; margin:0 auto 6px;">👔</div>`
-              }
-              <div style="font-size:0.75rem; color:#78350f; font-weight:800; text-transform:uppercase;">Appointed Official</div>
-            </div>
-            <div style="flex:1; min-width:280px;">
-              <h2 style="margin:0; font-size:1.9rem; color:#064e3b; font-weight:900;">${esc(cert.name)}</h2>
-              <div style="font-size:1.15rem; color:#0a2a5e; margin-top:4px; font-weight:800;">
-                Designation: <span>Regional / State Coordinator (क्षेत्रीय / राज्य समन्वयक)</span>
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; margin-top:10px; font-size:0.88rem; color:#1e293b;">
-                <div><b>Assigned Territory:</b> <span style="color:#b45309; font-weight:800;">${esc(cert.territory || cert.state || 'All Assigned Territories')}</span></div>
-                <div><b>Qualification:</b> <span style="font-weight:700;">${esc(cert.qualification || 'Higher Academic / Professional')}</span></div>
-                <div><b>Aadhaar / Gov ID:</b> <span style="font-family:monospace; font-weight:800; color:#0369a1;">${esc(cert.aadhar_no || 'Verified on Record')}</span></div>
-                <div><b>Official Contact:</b> <span style="font-weight:700;">${esc(cert.mobile || '—')}</span></div>
-                <div style="grid-column:1 / -1; margin-top:2px;">
-                  <b>Official Residential / Office Address:</b><br>
-                  <span style="color:#334155; line-height:1.4;">${esc(cert.address ? cert.address + ', ' + (cert.district || '') + ', ' + (cert.state || '') + ' - ' + (cert.pin || '') : (cert.state || 'India'))}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Mandate Authority Text -->
-        <p style="font-size:0.98rem; color:#334155; line-height:1.7; margin:16px auto; max-width:820px; text-align:justify;">
-          The designated coordinator is officially authorized and mandated to oversee authorized training centre accreditations, supervise academic examinations, verify candidate credentials, coordinate student enrolments, and represent the council in academic and promotional engagements across the assigned jurisdiction.
-        </p>
-
-        <!-- Meta Grid -->
-        <div style="display:flex; justify-content:center; gap:16px; margin:16px 0; flex-wrap:wrap;">
-          <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 18px; border-radius:6px; font-size:0.88rem;">
-            <span style="color:#92400e; font-weight:700;">Issue Date:</span> <b style="color:#78350f;">${issueDateStr}</b>
-          </div>
-          <div style="background:#fef3c7; border:1px solid #fde68a; padding:6px 18px; border-radius:6px; font-size:0.88rem;">
-            <span style="color:#92400e; font-weight:700;">Tenure / Validity:</span> <b style="color:#78350f;">${validUntilStr}</b>
-          </div>
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:6px 18px; border-radius:6px; font-size:0.88rem;">
-            <span style="color:#166534; font-weight:700;">Council Registry:</span> <b style="color:#15803d;">Active &amp; Verified</b>
-          </div>
-        </div>
-
-        <!-- Footer Signatures & QR Code -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px dashed #cbd5e1; padding-top:20px; margin-top:22px; font-size:0.88rem; color:#475569;">
-          <!-- Left: QR Code -->
-          <div style="text-align:center;">
-            <img src="${qrCodeUrl}" style="width:85px; height:85px; border:2px solid #cbd5e1; border-radius:6px; display:block; margin:0 auto 4px;" alt="QR Code">
-            <div style="font-size:0.75rem; color:#64748b; font-weight:700;">Scan to Verify</div>
-            <div style="font-size:0.7rem; color:#94a3b8; font-family:monospace;">pescouncil.in/verify</div>
-          </div>
-
-          <!-- Center: Council Mohar & Hologram -->
-          <div style="text-align:center;">
-            ${cert.seal_url
-              ? `<img src="${esc(cert.seal_url)}" style="height:70px; display:block; margin:0 auto 4px;" alt="Regional Mohar">`
-              : `<div style="width:70px; height:70px; border-radius:50%; border:2px double #d4af37; margin:0 auto 4px; display:grid; place-items:center; background:#fefce8; color:#b45309; font-weight:900; font-size:0.75rem; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                   CENTRAL<br>SEAL
-                 </div>`
-            }
-            <span style="font-weight:700; color:#78350f; font-size:0.8rem;">Official Council Seal</span>
-          </div>
-
-          <!-- Right: Central Director Sign & Coordinator Sign -->
-          <div style="text-align:center;">
-            <div style="min-height:40px; display:flex; align-items:center; justify-content:center;">
-              ${cert.signature_url
-                ? `<img src="${esc(cert.signature_url)}" style="height:38px; display:block; margin:0 auto 2px;" alt="Signature">`
-                : `<span style="font-family:'Brush Script MT',cursive; font-size:1.6rem; color:#0a2a5e;">Dr. R. K. Sharma</span>`
-              }
-            </div>
-            <div style="border-bottom:1.5px solid #334155; width:170px; margin:4px auto 4px;"></div>
-            <div style="font-weight:700; color:#0a2a5e;">Director General / Registrar</div>
-            <div style="font-size:0.78rem; color:#64748b;">Purvanchal Education &amp; Skill Council</div>
-          </div>
-        </div>
+      <div id="printCertArea">
+        ${window.OfficialTemplates && window.OfficialTemplates.renderCoordinatorAppointmentCertificateHtml ? window.OfficialTemplates.renderCoordinatorAppointmentCertificateHtml({ certificate: cert }) : 'Loading Certificate...'}
       </div>
     </div>
   `;
