@@ -1063,168 +1063,51 @@ guard(async () => {
       const data = await api('/api/student/marksheets');
       const list = data.marksheets;
 
-      if (!list.length) {
+      if (!list || !list.length) {
         viewEl.innerHTML = `
           <div class="card" style="text-align:center; padding:40px 20px;">
-            <div style="font-size:3rem; margin-bottom:12px;">📄</div>
+            <div style="font-size:3rem; margin-bottom:12px;">📊</div>
             <h3>No Marksheet Issued Yet</h3>
-            <p class="muted">Your marksheet will appear here once your training centre uploads examination marks and it is verified by the council.</p>
+            <p class="muted">Your examination marksheet has not been issued yet by your centre.</p>
           </div>
         `;
         return;
       }
 
       const m = list[0];
-      let subjects = m.subjects || [];
-      if (typeof subjects === 'string') {
-        try { subjects = JSON.parse(subjects); } catch(e) { subjects = []; }
-      }
-      if (!subjects || !subjects.length) {
-        if (m.curriculum) {
-          let curr = m.curriculum;
-          if (typeof curr === 'string') {
-            try { curr = JSON.parse(curr); } catch(_) {}
-          }
-          if (curr && typeof curr === 'object') {
-            const pat = m.evaluation_type === 'semester' ? 'semester' : 'yearly';
-            const term = m.term || (pat === 'semester' ? 'Semester 1' : 'Annual Examination');
-            if (curr[pat] && curr[pat][term] && curr[pat][term].length) {
-              subjects = curr[pat][term];
-            }
-          }
-        }
-        if (!subjects || !subjects.length) {
-          subjects = getCourseCurriculumSubjects(m.course_name || m.course_code, m.evaluation_type, m.term);
-        }
-      }
-
-      let subjectsHtml = '';
-      if (subjects.length) {
-        subjectsHtml = `
-          <div class="wrap" style="margin: 20px 0;">
-            <table>
-              <thead>
-                <tr>
-                  <th>S.No</th>
-                  <th>Subject / Module</th>
-                  <th>Max Theory</th>
-                  <th>Max Practical</th>
-                  <th>Max Total</th>
-                  <th>Obt Theory</th>
-                  <th>Obt Practical</th>
-                  <th>Total Marks</th>
-                  <th>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${subjects.map((sub, i) => `
-                  <tr>
-                    <td>${i + 1}</td>
-                    <td><b>${esc(sub.name)}</b></td>
-                    <td>${sub.max_theory}</td>
-                    <td>${sub.max_practical}</td>
-                    <td>${sub.total_max}</td>
-                    <td>${sub.obt_theory}</td>
-                    <td>${sub.obt_practical}</td>
-                    <td><b style="color:var(--navy); font-size:1.05rem;">${sub.total_obt}</b></td>
-                    <td>${badge(sub.result)}</td>
-                  </tr>
-                `).join('')}
-                <tr style="background:#f1f5f9; font-weight:bold;">
-                  <td colspan="4" style="text-align:right;">GRAND TOTAL:</td>
-                  <td>${m.total_max}</td>
-                  <td colspan="2"></td>
-                  <td style="color:var(--navy); font-size:1.1rem;">${m.total_obtained}</td>
-                  <td>${badge(m.result)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        `;
-      }
-
-      const cName = m.institute_name || m.centre_name || 'Authorized Training Centre';
-      const cCode = m.centre_code || 'PESC00001';
-      const cAddress = m.institute_address || 'City Campus, Main Road';
-      const directorName = m.director_name || 'Dr. Ramesh Kumar';
-      const directorPhoto = m.director_photo || '';
-      const validityText = m.validity || 'Lifetime Recognition / Session 2026-27';
-
-      const directorPhotoHtml = directorPhoto
-        ? `<img src="${esc(directorPhoto)}" alt="Director Photo" style="width:100%; height:100%; object-fit:cover;">`
-        : `<div style="text-align:center; padding:2px;"><div style="font-size:1.4rem;">👤</div><span style="font-size:0.5rem; font-weight:700; color:#64748b; display:block; line-height:1;">Director Photo</span></div>`;
-
-      const sPhoto = me.user.photo || me.user.photo_url || m.student_photo || '';
-      const studentPhotoHtml = sPhoto
-        ? `<img src="${esc(sPhoto)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">`
-        : `<div style="text-align:center; padding:4px;"><div style="font-size:1.6rem;">👤</div><span style="font-size:0.55rem; font-weight:700; color:#64748b; display:block; line-height:1;">Student Photo</span></div>`;
+      const stuObj = {
+        id: me.user.id || m.student_id,
+        name: me.user.name,
+        father_name: m.father_name || me.user.father_name || 'Shri Ram',
+        mother_name: m.mother_name || me.user.mother_name || 'Smt. Geeta',
+        student_code: m.student_code || me.user.student_code || me.user.roll_no || 'PESC-26-00008',
+        roll_no: m.roll_no || me.user.roll_no || me.user.student_code || 'PESC-00008',
+        course_name: m.course_name || me.user.course_name || 'Nursery Teacher Training',
+        photo_url: me.user.photo || me.user.photo_url || m.student_photo || ''
+      };
+      const centreObj = {
+        name: m.centre_name || 'PREETI INSTITUTE OF TECHNOLOGY',
+        centre_code: m.centre_code || 'PESC00001',
+        address: m.centre_address || 'Village and post shahgarh district Azamgarh',
+        hindi_name: m.hindi_name || m.centre_name || 'प्रीति इंस्टीट्यूट ऑफ टेक्नोलॉजी'
+      };
 
       viewEl.innerHTML = `
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
             <div>
               <h2 style="margin:0 0 4px; color:#064e3b;">Official Statement of Marks</h2>
-              <p class="muted" style="margin:0;">Marksheet No: <b style="color:var(--navy); font-family:monospace;">${esc(m.marksheet_no || 'PESC-MRK-2026-001')}</b> · Exam Session: <b>${esc(m.exam_session || '2026-27')}</b></p>
+              <p class="muted" style="margin:0;">Marksheet No: <b style="color:var(--navy); font-family:monospace;">${esc(m.marksheet_no || 'PESC-MARKS-2026-0007')}</b></p>
             </div>
-            <div style="display:flex; gap:10px;">
-              <button onclick="window.print()" class="btn gold">🖨️ Print Official Marksheet</button>
-            </div>
+            <button onclick="window.print()" class="btn gold">🖨️ Print Marksheet (A4)</button>
           </div>
 
-          <!-- Official Standardized Marksheet Container -->
-          <div class="printable-area" style="background:#ffffff; border:10px double #d4af37; padding:28px 32px; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,0.06); text-align:center; position:relative;">
-            ${renderOfficialCouncilHeader({
-              studentCode: m.student_code || me.user.student_code || me.user.roll_no || 'PESC-26-00008',
-              rollNo: m.roll_no || me.user.roll_no || me.user.student_code || 'PESC-00008',
-              refNo: m.marksheet_no || 'PESC-MRK-2026-0007',
-              issueDate: date(m.issue_date || m.created_at) || '04-10-2026',
-              issuePlace: cAddress || 'Regional Council Office, Shahgarh, Azamgarh UP',
-              headOffice: 'Shahgarh, Azamgarh UP 276001'
-            })}
-
-            <!-- Top Section: QR Code on Left, Ribbon in Center, Student Photo on Right (Opposite) -->
-            <div style="display:flex; align-items:center; justify-content:space-between; margin:10px 0 16px; gap:12px;">
-              <div style="border:2px solid #072a60; padding:6px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(m.roll_no || m.student_code || 'PESC')}" alt="Verification QR" style="width:82px; height:82px; display:block;">
-                <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">SCAN TO VERIFY</div>
-              </div>
-
-              <!-- Center: Marksheet Ribbon Title -->
-              <div style="flex:1; text-align:center; padding:0 6px;">
-                <div style="display:inline-block; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#ffffff; font-size:1.45rem; font-weight:900; letter-spacing:2px; padding:6px 36px; border-radius:6px; box-shadow:0 3px 8px rgba(10,42,94,0.3); border:2px solid #d4af37;">
-                  STATEMENT OF MARKS
-                </div>
-                <div style="font-size:0.75rem; font-weight:800; color:#0a2a5e; letter-spacing:1px; margin-top:4px;">
-                  OFFICIAL EVALUATION ASSESSMENT · SESSION ${esc(m.exam_session || '2026-27')}
-                </div>
-              </div>
-
-              <!-- Right: Student Photo -->
-              <div style="border:2px solid #072a60; padding:3px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
-                <div style="width:76px; height:92px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
-                  ${studentPhotoHtml}
-                </div>
-                <div style="font-size:0.52rem; font-weight:900; color:#072a60; margin-top:2px; letter-spacing:0.3px;">PESC VERIFIED</div>
-              </div>
-            </div>
-
-            <!-- Candidate & Study Centre Info Box -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; font-size:0.86rem; margin-bottom:14px; background:#f8fafc; padding:10px 14px; border-radius:6px; text-align:left; border:1px solid #cbd5e1;">
-              <div>Candidate Name: <b style="color:#0f172a; font-size:0.95rem;">${esc(me.user.name)}</b></div>
-              <div>Authorized Study Centre: <b style="color:#0a2a5e;">${esc(cName)} (${esc(cCode)})</b></div>
-              <div>Father's Name: <b style="color:#0f172a;">${esc(m.father_name || me.user.father_name || 'N/A')}</b></div>
-              <div>Examination Centre: <b style="color:#0f172a;">${esc(cAddress)}</b></div>
-              <div>Course: <b style="color:#064e3b; font-size:0.95rem;">${esc(m.course_name || 'Diploma in Computer Application')}</b></div>
-              <div>Evaluation Scheme: <b style="color:#0369a1;">ANNUAL / CONSOLIDATED EVALUATION</b></div>
-            </div>
-
-            ${subjectsHtml}
-
-            ${renderOfficialCouncilFooter({
-              directorName: directorName,
-              centreCode: cCode
-            })}
-          </div>
+          ${window.OfficialTemplates ? window.OfficialTemplates.renderMarksheetHtml({
+            student: stuObj,
+            centre: centreObj,
+            mrkNo: m.marksheet_no || 'PESC-MARKS-2026-0007',
+            issueDate: '04-10-2026'
+          }) : '<p>Loading template...</p>'}
         </div>
       `;
     },

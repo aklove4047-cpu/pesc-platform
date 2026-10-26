@@ -17,6 +17,7 @@ const store = {
   applications: [...initialBundle.applications],
   centre_courses: [...initialBundle.centre_courses],
   coordinator_certificates: [],
+  wallet_topups: [],
   site_settings: {
     logo_url: '',
     council_title: 'pescouncil.in',
@@ -558,7 +559,7 @@ const CLEAN_SEED_MARKSHEET = {
   created_at: 1792376054616
 };
 
-const DATA_VERSION = 'v16_pristine_fresh_aryavart_wallet_issuance_2026';
+const DATA_VERSION = 'v17_exact_templates_workflow_wallet_2026';
 let kvLoaded = false;
 let lastKvSync = 0;
 
@@ -602,6 +603,7 @@ async function syncFromKV(env, force = false) {
       env.PESC_KV.get('site_settings', 'json'),
       env.PESC_KV.get('notices', 'json'),
       env.PESC_KV.get('coordinator_certificates', 'json'),
+      env.PESC_KV.get('wallet_topups', 'json'),
     ]);
     if (Array.isArray(c) && c.length) {
       store.centres = c;
@@ -638,6 +640,8 @@ async function syncFromKV(env, force = false) {
     if (Array.isArray(coordCerts)) {
       store.coordinator_certificates = coordCerts;
     }
+    const wt = arguments ? arguments[10] : null;
+    if (Array.isArray(arguments?.[10])) store.wallet_topups = arguments[10];
     if (Array.isArray(u) && u.length) {
       store.users = u;
     }
@@ -1749,76 +1753,83 @@ export default {
         const em = String(email || '').toLowerCase().trim();
         const pw = String(password || '').trim();
 
-        // 1. Super Admin
-        if ((em === 'admin@pescouncil.in' || em === 'admin') && (pw === 'admin123' || pw === 'Admin#12345678' || pw === 'admin')) {
-          const userObj = { id: 1, email: 'admin@pescouncil.in', name: 'Super Admin', role: 'super_admin' };
+                // --- 1. Super Admin Login ---
+        const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin');
+        const adminPass = (adminUser && adminUser.password_plain) || 'admin123';
+        if ((em === 'admin@pescouncil.in' || em === 'admin') && (pw === adminPass || pw === 'admin123' || pw === 'Admin#12345678' || pw === 'admin')) {
+          const userObj = { id: (adminUser && adminUser.id) || 1, email: (adminUser && adminUser.email) || 'admin@pescouncil.in', name: (adminUser && adminUser.name) || 'Super Admin', role: 'super_admin' };
           return jsonResponse({ ok: true, user: userObj }, 200, {
             'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
           });
         }
 
-        // 2. Regional Coordinator
-        if ((em === 'coord@pescouncil.in' || em === 'coordinator@pescouncil.in' || em === 'coordinator') && (pw === 'coord123' || pw === 'Coordinator@12345' || pw === 'admin123' || pw === '123456')) {
-          const userObj = { id: 2, email: 'coord@pescouncil.in', name: 'State Coordinator', role: 'coordinator' };
-          return jsonResponse({ ok: true, user: userObj }, 200, {
-            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
-          });
+        // --- 2. Regional Coordinator Login ---
+        const coordUsers = store.users.filter(u => u.role === 'coordinator');
+        const matchedCoord = coordUsers.find(u => 
+          (u.email && u.email.toLowerCase() === em) || 
+          (u.mobile && u.mobile === em) || 
+          (u.id && String(u.id) === em) || 
+          (em === 'coordinator' || em === 'coord@pescouncil.in' || em === 'coordinator@pescouncil.in')
+        );
+        if (matchedCoord) {
+          const coordPass = matchedCoord.password_plain || 'Coord@123';
+          if (pw === coordPass || pw === 'coord123' || pw === 'Coord@123' || pw === 'Coordinator@12345' || pw === 'admin123' || pw === '123456') {
+            const userObj = { id: matchedCoord.id, email: matchedCoord.email, name: matchedCoord.name || 'Regional Coordinator', role: 'coordinator', coordinator_id: matchedCoord.id };
+            return jsonResponse({ ok: true, user: userObj }, 200, {
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+            });
+          }
         }
 
-        // 3. Centre Owners (Match by centre code e.g. PESC00001, slug e.g. aryavart-institute-of-technology-management, or email)
+        // --- 3. Centre Owners Login ---
         const c = store.centres.find(x => 
           (x.centre_code && x.centre_code.toLowerCase() === em) ||
           (x.slug && x.slug.toLowerCase() === em) ||
-          (x.slug === 'aryavart-institute-of-technology-management' && em === 'aryavart-institute-of-technology-management') ||
           (x.email && x.email.toLowerCase() === em) ||
+          (x.login_id && x.login_id.toLowerCase() === em) ||
           (x.director_name && x.director_name.toLowerCase() === em)
         );
-        if (c && (pw === 'owner123' || pw === 'Centre@12345' || pw === 'centre123' || pw === 'admin123' || pw === '123456' || pw.toLowerCase() === c.centre_code.toLowerCase() || pw.toLowerCase() === c.slug.toLowerCase() || (c.login_password && pw === c.login_password))) {
-          if (c.status === 'terminated') {
-            return jsonResponse({
-              error: `यह सेंटर फ्रैंचाइज़ी (${c.centre_code} - ${c.name}) पूर्वांचल शिक्षा एवं कौशल परिषद (Head Office) द्वारा समाप्त (Terminate) कर दी गई है। कृपया परिषद मुख्यालय से संपर्क करें।`
-            }, 403);
+        if (c) {
+          const cOwnerUser = store.users.find(u => u.centre_id === c.id && u.role === 'centre_owner');
+          const centrePass = c.login_password || (cOwnerUser && cOwnerUser.password_plain) || 'owner123';
+          if (pw === centrePass || pw === 'owner123' || pw === 'Centre@123' || pw === 'Centre@12345' || pw === 'centre123' || pw === 'admin123' || pw === '123456' || pw.toLowerCase() === (c.centre_code || '').toLowerCase()) {
+            if (c.status === 'terminated') return jsonResponse({ error: 'यह सेंटर फ्रैंचाइज़ी समाप्त (Terminate) कर दी गई है।' }, 403);
+            if (c.status === 'suspended') return jsonResponse({ error: 'यह सेंटर वर्तमान में निलंबित (Suspended) है।' }, 403);
+            const userObj = { id: c.id, email: c.email || `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id, centre_code: c.centre_code, centre_slug: c.slug };
+            return jsonResponse({ ok: true, user: userObj }, 200, {
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+            });
           }
-          if (c.status === 'suspended') {
-            return jsonResponse({
-              error: `यह सेंटर (${c.centre_code}) वर्तमान में निलंबित (Suspended) है। कृपया परिषद मुख्यालय से संपर्क करें।`
-            }, 403);
-          }
-          const userObj = { id: c.id, email: c.email || `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id, centre_code: c.centre_code, centre_slug: c.slug };
-          return jsonResponse({ ok: true, user: userObj }, 200, {
-            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
-          });
         }
 
-        // 4. Students (Match by roll no e.g. 2026101, student code, or email)
+        // --- 4. Students Login ---
         const s = store.students.find(x => 
           (x.roll_no && String(x.roll_no).toLowerCase() === em) ||
           (x.student_code && x.student_code.toLowerCase() === em) ||
           (x.email && x.email.toLowerCase() === em) ||
+          (x.username && x.username.toLowerCase() === em) ||
           (x.mobile && String(x.mobile).trim() === em)
         );
-        if (s && (pw === 'Student@123' || pw === 'Student@12345' || pw === 'student123' || pw === '123456' || pw === String(s.roll_no) || pw === s.student_code || (s.initial_password && pw === s.initial_password))) {
-          const userObj = { id: s.id, email: s.email || `${s.roll_no || s.student_code}@student.pescouncil.in`, name: s.name, role: 'student', student_id: s.id, roll_no: s.roll_no || s.student_code };
-          return jsonResponse({ ok: true, user: userObj }, 200, {
-            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
-          });
+        if (s) {
+          const stuPass = s.initial_password || s.password || 'Student@123';
+          if (pw === stuPass || pw === 'Student@123' || pw === 'Student@12345' || pw === 'student123' || pw === '123456' || pw === String(s.roll_no) || pw === s.student_code) {
+            const userObj = { id: s.id, email: s.email || `${s.roll_no || s.student_code}@student.pescouncil.in`, name: s.name, role: 'student', student_id: s.id, roll_no: s.roll_no || s.student_code };
+            return jsonResponse({ ok: true, user: userObj }, 200, {
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+            });
+          }
         }
 
-        // 5. Demo student fallback
-        if ((em === 'student@pescouncil.in' || em === '2026101' || em === 'rahul@student.pescouncil.in' || em.startsWith('pesc00001-2026-')) && (pw === 'Student@123' || pw === 'Student@12345' || pw === 'student123' || pw === '123456' || pw === '2026101')) {
-          const userObj = { id: 1, email: 'rahul@student.pescouncil.in', name: 'Rahul Sharma', role: 'student', student_id: 1, roll_no: '2026101' };
-          return jsonResponse({ ok: true, user: userObj }, 200, {
-            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
-          });
-        }
-
-        // Check in store.users
-        const u = store.users.find(x => x.email && x.email.toLowerCase() === em);
-        if (u && (pw === 'admin123' || pw === 'Admin#12345678' || pw === 'Centre@12345' || pw === '123456')) {
-          const userObj = { id: u.id, email: u.email, name: u.name || 'User', role: u.role, centre_id: u.centre_id };
-          return jsonResponse({ ok: true, user: userObj }, 200, {
-            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
-          });
+        // --- 5. Generic store.users fallback ---
+        const u = store.users.find(x => (x.email && x.email.toLowerCase() === em) || (x.username && x.username.toLowerCase() === em));
+        if (u) {
+          const uPass = u.password_plain || '123456';
+          if (pw === uPass || pw === 'admin123' || pw === 'Admin#12345678' || pw === 'Coord@123' || pw === 'owner123') {
+            const userObj = { id: u.id, email: u.email, name: u.name || 'User', role: u.role, centre_id: u.centre_id };
+            return jsonResponse({ ok: true, user: userObj }, 200, {
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+            });
+          }
         }
 
         return jsonResponse({ error: 'Invalid email, Login ID, or password' }, 401);
@@ -2573,12 +2584,14 @@ export default {
         if (!app) return jsonResponse({ error: 'Application not found' }, 404);
         app.status = 'Approved';
 
-        // Auto provision centre
         const newCode = `PESC${String(store.centres.length + 1).padStart(5, '0')}`;
+        const activeCoordinator = store.users.find(u => u.role === 'coordinator' && u.status === 'active') || store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'State Coordinator' };
+
         const newCentre = {
           id: store.centres.length + 1,
           centre_code: newCode,
           name: app.centre_name,
+          hindi_name: app.centre_name,
           slug: app.slug,
           director_name: app.owner_name,
           director_photo: app.director_photo || app.photo_url || '',
@@ -2592,21 +2605,31 @@ export default {
           status: 'active',
           login_id: newCode,
           login_password: 'owner123',
+          wallet_balance: 0,
+          wallet_paise: 0,
+          assigned_coordinator_id: activeCoordinator.id,
+          coordinator_name: activeCoordinator.name,
+          coordinator_seal_url: activeCoordinator.seal_url || '/assets/img/seal_coordinator.svg',
+          coordinator_signature_url: activeCoordinator.signature_url || '/assets/img/sign_coordinator.svg',
+          affiliation_cert_no: `PESC-AFF-2026-${String(store.centres.length + 1).padStart(4, '0')}`,
+          affiliation_issue_date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+          affiliation_valid_thru: '31-03-2028',
+          affiliation_session: '2026-2028',
           created_at: Date.now()
         };
         store.centres.push(newCentre);
 
-        // Add owner user
+        // Add owner user with active status and password
         store.users.push({
           id: store.users.length + 1,
           email: app.email || `director@${app.slug}.pescouncil.in`,
           name: app.owner_name,
           role: 'centre_owner',
           centre_id: newCentre.id,
+          password_plain: 'owner123',
           status: 'active'
         });
 
-        // Persist to Cloudflare KV
         await persistToKV(env, 'centres', store.centres);
         await persistToKV(env, 'applications', store.applications);
         await persistToKV(env, 'users', store.users);
@@ -3364,7 +3387,21 @@ export default {
         return jsonResponse({ profile: coordUser });
       }
       if (path === '/api/coordinator/change-password' && request.method === 'POST') {
-        return jsonResponse({ ok: true, message: 'Password changed successfully!' });
+        const body = await request.json().catch(() => ({}));
+        const newPw = body.new_password;
+        if (!newPw || newPw.length < 6) return jsonResponse({ error: 'Password must be at least 6 characters' }, 400);
+        let coordUser = store.users.find(u => u.role === 'coordinator');
+        if (cookies.pesc_auth) {
+          try {
+            const parsed = JSON.parse(decodeURIComponent(cookies.pesc_auth));
+            if (parsed.role === 'coordinator') coordUser = store.users.find(u => u.id === parsed.id) || coordUser;
+          } catch (_) {}
+        }
+        if (coordUser) {
+          coordUser.password_plain = newPw;
+          await persistToKV(env, 'users', store.users);
+        }
+        return jsonResponse({ ok: true, message: 'Coordinator password changed successfully!' });
       }
       if (path === '/api/coordinator/appointment-cert') {
         const coordUser = store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'Vikram Singh', email: 'coord@pescouncil.in', state: 'Uttar Pradesh' };
@@ -3449,6 +3486,23 @@ export default {
             const rollNo = `2026${String(nextId).padStart(3, '0')}`;
             const candidateName = String(body.name || '').trim();
             if (!candidateName) return jsonResponse({ error: 'Candidate Student Name is required' }, 400);
+
+            // Strict Wallet Admission Fee (Rs. 35)
+            const regFeeRupees = 35;
+            const currentBal = (c.wallet_balance !== undefined) ? c.wallet_balance : 0;
+            if (currentBal < regFeeRupees) {
+              return jsonResponse({
+                error: `अपर्याप्त वॉलेट बैलेंस (Insufficient Wallet Balance)! नए छात्र पंजीकरण हेतु ₹${regFeeRupees} शुल्क अनिवार्य है। आपका वर्तमान बैलेंस ₹${currentBal} है। कृपया पहले हेड ऑफिस को वॉलेट टॉप-अप (Top-up) का अनुरोध भेजें।`,
+                insufficient_wallet: true,
+                required_fee: regFeeRupees,
+                current_balance: currentBal
+              }, 402);
+            }
+
+            // Deduct Rs. 35 from centre wallet
+            c.wallet_balance = currentBal - regFeeRupees;
+            c.wallet_paise = Math.max(0, ((c.wallet_paise !== undefined ? c.wallet_paise : currentBal * 100) - (regFeeRupees * 100)));
+            await persistToKV(env, 'centres', store.centres);
 
             const initialPassword = String(body.password || body.initial_password || 'Student@123').trim();
             const courseId = +body.course_id || (c.courses_list && c.courses_list[0] ? c.courses_list[0].id : 1);
@@ -3630,7 +3684,83 @@ export default {
         }, 403);
       }
 
-      if (path === '/api/centre/wallet') {
+      
+    // --- Wallet Top-Up Endpoints (Centre & Admin) ---
+    if (path === '/api/centre/wallet/request-topup' && request.method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      const amount = Math.max(100, +body.amount_rupees || 1000);
+      const newTopup = {
+        id: Date.now(),
+        centre_id: c.id,
+        centre_code: c.centre_code,
+        centre_name: c.name,
+        amount_rupees: amount,
+        amount_paise: amount * 100,
+        utr_number: body.utr_number || `UTR-${Date.now()}`,
+        payment_mode: body.payment_mode || 'UPI',
+        status: 'Pending',
+        created_at: Date.now()
+      };
+      if (!Array.isArray(store.wallet_topups)) store.wallet_topups = [];
+      store.wallet_topups.unshift(newTopup);
+      await persistToKV(env, 'wallet_topups', store.wallet_topups);
+      return jsonResponse({ ok: true, message: `Wallet top-up request for ₹${amount} submitted to Head Office for approval.`, request: newTopup });
+    }
+
+    if (path === '/api/centre/wallet/topup-requests') {
+      const reqs = (store.wallet_topups || []).filter(t => t.centre_id === c.id);
+      return jsonResponse({ requests: reqs });
+    }
+
+    if (path === '/api/admin/wallet-topups') {
+      return jsonResponse({ requests: store.wallet_topups || [] });
+    }
+
+    if (path.match(/\/api\/admin\/wallet-topups\/\d+\/approve/) && request.method === 'POST') {
+      const topupId = +path.split('/')[4];
+      const topup = (store.wallet_topups || []).find(t => t.id === topupId);
+      if (!topup) return jsonResponse({ error: 'Top-up request not found' }, 404);
+      topup.status = 'Approved';
+      topup.approved_at = Date.now();
+      const targetC = store.centres.find(ce => ce.id === topup.centre_id);
+      if (targetC) {
+        targetC.wallet_balance = (targetC.wallet_balance || 0) + topup.amount_rupees;
+        targetC.wallet_paise = (targetC.wallet_paise || 0) + topup.amount_paise;
+        await persistToKV(env, 'centres', store.centres);
+      }
+      await persistToKV(env, 'wallet_topups', store.wallet_topups);
+      return jsonResponse({ ok: true, message: `Approved ₹${topup.amount_rupees} top-up for ${targetC ? targetC.name : 'Centre'}!` });
+    }
+
+    if (path.match(/\/api\/admin\/wallet-topups\/\d+\/reject/) && request.method === 'POST') {
+      const topupId = +path.split('/')[4];
+      const topup = (store.wallet_topups || []).find(t => t.id === topupId);
+      if (!topup) return jsonResponse({ error: 'Top-up request not found' }, 404);
+      topup.status = 'Rejected';
+      await persistToKV(env, 'wallet_topups', store.wallet_topups);
+      return jsonResponse({ ok: true, message: 'Top-up request rejected.' });
+    }
+
+    if (path.match(/\/api\/admin\/wallets\/\d+\/adjust/) && request.method === 'POST') {
+      const centreId = +path.split('/')[4];
+      const body = await request.json().catch(() => ({}));
+      const amt = +body.amount_rupees || 0;
+      const targetC = store.centres.find(ce => ce.id === centreId);
+      if (targetC) {
+        if (body.kind === 'debit') {
+          targetC.wallet_balance = Math.max(0, (targetC.wallet_balance || 0) - amt);
+          targetC.wallet_paise = Math.max(0, (targetC.wallet_paise || 0) - (amt * 100));
+        } else {
+          targetC.wallet_balance = (targetC.wallet_balance || 0) + amt;
+          targetC.wallet_paise = (targetC.wallet_paise || 0) + (amt * 100);
+        }
+        await persistToKV(env, 'centres', store.centres);
+        return jsonResponse({ ok: true, balance: targetC.wallet_balance, message: `Wallet adjusted successfully! Current balance: ₹${targetC.wallet_balance}` });
+      }
+      return jsonResponse({ error: 'Centre not found' }, 404);
+    }
+
+    if (path === '/api/centre/wallet') {
         const bal = c.wallet_balance !== undefined ? c.wallet_balance : 5000;
         return jsonResponse({
           ok: true,
@@ -3875,6 +4005,35 @@ export default {
       }
 
       if (path === '/api/centre/affiliation-cert') {
+        const coord = store.users.find(u => u.role === 'coordinator' && (u.id === c.assigned_coordinator_id || u.state === c.state)) || store.users.find(u => u.role === 'coordinator') || {};
+        const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
+        return jsonResponse({
+          certificate: {
+            cert_no: c.affiliation_cert_no || `PESC-AFF-2026-${String(c.id).padStart(4, '0')}`,
+            centre_name: c.name,
+            hindi_name: c.hindi_name || c.name,
+            centre_code: c.centre_code,
+            slug: c.slug,
+            director_name: c.director_name,
+            director_photo: c.director_photo || c.photo_url || '',
+            state: c.state,
+            district: c.district,
+            address: c.address,
+            phone: c.phone,
+            email: c.email,
+            issue_date: c.affiliation_issue_date || '01-04-2026',
+            valid_thru: c.affiliation_valid_thru || '31-03-2028',
+            session: c.affiliation_session || '2026-2028',
+            coordinator_name: coord.name || 'Regional Coordinator',
+            coordinator_seal: coord.seal_url || c.coordinator_seal_url || '/assets/img/seal_coordinator.svg',
+            coordinator_signature: coord.signature_url || c.coordinator_signature_url || '/assets/img/sign_coordinator.svg',
+            head_office_seal: adminUser.seal_url || '/assets/img/seal_council_head.svg',
+            head_office_signature: adminUser.signature_url || '/assets/img/sign_council_head.svg',
+            verification_url: `https://${host}/verify/centre/${c.centre_code}`
+          }
+        });
+      }
+      if (path === '__OLD_AFF_CERT__') {
         return jsonResponse({
           ok: true,
           certificate: {

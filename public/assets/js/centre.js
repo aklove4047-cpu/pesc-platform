@@ -2589,211 +2589,18 @@ window.showAdmissionFormModal = async function(studentOrId) {
   const qPg = quals.post_graduation || {};
 
   modal.innerHTML = `
-    <div style="background:#fff; max-width:820px; width:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.3); overflow:hidden; position:relative; margin:auto;">
-      <!-- Top Action Toolbar (Hidden in Print) -->
-      <div class="no-print" style="background:#0f172a; color:#fff; padding:12px 20px; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-weight:700; font-size:0.95rem;">📄 Official Student Admission Form (Image 2)</span>
+    <div style="background:#fff; max-width:860px; width:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.3); overflow:hidden; position:relative; margin:auto;">
+      <!-- Top Action Toolbar -->
+      <div class="no-print" style="background:#072a60; color:#fff; padding:12px 20px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700; font-size:1rem;">📄 Official Student Admission Form</span>
         <div style="display:flex; gap:10px;">
-          <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:6px 16px;" onclick="window.print()">🖨️ Print Form (A4)</button>
+          <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:6px 18px;" onclick="window.print()">🖨️ Print Form (A4)</button>
           <button type="button" class="btn sm alt" style="padding:6px 14px;" onclick="document.getElementById('admissionFormViewModal').style.display='none'">✕ Close</button>
         </div>
       </div>
 
-      <!-- Printable A4 Admission Document Container (Exact Image 2) -->
-      <div id="admissionFormPrintArea" style="padding:32px 36px; background:#fff; font-family:'Inter', Arial, sans-serif; color:#0f172a; line-height:1.45; position:relative;">
-        
-        <!-- Document Header (Exact Image 2) -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-          <!-- Left Logo -->
-          <div style="width:75px; height:75px; border-radius:50%; border:2px solid #0284c7; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#f0f9ff; overflow:hidden;">
-            ${centre.logo_url || centre.seal_url ? `<img src="${centre.logo_url || centre.seal_url}" style="width:100%; height:100%; object-fit:contain;">` : `<span style="font-size:2.2rem;">🎓</span>`}
-          </div>
-
-          <!-- Center Details -->
-          <div style="text-align:center; flex:1; padding:0 12px;">
-            <div style="font-size:0.75rem; font-weight:800; color:#334155; letter-spacing:0.5px; text-align:right;">BRANCH CODE: <span style="font-family:monospace; color:#0284c7;">${esc(branchCode)}</span></div>
-            <h1 style="color:#0284c7; font-size:1.6rem; font-weight:900; margin:2px 0; text-transform:uppercase; letter-spacing:-0.3px;">${esc(centreName)}</h1>
-            <div style="font-size:0.72rem; font-weight:700; color:#1e293b; letter-spacing:0.2px;">ACCREDITED TO THE BRIGHT FUTURE &amp; GOVT. OF INDIA &amp; ISO 9001:2015</div>
-            <div style="font-size:0.68rem; color:#475569; margin-top:2px;">ISO 29990:2010 CERTIFIED ORGANIZATION , Reg.No: U85100UP2025PTC221451</div>
-          </div>
-
-          <!-- Right Date -->
-          <div style="font-size:0.8rem; font-weight:800; color:#0f172a; white-space:nowrap; padding-top:4px;">
-            DATE: <span style="border-bottom:1px solid #0f172a; padding:0 8px;">${esc(todayDate)}</span>
-          </div>
-        </div>
-
-        <!-- Pill Title Banner (Exact Image 2) -->
-        <div style="text-align:center; margin:14px 0 16px;">
-          <div style="background:#0284c7; color:#ffffff; font-weight:900; font-size:1.15rem; padding:6px 40px; border-radius:30px; display:inline-block; letter-spacing:1px; box-shadow:0 3px 10px rgba(2,132,199,0.35);">
-            ADMISSION FORM
-          </div>
-        </div>
-
-        <!-- Form Rows (Exact Underline Fields from Image 2) -->
-        <div style="font-size:0.86rem; color:#0f172a;">
-          <!-- 1. Student Name -->
-          <div style="margin-bottom:12px; display:flex; align-items:flex-end;">
-            <b style="white-space:nowrap;">1. NAME OF THE STUDENT:&nbsp;<span style="font-size:0.75rem; color:#475569;">(IN THE CAPITAL LETTERS)</span>&nbsp;</b>
-            <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-size:0.95rem; color:#0369a1; text-transform:uppercase;">${esc(stu.name || '')}</span>
-          </div>
-
-          <!-- 2. Date of Birth -->
-          <div style="margin-bottom:12px; display:flex; align-items:flex-end;">
-            <b style="white-space:nowrap;">2. DATE OF BIRTH:&nbsp;</b>
-            <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px;">${esc(stu.dob || '')}</span>
-          </div>
-
-          <!-- 3. Father's Name & Occupation -->
-          <div style="margin-bottom:12px; display:flex; align-items:flex-end; gap:16px;">
-            <div style="flex:3; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">3. FATHER'S NAME:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; text-transform:uppercase;">${esc(stu.father_name || '')}</span>
-            </div>
-            <div style="flex:2; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">OCCUPATION:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:8px;">${esc(stu.father_occupation || 'Business / Private')}</span>
-            </div>
-          </div>
-
-          <!-- 4. Mother's Name & Occupation -->
-          <div style="margin-bottom:12px; display:flex; align-items:flex-end; gap:16px;">
-            <div style="flex:3; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">4. MOTHER'S NAME:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; text-transform:uppercase;">${esc(stu.mother_name || '')}</span>
-            </div>
-            <div style="flex:2; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">OCCUPATION:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:8px;">${esc(stu.mother_occupation || 'Homemaker')}</span>
-            </div>
-          </div>
-
-          <!-- 5. Mobile & Whatsapp -->
-          <div style="margin-bottom:12px; display:flex; align-items:flex-end; gap:16px;">
-            <div style="flex:1; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">5. MOBILE NO.:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-family:monospace;">${esc(stu.mobile || stu.student_whatsapp || '')}</span>
-            </div>
-            <div style="flex:1; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">Whatsapp No.:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-family:monospace;">${esc(stu.student_whatsapp || stu.parent_whatsapp || stu.mobile || '')}</span>
-            </div>
-          </div>
-
-          <!-- 6. Email ID -->
-          <div style="margin-bottom:12px; display:flex; align-items:flex-end;">
-            <b style="white-space:nowrap;">6. EMAIL ID:&nbsp;</b>
-            <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:8px; color:#0369a1;">${esc(stu.email || '')}</span>
-          </div>
-
-          <!-- 7. Aadhar No & APAAR ID -->
-          <div style="margin-bottom:12px; display:flex; align-items:flex-end; gap:16px;">
-            <div style="flex:1; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">7. AADHAR NO:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-family:monospace;">${esc(stu.aadhar_no || '•••• •••• ••••')}</span>
-            </div>
-            <div style="flex:1; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">APAR ID:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px; font-family:monospace;">${esc(stu.apaar_id || 'APAR-2026-9281')}</span>
-            </div>
-          </div>
-
-          <!-- 8. Course Name & Duration -->
-          <div style="margin-bottom:14px; display:flex; align-items:flex-end; gap:16px;">
-            <div style="flex:2; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">8. COURSE NAME:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:800; padding-left:8px; color:#0284c7;">${esc(stu.course || stu.course_name || 'Diploma Course')}</span>
-            </div>
-            <div style="flex:1; display:flex; align-items:flex-end;">
-              <b style="white-space:nowrap;">DURATION:&nbsp;</b>
-              <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:8px;">${esc(stu.duration_months ? stu.duration_months + ' Months' : '12 Months')}</span>
-            </div>
-          </div>
-
-          <!-- 9. Academic Qualification Table (Exact Image 2) -->
-          <div style="margin-bottom:16px;">
-            <b style="display:block; margin-bottom:6px;">9. ACADEMIC QUALIFICATION:</b>
-            <table style="width:100%; border-collapse:collapse; text-align:center; font-size:0.8rem; border:1px solid #334155;">
-              <thead>
-                <tr style="background:#f8fafc; font-weight:800; border-bottom:1px solid #334155;">
-                  <th style="border:1px solid #334155; padding:6px 4px; width:22%;">EXAMINATION PASSED</th>
-                  <th style="border:1px solid #334155; padding:6px 4px; width:34%;">SCHOOL/ COLLEGE</th>
-                  <th style="border:1px solid #334155; padding:6px 4px; width:24%;">BOARD/ UNIVERSITY</th>
-                  <th style="border:1px solid #334155; padding:6px 4px; width:20%;">YEAR OF PASSING</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style="border:1px solid #334155; padding:6px; font-weight:700; text-align:left; padding-left:10px;">10th</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(q10.school || 'Government High School')}</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(q10.board || 'UP Board')}</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(q10.year || '2020')}</td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #334155; padding:6px; font-weight:700; text-align:left; padding-left:10px;">12th</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(q12.school || 'Inter College')}</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(q12.board || 'UP Board')}</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(q12.year || '2022')}</td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #334155; padding:6px; font-weight:700; text-align:left; padding-left:10px;">Graduation</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(qGrad.school || '')}</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(qGrad.board || '')}</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(qGrad.year || '')}</td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #334155; padding:6px; font-weight:700; text-align:left; padding-left:10px;">Post Graduation</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(qPg.school || '')}</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(qPg.board || '')}</td>
-                  <td style="border:1px solid #334155; padding:6px;">${esc(qPg.year || '')}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Emergency Contact Information (Exact Image 2) -->
-          <div style="margin-bottom:14px;">
-            <b style="font-size:0.8rem; letter-spacing:0.3px; color:#1e293b; display:block; text-align:center; margin-bottom:8px;">EMERGENCY CONTACT INFORMATION</b>
-            <div style="display:flex; justify-content:space-between; gap:12px; font-size:0.82rem;">
-              <div style="flex:1; display:flex; align-items:flex-end;">
-                <b>NAME:&nbsp;</b>
-                <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:4px;">${esc(stu.emergency_name || stu.father_name || '')}</span>
-              </div>
-              <div style="flex:1; display:flex; align-items:flex-end;">
-                <b>RELATION:&nbsp;</b>
-                <span style="flex:1; border-bottom:1px dashed #334155; font-weight:600; padding-left:4px;">${esc(stu.emergency_relation || 'Father / Guardian')}</span>
-              </div>
-              <div style="flex:1; display:flex; align-items:flex-end;">
-                <b>CONTACT NO:&nbsp;</b>
-                <span style="flex:1; border-bottom:1px dashed #334155; font-weight:700; padding-left:4px; font-family:monospace;">${esc(stu.emergency_contact || stu.parent_whatsapp || stu.mobile || '')}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Declaration Section (घोषणा) (Exact Image 2) -->
-          <div style="text-align:center; margin-top:14px; font-size:0.75rem; color:#334155; line-height:1.4;">
-            <b style="color:#0f172a;">Declaration Section (घोषणा)</b><br>
-            I hereby declare that the information provided above is true and correct to the best of my knowledge.<br>
-            I agree to abide by the rules and regulations of the institute.
-          </div>
-
-          <!-- Signatures (Exact Image 2) -->
-          <div style="display:flex; justify-content:space-between; margin-top:36px; padding:0 14px;">
-            <div style="text-align:center; width:220px;">
-              <div style="border-top:1px dashed #334155; margin-bottom:6px;"></div>
-              <b style="font-size:0.78rem;">(STUDENT SIGNATURE)</b>
-            </div>
-            <div style="text-align:center; width:220px;">
-              <div style="border-top:1px dashed #334155; margin-bottom:6px;"></div>
-              <b style="font-size:0.78rem;">(AUTHORISED SIGNATURE)</b>
-            </div>
-          </div>
-
-          <!-- Cyan Bottom Banner with 5 Gold Stars (Exact Image 2) -->
-          <div style="background:#0284c7; height:24px; margin-top:18px; display:flex; align-items:center; justify-content:center; color:#facc15; font-size:1.15rem; letter-spacing:6px;">
-            ⭐ ⭐ ⭐ ⭐ ⭐
-          </div>
-        </div>
+      <div id="admissionFormPrintArea" style="padding:16px;">
+        ${window.OfficialTemplates ? window.OfficialTemplates.renderAdmissionFormHtml({ student: stu, centre: centre }) : '<p>Loading template...</p>'}
       </div>
     </div>
   `;
@@ -3029,80 +2836,18 @@ async function updateCertPreview() {
 
   $('#certPreviewContainer').innerHTML = `
     ${draftBanner}
-
-    <!-- Royal Certificate Frame with Double Gold & Deep Navy Border -->
-    <div style="border:4px double #d4af37; padding:24px; border-radius:8px; background:#ffffff; position:relative; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
-      <!-- Corner Filigree Ornaments -->
-      <div style="position:absolute; top:8px; left:12px; font-size:1.4rem; color:#d4af37;">⚜️</div>
-      <div style="position:absolute; top:8px; right:12px; font-size:1.4rem; color:#d4af37;">⚜️</div>
-      <div style="position:absolute; bottom:8px; left:12px; font-size:1.4rem; color:#d4af37;">⚜️</div>
-      <div style="position:absolute; bottom:8px; right:12px; font-size:1.4rem; color:#d4af37;">⚜️</div>
-
-      ${renderOfficialCouncilHeader({
-        format: certFormat,
-        studentCode: code,
-        rollNo: code,
-        refNo: refNo,
-        issueDate: issueDate,
-        centreName: cName,
-        centreCode: cCode,
-        centreAddress: cAddress,
-        centreHindi: 'आर्यावर्त इंस्टीट्यूट ऑफ टेक्नोलॉजी एंड मैनेजमेंट',
-        centreEnglish: 'ARYAVART INSTITUTE OF TECHNOLOGY & MANAGEMENT'
-      })}
-
-      <!-- Security Ribbon, QR Code, Student Photo -->
-      <div style="display:flex; align-items:center; justify-content:space-between; margin:14px 0 18px; gap:14px;">
-        <!-- Left: QR Code -->
-        <div style="border:2px solid #072a60; padding:6px; border-radius:8px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(cleanNum)}" alt="Verification QR" style="width:82px; height:82px; display:block;">
-          <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">
-            SCAN TO VERIFY
-          </div>
-        </div>
-
-        <!-- Center: Royal Emblem Title -->
-        <div style="flex:1; text-align:center; padding:0 10px;">
-          <div style="display:inline-block; background:linear-gradient(135deg, #072a60 0%, #064e3b 50%, #072a60 100%); color:#ffffff; font-size:1.65rem; font-weight:900; letter-spacing:3px; padding:10px 42px; border-radius:8px; box-shadow:0 6px 18px rgba(7,42,96,0.35); border:2.5px solid #d4af37; text-transform:uppercase;">
-            CERTIFICATE OF EXCELLENCE
-          </div>
-          <div style="font-size:0.88rem; font-weight:900; color:#b45309; letter-spacing:1px; margin-top:6px; font-family:'Tiro Devanagari Hindi', serif;">
-            व्यावसायिक दक्षता एवं प्रशिक्षण उत्तीर्ण प्रमाण-पत्र
-          </div>
-        </div>
-
-        <!-- Right: Student Photo with Holographic Border -->
-        <div style="border:2px solid #072a60; padding:3px; border-radius:8px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
-          <div style="width:80px; height:98px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
-            ${studentPhotoHtml}
-          </div>
-          <div style="font-size:0.54rem; font-weight:900; color:#072a60; margin-top:3px; letter-spacing:0.3px;">PESC VERIFIED</div>
-        </div>
-      </div>
-
-      <!-- Official Certificate Body Text -->
-      <div style="font-size:0.98rem; color:#0f172a; font-weight:600; line-height:2.3; text-align:center; margin:20px auto 16px; max-width:760px; padding:16px 20px; background:rgba(248,250,252,0.6); border:1px solid #e2e8f0; border-radius:10px;">
-        This is to certify that Mr. / Ms. <span style="font-size:1.35rem; font-weight:900; color:#072a60; border-bottom:2px solid #072a60; padding:0 12px; font-family:'Tiro Devanagari Hindi', 'Georgia', serif;">${esc(name)}</span><br>
-        Son / Daughter of Shri <span style="font-size:1.1rem; font-weight:800; color:#0f172a; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(father)}</span> &amp; Smt. <span style="font-size:1.1rem; font-weight:800; color:#0f172a; border-bottom:1.5px solid #64748b; padding:0 10px;">${esc(mother)}</span><br>
-        bearing Student Registration Code <span style="font-family:monospace; font-weight:900; color:#0369a1; border-bottom:1.5px solid #0369a1; padding:0 8px; font-size:1.05rem;">${esc(code)}</span> has successfully passed the examination in<br>
-        <div style="font-size:1.45rem; font-weight:900; color:#047857; margin:8px 0; letter-spacing:0.5px; border-bottom:2.5px solid #047857; display:inline-block; padding:0 18px;">
-          ${esc(course)}
-        </div><br>
-        evaluated under <span style="font-weight:800; color:#0f172a;">${esc(certTerm)}</span> with Final Grade <span style="font-size:1.25rem; font-weight:900; color:#15803d; background:#ecfdf5; border:1.5px solid #86efac; padding:2px 14px; border-radius:20px; display:inline-block;">A+ (Distinction)</span><br>
-        from our Accredited Study Centre <b style="color:#072a60;">${esc(cName)} (${esc(cCode)})</b>, located at <i>${esc(cAddress)}</i>.<br>
-        <span style="font-size:0.85rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">In witness whereof, this official credential is duly conferred by the Council.</span>
-      </div>
-
-      ${renderOfficialCouncilFooter({
-        format: certFormat,
-        directorName: directorName,
-        centreCode: cCode,
-        isIssued: isIssued
-      })}
+    <div class="no-print" style="margin-bottom:12px; display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" class="btn sm" style="background:#0284c7; color:#fff;" onclick="window.print()">🖨️ Print Certificate (A4)</button>
     </div>
+    ${window.OfficialTemplates ? window.OfficialTemplates.renderCertificateHtml({
+      student: { id: studentId, name, father_name: father, mother_name: mother, student_code: code, roll_no: code, course_name: course, photo_url: photo },
+      centre: { name: cName, centre_code: cCode, address: cAddress, hindi_name: (currentCentre && currentCentre.hindi_name) || cName, logo_url: (currentCentre && currentCentre.logo_url) || null, seal_url: (currentCentre && currentCentre.seal_url) || null },
+      certNo: refNo,
+      issueDate: issueDate,
+      duration: isSemester ? '6 Months' : '1 Year'
+    }) : '<p>Loading Certificate Template...</p>'}
   `;
 }
-
 // Marksheet Preview
 let mrkEvalPattern = 'yearly';
 
@@ -3791,75 +3536,31 @@ async function updateMrkPreview() {
     </div>
   `;
 
+    const customSubjects = window._customMarksheetData && window._customMarksheetData[studentId] ? window._customMarksheetData[studentId] : [
+    { code: 'NTT-01', name: 'Child Psychology', max: 100, min: 40, obt: 78, grade: 'A' },
+    { code: 'NTT-02', name: 'School Organization', max: 100, min: 40, obt: 72, grade: 'B+' },
+    { code: 'NTT-03', name: 'Methods of Teaching', max: 100, min: 40, obt: 85, grade: 'A+' },
+    { code: 'NTT-04', name: 'Practical Assessment', max: 100, min: 40, obt: 85, grade: 'A+' },
+    { code: 'NTT-05', name: 'Viva-Voce Exam', max: 100, min: 40, obt: 78, grade: 'A+' },
+    { code: 'NTT-06', name: 'Internal Project', max: 100, min: 40, obt: 80, grade: 'A+' }
+  ];
+
   $('#mrkPreviewContainer').innerHTML = `
     ${draftBanner}
-
-    ${renderOfficialCouncilHeader({
-      format: mrkFormat,
-      studentCode: code,
-      rollNo: code,
-      refNo: refNo,
+    <div class="no-print" style="margin-bottom:12px; display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" class="btn sm gold" onclick="openMarksEditModal(${studentId})">✏️ Edit Marks / Subjects</button>
+      <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="window.print()">🖨️ Print Marksheet (A4)</button>
+    </div>
+    ${window.OfficialTemplates ? window.OfficialTemplates.renderMarksheetHtml({
+      student: { id: studentId, name, father_name: father, mother_name: mother, student_code: code, roll_no: code, course_name: course, photo_url: photo },
+      centre: { name: cName, centre_code: cCode, address: cAddress, hindi_name: (currentCentre && currentCentre.hindi_name) || cName, logo_url: (currentCentre && currentCentre.logo_url) || null, seal_url: (currentCentre && currentCentre.seal_url) || null },
+      mrkNo: refNo,
       issueDate: issueDate,
-      centreName: cName,
-      centreCode: cCode,
-      centreAddress: cAddress,
-      centreHindi: 'आर्यावर्त इंस्टीट्यूट ऑफ टेक्नोलॉजी एंड मैनेजमेंट',
-      centreEnglish: 'ARYAVART INSTITUTE OF TECHNOLOGY & MANAGEMENT',
-      issuePlace: cAddress || 'Regional Council Office, Shahgarh, Azamgarh UP',
-      headOffice: 'Shahgarh, Azamgarh UP 276001'
-    })}
-
-    <!-- Top Section: QR Code on Left, Ribbon in Center, Student Photo on Right (Opposite) -->
-    <div style="display:flex; align-items:center; justify-content:space-between; margin:10px 0 16px; gap:12px;">
-      <!-- Left: QR Code -->
-      <div style="border:2px solid #072a60; padding:6px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); text-align:center; flex-shrink:0;">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=https%3A%2F%2Fpescouncil.in%2Fverify%2F${encodeURIComponent(cleanNum)}" alt="Verification QR" style="width:82px; height:82px; display:block;">
-        <div style="font-size:0.56rem; font-weight:900; color:#072a60; text-transform:uppercase; margin-top:3px; letter-spacing:0.5px;">
-          SCAN TO VERIFY
-        </div>
-      </div>
-
-      <!-- Center: Ribbon Title -->
-      <div style="flex:1; text-align:center; padding:0 6px;">
-        <div style="display:inline-block; background:linear-gradient(135deg, #0a2a5e, #1e3a8a); color:#ffffff; font-size:1.45rem; font-weight:900; letter-spacing:2px; padding:6px 36px; border-radius:6px; box-shadow:0 3px 8px rgba(10,42,94,0.3); border:2px solid #d4af37;">
-          STATEMENT OF MARKS
-        </div>
-        <div style="font-size:0.75rem; font-weight:800; color:#0a2a5e; letter-spacing:1px; margin-top:4px;">
-          ${isSemester ? 'SEMESTER EXAMINATION EVALUATION: ' + esc(mrkTerm).toUpperCase() : 'ANNUAL EXAMINATION EVALUATION: ' + esc(mrkTerm).toUpperCase()}
-        </div>
-      </div>
-
-      <!-- Right: Student Photo -->
-      <div style="border:2px solid #072a60; padding:3px; border-radius:6px; background:#ffffff; box-shadow:0 2px 8px rgba(7,42,96,0.12); flex-shrink:0; text-align:center;">
-        <div style="width:76px; height:92px; border-radius:4px; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
-          ${studentPhotoHtml}
-        </div>
-        <div style="font-size:0.52rem; font-weight:900; color:#072a60; margin-top:2px; letter-spacing:0.3px;">PESC VERIFIED</div>
-      </div>
-    </div>
-
-    <!-- Candidate & Study Centre Info Box -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; font-size:0.86rem; margin-bottom:14px; background:#f8fafc; padding:10px 14px; border-radius:6px; text-align:left; border:1px solid #cbd5e1;">
-      <div>Candidate Name: <b style="color:#0f172a; font-size:0.95rem;">${esc(name)}</b></div>
-      <div>Authorized Study Centre: <b style="color:#0a2a5e;">${esc(cName)} (${esc(cCode)})</b></div>
-      <div>Father's Name: <b style="color:#0f172a;">${esc(father)}</b></div>
-      <div>Examination Centre: <b style="color:#0f172a;">${esc(cAddress)}</b></div>
-      <div>Course: <b style="color:#064e3b; font-size:0.95rem;">${esc(course)}</b></div>
-      <div>Evaluation Scheme: <b style="color:${isSemester ? '#0369a1' : '#b45309'};">${isSemester ? '📚 Semester-Wise (' + esc(mrkTerm) + ')' : '📅 Yearly / Annual (' + esc(mrkTerm) + ')'}</b></div>
-    </div>
-
-    ${tableContent}
-
-    ${renderOfficialCouncilFooter({
-      format: mrkFormat,
-      directorName: directorName,
-      centreCode: cCode,
-      isIssued: isIssued
-    })}
+      subjects: customSubjects,
+      duration: isSemester ? '6 Months' : '1 Year'
+    }) : '<p>Loading Marksheet Template...</p>'}
   `;
 }
-
-// Semester Graded Certificate
 function updateSemCertPreview() {
   const sel = $('#semCertStudentSelect');
   if (!sel) return;
@@ -4174,34 +3875,12 @@ function updateIdCardPreview() {
 
   const headerTitle = idCardStyle === 'council' ? 'PURVANCHAL EDUCATION &amp; SKILL COUNCIL' : esc(cName).toUpperCase();
 
-  $('#idCardPreview').innerHTML = `
-    <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden; font-family:sans-serif;">
-      <div style="background:${idCardStyle === 'council' ? '#064e3b' : '#0284c7'}; color:#ffffff; padding:10px; text-align:center;">
-        <div style="font-size:0.75rem; font-weight:800; letter-spacing:0.5px;">${headerTitle}</div>
-        <div style="font-size:0.65rem; color:#fde047;">STUDENT IDENTITY CARD · 2026-27</div>
-      </div>
-      <div style="padding:14px; display:flex; gap:12px; align-items:center;">
-        <div style="width:72px; height:86px; background:#e2e8f0; border-radius:6px; border:1px solid #cbd5e1; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
-          ${photo ? `<img src="${esc(photo)}" alt="Student Photo" style="width:100%; height:100%; object-fit:cover;">` : `<span style="font-size:2.2rem;">👤</span>`}
-        </div>
-        <div style="font-size:0.8rem; line-height:1.5;">
-          <div style="font-size:0.95rem; font-weight:800; color:#0f172a;">${esc(name)}</div>
-          <div>Roll No: <b style="font-family:monospace; color:#064e3b;">${esc(code)}</b></div>
-          <div>Course: <b>${esc(course)}</b></div>
-          <div>Father: ${esc(father)}</div>
-          <div>Phone: ${esc(mobile)}</div>
-        </div>
-      </div>
-      <div style="background:#f8fafc; border-top:1px dashed #cbd5e1; padding:6px 12px; display:flex; justify-content:space-between; align-items:center; font-size:0.68rem; color:#64748b;">
-        <span>Valid Till: Dec 2027</span>
-        <span style="font-family:monospace;">||| | |||| | |||</span>
-        <span>Director Sign</span>
-      </div>
-    </div>
-  `;
+  $('#idCardPreview').innerHTML = window.OfficialTemplates ? window.OfficialTemplates.renderStudentIdCardHtml({
+      student: { name, roll_no: code, student_code: code, course_name: course, father_name: father, mobile, photo_url: photo },
+      centre: currentCentre || { name: cName, centre_code: 'PESC00001' },
+      validUpto: 'SEP 2027'
+    }) : '<p>Loading ID Card...</p>';
 }
-
-// Quick View Student Modal
 async function quickViewStudent(id) {
   guard(async () => {
     const d = await api(`/api/centre/students/${id}`);
@@ -4948,3 +4627,77 @@ guard(async () => {
     showCentreAuthScreen();
   }
 });
+
+// Global Marks Edit Modal Handler
+window._customMarksheetData = {};
+window.openMarksEditModal = function(studentId) {
+  const currentSubs = window._customMarksheetData[studentId] || [
+    { code: 'NTT-01', name: 'Child Psychology', max: 100, min: 40, obt: 78, grade: 'A' },
+    { code: 'NTT-02', name: 'School Organization', max: 100, min: 40, obt: 72, grade: 'B+' },
+    { code: 'NTT-03', name: 'Methods of Teaching', max: 100, min: 40, obt: 85, grade: 'A+' },
+    { code: 'NTT-04', name: 'Practical Assessment', max: 100, min: 40, obt: 85, grade: 'A+' },
+    { code: 'NTT-05', name: 'Viva-Voce Exam', max: 100, min: 40, obt: 78, grade: 'A+' },
+    { code: 'NTT-06', name: 'Internal Project', max: 100, min: 40, obt: 80, grade: 'A+' }
+  ];
+
+  let modal = document.getElementById('marksEditModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'marksEditModal';
+    modal.className = 'modal-backdrop';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.75); display:flex; align-items:center; justify-content:center; z-index:99999; padding:20px;';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div style="background:#fff; max-width:650px; width:100%; border-radius:12px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.3); max-height:90vh; overflow-y:auto;">
+      <h3 style="color:#072a60; margin:0 0 16px;">✏️ Edit Examination Marks &amp; Subjects</h3>
+      <form id="marksEditForm" onsubmit="saveCustomMarks(event, ${studentId})">
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:16px;">
+          <thead>
+            <tr style="background:#072a60; color:#fff;">
+              <th style="padding:6px; border:1px solid #cbd5e1;">Code</th>
+              <th style="padding:6px; border:1px solid #cbd5e1;">Subject Name</th>
+              <th style="padding:6px; border:1px solid #cbd5e1; width:70px;">Max</th>
+              <th style="padding:6px; border:1px solid #cbd5e1; width:80px;">Obtained</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${currentSubs.map((s, i) => `
+              <tr>
+                <td style="padding:4px; border:1px solid #cbd5e1;"><input type="text" name="code_${i}" value="${s.code}" style="width:100%; padding:4px;"></td>
+                <td style="padding:4px; border:1px solid #cbd5e1;"><input type="text" name="name_${i}" value="${s.name}" style="width:100%; padding:4px;"></td>
+                <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" name="max_${i}" value="${s.max}" style="width:100%; padding:4px;"></td>
+                <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" name="obt_${i}" value="${s.obt}" style="width:100%; padding:4px;"></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn alt sm" onclick="document.getElementById('marksEditModal').style.display='none'">Cancel</button>
+          <button type="submit" class="btn gold sm">💾 Save &amp; Update Marksheet</button>
+        </div>
+      </form>
+    </div>
+  `;
+  modal.style.display = 'flex';
+};
+
+window.saveCustomMarks = function(e, studentId) {
+  e.preventDefault();
+  const f = e.target;
+  const subs = [];
+  for (let i = 0; i < 6; i++) {
+    const code = f['code_' + i] ? f['code_' + i].value : 'SUB-' + (i+1);
+    const name = f['name_' + i] ? f['name_' + i].value : 'Subject ' + (i+1);
+    const max = +(f['max_' + i] ? f['max_' + i].value : 100);
+    const obt = +(f['obt_' + i] ? f['obt_' + i].value : 75);
+    const pct = max > 0 ? (obt / max) * 100 : 75;
+    const grade = pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : 'B';
+    subs.push({ code, name, max, min: 40, obt, grade });
+  }
+  window._customMarksheetData[studentId] = subs;
+  document.getElementById('marksEditModal').style.display = 'none';
+  if (typeof updateMrkPreview === 'function') updateMrkPreview();
+  if (typeof toast === 'function') toast('✅ Marks updated successfully!');
+};
