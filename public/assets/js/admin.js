@@ -1753,11 +1753,10 @@ function showHeadOfficePaymentSettingsModal(s) {
     };
     await api('/api/admin/headoffice-payment-settings', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: payload
     });
     toast('✅ Head Office payment settings updated successfully!');
-    show('Wallets');
+    await views.Wallets();
   }, '700px');
 }
 
@@ -2443,17 +2442,19 @@ V.addEventListener('click', (e) => {
       show('Wallets');
       return;
     } else if (a === 'approve_topup') {
-      if (!confirm(`Are you sure you want to approve this offline top-up and credit ₹${b.dataset.amount} directly to ${b.dataset.name}'s wallet?`)) return;
-      await post(`/api/admin/wallet-topups/${id}/approve`);
-      toast(`✅ Approved! ₹${b.dataset.amount} successfully credited to ${b.dataset.name}'s wallet.`);
-      show('Wallets');
+      const topupAmt = b.dataset.amount || '0';
+      const cName = b.dataset.name || 'Centre';
+      if (!confirm(`Are you sure you want to approve this offline top-up and credit ₹${topupAmt} directly to ${cName}'s wallet?`)) return;
+      await api(`/api/admin/wallet-topups/${id}/approve`, { method: 'POST', body: {} });
+      toast(`✅ Approved! ₹${topupAmt} successfully credited to ${cName}'s wallet.`);
+      await views.Wallets();
       return;
     } else if (a === 'reject_topup') {
       const r = ask('Enter reason for rejecting this top-up request:') || 'UTR verification failed or payment not received';
       if (!r) return;
-      await post(`/api/admin/wallet-topups/${id}/reject`, { reason: r });
+      await api(`/api/admin/wallet-topups/${id}/reject`, { method: 'POST', body: { reason: r } });
       toast('Top-up request rejected.');
-      show('Wallets');
+      await views.Wallets();
       return;
     } else if (a === 'edit_headoffice_payment') {
       const { settings } = await api('/api/admin/headoffice-payment-settings');

@@ -14,10 +14,11 @@ async function api(path, opts = {}) {
     body = opts.body;
   }
   const headers = body ? { 'Content-Type': 'application/json' } : {};
+  const sendBody = typeof body === 'string' ? body : (body !== undefined ? JSON.stringify(body) : undefined);
   const r = await fetch(path, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: sendBody,
     credentials: 'same-origin'
   });
   let d = {}; try { d = await r.json(); } catch {}

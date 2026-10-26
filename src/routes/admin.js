@@ -564,7 +564,7 @@ router.get('/headoffice-payment-settings', (req, res) => {
   res.json({ settings });
 });
 
-router.put('/headoffice-payment-settings', (req, res) => {
+const handleUpdatePaymentSettings = (req, res) => {
   const b = req.body;
   const upiId = str(b.upi_id, 80) || 'pescouncil@upi';
   const upiName = str(b.upi_name, 100) || 'Purvanchal Education and Skill Council';
@@ -589,7 +589,9 @@ router.put('/headoffice-payment-settings', (req, res) => {
 
   audit(req, 'headoffice_payment.update', 'headoffice_payment_settings', 1, 'ok');
   res.json({ ok: true });
-});
+};
+router.put('/headoffice-payment-settings', handleUpdatePaymentSettings);
+router.post('/headoffice-payment-settings', handleUpdatePaymentSettings);
 
 // User Password Reset by Admin
 router.post('/users/:id/reset-password', h(async (req, res) => {

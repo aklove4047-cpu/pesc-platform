@@ -2457,29 +2457,88 @@ export default {
       }
 
       if (path === '/api/admin/headoffice-payment-settings') {
-        if (request.method === 'POST') {
-          const body = await request.json().catch(() => ({}));
+        if (request.method === 'POST' || request.method === 'PUT') {
+          let body = await request.json().catch(() => ({}));
+          if (typeof body === 'string') {
+            try { body = JSON.parse(body); } catch (_) {}
+          }
           store.site_settings = store.site_settings || {};
-          if (body.upi_id) store.site_settings.upi_id = String(body.upi_id).trim();
-          if (body.upi_name) store.site_settings.upi_name = String(body.upi_name).trim();
-          if (body.bank_name) store.site_settings.bank_name = String(body.bank_name).trim();
-          if (body.bank_account) store.site_settings.bank_account = String(body.bank_account).trim();
-          if (body.bank_ifsc) store.site_settings.bank_ifsc = String(body.bank_ifsc).trim();
-          if (body.whatsapp_number) store.site_settings.whatsapp_number = String(body.whatsapp_number).trim();
-          if (body.qr_image_url !== undefined) store.site_settings.qr_image_url = String(body.qr_image_url).trim();
+          if (body.upi_id !== undefined) store.site_settings.upi_id = String(body.upi_id).trim();
+          if (body.upi_name !== undefined) store.site_settings.upi_name = String(body.upi_name).trim();
+          if (body.bank_name !== undefined) store.site_settings.bank_name = String(body.bank_name).trim();
+          
+          const acc = body.account_number !== undefined ? body.account_number : body.bank_account;
+          if (acc !== undefined) {
+            store.site_settings.account_number = String(acc).trim();
+            store.site_settings.bank_account = String(acc).trim();
+          }
+
+          const ifsc = body.ifsc_code !== undefined ? body.ifsc_code : body.bank_ifsc;
+          if (ifsc !== undefined) {
+            store.site_settings.ifsc_code = String(ifsc).trim().toUpperCase();
+            store.site_settings.bank_ifsc = String(ifsc).trim().toUpperCase();
+          }
+
+          if (body.whatsapp_number !== undefined) {
+            store.site_settings.whatsapp_number = String(body.whatsapp_number).trim();
+          }
+
+          const qr = body.qr_code_image !== undefined ? body.qr_code_image : body.qr_image_url;
+          if (qr !== undefined) {
+            store.site_settings.qr_code_image = String(qr).trim();
+            store.site_settings.qr_image_url = String(qr).trim();
+          }
+
           await persistToKV(env, 'site_settings', store.site_settings);
-          return jsonResponse({ ok: true, message: 'Payment settings updated successfully!', settings: store.site_settings });
+
+          const curS = store.site_settings;
+          const upiId = curS.upi_id || 'pescouncil@upi';
+          const upiName = curS.upi_name || 'Purvanchal Education and Skill Council';
+          const bankName = curS.bank_name || 'State Bank of India';
+          const accNo = curS.account_number || curS.bank_account || '39820192830';
+          const ifscCode = curS.ifsc_code || curS.bank_ifsc || 'SBIN0001234';
+          const waNum = curS.whatsapp_number || '919876543210';
+          const qrImg = curS.qr_code_image || curS.qr_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi%3A%2F%2Fpay%3Fpa%3D${encodeURIComponent(upiId)}%26pn%3D${encodeURIComponent(upiName)}`;
+
+          return jsonResponse({
+            ok: true,
+            message: 'Payment settings updated successfully!',
+            settings: {
+              upi_id: upiId,
+              upi_name: upiName,
+              bank_name: bankName,
+              account_number: accNo,
+              bank_account: accNo,
+              ifsc_code: ifscCode,
+              bank_ifsc: ifscCode,
+              whatsapp_number: waNum,
+              qr_code_image: qrImg,
+              qr_image_url: qrImg
+            }
+          });
         }
+
         const s = store.site_settings || {};
+        const upiId = s.upi_id || 'pescouncil@upi';
+        const upiName = s.upi_name || 'Purvanchal Education and Skill Council';
+        const bankName = s.bank_name || 'State Bank of India';
+        const accNo = s.account_number || s.bank_account || '39820192830';
+        const ifscCode = s.ifsc_code || s.bank_ifsc || 'SBIN0001234';
+        const waNum = s.whatsapp_number || '919876543210';
+        const qrImg = s.qr_code_image || s.qr_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi%3A%2F%2Fpay%3Fpa%3D${encodeURIComponent(upiId)}%26pn%3D${encodeURIComponent(upiName)}`;
+
         return jsonResponse({
           settings: {
-            upi_id: s.upi_id || 'pescouncil@upi',
-            upi_name: s.upi_name || 'Purvanchal Education & Skill Council',
-            bank_name: s.bank_name || 'State Bank of India',
-            bank_account: s.bank_account || '39820192830',
-            bank_ifsc: s.bank_ifsc || 'SBIN0001234',
-            whatsapp_number: s.whatsapp_number || '+919876543210',
-            qr_image_url: s.qr_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi%3A%2F%2Fpay%3Fpa%3D${encodeURIComponent(s.upi_id || 'pescouncil@upi')}%26pn%3D${encodeURIComponent(s.upi_name || 'PESC')}`
+            upi_id: upiId,
+            upi_name: upiName,
+            bank_name: bankName,
+            account_number: accNo,
+            bank_account: accNo,
+            ifsc_code: ifscCode,
+            bank_ifsc: ifscCode,
+            whatsapp_number: waNum,
+            qr_code_image: qrImg,
+            qr_image_url: qrImg
           }
         });
       }
@@ -2488,8 +2547,13 @@ export default {
         return jsonResponse({
           wallets: store.centres.map(c => ({
             id: c.id,
+            centre_id: c.id,
             centre_code: c.centre_code,
             centre_name: c.name,
+            name: c.name,
+            district: c.district,
+            state: c.state,
+            centre_status: c.status || 'active',
             balance: c.wallet_balance !== undefined ? c.wallet_balance : (c.wallet_paise ? c.wallet_paise / 100 : 0),
             balance_paise: c.wallet_paise !== undefined ? c.wallet_paise : (c.wallet_balance ? c.wallet_balance * 100 : 0)
           }))
@@ -2500,23 +2564,37 @@ export default {
         return jsonResponse({ requests: store.wallet_topups || [] });
       }
 
-      if (path.match(/\/api\/admin\/wallet-topups\/\d+\/approve/) && request.method === 'POST') {
-        const topupId = +path.split('/')[4];
-        const topup = (store.wallet_topups || []).find(t => t.id === topupId);
+      if (path.match(/\/api\/admin\/wallet-topups\/[^\/]+\/approve/) && request.method === 'POST') {
+        const topupIdStr = String(path.split('/')[4]);
+        const topup = (store.wallet_topups || []).find(t => String(t.id) === topupIdStr || +t.id === +topupIdStr);
         if (!topup) return jsonResponse({ error: 'Top-up request not found' }, 404);
+
+        if (String(topup.status || '').toLowerCase() === 'approved') {
+          return jsonResponse({ error: 'Request is already approved' }, 409);
+        }
+
+        const reqAmt = (topup.amount_rupees !== undefined ? +topup.amount_rupees : (topup.amount_paise ? +topup.amount_paise / 100 : 0)) || 0;
+        const reqPaise = (topup.amount_paise !== undefined ? +topup.amount_paise : reqAmt * 100) || 0;
+
         topup.status = 'Approved';
         topup.approved_at = Date.now();
-        const targetC = store.centres.find(ce => ce.id === topup.centre_id);
+        topup.reviewed_at = Date.now();
+
+        const targetC = store.centres.find(ce =>
+          (+ce.id === +topup.centre_id) ||
+          (topup.centre_code && ce.centre_code && String(ce.centre_code).toUpperCase() === String(topup.centre_code).toUpperCase())
+        );
+
         if (targetC) {
-          targetC.wallet_balance = (targetC.wallet_balance || 0) + topup.amount_rupees;
-          targetC.wallet_paise = (targetC.wallet_paise || 0) + topup.amount_paise;
+          targetC.wallet_balance = (targetC.wallet_balance || 0) + reqAmt;
+          targetC.wallet_paise = (targetC.wallet_paise || 0) + reqPaise;
           if (!Array.isArray(targetC.wallet_ledger)) targetC.wallet_ledger = [];
           targetC.wallet_ledger.unshift({
             id: Date.now(),
             kind: 'credit',
             type: 'credit',
-            amount: topup.amount_rupees,
-            amount_paise: topup.amount_paise,
+            amount: reqAmt,
+            amount_paise: reqPaise,
             balance_after: targetC.wallet_balance,
             description: `Wallet Top-Up Approved (${topup.payment_mode || 'UPI'} - ${topup.utr_number || 'Direct'})`,
             note: `Wallet Top-Up Approved (${topup.payment_mode || 'UPI'} - ${topup.utr_number || 'Direct'})`,
@@ -2527,16 +2605,34 @@ export default {
           await persistToKV(env, 'centres', store.centres);
         }
         await persistToKV(env, 'wallet_topups', store.wallet_topups);
-        return jsonResponse({ ok: true, message: `Approved ₹${topup.amount_rupees} top-up for ${targetC ? targetC.name : 'Centre'}!` });
+
+        return jsonResponse({
+          ok: true,
+          status: 'approved',
+          id: topup.id,
+          credited_rupees: reqAmt,
+          credited_paise: reqPaise,
+          balance_paise: targetC ? targetC.wallet_paise : reqPaise,
+          balance: targetC ? targetC.wallet_balance : reqAmt,
+          message: `Approved ₹${reqAmt.toLocaleString('en-IN')} top-up for ${targetC ? targetC.name : 'Centre'}!`
+        });
       }
 
-      if (path.match(/\/api\/admin\/wallet-topups\/\d+\/reject/) && request.method === 'POST') {
-        const topupId = +path.split('/')[4];
-        const topup = (store.wallet_topups || []).find(t => t.id === topupId);
+      if (path.match(/\/api\/admin\/wallet-topups\/[^\/]+\/reject/) && request.method === 'POST') {
+        const topupIdStr = String(path.split('/')[4]);
+        let body = await request.json().catch(() => ({}));
+        if (typeof body === 'string') {
+          try { body = JSON.parse(body); } catch (_) {}
+        }
+        const reason = (body.reason || 'UTR verification failed or payment not received').trim();
+        const topup = (store.wallet_topups || []).find(t => String(t.id) === topupIdStr || +t.id === +topupIdStr);
         if (!topup) return jsonResponse({ error: 'Top-up request not found' }, 404);
+
         topup.status = 'Rejected';
+        topup.rejection_reason = reason;
+        topup.reviewed_at = Date.now();
         await persistToKV(env, 'wallet_topups', store.wallet_topups);
-        return jsonResponse({ ok: true, message: 'Top-up request rejected.' });
+        return jsonResponse({ ok: true, status: 'rejected', id: topup.id, rejection_reason: reason, message: 'Top-up request rejected.' });
       }
 
       if (path.match(/\/api\/admin\/wallets\/\d+\/adjust/) && request.method === 'POST') {
@@ -3877,9 +3973,30 @@ export default {
       });
     }
 
-    if (path === '/api/centre/wallet/topup-requests') {
-      const reqs = (store.wallet_topups || []).filter(t => t.centre_id === c.id);
-      return jsonResponse({ requests: reqs });
+    if (path === '/api/centre/wallet/payment-settings') {
+      const s = store.site_settings || {};
+      const upiId = s.upi_id || 'pescouncil@upi';
+      const upiName = s.upi_name || 'Purvanchal Education and Skill Council';
+      const bankName = s.bank_name || 'State Bank of India';
+      const accNo = s.account_number || s.bank_account || '39820192830';
+      const ifsc = s.ifsc_code || s.bank_ifsc || 'SBIN0001234';
+      const wa = s.whatsapp_number || '919876543210';
+      const qrImage = s.qr_code_image || s.qr_image_url || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi%3A%2F%2Fpay%3Fpa%3D${encodeURIComponent(upiId)}%26pn%3D${encodeURIComponent(upiName)}`;
+
+      return jsonResponse({
+        settings: {
+          upi_id: upiId,
+          upi_name: upiName,
+          bank_name: bankName,
+          account_number: accNo,
+          bank_account: accNo,
+          ifsc_code: ifsc,
+          bank_ifsc: ifsc,
+          whatsapp_number: wa,
+          qr_code_image: qrImage,
+          qr_image_url: qrImage
+        }
+      });
     }
 
     if (path === '/api/centre/wallet') {
