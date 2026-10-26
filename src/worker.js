@@ -46,6 +46,27 @@ const store = {
 
 // Comprehensive Accredited Course Curriculum: Yearly-Wise & Semester-Wise Distinct Subjects
 const COURSE_CURRICULUM_DATA = {
+  NTT: {
+    name: 'Nursery Teacher Training',
+    yearly: {
+      'Annual Examination': [
+        { code: 'NTT-01', name: 'Child Psychology', max_marks: 100, min_marks: 40, theory: 78, marks_obtained: 78, grade: 'A' },
+        { code: 'NTT-02', name: 'School Organization', max_marks: 100, min_marks: 40, theory: 72, marks_obtained: 72, grade: 'B+' },
+        { code: 'NTT-03', name: 'Methods of Teaching', max_marks: 100, min_marks: 40, theory: 83, marks_obtained: 83, grade: 'A+' },
+        { code: 'NTT-04', name: 'Arts & Craft', max_marks: 100, min_marks: 40, theory: 85, marks_obtained: 85, grade: 'A+' },
+        { code: 'NTT-05', name: 'Lesson Plan', max_marks: 100, min_marks: 40, theory: 75, marks_obtained: 75, grade: 'A' },
+        { code: 'NTT-06', name: 'Practical & Assignment', max_marks: 100, min_marks: 40, theory: 89, marks_obtained: 89, grade: 'A+' },
+      ],
+      '1st Year': [
+        { code: 'NTT-01', name: 'Child Psychology', max_marks: 100, min_marks: 40, theory: 78, marks_obtained: 78, grade: 'A' },
+        { code: 'NTT-02', name: 'School Organization', max_marks: 100, min_marks: 40, theory: 72, marks_obtained: 72, grade: 'B+' },
+        { code: 'NTT-03', name: 'Methods of Teaching', max_marks: 100, min_marks: 40, theory: 83, marks_obtained: 83, grade: 'A+' },
+        { code: 'NTT-04', name: 'Arts & Craft', max_marks: 100, min_marks: 40, theory: 85, marks_obtained: 85, grade: 'A+' },
+        { code: 'NTT-05', name: 'Lesson Plan', max_marks: 100, min_marks: 40, theory: 75, marks_obtained: 75, grade: 'A' },
+        { code: 'NTT-06', name: 'Practical & Assignment', max_marks: 100, min_marks: 40, theory: 89, marks_obtained: 89, grade: 'A+' },
+      ]
+    }
+  },
   DCA: {
     name: 'Diploma in Computer Applications',
     yearly: {
@@ -269,33 +290,6 @@ const COURSE_CURRICULUM_DATA = {
         { code: 'DTP-S201', name: 'CorelDraw Vector Art, Banner & Logo Design', max_marks: 100, theory: 45, practical: 46 },
         { code: 'DTP-S202', name: 'Adobe InDesign & Book Publication Pre-Press', max_marks: 100, theory: 44, practical: 45 },
         { code: 'DTP-S203', name: 'Print Production Technology & Exhibition Portfolio', max_marks: 100, theory: 48, practical: 48 },
-      ]
-    }
-  },
-  NTT: {
-    name: 'Nursery Teacher Training',
-    yearly: {
-      'Annual Examination': [
-        { code: 'NTT-Y101', name: 'Child Psychology & Child Development', max_marks: 100, theory: 45, practical: 45 },
-        { code: 'NTT-Y102', name: 'Early Childhood Care & Education (ECCE)', max_marks: 100, theory: 44, practical: 46 },
-        { code: 'NTT-Y103', name: 'Pre-School Organization, Health & Nutrition', max_marks: 100, theory: 45, practical: 46 },
-        { code: 'NTT-Y104', name: 'Educational Rhymes, Story Telling & Music', max_marks: 100, theory: 46, practical: 45 },
-        { code: 'NTT-Y105', name: 'Teaching Learning Materials (TLM) & Arts Crafts', max_marks: 100, theory: 45, practical: 45 },
-        { code: 'NTT-Y106', name: 'Micro-Teaching Practical & Classroom Viva', max_marks: 100, theory: 48, practical: 48 },
-      ]
-    },
-    semester: {
-      'Semester 1': [
-        { code: 'NTT-S101', name: 'Child Development & Psychology Fundamentals', max_marks: 100, theory: 45, practical: 45 },
-        { code: 'NTT-S102', name: 'Nutrition, Health & Hygiene for Pre-Primary', max_marks: 100, theory: 44, practical: 46 },
-        { code: 'NTT-S103', name: 'Early Education Curriculum & Rhyme Workshop', max_marks: 100, theory: 46, practical: 45 },
-        { code: 'NTT-S104', name: 'Practical Activity Lab - I & Viva-Voce', max_marks: 100, theory: 47, practical: 47 },
-      ],
-      'Semester 2': [
-        { code: 'NTT-S201', name: 'Modern Teaching Methods (Montessori & Play-Way)', max_marks: 100, theory: 45, practical: 46 },
-        { code: 'NTT-S202', name: 'School Administration & Community Engagement', max_marks: 100, theory: 44, practical: 45 },
-        { code: 'NTT-S203', name: 'TLM Creation, Creative Crafts & Exhibition', max_marks: 100, theory: 46, practical: 45 },
-        { code: 'NTT-S204', name: 'School Internship & Teaching Demonstration Viva', max_marks: 100, theory: 48, practical: 48 },
       ]
     }
   },
@@ -559,9 +553,28 @@ const CLEAN_SEED_MARKSHEET = {
   created_at: 1792376054616
 };
 
-const DATA_VERSION = 'v17_exact_templates_workflow_wallet_2026';
+const DATA_VERSION = 'v26_clean_zero_all_entities_2026';
 let kvLoaded = false;
 let lastKvSync = 0;
+
+const CLEAN_ADMIN_USER = {
+  id: 1,
+  email: 'admin@pescouncil.in',
+  name: 'Super Admin',
+  mobile: '+91 542-1234567',
+  password_plain: 'admin123',
+  password_hash: '$2a$10$f.7G6mrYseQ4QA43wtgRQuk4M4sWtZ7JnU6WCYbVqEChIkfiRgWv.',
+  role: 'super_admin',
+  state: 'Uttar Pradesh',
+  centre_id: null,
+  status: 'active',
+  failed_logins: 0,
+  locked_until: null,
+  created_at: 1792375801646,
+  photo_url: null,
+  seal_url: null,
+  signature_url: null
+};
 
 async function syncFromKV(env, force = false) {
   if (!env || !env.PESC_KV) return;
@@ -570,29 +583,32 @@ async function syncFromKV(env, force = false) {
   try {
     const currentVersion = await env.PESC_KV.get('data_version');
     if (currentVersion !== DATA_VERSION) {
-      // Overwrite KV with clean fresh state
+      // Overwrite KV with 100% clean fresh zero state (all centres, coords, students deleted)
       await Promise.all([
         env.PESC_KV.put('data_version', DATA_VERSION),
-        env.PESC_KV.put('centres', JSON.stringify([CLEAN_SEED_CENTRE])),
+        env.PESC_KV.put('centres', JSON.stringify([])),
         env.PESC_KV.put('applications', JSON.stringify([])),
-        env.PESC_KV.put('students', JSON.stringify([CLEAN_SEED_STUDENT])),
-        env.PESC_KV.put('certificates', JSON.stringify([CLEAN_SEED_CERTIFICATE])),
-        env.PESC_KV.put('marksheets', JSON.stringify([CLEAN_SEED_MARKSHEET])),
+        env.PESC_KV.put('students', JSON.stringify([])),
+        env.PESC_KV.put('certificates', JSON.stringify([])),
+        env.PESC_KV.put('marksheets', JSON.stringify([])),
         env.PESC_KV.put('coordinator_certificates', JSON.stringify([])),
-        env.PESC_KV.put('users', JSON.stringify(store.users)),
+        env.PESC_KV.put('wallet_topups', JSON.stringify([])),
+        env.PESC_KV.put('users', JSON.stringify([CLEAN_ADMIN_USER])),
       ]);
-      store.centres = [CLEAN_SEED_CENTRE];
+      store.centres = [];
       store.applications = [];
-      store.students = [CLEAN_SEED_STUDENT];
-      store.certificates = [CLEAN_SEED_CERTIFICATE];
-      store.marksheets = [CLEAN_SEED_MARKSHEET];
+      store.students = [];
+      store.certificates = [];
+      store.marksheets = [];
       store.coordinator_certificates = [];
+      store.wallet_topups = [];
+      store.users = [CLEAN_ADMIN_USER];
       kvLoaded = true;
       lastKvSync = now;
       return;
     }
 
-    const [c, a, s, u, certs, mrks, courses, settings, notices, coordCerts] = await Promise.all([
+    const [c, a, s, u, certs, mrks, courses, settings, notices, coordCerts, wt] = await Promise.all([
       env.PESC_KV.get('centres', 'json'),
       env.PESC_KV.get('applications', 'json'),
       env.PESC_KV.get('students', 'json'),
@@ -605,46 +621,17 @@ async function syncFromKV(env, force = false) {
       env.PESC_KV.get('coordinator_certificates', 'json'),
       env.PESC_KV.get('wallet_topups', 'json'),
     ]);
-    if (Array.isArray(c) && c.length) {
-      store.centres = c;
-    } else {
-      store.centres = [CLEAN_SEED_CENTRE];
-    }
-    if (Array.isArray(a)) {
-      store.applications = a;
-    }
-    if (Array.isArray(s) && s.length) {
-      store.students = s;
-    } else {
-      store.students = [CLEAN_SEED_STUDENT];
-    }
-    if (Array.isArray(certs) && certs.length) {
-      store.certificates = certs;
-    } else {
-      store.certificates = [CLEAN_SEED_CERTIFICATE];
-    }
-    if (Array.isArray(mrks) && mrks.length) {
-      store.marksheets = mrks;
-    } else {
-      store.marksheets = [CLEAN_SEED_MARKSHEET];
-    }
-    if (Array.isArray(courses) && courses.length) {
-      store.courses = courses;
-    }
-    if (settings && typeof settings === 'object') {
-      store.site_settings = Object.assign(store.site_settings, settings);
-    }
-    if (Array.isArray(notices) && notices.length) {
-      store.notices = notices;
-    }
-    if (Array.isArray(coordCerts)) {
-      store.coordinator_certificates = coordCerts;
-    }
-    const wt = arguments ? arguments[10] : null;
-    if (Array.isArray(arguments?.[10])) store.wallet_topups = arguments[10];
-    if (Array.isArray(u) && u.length) {
-      store.users = u;
-    }
+    if (Array.isArray(c)) store.centres = c;
+    if (Array.isArray(a)) store.applications = a;
+    if (Array.isArray(s)) store.students = s;
+    if (Array.isArray(certs)) store.certificates = certs;
+    if (Array.isArray(mrks)) store.marksheets = mrks;
+    if (Array.isArray(courses) && courses.length) store.courses = courses;
+    if (settings && typeof settings === 'object') store.site_settings = Object.assign(store.site_settings, settings);
+    if (Array.isArray(notices) && notices.length) store.notices = notices;
+    if (Array.isArray(coordCerts)) store.coordinator_certificates = coordCerts;
+    if (Array.isArray(wt)) store.wallet_topups = wt;
+    if (Array.isArray(u) && u.length) store.users = u;
     kvLoaded = true;
     lastKvSync = now;
   } catch (_) {}

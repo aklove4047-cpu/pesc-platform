@@ -1,5 +1,5 @@
 // Official Document Templates (Admission Form, Certificate, Marksheet, Student ID Card)
-// Designed to exactly match user-provided reference images (NO Ashok Stambh - Council & ISO accreditations only)
+// Pixel-accurate recreation of User-Provided Reference Images (Without Ashok Stambh)
 
 (function(global) {
   'use strict';
@@ -14,7 +14,7 @@
       .replace(/'/g, '&#39;');
   }
 
-  // Base64 / SVG Badges & Seals
+  // Official Seals & Signatures
   const SEALS = {
     councilSeal: '/assets/img/seal_council_head.svg',
     councilSign: '/assets/img/sign_council_head.svg',
@@ -24,39 +24,82 @@
     centreSign: '/assets/img/sign_centre_director.svg',
   };
 
-  // Badges Bar (ISO, NITI Aayog NGO Darpan, IAF, MSME, PESC) - NO Ashok Stambh
+  // 1. Accreditations Badge Strip (ISO, NITI Aayog NGO Darpan, IAF, MSME, PESC - NO Ashok Stambh)
   function renderAccreditationBadgesHtml() {
     return `
-      <div style="display:flex; justify-content:center; align-items:center; gap:16px; margin-top:14px; padding-top:10px; border-top:1.5px solid #cbd5e1; flex-wrap:wrap;">
+      <div style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:14px; padding-top:8px; border-top:1.5px solid #cbd5e1; flex-wrap:wrap;">
         <div style="text-align:center;">
-          <div style="width:36px; height:36px; border:1.5px solid #0369a1; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:0.6rem; color:#0369a1; background:#f0f9ff;">ISO</div>
-          <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:2px;">9001:2015</div>
+          <div style="width:36px; height:36px; border:1.5px solid #0369a1; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:0.58rem; color:#0369a1; background:#f0f9ff;">ISO</div>
+          <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:1px;">9001:2015</div>
         </div>
         <div style="text-align:center;">
           <div style="width:36px; height:36px; border:1.5px solid #047857; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:0.55rem; color:#047857; background:#ecfdf5;">NITI</div>
-          <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:2px;">Aayog</div>
+          <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:1px;">Aayog</div>
         </div>
         <div style="text-align:center;">
-          <div style="padding:4px 8px; border:1.5px solid #b45309; border-radius:4px; font-weight:900; font-size:0.55rem; color:#b45309; background:#fffbeb;">NGO DARPAN</div>
-          <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:2px;">Govt. of India</div>
+          <div style="padding:3px 8px; border:1.5px solid #b45309; border-radius:4px; font-weight:900; font-size:0.52rem; color:#b45309; background:#fffbeb;">NGO DARPAN</div>
+          <div style="font-size:0.48rem; font-weight:800; color:#475569; margin-top:1px;">Govt. of India</div>
         </div>
         <div style="text-align:center;">
-          <div style="padding:4px 10px; border:1.5px solid #1e3a8a; border-radius:4px; font-weight:900; font-size:0.55rem; color:#1e3a8a; background:#eff6ff;">IAF MEMBER</div>
-          <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:2px;">Accredited</div>
+          <div style="padding:3px 8px; border:1.5px solid #1e3a8a; border-radius:4px; font-weight:900; font-size:0.52rem; color:#1e3a8a; background:#eff6ff;">IAF MEMBER</div>
+          <div style="font-size:0.48rem; font-weight:800; color:#475569; margin-top:1px;">Accredited</div>
         </div>
         <div style="text-align:center;">
-          <div style="padding:4px 8px; border:1.5px solid #7c2d12; border-radius:4px; font-weight:900; font-size:0.55rem; color:#7c2d12; background:#fef2f2;">MSME</div>
-          <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:2px;">Govt. of India</div>
+          <div style="padding:3px 8px; border:1.5px solid #7c2d12; border-radius:4px; font-weight:900; font-size:0.52rem; color:#7c2d12; background:#fef2f2;">MSME</div>
+          <div style="font-size:0.48rem; font-weight:800; color:#475569; margin-top:1px;">Govt. of India</div>
         </div>
         <div style="text-align:center;">
-          <div style="width:36px; height:36px; border:1.5px solid #d4af37; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:0.58rem; color:#854d0e; background:#fefce8;">PESC</div>
-          <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:2px;">Autonomous</div>
+          <div style="width:36px; height:36px; border:1.5px solid #d4af37; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:0.55rem; color:#854d0e; background:#fefce8;">PESC</div>
+          <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:1px;">Autonomous</div>
         </div>
       </div>
     `;
   }
 
-  // 1. ADMISSION FORM TEMPLATE (Image 2 - media_1793022501809.jpg)
+  // 2. Section Header Ribbon for Admission Form
+  function renderAdmissionRibbon(title) {
+    return `
+      <div style="text-align:center; margin:8px 0 6px;">
+        <svg viewBox="0 0 320 28" width="300" height="28" style="display:inline-block; max-width:100%;">
+          <polygon points="14,0 306,0 320,14 306,28 14,28 0,14" fill="#08244c" stroke="#d4af37" stroke-width="1.5"/>
+          <text x="160" y="19" font-family="'Inter', sans-serif" font-size="11" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1.5">${esc(title)}</text>
+        </svg>
+      </div>
+    `;
+  }
+
+  // 3. Golden 3D Ribbon Banner for Marksheet and Certificate
+  function render3DGoldRibbon(mainTitle, subTitle) {
+    return `
+      <div style="text-align:center; margin:4px auto 10px; max-width:480px; width:100%;">
+        <svg viewBox="0 0 500 70" width="100%" height="70" style="display:block; margin:0 auto;">
+          <defs>
+            <linearGradient id="goldRibbonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#b45309"/>
+              <stop offset="12%" stop-color="#fef08a"/>
+              <stop offset="50%" stop-color="#f59e0b"/>
+              <stop offset="88%" stop-color="#fef08a"/>
+              <stop offset="100%" stop-color="#b45309"/>
+            </linearGradient>
+          </defs>
+          <!-- Left Tail -->
+          <polygon points="45,26 0,16 22,42 0,68 45,58" fill="#92400e" stroke="#78350f" stroke-width="1.5"/>
+          <polygon points="45,26 45,58 75,58" fill="#78350f"/>
+          <!-- Right Tail -->
+          <polygon points="455,26 500,16 478,42 500,68 455,58" fill="#92400e" stroke="#78350f" stroke-width="1.5"/>
+          <polygon points="455,26 455,58 425,58" fill="#78350f"/>
+          <!-- Main Body -->
+          <rect x="50" y="12" width="400" height="48" rx="6" fill="url(#goldRibbonGrad)" stroke="#78350f" stroke-width="2"/>
+          <text x="250" y="36" font-family="'Rozha One', 'Georgia', serif" font-size="22" font-weight="900" fill="#08244c" text-anchor="middle" letter-spacing="3">${esc(mainTitle)}</text>
+          <text x="250" y="51" font-family="'Inter', sans-serif" font-size="10.5" font-weight="900" fill="#08244c" text-anchor="middle" letter-spacing="2">${esc(subTitle)}</text>
+        </svg>
+      </div>
+    `;
+  }
+
+  // =========================================================================
+  // TEMPLATE 1: ADMISSION FORM (media_1793022501809.jpg)
+  // =========================================================================
   function renderAdmissionFormHtml(data) {
     const s = data.student || {};
     const c = data.centre || {};
@@ -78,13 +121,11 @@
     const cat = s.category || 'Gen';
     const durationStr = s.duration_months ? `${Math.round(s.duration_months/12) || 1} Year` : '1 Year';
 
-    // Quals
     const quals = s.academic_qualifications || {};
     const q10 = quals.tenth || quals['10th'] || { board: 'State Board / CBSE', year: '2020', marks: '420/500', pct: '84.0%' };
     const q12 = quals.twelfth || quals['12th'] || { board: 'State Board / UP Board', year: '2022', marks: '395/500', pct: '79.0%' };
     const qGrad = quals.graduation || { board: 'University', year: '2025', marks: '1150/1500', pct: '76.6%' };
 
-    // Seals & Signatures
     const centreSeal = c.seal_url || SEALS.centreSeal;
     const centreSign = c.signature_url || SEALS.centreSign;
     const coordSeal = c.coordinator_seal_url || SEALS.coordinatorSeal;
@@ -93,7 +134,7 @@
     const councilSign = SEALS.councilSign;
 
     return `
-      <div class="official-admission-form printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #072a60; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
+      <div class="official-admission-form printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
         
         <!-- Watermark Background -->
         <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0.035; z-index:0;">
@@ -110,10 +151,10 @@
 
             <!-- Center: Names and Accreditations -->
             <div style="text-align:center; flex:1;">
-              <div style="font-size:2rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
+              <div style="font-size:2rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
                 ${esc(centreHindi)}
               </div>
-              <div style="font-size:1.3rem; font-weight:900; color:#072a60; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
+              <div style="font-size:1.3rem; font-weight:900; color:#08244c; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
                 ${esc(centreEnglish)}
               </div>
               <div style="display:inline-block; background:#fef08a; color:#854d0e; font-size:0.68rem; font-weight:800; padding:2px 14px; border-radius:12px; border:1px solid #fde047; text-transform:uppercase; margin:3px 0; letter-spacing:0.5px;">
@@ -129,19 +170,19 @@
               <div style="width:52px; height:52px; margin:0 auto; border-radius:50%; border:1.5px solid #047857; display:flex; align-items:center; justify-content:center; background:#ecfdf5; box-shadow:0 2px 6px rgba(4,120,87,0.15);">
                 <img src="${councilSeal}" style="width:42px; height:42px;">
               </div>
-              <div style="font-size:0.62rem; font-weight:900; color:#072a60; margin-top:3px;">NITI Aayog</div>
+              <div style="font-size:0.62rem; font-weight:900; color:#08244c; margin-top:3px;">NITI Aayog</div>
               <div style="font-size:0.52rem; font-weight:800; color:#475569;">NGO DARPAN</div>
               <div style="font-size:0.5rem; color:#64748b;">Registered Org.</div>
             </div>
           </div>
 
           <!-- Banner Bar -->
-          <div style="background:linear-gradient(135deg, #072a60 0%, #0c4a6e 50%, #072a60 100%); color:#ffffff; text-align:center; font-weight:900; font-size:1.05rem; padding:6px 12px; border-radius:4px; letter-spacing:1.5px; margin:6px 0 8px; border:1.5px solid #d4af37; text-transform:uppercase;">
+          <div style="background:linear-gradient(135deg, #08244c 0%, #0c4a6e 50%, #08244c 100%); color:#ffffff; text-align:center; font-weight:900; font-size:1.05rem; padding:6px 12px; border-radius:4px; letter-spacing:1.5px; margin:6px 0 8px; border:1.5px solid #d4af37; text-transform:uppercase;">
             ADMISSION FORM / ADMISSION APPLICATION FORM
           </div>
 
           <!-- Metadata Line -->
-          <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:8px; border-bottom:1.5px solid #072a60; padding-bottom:4px;">
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:8px; border-bottom:1.5px solid #08244c; padding-bottom:4px;">
             <div>
               <span>Form No: <b>${esc(formNo)}</b></span>
               <span style="margin-left:14px;">Reg. No. (Council): <b>${esc(regNo)}</b></span>
@@ -153,16 +194,11 @@
 
           <!-- Main Layout: Left Details + Right Photo -->
           <div style="display:flex; gap:16px; align-items:flex-start;">
-            <!-- Left Info -->
             <div style="flex:1;">
-              <!-- Section Ribbon: PERSONAL DETAILS -->
-              <div style="background:#072a60; color:#ffffff; text-align:center; font-size:0.75rem; font-weight:900; letter-spacing:1.5px; padding:3px 24px; border-radius:12px; margin:4px 0 8px; display:inline-block; border:1.5px solid #d4af37;">
-                PERSONAL DETAILS
-              </div>
-
+              ${renderAdmissionRibbon('PERSONAL DETAILS')}
               <div style="font-size:0.84rem; line-height:1.75; color:#0f172a;">
                 <div>
-                  Full Name (In Block Letters): <b style="font-size:0.95rem; color:#072a60; text-transform:uppercase; border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.name || '')}</b>
+                  Full Name (In Block Letters): <b style="font-size:0.95rem; color:#08244c; text-transform:uppercase; border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.name || '')}</b>
                 </div>
                 <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
                   <span>Gender: [${isMale ? '✓' : '&nbsp;'}] Male &nbsp; [${isFemale ? '✓' : '&nbsp;'}] Female</span>
@@ -183,21 +219,17 @@
 
             <!-- Right: Photo Box -->
             <div style="width:110px; flex-shrink:0; text-align:center;">
-              <div style="width:105px; height:130px; border:2px solid #072a60; border-radius:4px; overflow:hidden; background:#f8fafc; margin:0 auto; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+              <div style="width:105px; height:130px; border:2px solid #08244c; border-radius:4px; overflow:hidden; background:#f8fafc; margin:0 auto; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
                 ${photoHtml}
               </div>
-              <div style="font-size:0.58rem; font-weight:800; color:#072a60; margin-top:3px; letter-spacing:0.5px;">PESC VERIFIED</div>
+              <div style="font-size:0.58rem; font-weight:800; color:#08244c; margin-top:3px; letter-spacing:0.5px;">PESC VERIFIED</div>
             </div>
           </div>
 
-          <!-- Section Ribbon: COURSE DETAILS -->
-          <div style="text-align:center; margin:8px 0 6px;">
-            <div style="background:#072a60; color:#ffffff; font-size:0.75rem; font-weight:900; letter-spacing:1.5px; padding:3px 24px; border-radius:12px; display:inline-block; border:1.5px solid #d4af37;">
-              COURSE DETAILS
-            </div>
-          </div>
+          <!-- Section: COURSE DETAILS -->
+          ${renderAdmissionRibbon('COURSE DETAILS')}
           <div style="font-size:0.84rem; line-height:1.75; color:#0f172a;">
-            <div>Course Applied For: <b style="font-size:1rem; color:#072a60; border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.course_name || s.course || 'Vocational Diploma Course')}</b></div>
+            <div>Course Applied For: <b style="font-size:1rem; color:#08244c; border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.course_name || s.course || 'Nursery Teacher Training')}</b></div>
             <div style="display:flex; gap:16px;">
               <span>Course Duration: [✓] ${esc(durationStr)}</span>
               <span>&nbsp; [ ] Other</span>
@@ -205,12 +237,8 @@
             <div>Study Centre Name: <b style="color:#0f172a; border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(c.name || centreEnglish)} (${esc(centreCode)})</b></div>
           </div>
 
-          <!-- Section Ribbon: CONTACT & COMMUNICATION DETAILS -->
-          <div style="text-align:center; margin:8px 0 6px;">
-            <div style="background:#072a60; color:#ffffff; font-size:0.75rem; font-weight:900; letter-spacing:1.5px; padding:3px 24px; border-radius:12px; display:inline-block; border:1.5px solid #d4af37;">
-              CONTACT &amp; COMMUNICATION DETAILS
-            </div>
-          </div>
+          <!-- Section: CONTACT & COMMUNICATION DETAILS -->
+          ${renderAdmissionRibbon('CONTACT & COMMUNICATION DETAILS')}
           <div style="font-size:0.84rem; line-height:1.75; color:#0f172a;">
             <div>Permanent Address: <span style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.address || s.local_address || 'Village & Post Shahgarh, Azamgarh, Uttar Pradesh')}</span></div>
             <div style="display:flex; gap:14px; flex-wrap:wrap;">
@@ -225,15 +253,11 @@
             </div>
           </div>
 
-          <!-- Section Ribbon: EDUCATIONAL QUALIFICATION -->
-          <div style="text-align:center; margin:8px 0 6px;">
-            <div style="background:#072a60; color:#ffffff; font-size:0.75rem; font-weight:900; letter-spacing:1.5px; padding:3px 24px; border-radius:12px; display:inline-block; border:1.5px solid #d4af37;">
-              EDUCATIONAL QUALIFICATION
-            </div>
-          </div>
-          <table style="width:100%; border-collapse:collapse; font-size:0.78rem; text-align:center; border:1.5px solid #072a60; margin-bottom:8px;">
+          <!-- Section: EDUCATIONAL QUALIFICATION -->
+          ${renderAdmissionRibbon('EDUCATIONAL QUALIFICATION')}
+          <table style="width:100%; border-collapse:collapse; font-size:0.78rem; text-align:center; border:1.5px solid #08244c; margin-bottom:8px;">
             <thead>
-              <tr style="background:#072a60; color:#ffffff; font-weight:900;">
+              <tr style="background:#08244c; color:#ffffff; font-weight:900;">
                 <th style="padding:5px 6px; border:1px solid #cbd5e1; width:22%;">Exam Passed</th>
                 <th style="padding:5px 6px; border:1px solid #cbd5e1; width:34%;">Board/University</th>
                 <th style="padding:5px 6px; border:1px solid #cbd5e1; width:16%;">Passing Year</th>
@@ -273,29 +297,23 @@
             </tbody>
           </table>
 
-          <!-- Declaration -->
-          <div style="text-align:center; margin:8px 0 4px;">
-            <div style="background:#072a60; color:#ffffff; font-size:0.75rem; font-weight:900; letter-spacing:1.5px; padding:3px 24px; border-radius:12px; display:inline-block; border:1.5px solid #d4af37;">
-              DECLARATION BY THE APPLICANT
-            </div>
-          </div>
+          <!-- Section: DECLARATION BY THE APPLICANT -->
+          ${renderAdmissionRibbon('DECLARATION BY THE APPLICANT')}
           <div style="font-size:0.74rem; color:#334155; line-height:1.45; text-align:justify; margin-bottom:12px;">
             I hereby declare that all the information provided above is true and correct to the best of my knowledge, and I understand that any false statement may lead to the rejection of my application.
           </div>
 
           <!-- 3 Stamps & Signatures Row (Applicant, Centre/Coordinator, Council) -->
           <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px; padding:0 8px;">
-            <!-- Left: Applicant -->
             <div style="text-align:center; width:180px;">
               <div style="height:48px; display:flex; align-items:flex-end; justify-content:center;">
-                <div style="font-family:'Brush Script MT', cursive; font-size:1.4rem; color:#072a60;">${esc(s.name || 'Applicant')}</div>
+                <div style="font-family:'Brush Script MT', cursive; font-size:1.4rem; color:#08244c;">${esc(s.name || 'Applicant')}</div>
               </div>
               <div style="border-top:1.5px solid #0f172a; padding-top:4px; font-size:0.78rem; font-weight:800; color:#0f172a;">
                 Signature of Applicant
               </div>
             </div>
 
-            <!-- Middle: Authorised Signatory / Coordinator -->
             <div style="text-align:center; width:220px;">
               <div style="height:65px; position:relative; display:flex; align-items:center; justify-content:center;">
                 <img src="${coordSeal}" style="width:64px; height:64px; position:absolute; opacity:0.85; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.15));">
@@ -306,7 +324,6 @@
               </div>
             </div>
 
-            <!-- Right: Signature of Council -->
             <div style="text-align:center; width:200px;">
               <div style="height:65px; position:relative; display:flex; align-items:center; justify-content:center;">
                 <img src="${councilSeal}" style="width:64px; height:64px; position:absolute; opacity:0.85; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.15));">
@@ -318,14 +335,15 @@
             </div>
           </div>
 
-          <!-- Bottom Badges Strip -->
           ${renderAccreditationBadgesHtml()}
         </div>
       </div>
     `;
   }
 
-  // 2. CERTIFICATE OF COMPLETION TEMPLATE (Image 3 - media_1793022505568.jpg)
+  // =========================================================================
+  // TEMPLATE 2: CERTIFICATE OF COMPLETION (media_1793022505568.jpg)
+  // =========================================================================
   function renderCertificateHtml(data) {
     const s = data.student || {};
     const c = data.centre || {};
@@ -350,7 +368,6 @@
       `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
       `<div style="padding-top:25px; font-size:0.6rem; font-weight:800; color:#64748b;">PHOTO</div>`;
 
-    // Seals & Signatures
     const centreSeal = c.seal_url || SEALS.centreSeal;
     const centreSign = c.signature_url || SEALS.centreSign;
     const coordSeal = c.coordinator_seal_url || SEALS.coordinatorSeal;
@@ -359,7 +376,7 @@
     const councilSign = SEALS.councilSign;
 
     return `
-      <div class="official-certificate printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #072a60; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
+      <div class="official-certificate printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
         
         <!-- Watermark Background -->
         <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0.035; z-index:0;">
@@ -376,10 +393,10 @@
 
             <!-- Center: Names and Accreditations -->
             <div style="text-align:center; flex:1;">
-              <div style="font-size:2rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
+              <div style="font-size:2rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
                 ${esc(centreHindi)}
               </div>
-              <div style="font-size:1.3rem; font-weight:900; color:#072a60; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
+              <div style="font-size:1.3rem; font-weight:900; color:#08244c; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
                 ${esc(centreEnglish)}
               </div>
               <div style="display:inline-block; background:#fef08a; color:#854d0e; font-size:0.68rem; font-weight:800; padding:2px 14px; border-radius:12px; border:1px solid #fde047; text-transform:uppercase; margin:3px 0; letter-spacing:0.5px;">
@@ -395,7 +412,7 @@
               <div style="width:52px; height:52px; margin:0 auto; border-radius:50%; border:1.5px solid #047857; display:flex; align-items:center; justify-content:center; background:#ecfdf5; box-shadow:0 2px 6px rgba(4,120,87,0.15);">
                 <img src="${councilSeal}" style="width:42px; height:42px;">
               </div>
-              <div style="font-size:0.62rem; font-weight:900; color:#072a60; margin-top:3px;">NITI Aayog</div>
+              <div style="font-size:0.62rem; font-weight:900; color:#08244c; margin-top:3px;">NITI Aayog</div>
               <div style="font-size:0.52rem; font-weight:800; color:#475569;">NGO DARPAN</div>
               <div style="font-size:0.5rem; color:#64748b;">Registered Org.</div>
             </div>
@@ -408,55 +425,45 @@
               <div>Student Reg. No.: <span style="font-family:monospace; color:#0284c7;">${esc(studentRegNo)}</span></div>
               <div>Roll Number: <span style="font-family:monospace;">${esc(rollNo)}</span></div>
             </div>
-            <!-- Right: Photo & Ref No -->
             <div style="display:flex; gap:16px; align-items:flex-start;">
               <div style="text-align:right;">
                 <div>Ref No.: <span style="font-family:monospace;">${esc(certNo)}</span></div>
-                <div>Date of Issue : <span style="border-bottom:1px solid #0f172a; padding:0 6px;">${esc(issueDate)}</span></div>
+                <div>Date of Issue: <span style="border-bottom:1px solid #0f172a; padding:0 6px;">${esc(issueDate)}</span></div>
               </div>
-              <div style="width:82px; height:98px; border:2px solid #072a60; border-radius:4px; overflow:hidden; background:#f8fafc; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.12);">
+              <div style="width:82px; height:98px; border:2px solid #08244c; border-radius:4px; overflow:hidden; background:#f8fafc; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.12);">
                 ${photoHtml}
               </div>
             </div>
           </div>
 
-          <!-- Golden 3D Ribbon Banner: CERTIFICATE OF COMPLETION -->
-          <div style="text-align:center; margin:4px 0 14px;">
-            <div style="display:inline-block; position:relative; background:linear-gradient(135deg, #d4af37 0%, #fef08a 40%, #b45309 100%); padding:8px 50px 10px; border-radius:6px; box-shadow:0 6px 18px rgba(180,83,9,0.3); border:2px solid #854d0e;">
-              <div style="font-size:1.85rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Georgia', serif; letter-spacing:3px; line-height:1;">
-                CERTIFICATE
-              </div>
-              <div style="font-size:0.85rem; font-weight:900; color:#072a60; letter-spacing:2px; text-transform:uppercase; margin-top:3px;">
-                OF COMPLETION
-              </div>
-            </div>
-          </div>
+          <!-- 3D Golden Ribbon: CERTIFICATE OF COMPLETION -->
+          ${render3DGoldRibbon('CERTIFICATE', 'OF COMPLETION')}
 
           <!-- Certificate Body -->
           <div style="text-align:center; font-size:0.92rem; color:#0f172a; line-height:2.2; margin:10px auto;">
-            <div style="font-weight:800; color:#072a60; letter-spacing:1px; font-size:0.95rem;">THIS IS TO CERTIFY THAT</div>
+            <div style="font-weight:800; color:#08244c; letter-spacing:1px; font-size:0.95rem;">THIS IS TO CERTIFY THAT</div>
             <div style="font-size:1.05rem;">
-              MR. / MRS. &nbsp;<span style="font-family:'Brush Script MT', 'Dancing Script', cursive; font-size:2rem; font-weight:900; color:#072a60; border-bottom:1.5px solid #334155; padding:0 30px; display:inline-block;">${esc(s.name || 'Candidate Name')}</span>
+              MR. / MRS. &nbsp;<span style="font-family:'Brush Script MT', 'Dancing Script', cursive; font-size:2.1rem; font-weight:900; color:#08244c; border-bottom:1.5px solid #334155; padding:0 30px; display:inline-block;">${esc(s.name || 'Preeti')}</span>
             </div>
             <div>
-              S/O / D/O / W/O : &nbsp;<span style="font-weight:800; border-bottom:1.5px solid #334155; padding:0 24px;">${esc(s.father_name || 'Shri Ram')}</span>
+              S/O / D/O / W/O : &nbsp;<span style="font-weight:800; border-bottom:1.5px solid #334155; padding:0 24px;">${esc(s.father_name || 'Ram')}</span>
             </div>
             <div>
-              MOTHER'S NAME : &nbsp;<span style="font-weight:800; border-bottom:1.5px solid #334155; padding:0 24px;">${esc(s.mother_name || 'Smt. Geeta')}</span>
+              MOTHER'S NAME : &nbsp;<span style="font-weight:800; border-bottom:1.5px solid #334155; padding:0 24px;">${esc(s.mother_name || 'Geeta')}</span>
             </div>
             <div style="font-size:0.78rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;">
               HAS SUCCESSFULLY CLEARED THE ASSESSMENT IN THE JOB ROLE / COURSE
             </div>
-            <div style="font-size:1.55rem; font-weight:900; color:#072a60; font-family:'Georgia', serif; margin:2px 0;">
+            <div style="font-size:1.55rem; font-weight:900; color:#08244c; font-family:'Georgia', serif; margin:2px 0;">
               ${esc(courseName)}
             </div>
             <div>
-              WITH &nbsp;<b style="border-bottom:1.5px solid #334155; padding:0 12px; font-size:1.05rem; color:#072a60;">${esc(percentage)}</b> % MARKS HELD IN &nbsp;<span style="border-bottom:1.5px solid #334155; padding:0 16px;">${esc(examVenue)}</span>
+              WITH &nbsp;<b style="border-bottom:1.5px solid #334155; padding:0 12px; font-size:1.05rem; color:#08244c;">${esc(percentage)}</b> % MARKS HELD IN &nbsp;<span style="border-bottom:1.5px solid #334155; padding:0 16px;">${esc(examVenue)}</span>
             </div>
             <div>
               WITH GRADE &nbsp;<b style="border-bottom:1.5px solid #334155; padding:0 16px; font-size:1.15rem; color:#15803d;">${esc(grade)}</b> &nbsp; FROM OUR AUTHORIZED STUDY CENTRE
             </div>
-            <div style="font-size:1.3rem; font-weight:900; color:#072a60; text-transform:uppercase; margin:4px 0;">
+            <div style="font-size:1.3rem; font-weight:900; color:#08244c; text-transform:uppercase; margin:4px 0;">
               ${esc(c.name || centreEnglish)}
             </div>
             <div style="font-size:0.75rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.4px;">
@@ -472,7 +479,6 @@
 
           <!-- Bottom Row: 3 Stamps + QR Code -->
           <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px; padding:0 6px;">
-            <!-- 1. Head Office -->
             <div style="text-align:center; width:160px;">
               <div style="height:62px; position:relative; display:flex; align-items:center; justify-content:center;">
                 <img src="${councilSeal}" style="width:60px; height:60px; position:absolute; opacity:0.85;">
@@ -483,7 +489,6 @@
               </div>
             </div>
 
-            <!-- 2. Center Head -->
             <div style="text-align:center; width:170px;">
               <div style="height:62px; position:relative; display:flex; align-items:center; justify-content:center;">
                 <img src="${centreSeal}" style="width:60px; height:60px; position:absolute; opacity:0.85;">
@@ -494,7 +499,6 @@
               </div>
             </div>
 
-            <!-- 3. Coordinator -->
             <div style="text-align:center; width:160px;">
               <div style="height:62px; position:relative; display:flex; align-items:center; justify-content:center;">
                 <img src="${coordSeal}" style="width:60px; height:60px; position:absolute; opacity:0.85;">
@@ -505,23 +509,23 @@
               </div>
             </div>
 
-            <!-- 4. QR Code -->
             <div style="text-align:center; width:100px;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=https%3A%2F%2Fpescouncil.in%2Fverify%2Fcertificate%2F${encodeURIComponent(studentRegNo)}" style="width:65px; height:65px; display:block; margin:0 auto; border:1px solid #072a60; padding:2px; background:#fff;">
-              <div style="font-size:0.56rem; font-weight:800; color:#072a60; margin-top:3px; line-height:1.2;">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=https%3A%2F%2Fpescouncil.in%2Fverify%2Fcertificate%2F${encodeURIComponent(studentRegNo)}" style="width:65px; height:65px; display:block; margin:0 auto; border:1px solid #08244c; padding:2px; background:#fff;">
+              <div style="font-size:0.56rem; font-weight:800; color:#08244c; margin-top:3px; line-height:1.2;">
                 Verify Certificate<br>Scan QR Code
               </div>
             </div>
           </div>
 
-          <!-- Bottom Badges Strip -->
           ${renderAccreditationBadgesHtml()}
         </div>
       </div>
     `;
   }
 
-  // 3. MARKSHEET / STATEMENT OF MARKS TEMPLATE (Image 4 - media_1793022512184.jpg)
+  // =========================================================================
+  // TEMPLATE 3: MARKSHEET / STATEMENT OF MARKS (media_1793022512184.jpg)
+  // =========================================================================
   function renderMarksheetHtml(data) {
     const s = data.student || {};
     const c = data.centre || {};
@@ -540,14 +544,13 @@
       `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
       `<div style="padding-top:25px; font-size:0.6rem; font-weight:800; color:#64748b;">PHOTO</div>`;
 
-    // Subjects list
     const subjects = data.subjects || [
       { code: 'NTT-01', name: 'Child Psychology', max: 100, min: 40, obt: 78, grade: 'A' },
       { code: 'NTT-02', name: 'School Organization', max: 100, min: 40, obt: 72, grade: 'B+' },
-      { code: 'NTT-03', name: 'Methods of Teaching', max: 100, min: 40, obt: 85, grade: 'A+' },
-      { code: 'NTT-04', name: 'Practical', max: 100, min: 40, obt: 85, grade: 'A+' },
-      { code: 'NTT-05', name: 'Viva-Voce', max: 100, min: 40, obt: 78, grade: 'A+' },
-      { code: 'NTT-06', name: 'Internal Assessment', max: 100, min: 40, obt: 80, grade: 'A+' }
+      { code: 'NTT-03', name: 'Methods of Teaching', max: 100, min: 40, obt: 83, grade: 'A+' },
+      { code: 'NTT-04', name: 'Arts & Craft', max: 100, min: 40, obt: 85, grade: 'A+' },
+      { code: 'NTT-05', name: 'Lesson Plan', max: 100, min: 40, obt: 75, grade: 'A' },
+      { code: 'NTT-06', name: 'Practical & Assignment', max: 100, min: 40, obt: 89, grade: 'A+' }
     ];
 
     const maxTotal = subjects.reduce((sum, sub) => sum + (+sub.max || 100), 0);
@@ -556,7 +559,6 @@
     const finalGrade = percentage >= 85 ? 'A+' : percentage >= 70 ? 'A' : percentage >= 60 ? 'B+' : 'B';
     const resultText = percentage >= 60 ? 'PASSED IN FIRST DIVISION' : 'PASSED IN SECOND DIVISION';
 
-    // Seals & Signatures
     const centreSeal = c.seal_url || SEALS.centreSeal;
     const centreSign = c.signature_url || SEALS.centreSign;
     const coordSeal = c.coordinator_seal_url || SEALS.coordinatorSeal;
@@ -565,7 +567,7 @@
     const councilSign = SEALS.councilSign;
 
     return `
-      <div class="official-marksheet printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #072a60; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
+      <div class="official-marksheet printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
         
         <!-- Watermark Background -->
         <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0.035; z-index:0;">
@@ -582,10 +584,10 @@
 
             <!-- Center: Names and Accreditations -->
             <div style="text-align:center; flex:1;">
-              <div style="font-size:2rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
+              <div style="font-size:2rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
                 ${esc(centreHindi)}
               </div>
-              <div style="font-size:1.3rem; font-weight:900; color:#072a60; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
+              <div style="font-size:1.3rem; font-weight:900; color:#08244c; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
                 ${esc(centreEnglish)}
               </div>
               <div style="display:inline-block; background:#fef08a; color:#854d0e; font-size:0.68rem; font-weight:800; padding:2px 14px; border-radius:12px; border:1px solid #fde047; text-transform:uppercase; margin:3px 0; letter-spacing:0.5px;">
@@ -601,7 +603,7 @@
               <div style="width:52px; height:52px; margin:0 auto; border-radius:50%; border:1.5px solid #047857; display:flex; align-items:center; justify-content:center; background:#ecfdf5; box-shadow:0 2px 6px rgba(4,120,87,0.15);">
                 <img src="${councilSeal}" style="width:42px; height:42px;">
               </div>
-              <div style="font-size:0.62rem; font-weight:900; color:#072a60; margin-top:3px;">NITI Aayog</div>
+              <div style="font-size:0.62rem; font-weight:900; color:#08244c; margin-top:3px;">NITI Aayog</div>
               <div style="font-size:0.52rem; font-weight:800; color:#475569;">NGO DARPAN</div>
               <div style="font-size:0.5rem; color:#64748b;">Registered Org.</div>
             </div>
@@ -612,48 +614,38 @@
             <div>
               <div>Student Reg. No.: <span style="font-family:monospace; color:#0284c7;">${esc(studentRegNo)}</span></div>
               <div>Roll Number : <span style="font-family:monospace;">${esc(rollNo)}</span></div>
-              <div>MR. /MRS. : <b style="font-size:0.95rem; color:#072a60;">${esc(s.name || 'Candidate Name')}</b></div>
+              <div>MR. /MRS. : <b style="font-size:0.95rem; color:#08244c;">${esc(s.name || 'Preeti')}</b></div>
             </div>
-            <!-- Right: Photo & Ref No -->
             <div style="display:flex; gap:16px; align-items:flex-start;">
               <div style="text-align:right;">
                 <div>Ref No.: <span style="font-family:monospace;">${esc(mrkNo)}</span></div>
                 <div>Date of Issue : <span style="border-bottom:1px solid #0f172a; padding:0 6px;">${esc(issueDate)}</span></div>
               </div>
-              <div style="width:82px; height:98px; border:2px solid #072a60; border-radius:4px; overflow:hidden; background:#f8fafc; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.12);">
+              <div style="width:82px; height:98px; border:2px solid #08244c; border-radius:4px; overflow:hidden; background:#f8fafc; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.12);">
                 ${photoHtml}
               </div>
             </div>
           </div>
 
-          <!-- Golden 3D Ribbon Banner: MARKSHEET / STATEMENT OF MARKS -->
-          <div style="text-align:center; margin:2px 0 10px;">
-            <div style="display:inline-block; position:relative; background:linear-gradient(135deg, #d4af37 0%, #fef08a 40%, #b45309 100%); padding:6px 60px 8px; border-radius:6px; box-shadow:0 6px 18px rgba(180,83,9,0.3); border:2px solid #854d0e;">
-              <div style="font-size:1.9rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Georgia', serif; letter-spacing:3px; line-height:1;">
-                MARKSHEET
-              </div>
-              <div style="font-size:0.85rem; font-weight:900; color:#072a60; letter-spacing:2px; text-transform:uppercase; margin-top:2px;">
-                STATEMENT OF MARKS
-              </div>
-            </div>
-          </div>
+          <!-- 3D Golden Ribbon: MARKSHEET / STATEMENT OF MARKS -->
+          ${render3DGoldRibbon('MARKSHEET', 'STATEMENT OF MARKS')}
 
           <!-- Candidate Details & Course Line -->
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.86rem; font-weight:800; color:#0f172a; margin-bottom:8px; line-height:1.6;">
             <div>
-              <div>S/O / D/O / W/O : <span>${esc(s.father_name || 'Shri Ram')}</span></div>
-              <div>MOTHER'S NAME : <span>${esc(s.mother_name || 'Smt. Geeta')}</span></div>
+              <div>S/O / D/O / W/O : <span>${esc(s.father_name || 'Ram')}</span></div>
+              <div>MOTHER'S NAME : <span>${esc(s.mother_name || 'Geeta')}</span></div>
             </div>
             <div style="text-align:center;">
-              <div style="font-size:1.15rem; font-weight:900; color:#072a60;">${esc(courseName)}</div>
+              <div style="font-size:1.15rem; font-weight:900; color:#08244c;">${esc(courseName)}</div>
               <div style="font-size:0.82rem; color:#475569;">Duration : ${esc(duration)}</div>
             </div>
           </div>
 
-          <!-- Marks Table (Exact Image 4) -->
-          <table style="width:100%; border-collapse:collapse; font-size:0.84rem; text-align:center; border:2px solid #072a60; margin-bottom:6px;">
+          <!-- Marks Table -->
+          <table style="width:100%; border-collapse:collapse; font-size:0.84rem; text-align:center; border:2px solid #08244c; margin-bottom:6px;">
             <thead>
-              <tr style="background:#072a60; color:#ffffff; font-weight:900;">
+              <tr style="background:#08244c; color:#ffffff; font-weight:900;">
                 <th style="padding:7px 6px; border:1px solid #cbd5e1; width:22%;">Paper Code /<br>Subject Code</th>
                 <th style="padding:7px 8px; border:1px solid #cbd5e1; width:38%; text-align:left;">Subject Name</th>
                 <th style="padding:7px 6px; border:1px solid #cbd5e1; width:10%;">Max<br>Marks</th>
@@ -669,23 +661,22 @@
                   <td style="padding:6px 8px; border:1px solid #cbd5e1; text-align:left; font-weight:700;">${esc(sub.name)}</td>
                   <td style="padding:6px 6px; border:1px solid #cbd5e1;">${esc(sub.max)}</td>
                   <td style="padding:6px 6px; border:1px solid #cbd5e1;">${esc(sub.min)}</td>
-                  <td style="padding:6px 6px; border:1px solid #cbd5e1; font-weight:900; color:#072a60;">${esc(sub.obt)}</td>
+                  <td style="padding:6px 6px; border:1px solid #cbd5e1; font-weight:900; color:#08244c;">${esc(sub.obt)}</td>
                   <td style="padding:6px 6px; border:1px solid #cbd5e1; font-weight:900; color:#15803d;">${esc(sub.grade)}</td>
                 </tr>
               `).join('')}
-              <!-- Grand Total Row -->
-              <tr style="background:#072a60; color:#ffffff; font-weight:900; font-size:0.92rem;">
-                <td colspan="2" style="padding:7px 12px; border:1px solid #072a60; text-align:right; letter-spacing:1px;">GRAND TOTAL:</td>
-                <td style="padding:7px 6px; border:1px solid #072a60;">${maxTotal}</td>
-                <td style="padding:7px 6px; border:1px solid #072a60;">-</td>
-                <td style="padding:7px 6px; border:1px solid #072a60; color:#fde047;">${obtTotal}</td>
-                <td style="padding:7px 6px; border:1px solid #072a60; color:#86efac;">${finalGrade}</td>
+              <tr style="background:#08244c; color:#ffffff; font-weight:900; font-size:0.92rem;">
+                <td colspan="2" style="padding:7px 12px; border:1px solid #08244c; text-align:right; letter-spacing:1px;">GRAND TOTAL:</td>
+                <td style="padding:7px 6px; border:1px solid #08244c;">${maxTotal}</td>
+                <td style="padding:7px 6px; border:1px solid #08244c;">-</td>
+                <td style="padding:7px 6px; border:1px solid #08244c; color:#fde047;">${obtTotal}</td>
+                <td style="padding:7px 6px; border:1px solid #08244c; color:#86efac;">${finalGrade}</td>
               </tr>
             </tbody>
           </table>
 
           <!-- Percentage & Grade Summary Bar -->
-          <div style="display:flex; justify-content:space-around; align-items:center; font-size:0.92rem; font-weight:900; color:#072a60; border:1.5px solid #072a60; padding:5px 12px; background:#f0f9ff; margin:6px 0;">
+          <div style="display:flex; justify-content:space-around; align-items:center; font-size:0.92rem; font-weight:900; color:#08244c; border:1.5px solid #08244c; padding:5px 12px; background:#f0f9ff; margin:6px 0;">
             <div>PERCENTAGE : <span style="color:#0369a1;">${percentage}%</span></div>
             <div>GRADE: <span style="color:#15803d;">${finalGrade}</span></div>
           </div>
@@ -697,7 +688,6 @@
 
           <!-- Bottom Row: 3 Stamps + QR Code -->
           <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px; padding:0 6px;">
-            <!-- 1. Head Office -->
             <div style="text-align:center; width:160px;">
               <div style="height:62px; position:relative; display:flex; align-items:center; justify-content:center;">
                 <img src="${councilSeal}" style="width:60px; height:60px; position:absolute; opacity:0.85;">
@@ -708,7 +698,6 @@
               </div>
             </div>
 
-            <!-- 2. Center Head -->
             <div style="text-align:center; width:170px;">
               <div style="height:62px; position:relative; display:flex; align-items:center; justify-content:center;">
                 <img src="${centreSeal}" style="width:60px; height:60px; position:absolute; opacity:0.85;">
@@ -719,7 +708,6 @@
               </div>
             </div>
 
-            <!-- 3. Coordinator -->
             <div style="text-align:center; width:160px;">
               <div style="height:62px; position:relative; display:flex; align-items:center; justify-content:center;">
                 <img src="${coordSeal}" style="width:60px; height:60px; position:absolute; opacity:0.85;">
@@ -730,27 +718,27 @@
               </div>
             </div>
 
-            <!-- 4. QR Code -->
             <div style="text-align:center; width:100px;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=https%3A%2F%2Fpescouncil.in%2Fverify%2Fmarksheet%2F${encodeURIComponent(studentRegNo)}" style="width:65px; height:65px; display:block; margin:0 auto; border:1px solid #072a60; padding:2px; background:#fff;">
-              <div style="font-size:0.56rem; font-weight:800; color:#072a60; margin-top:3px; line-height:1.2;">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=https%3A%2F%2Fpescouncil.in%2Fverify%2Fmarksheet%2F${encodeURIComponent(studentRegNo)}" style="width:65px; height:65px; display:block; margin:0 auto; border:1px solid #08244c; padding:2px; background:#fff;">
+              <div style="font-size:0.56rem; font-weight:800; color:#08244c; margin-top:3px; line-height:1.2;">
                 Verify Certificate<br>Scan QR Code
               </div>
             </div>
           </div>
 
-          <!-- Bottom Badges Strip -->
           ${renderAccreditationBadgesHtml()}
         </div>
       </div>
     `;
   }
 
-  // 4. STUDENT I-CARD TEMPLATE (Image 1 - media_1793022486550.jpg)
+  // =========================================================================
+  // TEMPLATE 4: STUDENT I-CARD (media_1793022486550.jpg)
+  // =========================================================================
   function renderStudentIdCardHtml(data) {
     const s = data.student || {};
     const c = data.centre || {};
-    const name = s.name || 'Candidate Name';
+    const name = s.name || 'Preeti';
     const rollNo = s.roll_no || `Pesc-${String(s.id || '00008').padStart(5, '0')}`;
     const courseName = s.course_name || s.course || 'Nursery Teacher Training';
     const regNo = s.student_code || `PIT-26-${String(s.id || '0008').padStart(4, '0')}`;
@@ -765,7 +753,6 @@
       `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
       `<div style="padding-top:35px; font-size:0.7rem; font-weight:800; color:#64748b;">PHOTO</div>`;
 
-    // Seals & Signatures
     const centreSign = c.signature_url || SEALS.centreSign;
     const councilSeal = SEALS.councilSeal;
     const councilSign = SEALS.councilSign;
@@ -773,7 +760,7 @@
     return `
       <div class="official-id-card-wrap" style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap; font-family:'Inter', Arial, sans-serif;">
         <!-- FRONT SIDE -->
-        <div class="id-card-front printable-area" style="width:320px; border-radius:16px; overflow:hidden; border:4px solid #072a60; outline:2px solid #d4af37; background:#ffffff; box-shadow:0 8px 24px rgba(0,0,0,0.18); position:relative; box-sizing:border-box;">
+        <div class="id-card-front printable-area" style="width:320px; border-radius:16px; overflow:hidden; border:4px solid #08244c; outline:2px solid #d4af37; background:#ffffff; box-shadow:0 8px 24px rgba(0,0,0,0.18); position:relative; box-sizing:border-box;">
           
           <!-- Lanyard Slot Cutout -->
           <div style="width:48px; height:12px; background:#e2e8f0; border-radius:6px; margin:8px auto 4px; border:1px solid #94a3b8;"></div>
@@ -783,10 +770,10 @@
             <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
               <img src="${councilSeal}" style="width:38px; height:38px; flex-shrink:0;">
               <div>
-                <div style="font-size:0.95rem; font-weight:900; color:#072a60; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.1;">
+                <div style="font-size:0.95rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.1;">
                   ${esc(centreHindi)}
                 </div>
-                <div style="font-size:0.65rem; font-weight:900; color:#072a60; text-transform:uppercase; letter-spacing:0.3px;">
+                <div style="font-size:0.65rem; font-weight:900; color:#08244c; text-transform:uppercase; letter-spacing:0.3px;">
                   ${esc(centreEnglish)}
                 </div>
               </div>
@@ -798,10 +785,10 @@
 
           <!-- Golden Ribbon Banner: STUDENT I-CARD -->
           <div style="text-align:center; margin:2px 0 6px;">
-            <div style="display:inline-block; background:linear-gradient(135deg, #072a60 0%, #0369a1 100%); color:#ffffff; padding:4px 28px; border-radius:18px; border:1.5px solid #d4af37; box-shadow:0 3px 8px rgba(7,42,96,0.3);">
+            <div style="display:inline-block; background:linear-gradient(135deg, #08244c 0%, #0369a1 100%); color:#ffffff; padding:4px 28px; border-radius:18px; border:1.5px solid #d4af37; box-shadow:0 3px 8px rgba(7,42,96,0.3);">
               <div style="font-size:0.92rem; font-weight:900; letter-spacing:1px;">STUDENT I-CARD</div>
             </div>
-            <div style="font-size:0.6rem; font-weight:800; color:#072a60; margin-top:2px;">VALID UPTO: <b>${esc(validUpto)}</b></div>
+            <div style="font-size:0.6rem; font-weight:800; color:#08244c; margin-top:2px;">VALID UPTO: <b>${esc(validUpto)}</b></div>
           </div>
 
           <!-- Photo with Golden Border -->
@@ -811,7 +798,7 @@
 
           <!-- Candidate Details -->
           <div style="font-size:0.74rem; font-weight:800; color:#0f172a; line-height:1.6; padding:0 16px;">
-            <div>STUDENT NAME: <b style="color:#072a60; font-size:0.8rem;">${esc(name)}</b></div>
+            <div>STUDENT NAME: <b style="color:#08244c; font-size:0.8rem;">${esc(name)}</b></div>
             <div>ROLL NO: <span style="font-family:monospace; color:#0284c7;">${esc(rollNo)}</span></div>
             <div>COURSE : <b style="color:#047857;">${esc(courseName)}</b></div>
             <div>REG. NO : <span style="font-family:monospace;">${esc(regNo)}</span></div>
@@ -838,18 +825,17 @@
           </div>
 
           <!-- Bottom Navy Brand Bar -->
-          <div style="background:#072a60; color:#ffffff; text-align:center; font-size:0.65rem; font-weight:900; padding:4px 6px; text-transform:uppercase; letter-spacing:0.5px;">
+          <div style="background:#08244c; color:#ffffff; text-align:center; font-size:0.65rem; font-weight:900; padding:4px 6px; text-transform:uppercase; letter-spacing:0.5px;">
             ${esc(centreEnglish)}
           </div>
         </div>
 
         <!-- BACK SIDE -->
-        <div class="id-card-back printable-area" style="width:320px; border-radius:16px; overflow:hidden; border:4px solid #072a60; outline:2px solid #d4af37; background:#ffffff; box-shadow:0 8px 24px rgba(0,0,0,0.18); position:relative; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between;">
-          <!-- Lanyard Slot Cutout -->
+        <div class="id-card-back printable-area" style="width:320px; border-radius:16px; overflow:hidden; border:4px solid #08244c; outline:2px solid #d4af37; background:#ffffff; box-shadow:0 8px 24px rgba(0,0,0,0.18); position:relative; box-sizing:border-box; display:flex; flex-direction:column; justify-content:space-between;">
           <div style="width:48px; height:12px; background:#e2e8f0; border-radius:6px; margin:8px auto 4px; border:1px solid #94a3b8;"></div>
 
           <div style="padding:10px 18px 4px;">
-            <div style="text-align:center; font-size:0.9rem; font-weight:900; color:#072a60; border-bottom:1.5px solid #072a60; padding-bottom:4px; margin-bottom:8px;">
+            <div style="text-align:center; font-size:0.9rem; font-weight:900; color:#08244c; border-bottom:1.5px solid #08244c; padding-bottom:4px; margin-bottom:8px;">
               RULES &amp; REGULATIONS
             </div>
             <ol style="font-size:0.68rem; color:#334155; line-height:1.5; padding-left:14px; margin:0 0 12px;">
@@ -860,17 +846,16 @@
 
             <div style="font-size:0.72rem; color:#0f172a; line-height:1.5;">
               <b>Contact:</b><br>
-              Website: ${esc(c.slug ? `https://${c.slug}.pescouncil.in` : 'https://pescouncil.in')}<br>
-              Email: ${esc(c.email || 'info@pescouncil.in')}
+              Website: ${esc(c.slug ? `https://${c.slug}.pescouncil.in` : 'https://pitcouncil.com')}<br>
+              Email: ${esc(c.email || 'info@pitcouncil.com')}
             </div>
           </div>
 
           <div style="text-align:center; padding-bottom:8px;">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=https%3A%2F%2Fpescouncil.in%2Fverify%2Fstudent%2F${encodeURIComponent(regNo)}" style="width:75px; height:75px; border:1px solid #072a60; padding:2px; background:#fff; display:block; margin:0 auto;">
-            <div style="font-size:0.62rem; font-weight:800; color:#072a60; margin-top:3px;">Verify Card</div>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=https%3A%2F%2Fpescouncil.in%2Fverify%2Fstudent%2F${encodeURIComponent(regNo)}" style="width:75px; height:75px; border:1px solid #08244c; padding:2px; background:#fff; display:block; margin:0 auto;">
+            <div style="font-size:0.62rem; font-weight:800; color:#08244c; margin-top:3px;">Verify Card</div>
           </div>
 
-          <!-- Bottom Badges Strip -->
           <div style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:4px 6px;">
             ${renderAccreditationBadgesHtml()}
           </div>
@@ -879,7 +864,7 @@
     `;
   }
 
-  // Export to window / global
+  // Export
   global.OfficialTemplates = {
     renderAdmissionFormHtml,
     renderCertificateHtml,
