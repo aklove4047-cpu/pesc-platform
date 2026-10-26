@@ -984,6 +984,36 @@ async function sendFranchiseApprovalEmail(env, app, centreCode, password) {
   };
 }
 
+function getAuthorities(centre) {
+  const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
+  const coordUser = store.users.find(u => u.role === 'coordinator') || {};
+  const c = centre || store.centres[0] || {};
+  return {
+    head_office: {
+      name: adminUser.name || 'Chhotu maurya',
+      designation: adminUser.designation || 'Executive Director & Controller of Examinations',
+      seal_url: adminUser.seal_url || '/assets/img/seal_council_head.svg',
+      signature_url: adminUser.signature_url || '/assets/img/sign_council_head.svg',
+      chairman_signature_url: adminUser.chairman_signature_url || adminUser.signature_url || '/assets/img/sign_council_head.svg',
+      mobile: adminUser.mobile || '+91 94152 00000',
+      email: adminUser.email || 'admin@pescouncil.in'
+    },
+    coordinator: {
+      name: coordUser.name || 'Er. V. K. Maurya',
+      state: coordUser.state || c.state || 'Uttar Pradesh',
+      seal_url: coordUser.seal_url || '/assets/img/seal_coordinator.svg',
+      signature_url: coordUser.signature_url || '/assets/img/sign_coordinator.svg'
+    },
+    centre: {
+      name: c.name || 'Authorized Training Centre',
+      centre_code: c.centre_code || 'PESC00001',
+      director_name: c.director_name || 'Centre Director',
+      seal_url: c.seal_url || '/assets/img/seal_centre_director.svg',
+      signature_url: c.signature_url || '/assets/img/sign_centre_director.svg'
+    }
+  };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -1137,7 +1167,7 @@ export default {
     // 5. REST APIs
     // --- Public APIs ---
     if (path === '/api/public/settings') {
-      return jsonResponse({ ok: true, settings: store.site_settings });
+      return jsonResponse({ ok: true, settings: store.site_settings, authorities: getAuthorities(null) });
     }
 
     if (path === '/api/public/centres') {
@@ -1252,6 +1282,7 @@ export default {
           email: c.email || `director@${c.slug}.pescouncil.in`
         },
         courses: activeCourses,
+        authorities: getAuthorities(c),
         stats: { established_year: 2021 }
       });
     }
@@ -3608,7 +3639,21 @@ export default {
         return jsonResponse({ certificates: store.certificates });
       }
       if (path === '/api/coordinator/profile') {
-        const coordUser = store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'Vikram Singh', email: 'coord@pescouncil.in', state: 'Uttar Pradesh' };
+        let coordUser = store.users.find(u => u.role === 'coordinator');
+        if (!coordUser) {
+          coordUser = {
+            id: 2,
+            name: 'Er. V. K. Maurya',
+            email: 'coordinator@pescouncil.in',
+            mobile: '+91 94152 11111',
+            role: 'coordinator',
+            state: 'Uttar Pradesh',
+            status: 'active',
+            seal_url: null,
+            signature_url: null
+          };
+          store.users.push(coordUser);
+        }
         if (request.method === 'POST') {
           const body = await request.json().catch(() => ({}));
           if (body.name) coordUser.name = String(body.name).slice(0, 100);
@@ -3619,7 +3664,7 @@ export default {
           if (body.seal_url !== undefined) coordUser.seal_url = body.seal_url;
           if (body.signature_url !== undefined) coordUser.signature_url = body.signature_url;
           await persistToKV(env, 'users', store.users);
-          return jsonResponse({ ok: true, message: 'Profile updated successfully!' });
+          return jsonResponse({ ok: true, message: 'Profile updated successfully!', profile: coordUser });
         }
         return jsonResponse({ profile: coordUser });
       }
@@ -3716,6 +3761,7 @@ export default {
           fee_paid_rupees: totalPaid,
           fee_pending_rupees: totalPending,
           certificates_count: certs.length,
+          authorities: getAuthorities(c)
         });
       }
 
@@ -3794,6 +3840,7 @@ export default {
               pin: body.pin || '',
               username: autoUsername,
               initial_password: autoPassword,
+              password: autoPassword,
               course_id: courseId,
               course: matchedCourse.name,
               course_code: matchedCourse.code,
@@ -3825,6 +3872,9 @@ export default {
               id: store.users.length + 1,
               name: candidateName,
               email: newStu.email,
+              username: autoUsername,
+              student_code: studentCode,
+              password_plain: autoPassword,
               role: 'student',
               student_id: newStu.id,
               centre_id: c.id,
@@ -3839,7 +3889,8 @@ export default {
               student_code: studentCode,
               roll_no: rollNo,
               username: autoUsername,
-              initial_password: autoPassword
+              initial_password: autoPassword,
+              portal_url: `https://${host}/student`
             }, 201);
           } catch (err) {
             return jsonResponse({ error: err.message }, 400);
@@ -4114,7 +4165,8 @@ export default {
         return jsonResponse({
           centres: store.centres,
           active_id: c.id,
-          active_centre: c
+          active_centre: c,
+          authorities: getAuthorities(c)
         });
       }
 
@@ -4162,7 +4214,7 @@ export default {
       }
 
       if (path === '/api/centre/settings') {
-        if (request.method === 'POST') {
+        if (request.method === 'POST' || request.method === 'PUT') {
           try {
             const body = await request.json();
             if (body.name) c.name = body.name.trim();
@@ -4170,7 +4222,17 @@ export default {
             if (body.state) c.state = body.state.trim();
             if (body.address) c.address = body.address.trim();
             if (body.pin) c.pin = body.pin.trim();
-            if (body.logo_url) c.logo_url = body.logo_url.trim();
+            if (body.phone) c.phone = body.phone.trim();
+            if (body.email) c.email = body.email.trim();
+            if (body.director_name) c.director_name = body.director_name.trim();
+            if (body.logo_url !== undefined) c.logo_url = String(body.logo_url).trim();
+            if (body.seal_url !== undefined) c.seal_url = String(body.seal_url).trim();
+            if (body.signature_url !== undefined) c.signature_url = String(body.signature_url).trim();
+            if (body.center_photo || body.photo_url) {
+              c.center_photo = String(body.center_photo || body.photo_url).trim();
+              c.photo_url = c.center_photo;
+            }
+            if (body.director_photo) c.director_photo = String(body.director_photo).trim();
             if (body.upi_id) c.upi_id = body.upi_id.trim();
             if (body.bank_name) c.bank_name = body.bank_name.trim();
             if (body.account_no) c.account_no = body.account_no.trim();
@@ -4179,12 +4241,61 @@ export default {
             if (body.qr_code_url) c.qr_code_url = body.qr_code_url.trim();
 
             await persistToKV(env, 'centres', store.centres);
-            return jsonResponse({ ok: true, message: 'Centre details & payment settings updated successfully!', centre: c });
+            return jsonResponse({
+              ok: true,
+              message: 'Centre details & settings updated successfully!',
+              centre: c,
+              authorities: getAuthorities(c)
+            });
           } catch (err) {
             return jsonResponse({ error: err.message }, 400);
           }
         }
-        return jsonResponse({ settings: { theme: { primary: '#047857' }, certificates: { enabled: true } }, centre: c });
+        return jsonResponse({
+          ok: true,
+          settings: { theme: { primary: '#047857' }, certificates: { enabled: true } },
+          centre: c,
+          authorities: getAuthorities(c)
+        });
+      }
+
+      if (path === '/api/centre/mohar-signature') {
+        if (request.method === 'POST' || request.method === 'PUT') {
+          try {
+            const body = await request.json();
+            if (body.seal_url !== undefined) c.seal_url = String(body.seal_url).trim();
+            if (body.signature_url !== undefined) c.signature_url = String(body.signature_url).trim();
+            await persistToKV(env, 'centres', store.centres);
+            return jsonResponse({
+              ok: true,
+              message: 'Centre stamp and signature saved successfully!',
+              centre: c,
+              authorities: getAuthorities(c)
+            });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+        return jsonResponse({
+          ok: true,
+          seal_url: c.seal_url || '',
+          signature_url: c.signature_url || '',
+          centre: c,
+          authorities: getAuthorities(c)
+        });
+      }
+
+      if (path.match(/\/api\/centre\/students\/\d+\/marks$/)) {
+        const sId = +path.split('/')[4];
+        const stu = store.students.find(s => s.id === sId && s.centre_id === c.id);
+        if (!stu) return jsonResponse({ error: 'Student not found' }, 404);
+        if (request.method === 'POST' || request.method === 'PUT') {
+          const body = await request.json();
+          stu.marks_data = body.subjects || body.marks || [];
+          await persistToKV(env, 'students', store.students);
+          return jsonResponse({ ok: true, message: 'Marks updated and saved successfully!', subjects: stu.marks_data });
+        }
+        return jsonResponse({ ok: true, subjects: stu.marks_data || [] });
       }
 
       if (path === '/api/centre/payment-settings') {
@@ -4317,34 +4428,6 @@ export default {
             qr_url: `https://pescouncil.in/verify?code=${c.centre_code}`
           }
         });
-      }
-
-      if (path === '/api/centre/settings') {
-        if (request.method === 'POST' || request.method === 'PUT') {
-          try {
-            const body = await request.json();
-            if (body.name) c.name = body.name.trim();
-            if (body.address) c.address = body.address.trim();
-            if (body.district) c.district = body.district.trim();
-            if (body.state) c.state = body.state.trim();
-            if (body.pin) c.pin = body.pin.trim();
-            if (body.logo_url) c.logo_url = body.logo_url.trim();
-            if (body.seal_url) c.seal_url = body.seal_url.trim();
-            if (body.signature_url) c.signature_url = body.signature_url.trim();
-            if (body.center_photo || body.photo_url) {
-              c.center_photo = (body.center_photo || body.photo_url).trim();
-              c.photo_url = c.center_photo;
-            }
-            if (body.director_photo) c.director_photo = body.director_photo.trim();
-            if (body.upi_id) c.upi_id = body.upi_id.trim();
-
-            await persistToKV(env, 'centres', store.centres);
-            return jsonResponse({ ok: true, message: 'Centre profile and settings saved successfully!', centre: c });
-          } catch (err) {
-            return jsonResponse({ error: err.message }, 400);
-          }
-        }
-        return jsonResponse({ ok: true, centre: c });
       }
 
       if (path === '/api/centre/profile') {

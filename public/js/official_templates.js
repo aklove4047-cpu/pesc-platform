@@ -24,6 +24,26 @@
     centreSign: '/assets/img/sign_centre_director.svg',
   };
 
+  function resolveSeals(data, c) {
+    const auth = (data && data.authorities) || (typeof window !== 'undefined' && window._councilAuthorities) || {};
+    const hoAuth = auth.head_office || {};
+    const coordAuth = auth.coordinator || {};
+    const centreAuth = auth.centre || {};
+
+    const centreSeal = (c && c.seal_url) || centreAuth.seal_url || (data && data.centreSeal) || SEALS.centreSeal;
+    const centreSign = (c && c.signature_url) || centreAuth.signature_url || (data && data.centreSign) || SEALS.centreSign;
+    const coordSeal = (c && c.coordinator_seal_url) || coordAuth.seal_url || (data && data.coordSeal) || SEALS.coordinatorSeal;
+    const coordSign = (c && c.coordinator_signature_url) || coordAuth.signature_url || (data && data.coordSign) || SEALS.coordinatorSign;
+    const councilSeal = hoAuth.seal_url || (c && c.council_seal_url) || (data && data.councilSeal) || SEALS.councilSeal;
+    const councilSign = hoAuth.signature_url || (c && c.council_signature_url) || (data && data.councilSign) || SEALS.councilSign;
+    const chairmanSign = hoAuth.chairman_signature_url || councilSign;
+    const hoName = hoAuth.name || 'Executive Director & Controller of Examinations';
+    const coordName = coordAuth.name || (c && c.coordinator_name) || 'Regional Coordinator';
+    const directorName = (c && (c.director_name || c.name)) || centreAuth.director_name || 'Centre Director';
+
+    return { centreSeal, centreSign, coordSeal, coordSign, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName };
+  }
+
   // 1. Accreditations Badge Strip (ISO, NITI Aayog NGO Darpan, IAF, MSME, PESC - NO Ashok Stambh)
   function renderAccreditationBadgesHtml() {
     return `
@@ -126,12 +146,7 @@
     const q12 = quals.twelfth || quals['12th'] || { board: 'State Board / UP Board', year: '2022', marks: '395/500', pct: '79.0%' };
     const qGrad = quals.graduation || { board: 'University', year: '2025', marks: '1150/1500', pct: '76.6%' };
 
-    const centreSeal = c.seal_url || SEALS.centreSeal;
-    const centreSign = c.signature_url || SEALS.centreSign;
-    const coordSeal = c.coordinator_seal_url || SEALS.coordinatorSeal;
-    const coordSign = c.coordinator_signature_url || SEALS.coordinatorSign;
-    const councilSeal = SEALS.councilSeal;
-    const councilSign = SEALS.councilSign;
+    const { centreSeal, centreSign, coordSeal, coordSign, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
 
     return `
       <div class="official-admission-form printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
@@ -368,12 +383,7 @@
       `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
       `<div style="padding-top:25px; font-size:0.6rem; font-weight:800; color:#64748b;">PHOTO</div>`;
 
-    const centreSeal = c.seal_url || SEALS.centreSeal;
-    const centreSign = c.signature_url || SEALS.centreSign;
-    const coordSeal = c.coordinator_seal_url || SEALS.coordinatorSeal;
-    const coordSign = c.coordinator_signature_url || SEALS.coordinatorSign;
-    const councilSeal = SEALS.councilSeal;
-    const councilSign = SEALS.councilSign;
+    const { centreSeal, centreSign, coordSeal, coordSign, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
 
     return `
       <div class="official-certificate printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
@@ -559,12 +569,7 @@
     const finalGrade = percentage >= 85 ? 'A+' : percentage >= 70 ? 'A' : percentage >= 60 ? 'B+' : 'B';
     const resultText = percentage >= 60 ? 'PASSED IN FIRST DIVISION' : 'PASSED IN SECOND DIVISION';
 
-    const centreSeal = c.seal_url || SEALS.centreSeal;
-    const centreSign = c.signature_url || SEALS.centreSign;
-    const coordSeal = c.coordinator_seal_url || SEALS.coordinatorSeal;
-    const coordSign = c.coordinator_signature_url || SEALS.coordinatorSign;
-    const councilSeal = SEALS.councilSeal;
-    const councilSign = SEALS.councilSign;
+    const { centreSeal, centreSign, coordSeal, coordSign, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
 
     return `
       <div class="official-marksheet printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
@@ -753,9 +758,7 @@
       `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
       `<div style="padding-top:35px; font-size:0.7rem; font-weight:800; color:#64748b;">PHOTO</div>`;
 
-    const centreSign = c.signature_url || SEALS.centreSign;
-    const councilSeal = SEALS.councilSeal;
-    const councilSign = SEALS.councilSign;
+    const { centreSign, councilSeal, councilSign } = resolveSeals(data, c);
 
     return `
       <div class="official-id-card-wrap" style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap; font-family:'Inter', Arial, sans-serif;">
@@ -880,10 +883,7 @@
     const status = cert.status || 'Active';
     const authorizedCourses = cert.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Nursery Teacher Training (NTT), Web Development, Graphic Design, Hardware & Networking';
 
-    const councilSeal = cert.council_seal_url || SEALS.councilSeal;
-    const councilSign = cert.council_signature_url || SEALS.councilSign;
-    const coordSeal = cert.coordinator_seal_url || SEALS.coordinatorSeal;
-    const coordSign = cert.coordinator_signature_url || SEALS.coordinatorSign;
+    const { councilSeal, councilSign, coordSeal, coordSign } = resolveSeals(cert, cert);
     const coordName = cert.coordinator_name || 'Regional Coordinator';
     const coordTerritory = cert.coordinator_territory || cert.state || 'Uttar Pradesh';
 
@@ -1037,8 +1037,7 @@
     const validUntilStr = cert.valid_until ? new Date(cert.valid_until).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '31 March 2029';
 
     // Must be Head Office Seal and Head Office Director General Signature (NOT Coordinator's own signature)
-    const councilSeal = cert.council_seal_url || SEALS.councilSeal;
-    const councilSign = cert.council_signature_url || SEALS.councilSign;
+    const { councilSeal, councilSign } = resolveSeals(cert, cert);
 
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=https%3A%2F%2Fpescouncil.in%2Fverify%2Fcoordinator%2F${encodeURIComponent(cert.token || 'valid')}`;
 

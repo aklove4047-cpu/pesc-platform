@@ -17,6 +17,6 @@ services:
       - key: SEED_ADMIN_EMAIL
         value: admin@pescouncil.in
       - key: SEED_ADMIN_PASSWORD
-        value: Admin#12345678
+        sync: false   # set a strong password (12+ chars) in the Render dashboard
       - key: PAYMENT_WEBHOOK_SECRET
         generateValue: true
