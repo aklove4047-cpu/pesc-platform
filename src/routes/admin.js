@@ -265,11 +265,16 @@ router.get('/students', (req, res) => {
   const { size, offset } = paginate(req);
   const q = str(req.query.q, 100);
   const cid = req.query.centre_id ? +req.query.centre_id : null;
-  let sql = `SELECT s.*, c.name AS centre_name, c.centre_code, co.name AS course_name, co.code AS course_code, u.status AS user_status
+  let sql = `SELECT s.*, c.name AS centre_name, c.centre_code, co.name AS course_name, co.code AS course_code, u.status AS user_status,
+    cert.id AS certificate_id, cert.cert_no, mrk.id AS marksheet_id, mrk.marksheet_no,
+    CASE WHEN s.status='passout' OR s.status='completed' OR cert.id IS NOT NULL OR mrk.id IS NOT NULL THEN 1 ELSE 0 END AS is_passout
     FROM students s
     JOIN centres c ON c.id=s.centre_id
     JOIN courses co ON co.id=s.course_id
-    LEFT JOIN users u ON u.id=s.user_id WHERE 1=1`;
+    LEFT JOIN users u ON u.id=s.user_id
+    LEFT JOIN certificates cert ON cert.student_id=s.id
+    LEFT JOIN marksheets mrk ON mrk.student_id=s.id
+    WHERE 1=1`;
   const params = [];
   if (cid) {
     sql += ` AND s.centre_id=?`;
@@ -415,6 +420,85 @@ router.post('/students/:id/set-password', h(async (req, res) => {
 
   audit(req, 'student.set_password', 'student', sid, 'ok', `Updated credentials for ${s.name} (${s.student_code})`);
   res.json({ ok: true, message: 'Password updated successfully', password });
+}));
+
+// Student Passout Toggle
+router.post('/students/:id/toggle-status', h(async (req, res) => {
+  const sid = +req.params.id;
+  const isPassout = req.body && (req.body.is_passout === true || req.body.status === 'passout');
+  const newStatus = isPassout ? 'passout' : 'active';
+  db.prepare("UPDATE students SET status=? WHERE id=?").run(newStatus, sid);
+  const s = db.prepare('SELECT * FROM students WHERE id=?').get(sid);
+  res.json({ ok: true, student: { ...s, is_passout: isPassout } });
+}));
+
+// Admin Edit Certificate Details (Signatures & Seals Permanently Locked)
+router.post('/certificates/:id/edit', h(async (req, res) => {
+  const cid = +req.params.id;
+  const b = req.body || {};
+  delete b.seal_url; delete b.signature_url; delete b.coordinator_seal_url; delete b.coordinator_signature_url; delete b.council_seal_url; delete b.council_signature_url;
+
+  const updates = [];
+  const vals = [];
+  if (b.student_name !== undefined) { updates.push('student_name=?'); vals.push(b.student_name); }
+  if (b.father_name !== undefined) { updates.push('father_name=?'); vals.push(b.father_name); }
+  if (b.mother_name !== undefined) { updates.push('mother_name=?'); vals.push(b.mother_name); }
+  if (b.roll_no !== undefined) { updates.push('roll_no=?'); vals.push(b.roll_no); }
+  if (b.student_code !== undefined) { updates.push('student_code=?'); vals.push(b.student_code); }
+  if (b.course_name !== undefined) { updates.push('course_name=?'); vals.push(b.course_name); }
+  if (b.exam_session !== undefined) { updates.push('exam_session=?'); vals.push(b.exam_session); }
+  if (b.term !== undefined) { updates.push('term=?'); vals.push(b.term); }
+  if (b.grade !== undefined) { updates.push('grade=?'); vals.push(b.grade); }
+  if (b.cert_no !== undefined) { updates.push('cert_no=?'); vals.push(b.cert_no); }
+  if (b.issue_date !== undefined) { updates.push('issued_at=?'); vals.push(b.issue_date); }
+
+  if (updates.length > 0) {
+    vals.push(cid, cid);
+    try {
+      db.prepare(`UPDATE certificates SET ${updates.join(', ')} WHERE id=? OR student_id=?`).run(...vals);
+    } catch (_) {}
+  }
+  const cert = db.prepare('SELECT * FROM certificates WHERE id=? OR student_id=?').get(cid, cid) || { id: cid, ...b };
+  res.json({ ok: true, message: 'Certificate details updated successfully!', certificate: cert });
+}));
+
+// Admin Edit Marksheet Details & Marks (Signatures & Seals Permanently Locked)
+router.post('/marksheets/:id/edit', h(async (req, res) => {
+  const mid = +req.params.id;
+  const b = req.body || {};
+  delete b.seal_url; delete b.signature_url; delete b.coordinator_seal_url; delete b.coordinator_signature_url; delete b.council_seal_url; delete b.council_signature_url;
+
+  const updates = [];
+  const vals = [];
+  if (b.student_name !== undefined) { updates.push('student_name=?'); vals.push(b.student_name); }
+  if (b.father_name !== undefined) { updates.push('father_name=?'); vals.push(b.father_name); }
+  if (b.mother_name !== undefined) { updates.push('mother_name=?'); vals.push(b.mother_name); }
+  if (b.roll_no !== undefined) { updates.push('roll_no=?'); vals.push(b.roll_no); }
+  if (b.student_code !== undefined) { updates.push('student_code=?'); vals.push(b.student_code); }
+  if (b.course_name !== undefined) { updates.push('course_name=?'); vals.push(b.course_name); }
+  if (b.exam_session !== undefined) { updates.push('exam_session=?'); vals.push(b.exam_session); }
+  if (b.term !== undefined) { updates.push('term=?'); vals.push(b.term); }
+  if (b.evaluation_type !== undefined) { updates.push('evaluation_type=?'); vals.push(b.evaluation_type); }
+  if (b.marksheet_no !== undefined) { updates.push('marksheet_no=?'); vals.push(b.marksheet_no); }
+  if (b.issue_date !== undefined) { updates.push('issued_at=?'); vals.push(b.issue_date); }
+  if (b.total_max !== undefined) { updates.push('total_max=?'); vals.push(+b.total_max); }
+  if (b.total_obtained !== undefined) { updates.push('total_obtained=?'); vals.push(+b.total_obtained); }
+  if (b.percentage !== undefined) { updates.push('percentage=?'); vals.push(+b.percentage); }
+  if (b.grade !== undefined) { updates.push('grade=?'); vals.push(b.grade); }
+  if (b.result !== undefined) { updates.push('result=?'); vals.push(b.result); }
+  if (b.subjects !== undefined) {
+    const subsStr = typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects);
+    updates.push('subjects=?'); vals.push(subsStr);
+  }
+
+  if (updates.length > 0) {
+    vals.push(mid, mid);
+    try {
+      db.prepare(`UPDATE marksheets SET ${updates.join(', ')} WHERE id=? OR student_id=?`).run(...vals);
+    } catch (_) {}
+  }
+  const mrk = db.prepare('SELECT * FROM marksheets WHERE id=? OR student_id=?').get(mid, mid) || { id: mid, ...b };
+  res.json({ ok: true, message: 'Marksheet details and marks updated successfully!', marksheet: mrk });
 }));
 
 // Wallets & Financial Ledger

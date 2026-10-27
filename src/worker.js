@@ -1011,7 +1011,7 @@ function getAuthorities(centre) {
 
   const isCustomCoord = (u) => u && !u.includes('seal_coordinator.svg') && !u.includes('sign_coordinator.svg');
 
-  const hoLogo = cleanImageUrl(adminUser.logo_url) || cleanImageUrl(store.site_settings && store.site_settings.logo_url) || '/assets/img/seal_council_head.svg';
+  const hoLogo = cleanImageUrl(adminUser.logo_url) || cleanImageUrl(store.site_settings && store.site_settings.logo_url) || '/assets/img/logo_council.svg';
   const hoSeal = cleanImageUrl(adminUser.seal_url) || '/assets/img/seal_council_head.svg';
   const hoSign = cleanImageUrl(adminUser.signature_url) || '/assets/img/sign_council_head.svg';
   const chairmanSign = cleanImageUrl(adminUser.chairman_signature_url) || hoSign;
@@ -1040,8 +1040,10 @@ function getAuthorities(centre) {
       seal_url: hoSeal,
       signature_url: hoSign,
       chairman_signature_url: chairmanSign,
-      mobile: adminUser.mobile || '+91 94152 00000',
-      email: adminUser.email || 'admin@pescouncil.in'
+      mobile: adminUser.mobile || (store.site_settings && store.site_settings.mobile) || '+91 94152 00000',
+      email: adminUser.email || (store.site_settings && store.site_settings.email) || 'admin@pescouncil.in',
+      address: adminUser.head_office || (store.site_settings && store.site_settings.address) || 'Purvanchal Education & Skill Council, Head Office, shahgarh/ Azamgarh, UP',
+      head_office: adminUser.head_office || (store.site_settings && store.site_settings.head_office) || 'Purvanchal Education & Skill Council, Head Office, shahgarh/ Azamgarh, UP'
     },
     coordinator: {
       id: coordUser.id || 2,
@@ -1215,7 +1217,22 @@ export default {
     // 5. REST APIs
     // --- Public APIs ---
     if (path === '/api/public/settings') {
-      return jsonResponse({ ok: true, settings: store.site_settings, authorities: getAuthorities(null) });
+      const auth = getAuthorities(null);
+      const s = store.site_settings || {};
+      const ho = auth.head_office || {};
+      return jsonResponse({
+        ok: true,
+        settings: {
+          ...s,
+          email: s.email || ho.email || 'admin@pescouncil.in',
+          phone: s.phone || s.mobile || ho.mobile || '+91 94152 00000',
+          mobile: s.mobile || ho.mobile || '+91 94152 00000',
+          head_office: s.head_office || s.address || ho.head_office || 'Purvanchal Education & Skill Council, Head Office, shahgarh/ Azamgarh, UP',
+          address: s.address || s.head_office || ho.head_office || 'Purvanchal Education & Skill Council, Head Office, shahgarh/ Azamgarh, UP',
+          logo_url: s.logo_url || ho.logo_url || '/assets/img/logo_council.svg'
+        },
+        authorities: auth
+      });
     }
 
     if (path === '/api/public/centres') {
@@ -2455,6 +2472,101 @@ export default {
         }
       }
 
+      // Admin Edit Certificate Details (Signatures & Seals Locked)
+      if (path.match(/\/api\/admin\/certificates\/\d+\/edit$/) && request.method === 'POST') {
+        const cId = +path.split('/')[4];
+        let cert = store.certificates.find(x => x.id === cId || x.student_id === cId);
+        if (!cert) return jsonResponse({ error: 'Certificate not found' }, 404);
+        const body = await request.json().catch(() => ({}));
+
+        delete body.seal_url;
+        delete body.signature_url;
+        delete body.coordinator_seal_url;
+        delete body.coordinator_signature_url;
+        delete body.council_seal_url;
+        delete body.council_signature_url;
+
+        if (body.student_name !== undefined) cert.student_name = String(body.student_name).trim();
+        if (body.father_name !== undefined) cert.father_name = String(body.father_name).trim();
+        if (body.mother_name !== undefined) cert.mother_name = String(body.mother_name).trim();
+        if (body.roll_no !== undefined) cert.roll_no = String(body.roll_no).trim();
+        if (body.student_code !== undefined) cert.student_code = String(body.student_code).trim();
+        if (body.course_name !== undefined) cert.course_name = String(body.course_name).trim();
+        if (body.exam_session !== undefined) cert.exam_session = String(body.exam_session).trim();
+        if (body.session !== undefined) cert.exam_session = String(body.session).trim();
+        if (body.term !== undefined) cert.term = String(body.term).trim();
+        if (body.grade !== undefined) cert.grade = String(body.grade).trim();
+        if (body.cert_no !== undefined) cert.cert_no = String(body.cert_no).trim();
+        if (body.issue_date !== undefined) cert.issued_at = body.issue_date;
+
+        const stu = store.students.find(s => s.id === cert.student_id);
+        if (stu) {
+          if (cert.student_name) stu.name = cert.student_name;
+          if (cert.father_name) stu.father_name = cert.father_name;
+          if (cert.mother_name) stu.mother_name = cert.mother_name;
+          if (cert.roll_no) stu.roll_no = cert.roll_no;
+          await persistToKV(env, 'students', store.students);
+        }
+
+        await persistToKV(env, 'certificates', store.certificates);
+        return jsonResponse({ ok: true, message: 'Certificate details updated successfully!', certificate: cert });
+      }
+
+      // Admin Edit Marksheet Details & Marks (Signatures & Seals Locked)
+      if (path.match(/\/api\/admin\/marksheets\/\d+\/edit$/) && request.method === 'POST') {
+        const mId = +path.split('/')[4];
+        let mrk = store.marksheets.find(x => x.id === mId || x.student_id === mId);
+        if (!mrk) return jsonResponse({ error: 'Marksheet not found' }, 404);
+        const body = await request.json().catch(() => ({}));
+
+        delete body.seal_url;
+        delete body.signature_url;
+        delete body.coordinator_seal_url;
+        delete body.coordinator_signature_url;
+        delete body.council_seal_url;
+        delete body.council_signature_url;
+
+        if (body.student_name !== undefined) mrk.student_name = String(body.student_name).trim();
+        if (body.father_name !== undefined) mrk.father_name = String(body.father_name).trim();
+        if (body.mother_name !== undefined) mrk.mother_name = String(body.mother_name).trim();
+        if (body.roll_no !== undefined) mrk.roll_no = String(body.roll_no).trim();
+        if (body.student_code !== undefined) mrk.student_code = String(body.student_code).trim();
+        if (body.course_name !== undefined) mrk.course_name = String(body.course_name).trim();
+        if (body.exam_session !== undefined) mrk.exam_session = String(body.exam_session).trim();
+        if (body.session !== undefined) mrk.exam_session = String(body.session).trim();
+        if (body.term !== undefined) mrk.term = String(body.term).trim();
+        if (body.evaluation_type !== undefined) mrk.evaluation_type = String(body.evaluation_type).trim();
+        if (body.marksheet_no !== undefined) mrk.marksheet_no = String(body.marksheet_no).trim();
+        if (body.issue_date !== undefined) mrk.issue_date = body.issue_date;
+
+        if (body.subjects !== undefined) {
+          mrk.subjects = typeof body.subjects === 'string' ? body.subjects : JSON.stringify(body.subjects);
+        }
+        if (body.total_max !== undefined) mrk.total_max = +body.total_max;
+        if (body.total_obtained !== undefined) mrk.total_obtained = +body.total_obtained;
+        if (body.percentage !== undefined) mrk.percentage = +body.percentage;
+        else if (mrk.total_max && mrk.total_obtained) {
+          mrk.percentage = Math.round((mrk.total_obtained / mrk.total_max) * 1000) / 10;
+        }
+        if (body.grade !== undefined) mrk.grade = String(body.grade).trim();
+        else if (mrk.percentage !== undefined) {
+          mrk.grade = mrk.percentage >= 80 ? 'A+' : mrk.percentage >= 70 ? 'A' : mrk.percentage >= 60 ? 'B' : mrk.percentage >= 50 ? 'C' : 'D';
+        }
+        if (body.result !== undefined) mrk.result = String(body.result).trim();
+
+        const stu = store.students.find(s => s.id === mrk.student_id);
+        if (stu) {
+          if (mrk.student_name) stu.name = mrk.student_name;
+          if (mrk.father_name) stu.father_name = mrk.father_name;
+          if (mrk.mother_name) stu.mother_name = mrk.mother_name;
+          if (mrk.roll_no) stu.roll_no = mrk.roll_no;
+          await persistToKV(env, 'students', store.students);
+        }
+
+        await persistToKV(env, 'marksheets', store.marksheets);
+        return jsonResponse({ ok: true, message: 'Marksheet details & marks updated successfully!', marksheet: mrk });
+      }
+
       if (path === '/api/admin/coordinators') {
         if (request.method === 'POST') {
           try {
@@ -2996,15 +3108,35 @@ export default {
         const enriched = store.students.map(s => {
           const ce = store.centres.find(c => c.id === s.centre_id) || store.centres[0] || { name: 'PESC Centre', centre_code: 'PESC0001' };
           const co = store.courses.find(c => c.id === s.course_id) || store.courses[0] || { name: 'Diploma Course', code: 'DCA' };
+          const cert = store.certificates.find(x => x.student_id === s.id);
+          const mrk = store.marksheets.find(x => x.student_id === s.id);
+          const isPassout = s.status === 'passout' || s.status === 'completed' || !!cert || !!mrk;
           return {
             ...s,
             centre_name: ce.name,
             centre_code: ce.centre_code,
             course_name: co.name,
-            course_code: co.code
+            course_code: co.code,
+            is_passout: isPassout,
+            has_certificate: !!cert,
+            has_marksheet: !!mrk,
+            certificate_id: cert ? cert.id : null,
+            marksheet_id: mrk ? mrk.id : null,
+            cert_no: cert ? cert.cert_no : null,
+            marksheet_no: mrk ? mrk.marksheet_no : null
           };
         });
         return jsonResponse({ students: enriched });
+      }
+
+      if (path.match(/\/api\/admin\/students\/\d+\/toggle-status$/) && request.method === 'POST') {
+        const sId = +path.split('/')[4];
+        const stu = store.students.find(s => s.id === sId);
+        if (!stu) return jsonResponse({ error: 'Student not found' }, 404);
+        const body = await request.json().catch(() => ({}));
+        stu.status = body.status || (stu.status === 'passout' || stu.status === 'completed' ? 'active' : 'passout');
+        await persistToKV(env, 'students', store.students);
+        return jsonResponse({ ok: true, status: stu.status, student: stu });
       }
 
       if (path.match(/\/api\/admin\/students\/\d+\/credentials/)) {
@@ -3165,11 +3297,23 @@ export default {
             adminUser.logo_url = cleanImageUrl(body.logo_url);
             if (!store.site_settings) store.site_settings = {};
             store.site_settings.logo_url = adminUser.logo_url;
-            await persistToKV(env, 'site_settings', store.site_settings);
           }
           if (body.seal_url !== undefined) adminUser.seal_url = cleanImageUrl(body.seal_url);
           if (body.signature_url !== undefined) adminUser.signature_url = cleanImageUrl(body.signature_url);
           if (body.chairman_signature_url !== undefined) adminUser.chairman_signature_url = cleanImageUrl(body.chairman_signature_url);
+          if (!store.site_settings) store.site_settings = {};
+          if (body.email) store.site_settings.email = adminUser.email;
+          if (body.mobile !== undefined) {
+            store.site_settings.phone = adminUser.mobile;
+            store.site_settings.mobile = adminUser.mobile;
+            store.site_settings.helpline = adminUser.mobile;
+          }
+          if (body.head_office !== undefined) {
+            store.site_settings.head_office = adminUser.head_office;
+            store.site_settings.address = adminUser.head_office;
+          }
+          if (body.name) store.site_settings.officer_name = adminUser.name;
+          await persistToKV(env, 'site_settings', store.site_settings);
           await persistToKV(env, 'users', store.users);
           return jsonResponse({
             ok: true,
@@ -3991,8 +4135,32 @@ export default {
             return jsonResponse({ error: err.message }, 400);
           }
         }
-        const stus = store.students.filter(s => s.centre_id === c.id);
+        const stus = store.students.filter(s => s.centre_id === c.id).map(s => {
+          const cert = store.certificates.find(x => x.student_id === s.id && x.centre_id === c.id);
+          const mrk = store.marksheets.find(x => x.student_id === s.id && x.centre_id === c.id);
+          const isPassout = s.status === 'passout' || s.status === 'completed' || !!cert || !!mrk;
+          return {
+            ...s,
+            is_passout: isPassout,
+            has_certificate: !!cert,
+            has_marksheet: !!mrk,
+            certificate_id: cert ? cert.id : null,
+            marksheet_id: mrk ? mrk.id : null,
+            cert_no: cert ? cert.cert_no : null,
+            marksheet_no: mrk ? mrk.marksheet_no : null
+          };
+        });
         return jsonResponse({ students: stus });
+      }
+
+      if (path.match(/\/api\/centre\/students\/\d+\/toggle-status$/) && request.method === 'POST') {
+        const sId = +path.split('/')[4];
+        const stu = store.students.find(s => s.id === sId && s.centre_id === c.id);
+        if (!stu) return jsonResponse({ error: 'Student not found' }, 404);
+        const body = await request.json().catch(() => ({}));
+        stu.status = body.status || (stu.status === 'passout' || stu.status === 'completed' ? 'active' : 'passout');
+        await persistToKV(env, 'students', store.students);
+        return jsonResponse({ ok: true, status: stu.status, student: stu });
       }
 
       if (path.match(/\/api\/centre\/students\/\d+\/photo$/) && request.method === 'POST') {
@@ -4179,6 +4347,101 @@ export default {
       if (path === '/api/centre/marksheets') {
         const mrks = store.marksheets.filter(x => x.centre_id === c.id);
         return jsonResponse({ ok: true, marksheets: mrks });
+      }
+
+      // Centre Edit Certificate Details (Signatures & Seals Locked)
+      if (path.match(/\/api\/centre\/certificates\/\d+\/edit$/) && request.method === 'POST') {
+        const cId = +path.split('/')[4];
+        let cert = store.certificates.find(x => (x.id === cId || x.student_id === cId) && x.centre_id === c.id);
+        if (!cert) return jsonResponse({ error: 'Certificate not found' }, 404);
+        const body = await request.json().catch(() => ({}));
+
+        delete body.seal_url;
+        delete body.signature_url;
+        delete body.coordinator_seal_url;
+        delete body.coordinator_signature_url;
+        delete body.council_seal_url;
+        delete body.council_signature_url;
+
+        if (body.student_name !== undefined) cert.student_name = String(body.student_name).trim();
+        if (body.father_name !== undefined) cert.father_name = String(body.father_name).trim();
+        if (body.mother_name !== undefined) cert.mother_name = String(body.mother_name).trim();
+        if (body.roll_no !== undefined) cert.roll_no = String(body.roll_no).trim();
+        if (body.student_code !== undefined) cert.student_code = String(body.student_code).trim();
+        if (body.course_name !== undefined) cert.course_name = String(body.course_name).trim();
+        if (body.exam_session !== undefined) cert.exam_session = String(body.exam_session).trim();
+        if (body.session !== undefined) cert.exam_session = String(body.session).trim();
+        if (body.term !== undefined) cert.term = String(body.term).trim();
+        if (body.grade !== undefined) cert.grade = String(body.grade).trim();
+        if (body.cert_no !== undefined) cert.cert_no = String(body.cert_no).trim();
+        if (body.issue_date !== undefined) cert.issued_at = body.issue_date;
+
+        const stu = store.students.find(s => s.id === cert.student_id);
+        if (stu) {
+          if (cert.student_name) stu.name = cert.student_name;
+          if (cert.father_name) stu.father_name = cert.father_name;
+          if (cert.mother_name) stu.mother_name = cert.mother_name;
+          if (cert.roll_no) stu.roll_no = cert.roll_no;
+          await persistToKV(env, 'students', store.students);
+        }
+
+        await persistToKV(env, 'certificates', store.certificates);
+        return jsonResponse({ ok: true, message: 'Certificate details updated successfully!', certificate: cert });
+      }
+
+      // Centre Edit Marksheet Details & Marks (Signatures & Seals Locked)
+      if (path.match(/\/api\/centre\/marksheets\/\d+\/edit$/) && request.method === 'POST') {
+        const mId = +path.split('/')[4];
+        let mrk = store.marksheets.find(x => (x.id === mId || x.student_id === mId) && x.centre_id === c.id);
+        if (!mrk) return jsonResponse({ error: 'Marksheet not found' }, 404);
+        const body = await request.json().catch(() => ({}));
+
+        delete body.seal_url;
+        delete body.signature_url;
+        delete body.coordinator_seal_url;
+        delete body.coordinator_signature_url;
+        delete body.council_seal_url;
+        delete body.council_signature_url;
+
+        if (body.student_name !== undefined) mrk.student_name = String(body.student_name).trim();
+        if (body.father_name !== undefined) mrk.father_name = String(body.father_name).trim();
+        if (body.mother_name !== undefined) mrk.mother_name = String(body.mother_name).trim();
+        if (body.roll_no !== undefined) mrk.roll_no = String(body.roll_no).trim();
+        if (body.student_code !== undefined) mrk.student_code = String(body.student_code).trim();
+        if (body.course_name !== undefined) mrk.course_name = String(body.course_name).trim();
+        if (body.exam_session !== undefined) mrk.exam_session = String(body.exam_session).trim();
+        if (body.session !== undefined) mrk.exam_session = String(body.session).trim();
+        if (body.term !== undefined) mrk.term = String(body.term).trim();
+        if (body.evaluation_type !== undefined) mrk.evaluation_type = String(body.evaluation_type).trim();
+        if (body.marksheet_no !== undefined) mrk.marksheet_no = String(body.marksheet_no).trim();
+        if (body.issue_date !== undefined) mrk.issue_date = body.issue_date;
+
+        if (body.subjects !== undefined) {
+          mrk.subjects = typeof body.subjects === 'string' ? body.subjects : JSON.stringify(body.subjects);
+        }
+        if (body.total_max !== undefined) mrk.total_max = +body.total_max;
+        if (body.total_obtained !== undefined) mrk.total_obtained = +body.total_obtained;
+        if (body.percentage !== undefined) mrk.percentage = +body.percentage;
+        else if (mrk.total_max && mrk.total_obtained) {
+          mrk.percentage = Math.round((mrk.total_obtained / mrk.total_max) * 1000) / 10;
+        }
+        if (body.grade !== undefined) mrk.grade = String(body.grade).trim();
+        else if (mrk.percentage !== undefined) {
+          mrk.grade = mrk.percentage >= 80 ? 'A+' : mrk.percentage >= 70 ? 'A' : mrk.percentage >= 60 ? 'B' : mrk.percentage >= 50 ? 'C' : 'D';
+        }
+        if (body.result !== undefined) mrk.result = String(body.result).trim();
+
+        const stu = store.students.find(s => s.id === mrk.student_id);
+        if (stu) {
+          if (mrk.student_name) stu.name = mrk.student_name;
+          if (mrk.father_name) stu.father_name = mrk.father_name;
+          if (mrk.mother_name) stu.mother_name = mrk.mother_name;
+          if (mrk.roll_no) stu.roll_no = mrk.roll_no;
+          await persistToKV(env, 'students', store.students);
+        }
+
+        await persistToKV(env, 'marksheets', store.marksheets);
+        return jsonResponse({ ok: true, message: 'Marksheet details & marks updated successfully!', marksheet: mrk });
       }
 
       if (path === '/api/centre/approvals-status') {
@@ -4796,6 +5059,26 @@ export default {
     }
 
     // 7. Default Fallback: Serve static assets from public directory
+    if ((path === '/' || path === '' || path === '/index.html') && tenantInfo.kind === 'main') {
+      const assetRes = await env.ASSETS.fetch(request);
+      if (assetRes.ok && (assetRes.headers.get('content-type') || '').includes('text/html')) {
+        let html = await assetRes.text();
+        const s = store.site_settings || {};
+        const ho = (getAuthorities(null) || {}).head_office || {};
+        const liveEmail = s.email || ho.email || 'info@pescouncil.in';
+        const livePhone = s.phone || s.mobile || ho.mobile || '+91 542-1234567';
+        const liveAddress = s.address || s.head_office || ho.head_office || 'Purvanchal Education & Skill Council, Head Office, shahgarh/ Azamgarh, UP';
+        html = html.replace(/info@pescouncil\.in/g, liveEmail);
+        html = html.replace(/\+91 542-1234567/g, livePhone);
+        html = html.replace(/Varanasi, Uttar Pradesh/g, liveAddress);
+        return new Response(html, {
+          status: assetRes.status,
+          headers: assetRes.headers
+        });
+      }
+      return assetRes;
+    }
+
     return env.ASSETS.fetch(request);
   }
 };

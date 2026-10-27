@@ -147,13 +147,96 @@ router.get('/students', (req, res) => {
   const q = `%${str(req.query.q, 50)}%`;
   const rows = db.prepare(`SELECT s.id, s.student_code, s.name, s.father_name, s.mobile, s.email, s.dob, s.status, s.session,
     s.fee_total, s.fee_paid, s.photo_url, s.initial_password, s.course_id,
-    co.name AS course, co.code AS course_code, co.duration_months
+    co.name AS course, co.code AS course_code, co.duration_months,
+    cert.id AS certificate_id, cert.cert_no, mrk.id AS marksheet_id, mrk.marksheet_no,
+    CASE WHEN s.status='passout' OR s.status='completed' OR cert.id IS NOT NULL OR mrk.id IS NOT NULL THEN 1 ELSE 0 END AS is_passout
     FROM students s
     JOIN courses co ON co.id=s.course_id
+    LEFT JOIN certificates cert ON cert.student_id=s.id
+    LEFT JOIN marksheets mrk ON mrk.student_id=s.id
     WHERE s.centre_id=? AND (s.name LIKE ? OR s.student_code LIKE ? OR s.mobile LIKE ?)
     ORDER BY s.id DESC LIMIT ? OFFSET ?`).all(cid(req), q, q, q, size, offset);
   res.json({ students: rows });
 });
+
+// Student Passout Status Toggle
+router.post('/students/:id/toggle-status', h(async (req, res) => {
+  const sid = +req.params.id;
+  const isPassout = req.body && (req.body.is_passout === true || req.body.status === 'passout');
+  const newStatus = isPassout ? 'passout' : 'active';
+  db.prepare("UPDATE students SET status=? WHERE id=? AND centre_id=?").run(newStatus, sid, cid(req));
+  const s = db.prepare('SELECT * FROM students WHERE id=? AND centre_id=?').get(sid, cid(req));
+  res.json({ ok: true, student: { ...s, is_passout: isPassout } });
+}));
+
+// Centre Edit Certificate Details (Signatures & Seals Permanently Locked)
+router.post('/certificates/:id/edit', h(async (req, res) => {
+  const cidVal = +req.params.id;
+  const b = req.body || {};
+  delete b.seal_url; delete b.signature_url; delete b.coordinator_seal_url; delete b.coordinator_signature_url; delete b.council_seal_url; delete b.council_signature_url;
+
+  const updates = [];
+  const vals = [];
+  if (b.student_name !== undefined) { updates.push('student_name=?'); vals.push(b.student_name); }
+  if (b.father_name !== undefined) { updates.push('father_name=?'); vals.push(b.father_name); }
+  if (b.mother_name !== undefined) { updates.push('mother_name=?'); vals.push(b.mother_name); }
+  if (b.roll_no !== undefined) { updates.push('roll_no=?'); vals.push(b.roll_no); }
+  if (b.student_code !== undefined) { updates.push('student_code=?'); vals.push(b.student_code); }
+  if (b.course_name !== undefined) { updates.push('course_name=?'); vals.push(b.course_name); }
+  if (b.exam_session !== undefined) { updates.push('exam_session=?'); vals.push(b.exam_session); }
+  if (b.term !== undefined) { updates.push('term=?'); vals.push(b.term); }
+  if (b.grade !== undefined) { updates.push('grade=?'); vals.push(b.grade); }
+  if (b.cert_no !== undefined) { updates.push('cert_no=?'); vals.push(b.cert_no); }
+  if (b.issue_date !== undefined) { updates.push('issued_at=?'); vals.push(b.issue_date); }
+
+  if (updates.length > 0) {
+    vals.push(cidVal, cidVal, cid(req));
+    try {
+      db.prepare(`UPDATE certificates SET ${updates.join(', ')} WHERE (id=? OR student_id=?) AND centre_id=?`).run(...vals);
+    } catch (_) {}
+  }
+  const cert = db.prepare('SELECT * FROM certificates WHERE (id=? OR student_id=?) AND centre_id=?').get(cidVal, cidVal, cid(req)) || { id: cidVal, ...b };
+  res.json({ ok: true, message: 'Certificate details updated successfully!', certificate: cert });
+}));
+
+// Centre Edit Marksheet Details & Marks (Signatures & Seals Permanently Locked)
+router.post('/marksheets/:id/edit', h(async (req, res) => {
+  const mid = +req.params.id;
+  const b = req.body || {};
+  delete b.seal_url; delete b.signature_url; delete b.coordinator_seal_url; delete b.coordinator_signature_url; delete b.council_seal_url; delete b.council_signature_url;
+
+  const updates = [];
+  const vals = [];
+  if (b.student_name !== undefined) { updates.push('student_name=?'); vals.push(b.student_name); }
+  if (b.father_name !== undefined) { updates.push('father_name=?'); vals.push(b.father_name); }
+  if (b.mother_name !== undefined) { updates.push('mother_name=?'); vals.push(b.mother_name); }
+  if (b.roll_no !== undefined) { updates.push('roll_no=?'); vals.push(b.roll_no); }
+  if (b.student_code !== undefined) { updates.push('student_code=?'); vals.push(b.student_code); }
+  if (b.course_name !== undefined) { updates.push('course_name=?'); vals.push(b.course_name); }
+  if (b.exam_session !== undefined) { updates.push('exam_session=?'); vals.push(b.exam_session); }
+  if (b.term !== undefined) { updates.push('term=?'); vals.push(b.term); }
+  if (b.evaluation_type !== undefined) { updates.push('evaluation_type=?'); vals.push(b.evaluation_type); }
+  if (b.marksheet_no !== undefined) { updates.push('marksheet_no=?'); vals.push(b.marksheet_no); }
+  if (b.issue_date !== undefined) { updates.push('issued_at=?'); vals.push(b.issue_date); }
+  if (b.total_max !== undefined) { updates.push('total_max=?'); vals.push(+b.total_max); }
+  if (b.total_obtained !== undefined) { updates.push('total_obtained=?'); vals.push(+b.total_obtained); }
+  if (b.percentage !== undefined) { updates.push('percentage=?'); vals.push(+b.percentage); }
+  if (b.grade !== undefined) { updates.push('grade=?'); vals.push(b.grade); }
+  if (b.result !== undefined) { updates.push('result=?'); vals.push(b.result); }
+  if (b.subjects !== undefined) {
+    const subsStr = typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects);
+    updates.push('subjects=?'); vals.push(subsStr);
+  }
+
+  if (updates.length > 0) {
+    vals.push(mid, mid, cid(req));
+    try {
+      db.prepare(`UPDATE marksheets SET ${updates.join(', ')} WHERE (id=? OR student_id=?) AND centre_id=?`).run(...vals);
+    } catch (_) {}
+  }
+  const mrk = db.prepare('SELECT * FROM marksheets WHERE (id=? OR student_id=?) AND centre_id=?').get(mid, mid, cid(req)) || { id: mid, ...b };
+  res.json({ ok: true, message: 'Marksheet details and marks updated successfully!', marksheet: mrk });
+}));
 
 router.get('/students/:id', (req, res) => {
   const s = db.prepare(`SELECT s.*, co.name AS course, co.code AS course_code, co.duration_months

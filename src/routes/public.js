@@ -234,4 +234,24 @@ router.get('/verify/coordinator/:token', (req, res) => {
   res.json(verifyCoordCertView(row));
 });
 
+router.get('/settings', (req, res) => {
+  const adminUser = db.prepare("SELECT * FROM users WHERE role='super_admin' OR role='admin' ORDER BY id ASC LIMIT 1").get() || {};
+  res.json({
+    email: adminUser.email || 'info@pescouncil.in',
+    phone: adminUser.mobile || '+91 542-1234567',
+    mobile: adminUser.mobile || '+91 94152 00000',
+    head_office: adminUser.head_office || 'Purvanchal Education & Skill Council, Head Office, Gorakhpur / Lucknow, UP',
+    address: adminUser.head_office || 'Gorakhpur / Varanasi, Uttar Pradesh, India',
+    authorities: {
+      head_office: {
+        name: adminUser.name || 'Executive Director & Controller of Examinations',
+        designation: adminUser.designation || 'Executive Director & Controller of Examinations',
+        seal_url: adminUser.seal_url || '/assets/img/seal_council_head.svg',
+        signature_url: adminUser.signature_url || '/assets/img/sign_council_head.svg',
+        logo_url: adminUser.photo_url || '/assets/img/logo_council.svg'
+      }
+    }
+  });
+});
+
 module.exports = router;

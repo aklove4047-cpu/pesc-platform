@@ -857,11 +857,16 @@ const views = {
     const c = dash.centre || {};
     const students = sData.students || [];
 
+    const activeList = students.filter(s => !s.is_passout && s.status !== 'passout' && s.status !== 'completed');
+    const passoutList = students.filter(s => s.is_passout || s.status === 'passout' || s.status === 'completed');
+    const isPassoutTab = window._centreStudentsTab === 'passout';
+    const currentList = isPassoutTab ? passoutList : activeList;
+
     V.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:20px;">
         <div>
           <h2 style="margin:0 0 4px; font-size:1.6rem; color:#064e3b;">1. My Students / Dashboard</h2>
-          <p class="muted" style="margin:0;">Overview of active students, fees collected, pending balances, and certifications</p>
+          <p class="muted" style="margin:0;">Overview of active students, passout graduates, fees collected, pending balances, and certifications</p>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn gold" onclick="switchModule('AffiliationCert')" style="font-weight:700;">📜 View Affiliation Certificate</button>
@@ -887,8 +892,12 @@ const views = {
       <!-- Dashboard KPI Summary Cards -->
       <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:24px;">
         <div class="stat" style="border-left: 4px solid #0284c7;">
-          <span>Total Students</span>
-          <b style="color:#0284c7;">${dash.students}</b>
+          <span>Active Students</span>
+          <b style="color:#0284c7;">${activeList.length}</b>
+        </div>
+        <div class="stat" style="border-left: 4px solid #059669;">
+          <span>Passout Graduates</span>
+          <b style="color:#059669;">${passoutList.length}</b>
         </div>
         <div class="stat" style="border-left: 4px solid #16a34a;">
           <span>Fees Collected</span>
@@ -902,42 +911,72 @@ const views = {
           <span>Courses Offered</span>
           <b style="color:#047857;">${dash.courses}</b>
         </div>
-        <div class="stat" style="border-left: 4px solid #ca8a04;">
-          <span>Today Attendance</span>
-          <b style="color:#ca8a04;">${dash.today_attendance_pct}%</b>
-        </div>
         <div class="stat" style="border-left: 4px solid #064e3b;">
           <span>Council Wallet</span>
           <b style="color:#064e3b;">${inr(dash.wallet_paise)}</b>
         </div>
       </div>
 
-      <!-- Students List Search & Quick Filter -->
+      <!-- Students List Search & Two Distinct Tabs -->
       <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-          <h3 style="margin:0; font-size:1.15rem; color:#0f172a;">Student Roster &amp; Fee Status</h3>
+          <div>
+            <h3 style="margin:0 0 4px; font-size:1.18rem; color:#0f172a;">
+              ${isPassoutTab ? '🎓 Passout Students Directory (पासआउट छात्र सूची)' : '📋 Active / Enrolled Students Roster (नामांकित छात्र)'}
+            </h3>
+            <span class="muted" style="font-size:0.85rem;">
+              ${isPassoutTab ? `Showing ${passoutList.length} passout candidates with certificate & marksheet edit/view options` : `Showing ${activeList.length} currently enrolled students`}
+            </span>
+          </div>
           <div style="min-width:280px; flex:1; max-width:400px;">
-            <input type="text" id="dashStudentSearch" placeholder="🔍 Search student name, roll code, mobile..." style="width:100%; padding:10px 14px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+            <input type="text" id="dashStudentSearch" placeholder="🔍 Search candidate name, roll no, code, course..." style="width:100%; padding:10px 14px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
           </div>
         </div>
 
+        <!-- Distinct Tabs: Active / Enrolled vs Passout -->
+        <div style="display:flex; gap:10px; margin-bottom:18px; border-bottom:2.5px solid #cbd5e1; padding-bottom:8px;">
+          <button type="button" class="btn ${!isPassoutTab ? 'gold' : 'alt'} sm" id="centreTabActive" style="font-weight:800; font-size:0.95rem; padding:8px 20px; border-radius:8px; cursor:pointer;">
+            📋 Active / Enrolled Students (${activeList.length})
+          </button>
+          <button type="button" class="btn ${isPassoutTab ? 'gold' : 'alt'} sm" id="centreTabPassout" style="font-weight:800; font-size:0.95rem; padding:8px 20px; border-radius:8px; cursor:pointer;">
+            🎓 Passout Students (${passoutList.length})
+          </button>
+        </div>
+
         <div id="dashStudentTableWrap">
-          ${renderStudentTable(students)}
+          ${renderStudentTable(currentList, isPassoutTab)}
         </div>
       </div>
     `;
+
+    const tabActiveBtn = $('#centreTabActive');
+    const tabPassoutBtn = $('#centreTabPassout');
+    if (tabActiveBtn) {
+      tabActiveBtn.onclick = () => {
+        window._centreStudentsTab = 'active';
+        views.MyStudents();
+      };
+    }
+    if (tabPassoutBtn) {
+      tabPassoutBtn.onclick = () => {
+        window._centreStudentsTab = 'passout';
+        views.MyStudents();
+      };
+    }
 
     const searchInput = $('#dashStudentSearch');
     if (searchInput) {
       searchInput.oninput = (e) => {
         const q = e.target.value.toLowerCase().trim();
-        const filtered = students.filter(s =>
+        const baseList = window._centreStudentsTab === 'passout' ? passoutList : activeList;
+        const filtered = baseList.filter(s =>
           (s.name || '').toLowerCase().includes(q) ||
           (s.student_code || '').toLowerCase().includes(q) ||
+          (s.roll_no || '').toLowerCase().includes(q) ||
           (s.mobile || '').toLowerCase().includes(q) ||
           (s.course || '').toLowerCase().includes(q)
         );
-        $('#dashStudentTableWrap').innerHTML = renderStudentTable(filtered);
+        $('#dashStudentTableWrap').innerHTML = renderStudentTable(filtered, window._centreStudentsTab === 'passout');
       };
     }
   },
@@ -2664,10 +2703,41 @@ function switchModule(modId) {
   }
 }
 
-// Student Table Renderer
-function renderStudentTable(students) {
-  if (!students.length) return '<p class="muted" style="text-align:center; padding:20px;">No students enrolled yet.</p>';
+// Student Table Renderer (Active vs Passout Support)
+function renderStudentTable(students, isPassout = false) {
+  if (!students.length) return `<p class="muted" style="text-align:center; padding:20px;">${isPassout ? 'No passout students found.' : 'No active enrolled students yet.'}</p>`;
   window._currentStudents = students;
+
+  if (isPassout) {
+    return table([
+      ['Photo', (r) => {
+        const p = r.photo || r.photo_url;
+        return p
+          ? `<div style="width:38px; height:46px; border-radius:4px; overflow:hidden; border:1px solid #cbd5e1; box-shadow:0 1px 3px rgba(0,0,0,0.1);"><img src="${esc(p)}" style="width:100%; height:100%; object-fit:cover;"></div>`
+          : `<div style="width:38px; height:46px; border-radius:4px; border:1.5px dashed #cbd5e1; display:flex; align-items:center; justify-content:center; background:#f8fafc; font-size:1.1rem; color:#94a3b8;">🎓</div>`;
+      }],
+      ['Roll & Code', (r) => `<b style="font-family:monospace; color:#0f172a;">${esc(r.student_code)}</b><br><span class="muted" style="font-size:0.8rem;">Roll: <b>${esc(r.roll_no || r.student_code)}</b></span>`],
+      ['Candidate Name', (r) => `<b>${esc(r.name)}</b><br><span class="muted" style="font-size:0.8rem;">Father: ${esc(r.father_name || '—')}</span>`],
+      ['Course', (r) => esc(r.course || r.course_name || 'Diploma')],
+      ['Issued Credentials', (r) => `
+        <div style="font-size:0.82rem;">
+          ${r.certificate_id ? `<span style="color:#047857; font-weight:700;">📜 Cert: ${esc(r.cert_no || 'Issued')}</span>` : '<span class="muted">No Certificate</span>'}<br>
+          ${r.marksheet_id ? `<span style="color:#0284c7; font-weight:700;">📊 Mrk: ${esc(r.marksheet_no || 'Issued')}</span>` : '<span class="muted">No Marksheet</span>'}
+        </div>
+      `],
+      ['Actions', (r) => `
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+          <button class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="viewIssuedStudentCert(${r.id})" title="View & Print Certificate">📜 Cert</button>
+          <button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="View & Print Marksheet">📊 Mrk</button>
+          <button class="btn sm" style="background:#d97706; color:#fff; font-weight:700;" onclick="openCentreEditCertModal(${r.certificate_id || r.id}, ${r.id})" title="Edit Certificate Details (Seals Locked)">✏️ Edit Cert</button>
+          <button class="btn sm" style="background:#b45309; color:#fff; font-weight:700;" onclick="openCentreEditMrkModal(${r.marksheet_id || r.id}, ${r.id})" title="Edit Marksheet & Marks (Seals Locked)">✏️ Edit Mrk</button>
+          <button class="btn sm alt" onclick="showAdmissionFormModal(${r.id})" title="Admission Form">📄 Form</button>
+          <button class="btn sm" style="background:#64748b; color:#fff; font-weight:700;" onclick="toggleCentreStudentStatus(${r.id}, false)" title="Move student back to Active list">📋 Revert Active</button>
+        </div>
+      `]
+    ], students);
+  }
+
   return table([
     ['Photo', (r) => {
       const p = r.photo || r.photo_url;
@@ -2690,11 +2760,48 @@ function renderStudentTable(students) {
         <button class="btn sm" style="background:#0284c7; color:#fff;" onclick="quickViewStudent(${r.id})">👁️ View</button>
         <button class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="showAdmissionFormModal(${r.id})">📄 Form</button>
         <button class="btn sm alt" onclick="printReceipt(${r.id})">🧾 Receipt</button>
-        <button class="btn sm gold" onclick="switchModule('CertificatePrinting')">🎓 Cert</button>
+        <button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Certificate Module">🎓 Cert</button>
+        <button class="btn sm" style="background:#059669; color:#fff; font-weight:700;" onclick="toggleCentreStudentStatus(${r.id}, true)" title="Mark student as passout/graduated">🎓 Mark Passout</button>
       </div>
     `]
   ], students);
 }
+
+// Student Status Toggle (Active vs Passout)
+window.toggleCentreStudentStatus = async function(studentId, isPassout) {
+  try {
+    await api(`/api/centre/students/${studentId}/toggle-status`, {
+      method: 'POST',
+      body: { is_passout: isPassout, status: isPassout ? 'passout' : 'active' }
+    });
+    toast(isPassout ? 'Student successfully marked as Passout!' : 'Student restored to Active list!');
+    if (typeof views.MyStudents === 'function') views.MyStudents();
+  } catch (err) {
+    alert('Failed to update student status: ' + (err.message || err));
+  }
+};
+
+window.viewIssuedStudentCert = function(studentId) {
+  switchModule('CertificatePrinting');
+  setTimeout(() => {
+    const sel = document.getElementById('certStudentSelect');
+    if (sel) {
+      sel.value = String(studentId);
+      if (typeof updateCertPreview === 'function') updateCertPreview();
+    }
+  }, 200);
+};
+
+window.viewIssuedStudentMrk = function(studentId) {
+  switchModule('MarksheetPrinting');
+  setTimeout(() => {
+    const sel = document.getElementById('mrkStudentSelect');
+    if (sel) {
+      sel.value = String(studentId);
+      if (typeof updateMrkPreview === 'function') updateMrkPreview();
+    }
+  }, 200);
+};
 
 // Image 2: Official Printable Student Admission Form Modal
 window.showAdmissionFormModal = async function(studentOrId) {
@@ -2953,12 +3060,18 @@ async function updateCertPreview() {
       printWrap.style.display = 'block';
       printWrap.innerHTML = `
         <div style="display:flex; gap:8px;">
+          <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditCertModal(${certDbId}, ${studentId})">✏️ Edit Certificate</button>
           <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Certificate</button>
           <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
         </div>
       `;
     } else {
-      printWrap.style.display = 'none';
+      printWrap.style.display = 'block';
+      printWrap.innerHTML = `
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditCertModal(${certDbId}, ${studentId})">✏️ Edit Certificate</button>
+        </div>
+      `;
     }
   }
 
@@ -2977,9 +3090,12 @@ async function updateCertPreview() {
         <div style="max-width:540px; margin:0 auto 24px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; font-size:0.9rem; color:#475569; line-height:1.6;">
           🔒 <b>सुरक्षा एवं अधिकृत सत्यापन:</b> हेड ऑफिस एवं समन्वयक की अधिकृत मुहर व डिजिटल हस्ताक्षर सहित ओरिजिनल प्रमाणपत्र देखने, प्रिंट करने एवं PDF डाउनलोड करने के लिए सेंटर वॉलेट से <b>₹${currentFee}</b> का भुगतान करके जारी करें।
         </div>
-        <button type="button" class="btn" onclick="signAndIssueCert(${certDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.1rem; padding:14px 34px; border-radius:10px; box-shadow:0 6px 20px rgba(22,163,74,0.35); border:none; cursor:pointer;">
-          ⚡ Pay ₹${currentFee} from Wallet &amp; Issue Certificate
-        </button>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:12px 24px; border-radius:10px; border:none; cursor:pointer;" onclick="openCentreEditCertModal(${certDbId}, ${studentId})">✏️ Edit Certificate Details</button>
+          <button type="button" class="btn" onclick="signAndIssueCert(${certDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.1rem; padding:14px 34px; border-radius:10px; box-shadow:0 6px 20px rgba(22,163,74,0.35); border:none; cursor:pointer;">
+            ⚡ Pay ₹${currentFee} from Wallet &amp; Issue Certificate
+          </button>
+        </div>
       </div>
     `;
     return;
@@ -2987,6 +3103,7 @@ async function updateCertPreview() {
 
   $('#certPreviewContainer').innerHTML = `
     <div class="no-print" style="margin-bottom:12px; display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800;" onclick="openCentreEditCertModal(${certDbId}, ${studentId})">✏️ Edit Certificate Details</button>
       <button type="button" class="btn sm" style="background:#0284c7; color:#fff;" onclick="window.print()">🖨️ Print Certificate (A4)</button>
       <button type="button" class="btn sm" style="background:#047857; color:#fff;" onclick="window.print()">💾 Save as PDF</button>
     </div>
@@ -3593,12 +3710,18 @@ async function updateMrkPreview() {
       printWrap.style.display = 'block';
       printWrap.innerHTML = `
         <div style="display:flex; gap:8px;">
+          <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
           <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Marksheet</button>
           <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
         </div>
       `;
     } else {
-      printWrap.style.display = 'none';
+      printWrap.style.display = 'block';
+      printWrap.innerHTML = `
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
+        </div>
+      `;
     }
   }
 
@@ -3617,9 +3740,12 @@ async function updateMrkPreview() {
         <div style="max-width:540px; margin:0 auto 24px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; font-size:0.9rem; color:#475569; line-height:1.6;">
           🔒 <b>सुरक्षा एवं अधिकृत सत्यापन:</b> हेड ऑफिस एवं समन्वयक की अधिकृत मुहर व डिजिटल हस्ताक्षर सहित ओरिजिनल अंकतालिका देखने, प्रिंट करने, मार्क्स एडिट करने एवं PDF डाउनलोड करने के लिए सेंटर वॉलेट से <b>₹${currentFee}</b> का भुगतान करके जारी करें।
         </div>
-        <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.1rem; padding:14px 34px; border-radius:10px; box-shadow:0 6px 20px rgba(22,163,74,0.35); border:none; cursor:pointer;">
-          ⚡ Pay ₹${currentFee} from Wallet &amp; Issue Marksheet
-        </button>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:12px 24px; border-radius:10px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
+          <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.1rem; padding:14px 34px; border-radius:10px; box-shadow:0 6px 20px rgba(22,163,74,0.35); border:none; cursor:pointer;">
+            ⚡ Pay ₹${currentFee} from Wallet &amp; Issue Marksheet
+          </button>
+        </div>
       </div>
     `;
     return;
@@ -3645,7 +3771,7 @@ async function updateMrkPreview() {
 
   $('#mrkPreviewContainer').innerHTML = `
     <div class="no-print" style="margin-bottom:12px; display:flex; justify-content:flex-end; gap:10px;">
-      <button type="button" class="btn sm gold" onclick="openMarksEditModal(${studentId})">✏️ Edit Marks / Subjects</button>
+      <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
       <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="window.print()">🖨️ Print Marksheet (A4)</button>
       <button type="button" class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="window.print()">💾 Save as PDF</button>
     </div>
@@ -4853,92 +4979,438 @@ guard(async () => {
   }
 });
 
-// Global Marks Edit Modal Handler
+// Global Custom Marksheet Cache
 window._customMarksheetData = {};
-window.openMarksEditModal = function(studentId) {
-  let currentSubs = window._customMarksheetData[studentId];
-  if (!currentSubs) {
+
+// Centre Marksheet & Marks Editor Modal (Seals & Signatures Permanently Locked)
+window.openCentreEditMrkModal = async function(mrkId, studentId) {
+  const existing = document.getElementById('centreEditMarksheetModal');
+  if (existing) existing.remove();
+
+  let sId = studentId || mrkId;
+  let stu = (window._currentStudents || []).find(s => s.id == sId);
+  let mrk = null;
+
+  try {
+    const stRes = await api(`/api/centre/approvals-status?student_id=${sId}`).catch(() => null);
+    if (stRes && stRes.marksheet) mrk = stRes.marksheet;
+  } catch (_) {}
+
+  if (!stu && sId) {
     try {
-      const saved = localStorage.getItem('pesc_custom_marks_' + studentId);
-      if (saved) currentSubs = JSON.parse(saved);
+      const res = await api(`/api/centre/students/${sId}`).catch(() => null);
+      if (res) stu = res.student || res;
     } catch (_) {}
   }
-  if (!currentSubs || !Array.isArray(currentSubs) || currentSubs.length === 0) {
-    currentSubs = [
-      { code: 'NTT-01', name: 'Child Psychology', max: 100, min: 40, obt: 78, grade: 'A' },
-      { code: 'NTT-02', name: 'School Organization', max: 100, min: 40, obt: 72, grade: 'B+' },
-      { code: 'NTT-03', name: 'Methods of Teaching', max: 100, min: 40, obt: 85, grade: 'A+' },
-      { code: 'NTT-04', name: 'Practical Assessment', max: 100, min: 40, obt: 85, grade: 'A+' },
-      { code: 'NTT-05', name: 'Viva-Voce Exam', max: 100, min: 40, obt: 78, grade: 'A+' },
-      { code: 'NTT-06', name: 'Internal Project', max: 100, min: 40, obt: 80, grade: 'A+' }
+
+  const s = stu || {};
+  const m = mrk || {};
+
+  let subs = [];
+  if (m.subjects) {
+    try {
+      subs = typeof m.subjects === 'string' ? JSON.parse(m.subjects) : m.subjects;
+    } catch (_) { subs = []; }
+  }
+  if (!subs.length && window._customMarksheetData && window._customMarksheetData[sId]) {
+    subs = window._customMarksheetData[sId];
+  }
+  if (!subs.length) {
+    try {
+      const saved = localStorage.getItem('pesc_custom_marks_' + sId);
+      if (saved) subs = JSON.parse(saved);
+    } catch (_) {}
+  }
+  if (!subs.length) {
+    subs = [
+      { code: 'DCA-Y101', name: 'Information Technology, OS & Windows', max_theory: 45, obt_theory: 37, max_practical: 45, obt_practical: 39 },
+      { code: 'DCA-Y102', name: 'Office Automation Tools (Word, Excel, PPT)', max_theory: 44, obt_theory: 36, max_practical: 46, obt_practical: 40 },
+      { code: 'DCA-Y103', name: 'Database Management Systems & MS Access', max_theory: 43, obt_theory: 35, max_practical: 47, obt_practical: 40 },
+      { code: 'DCA-Y104', name: 'Financial Accounting & Tally Prime with GST', max_theory: 44, obt_theory: 36, max_practical: 46, obt_practical: 40 },
+      { code: 'DCA-Y105', name: 'Internet, Cyber Security & Web Applications', max_theory: 45, obt_theory: 37, max_practical: 45, obt_practical: 39 },
+      { code: 'DCA-Y106', name: 'Annual Project Lab Assessment & Viva-Voce', max_theory: 46, obt_theory: 38, max_practical: 46, obt_practical: 40 }
     ];
   }
 
-  let modal = document.getElementById('marksEditModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'marksEditModal';
-    modal.className = 'modal-backdrop';
-    modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.75); display:flex; align-items:center; justify-content:center; z-index:99999; padding:20px;';
-    document.body.appendChild(modal);
-  }
+  const studentName = m.student_name || s.name || '';
+  const fatherName = m.father_name || s.father_name || '';
+  const motherName = m.mother_name || s.mother_name || '';
+  const rollNo = m.roll_no || s.roll_no || s.student_code || 'PESC-26-00008';
+  const studentCode = m.student_code || s.student_code || rollNo;
+  const courseName = m.course_name || s.course || s.course_name || 'Diploma Course';
+  const examSession = m.exam_session || '2026-27';
+  const term = m.term || 'Annual Examination';
+  const evaluationType = m.evaluation_type || (window.mrkEvalPattern === 'semester' ? 'semester' : 'annual');
+  const marksheetNo = m.marksheet_no || `PESC/MRK/2026/${String(sId || 1).padStart(5, '0')}`;
+  const issueDate = m.issue_date || (m.issued_at ? m.issued_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
+  const resultText = m.result || 'PASS';
+
+  const modal = document.createElement('div');
+  modal.id = 'centreEditMarksheetModal';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:center; justify-content:center; z-index:10000; padding:16px; overflow-y:auto;';
 
   modal.innerHTML = `
-    <div style="background:#fff; max-width:650px; width:100%; border-radius:12px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.3); max-height:90vh; overflow-y:auto;">
-      <h3 style="color:#072a60; margin:0 0 16px;">✏️ Edit Examination Marks &amp; Subjects</h3>
-      <form id="marksEditForm" onsubmit="saveCustomMarks(event, ${studentId})">
-        <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:16px;">
-          <thead>
-            <tr style="background:#072a60; color:#fff;">
-              <th style="padding:6px; border:1px solid #cbd5e1;">Code</th>
-              <th style="padding:6px; border:1px solid #cbd5e1;">Subject Name</th>
-              <th style="padding:6px; border:1px solid #cbd5e1; width:70px;">Max</th>
-              <th style="padding:6px; border:1px solid #cbd5e1; width:80px;">Obtained</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${currentSubs.map((s, i) => `
-              <tr>
-                <td style="padding:4px; border:1px solid #cbd5e1;"><input type="text" name="code_${i}" value="${esc(s.code)}" style="width:100%; padding:4px;"></td>
-                <td style="padding:4px; border:1px solid #cbd5e1;"><input type="text" name="name_${i}" value="${esc(s.name)}" style="width:100%; padding:4px;"></td>
-                <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" name="max_${i}" value="${s.max}" style="width:100%; padding:4px;"></td>
-                <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" name="obt_${i}" value="${s.obt}" style="width:100%; padding:4px;"></td>
+    <div style="background:#ffffff; border-radius:14px; max-width:890px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.45);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
+        <div>
+          <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">✏️ Edit Marksheet Particulars &amp; Examination Marks</h3>
+          <span class="muted" style="font-size:0.85rem;">Document: <b>${esc(marksheetNo)}</b> &bull; Candidate: <b>${esc(studentName || 'Candidate')}</b></span>
+        </div>
+        <button type="button" class="btn danger sm" onclick="document.getElementById('centreEditMarksheetModal').remove()">✕ Close</button>
+      </div>
+
+      <!-- Security Notice: Signatures & Seals Locked -->
+      <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.86rem; color:#14532d; display:flex; align-items:center; gap:10px;">
+        <span style="font-size:1.4rem;">🔒</span>
+        <div>
+          <b>Official Council Security Guard:</b> Council seals, coordinator stamps, and official signatures are permanently locked to verified credentials and cannot be edited. All candidate particulars and subject marks can be updated below.
+        </div>
+      </div>
+
+      <form id="centreEditMrkForm">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Candidate's Name (परीक्षार्थी का नाम) *</label>
+            <input name="student_name" value="${esc(studentName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Father's / Husband's Name *</label>
+            <input name="father_name" value="${esc(fatherName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Mother's Name</label>
+            <input name="mother_name" value="${esc(motherName)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Roll Number *</label>
+            <input name="roll_no" value="${esc(rollNo)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Student Reg. Code</label>
+            <input name="student_code" value="${esc(studentCode)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Course Name *</label>
+            <input name="course_name" value="${esc(courseName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Academic Session / Batch</label>
+            <input name="exam_session" value="${esc(examSession)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Term / Scheme</label>
+            <input name="term" value="${esc(term)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Evaluation Type</label>
+            <select name="evaluation_type" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+              <option value="annual" ${evaluationType !== 'semester' ? 'selected' : ''}>Annual Scheme (वार्षिक)</option>
+              <option value="semester" ${evaluationType === 'semester' ? 'selected' : ''}>Semester System (सेमेस्टर)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Document Ref / Marksheet No</label>
+            <input name="marksheet_no" value="${esc(marksheetNo)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Date of Issue</label>
+            <input name="issue_date" value="${esc(issueDate)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Final Result Text</label>
+            <input name="result" id="centreMrkEditResult" value="${esc(resultText)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-weight:700;">
+          </div>
+        </div>
+
+        <h4 style="margin:16px 0 8px; color:#064e3b;">📚 Subject Marks &amp; Papers:</h4>
+        <div style="overflow-x:auto; margin-bottom:16px;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.82rem; text-align:center; border:1px solid #cbd5e1;">
+            <thead>
+              <tr style="background:#f1f5f9; font-weight:800;">
+                <th style="padding:6px; border:1px solid #cbd5e1; width:15%;">Code</th>
+                <th style="padding:6px; border:1px solid #cbd5e1; width:40%; text-align:left;">Subject Title</th>
+                <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Th Max</th>
+                <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Th Obt</th>
+                <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Pr Max</th>
+                <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Pr Obt</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+            </thead>
+            <tbody id="centreMrkEditSubsBody">
+              ${subs.map((sub, idx) => `
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-code" value="${esc(sub.code || `SUB0${idx+1}`)}" style="width:100%; padding:4px; font-family:monospace; border:1px solid #cbd5e1; border-radius:4px; text-align:center;"></td>
+                  <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-name" value="${esc(sub.name || `Subject ${idx+1}`)}" style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                  <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-max" value="${sub.max_theory !== undefined ? sub.max_theory : (sub.max ? Math.round(sub.max*0.5) : 50)}" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                  <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-obt" value="${sub.obt_theory !== undefined ? sub.obt_theory : (sub.obt ? Math.round(sub.obt*0.5) : 38)}" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                  <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-max" value="${sub.max_practical !== undefined ? sub.max_practical : (sub.max ? Math.round(sub.max*0.5) : 50)}" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                  <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-obt" value="${sub.obt_practical !== undefined ? sub.obt_practical : (sub.obt ? Math.round(sub.obt*0.5) : 40)}" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Calculated Summary Box -->
+        <div style="background:#f8fafc; border:1.5px solid #059669; border-radius:8px; padding:10px 16px; margin-bottom:18px; display:flex; justify-content:space-around; align-items:center; font-size:0.92rem; font-weight:800;">
+          <div>Grand Max: <span id="lblCentreGrandMax" style="color:#0f172a;">--</span></div>
+          <div>Grand Obt: <span id="lblCentreGrandObt" style="color:#0284c7;">--</span></div>
+          <div>Percentage: <span id="lblCentrePct" style="color:#16a34a;">--%</span></div>
+          <div>Grade: <span id="lblCentreGrade" style="color:#7c3aed;">--</span></div>
+        </div>
+
         <div style="display:flex; justify-content:flex-end; gap:10px;">
-          <button type="button" class="btn alt sm" onclick="document.getElementById('marksEditModal').style.display='none'">Cancel</button>
-          <button type="submit" class="btn gold sm">💾 Save &amp; Update Marksheet</button>
+          <button type="button" class="btn alt" onclick="document.getElementById('centreEditMarksheetModal').remove()">Cancel</button>
+          <button type="submit" class="btn gold" style="font-weight:800; padding:10px 24px;">💾 Save Changes &amp; Update Marksheet</button>
         </div>
       </form>
     </div>
   `;
-  modal.style.display = 'flex';
+  document.body.appendChild(modal);
+
+  const calcScore = () => {
+    let totMax = 0, totObt = 0;
+    modal.querySelectorAll('#centreMrkEditSubsBody tr').forEach(tr => {
+      const thM = +tr.querySelector('.sub-th-max').value || 0;
+      const thO = +tr.querySelector('.sub-th-obt').value || 0;
+      const prM = +tr.querySelector('.sub-pr-max').value || 0;
+      const prO = +tr.querySelector('.sub-pr-obt').value || 0;
+      totMax += (thM + prM);
+      totObt += (thO + prO);
+    });
+    const pct = totMax > 0 ? Math.round((totObt / totMax) * 1000) / 10 : 0;
+    const grade = pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : pct >= 50 ? 'C' : 'D';
+    modal.querySelector('#lblCentreGrandMax').textContent = totMax;
+    modal.querySelector('#lblCentreGrandObt').textContent = totObt;
+    modal.querySelector('#lblCentrePct').textContent = pct + '%';
+    modal.querySelector('#lblCentreGrade').textContent = grade;
+    return { totMax, totObt, pct, grade };
+  };
+
+  modal.querySelectorAll('#centreMrkEditSubsBody input').forEach(inp => inp.oninput = calcScore);
+  calcScore();
+
+  modal.querySelector('#centreEditMrkForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const { totMax, totObt, pct, grade } = calcScore();
+
+    const subsPayload = [];
+    modal.querySelectorAll('#centreMrkEditSubsBody tr').forEach(tr => {
+      const code = tr.querySelector('.sub-code').value.trim();
+      const name = tr.querySelector('.sub-name').value.trim();
+      const max_theory = +tr.querySelector('.sub-th-max').value || 0;
+      const obt_theory = +tr.querySelector('.sub-th-obt').value || 0;
+      const max_practical = +tr.querySelector('.sub-pr-max').value || 0;
+      const obt_practical = +tr.querySelector('.sub-pr-obt').value || 0;
+      subsPayload.push({
+        code,
+        name,
+        max_theory,
+        obt_theory,
+        max_practical,
+        obt_practical,
+        total_max: max_theory + max_practical,
+        total_obt: obt_theory + obt_practical,
+        max: max_theory + max_practical,
+        obt: obt_theory + obt_practical
+      });
+    });
+
+    const payload = {
+      student_name: fd.get('student_name'),
+      father_name: fd.get('father_name'),
+      mother_name: fd.get('mother_name'),
+      roll_no: fd.get('roll_no'),
+      student_code: fd.get('student_code'),
+      course_name: fd.get('course_name'),
+      exam_session: fd.get('exam_session'),
+      term: fd.get('term'),
+      evaluation_type: fd.get('evaluation_type'),
+      marksheet_no: fd.get('marksheet_no'),
+      issue_date: fd.get('issue_date'),
+      result: fd.get('result') || 'PASS',
+      total_max: totMax,
+      total_obtained: totObt,
+      percentage: pct,
+      grade: grade,
+      subjects: subsPayload
+    };
+
+    const targetId = (mrk && mrk.id) || sId;
+    try {
+      await api(`/api/centre/marksheets/${targetId}/edit`, {
+        method: 'POST',
+        body: payload
+      });
+      window._customMarksheetData[sId] = subsPayload;
+      try {
+        localStorage.setItem('pesc_custom_marks_' + sId, JSON.stringify(subsPayload));
+      } catch (_) {}
+
+      toast('Marksheet particulars and marks updated successfully!');
+      modal.remove();
+      if (typeof updateMrkPreview === 'function') updateMrkPreview();
+      if (typeof views.MyStudents === 'function' && activeTab === 'MyStudents') views.MyStudents();
+    } catch (err) {
+      alert('Error updating marksheet: ' + (err.message || err));
+    }
+  };
 };
 
-window.saveCustomMarks = async function(e, studentId) {
-  e.preventDefault();
-  const f = e.target;
-  const subs = [];
-  for (let i = 0; i < 6; i++) {
-    const code = f['code_' + i] ? f['code_' + i].value : 'SUB-' + (i+1);
-    const name = f['name_' + i] ? f['name_' + i].value : 'Subject ' + (i+1);
-    const max = +(f['max_' + i] ? f['max_' + i].value : 100);
-    const obt = +(f['obt_' + i] ? f['obt_' + i].value : 75);
-    const pct = max > 0 ? (obt / max) * 100 : 75;
-    const grade = pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : 'B';
-    subs.push({ code, name, max, min: 40, obt, grade });
-  }
-  window._customMarksheetData[studentId] = subs;
+// Centre Certificate Editor Modal (Seals & Signatures Permanently Locked)
+window.openCentreEditCertModal = async function(certId, studentId) {
+  const existing = document.getElementById('centreEditCertModal');
+  if (existing) existing.remove();
+
+  let sId = studentId || certId;
+  let stu = (window._currentStudents || []).find(s => s.id == sId);
+  let cert = null;
+
   try {
-    localStorage.setItem('pesc_custom_marks_' + studentId, JSON.stringify(subs));
-    await api(`/api/centre/students/${studentId}/marks`, {
-      method: 'POST',
-      body: { subjects: subs }
-    }).catch(() => null);
+    const stRes = await api(`/api/centre/approvals-status?student_id=${sId}`).catch(() => null);
+    if (stRes && stRes.certificate) cert = stRes.certificate;
   } catch (_) {}
-  document.getElementById('marksEditModal').style.display = 'none';
-  if (typeof updateMrkPreview === 'function') updateMrkPreview();
-  if (typeof toast === 'function') toast('✅ Marks updated and saved successfully!');
+
+  if (!stu && sId) {
+    try {
+      const res = await api(`/api/centre/students/${sId}`).catch(() => null);
+      if (res) stu = res.student || res;
+    } catch (_) {}
+  }
+
+  const s = stu || {};
+  const c = cert || {};
+
+  const studentName = c.student_name || s.name || '';
+  const fatherName = c.father_name || s.father_name || '';
+  const motherName = c.mother_name || s.mother_name || '';
+  const rollNo = c.roll_no || s.roll_no || s.student_code || 'PESC-26-00008';
+  const studentCode = c.student_code || s.student_code || rollNo;
+  const courseName = c.course_name || s.course || s.course_name || 'Diploma Course';
+  const duration = c.duration || '1 Year';
+  const examSession = c.exam_session || '2026-27';
+  const term = c.term || 'Annual Examination';
+  const certNo = c.cert_no || `PESC/CERT/2026/${String(sId || 1).padStart(5, '0')}`;
+  const issueDate = c.issue_date || (c.issued_at ? c.issued_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
+  const grade = c.grade || 'A+';
+
+  const modal = document.createElement('div');
+  modal.id = 'centreEditCertModal';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:center; justify-content:center; z-index:10000; padding:16px; overflow-y:auto;';
+
+  modal.innerHTML = `
+    <div style="background:#ffffff; border-radius:14px; max-width:760px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.45);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
+        <div>
+          <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">✏️ Edit Certificate Particulars</h3>
+          <span class="muted" style="font-size:0.85rem;">Certificate No: <b>${esc(certNo)}</b> &bull; Candidate: <b>${esc(studentName || 'Candidate')}</b></span>
+        </div>
+        <button type="button" class="btn danger sm" onclick="document.getElementById('centreEditCertModal').remove()">✕ Close</button>
+      </div>
+
+      <!-- Security Notice -->
+      <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.86rem; color:#14532d; display:flex; align-items:center; gap:10px;">
+        <span style="font-size:1.4rem;">🔒</span>
+        <div>
+          <b>Official Council Security Guard:</b> Council seals, coordinator stamps, and official signatures are permanently locked to verified credentials and cannot be edited. All candidate particulars and certificate fields can be updated below.
+        </div>
+      </div>
+
+      <form id="centreEditCertForm">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Candidate Name (परीक्षार्थी का नाम) *</label>
+            <input name="student_name" value="${esc(studentName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Father's / Husband's Name *</label>
+            <input name="father_name" value="${esc(fatherName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Mother's Name</label>
+            <input name="mother_name" value="${esc(motherName)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Roll Number *</label>
+            <input name="roll_no" value="${esc(rollNo)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Student Reg. Code</label>
+            <input name="student_code" value="${esc(studentCode)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Course Name *</label>
+            <input name="course_name" value="${esc(courseName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Course Duration</label>
+            <input name="duration" value="${esc(duration)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Academic Session / Batch</label>
+            <input name="exam_session" value="${esc(examSession)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Term / Scheme</label>
+            <input name="term" value="${esc(term)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Grade Awarded</label>
+            <input name="grade" value="${esc(grade)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-weight:700;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Certificate Document No</label>
+            <input name="cert_no" value="${esc(certNo)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:700;">Date of Issue</label>
+            <input name="issue_date" value="${esc(issueDate)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn alt" onclick="document.getElementById('centreEditCertModal').remove()">Cancel</button>
+          <button type="submit" class="btn gold" style="font-weight:800; padding:10px 24px;">💾 Save Changes &amp; Update Certificate</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelector('#centreEditCertForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const payload = {
+      student_name: fd.get('student_name'),
+      father_name: fd.get('father_name'),
+      mother_name: fd.get('mother_name'),
+      roll_no: fd.get('roll_no'),
+      student_code: fd.get('student_code'),
+      course_name: fd.get('course_name'),
+      duration: fd.get('duration'),
+      exam_session: fd.get('exam_session'),
+      term: fd.get('term'),
+      cert_no: fd.get('cert_no'),
+      issue_date: fd.get('issue_date'),
+      grade: fd.get('grade')
+    };
+
+    const targetId = (cert && cert.id) || sId;
+    try {
+      await api(`/api/centre/certificates/${targetId}/edit`, {
+        method: 'POST',
+        body: payload
+      });
+      toast('Certificate particulars updated successfully!');
+      modal.remove();
+      if (typeof updateCertPreview === 'function') updateCertPreview();
+      if (typeof views.MyStudents === 'function' && activeTab === 'MyStudents') views.MyStudents();
+    } catch (err) {
+      alert('Error updating certificate: ' + (err.message || err));
+    }
+  };
 };
+
+// Aliases for compatibility
+window.openMarksEditModal = window.openCentreEditMrkModal;
+window.openCertEditModal = window.openCentreEditCertModal;

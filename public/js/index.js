@@ -418,3 +418,48 @@ if (navToggle && navLinks) {
     if (e.target.tagName === 'A') navLinks.classList.remove('open');
   });
 }
+
+// Sync live Head Office contact information (email, phone, address) to main website
+async function loadPublicSettings() {
+  try {
+    const res = await fetch('/api/public/settings').then(r => r.json());
+    if (res && res.settings) {
+      const s = res.settings;
+      const elEmail = document.getElementById('siteFooterEmail');
+      const elPhone = document.getElementById('siteFooterPhone');
+      const elAddress = document.getElementById('siteFooterAddress');
+      const liveEmail = s.email || 'info@pescouncil.in';
+      const livePhone = s.phone || s.mobile || '+91 542-1234567';
+      const liveAddress = s.address || s.head_office || 'Purvanchal Education & Skill Council, Head Office, Shahgarh, Azamgarh, UP';
+
+      if (elEmail) {
+        elEmail.textContent = liveEmail;
+        elEmail.href = `mailto:${liveEmail}`;
+      }
+      if (elPhone) {
+        elPhone.textContent = livePhone;
+        elPhone.href = `tel:${livePhone.replace(/[^0-9+]/g, '')}`;
+      }
+      if (elAddress) {
+        elAddress.textContent = liveAddress;
+      }
+
+      const noticeEmail = document.getElementById('siteNoticeEmail');
+      const noticePhone = document.getElementById('siteNoticePhone');
+      if (noticeEmail) {
+        noticeEmail.textContent = liveEmail;
+        noticeEmail.href = `mailto:${liveEmail}`;
+      }
+      if (noticePhone) {
+        noticePhone.textContent = livePhone;
+        noticePhone.href = `tel:${livePhone.replace(/[^0-9+]/g, '')}`;
+      }
+    }
+  } catch (_) {}
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadPublicSettings);
+} else {
+  loadPublicSettings();
+}
