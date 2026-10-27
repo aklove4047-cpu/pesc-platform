@@ -16,6 +16,7 @@
 
   // Official Seals & Signatures
   const SEALS = {
+    councilLogo: '/assets/img/logo_council.svg',
     councilSeal: '/assets/img/seal_council_head.svg',
     councilSign: '/assets/img/sign_council_head.svg',
     coordinatorSeal: '/assets/img/seal_coordinator.svg',
@@ -24,24 +25,57 @@
     centreSign: '/assets/img/sign_centre_director.svg',
   };
 
+  function cleanUrl(val) {
+    if (!val || typeof val !== 'string') return '';
+    val = val.trim();
+    const m = val.match(/src=["']([^"']+)["']/i);
+    if (m) val = m[1].trim();
+    val = val.replace(/^["']|["']$/g, '').trim();
+    if (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image/') || val.startsWith('/')) {
+      return val;
+    }
+    return '';
+  }
+
   function resolveSeals(data, c) {
     const auth = (data && data.authorities) || (typeof window !== 'undefined' && window._councilAuthorities) || {};
     const hoAuth = auth.head_office || {};
     const coordAuth = auth.coordinator || {};
     const centreAuth = auth.centre || {};
 
-    const centreSeal = (c && c.seal_url) || centreAuth.seal_url || (data && data.centreSeal) || SEALS.centreSeal;
-    const centreSign = (c && c.signature_url) || centreAuth.signature_url || (data && data.centreSign) || SEALS.centreSign;
-    const coordSeal = (c && c.coordinator_seal_url) || coordAuth.seal_url || (data && data.coordSeal) || SEALS.coordinatorSeal;
-    const coordSign = (c && c.coordinator_signature_url) || coordAuth.signature_url || (data && data.coordSign) || SEALS.coordinatorSign;
-    const councilSeal = hoAuth.seal_url || (c && c.council_seal_url) || (data && data.councilSeal) || SEALS.councilSeal;
-    const councilSign = hoAuth.signature_url || (c && c.council_signature_url) || (data && data.councilSign) || SEALS.councilSign;
-    const chairmanSign = hoAuth.chairman_signature_url || councilSign;
+    const isCustom = (url) => {
+      const u = cleanUrl(url);
+      if (!u) return false;
+      return !u.includes('seal_coordinator.svg') && !u.includes('sign_coordinator.svg') && !u.includes('seal_council_head.svg') && !u.includes('sign_council_head.svg') && !u.includes('logo_council.svg');
+    };
+
+    // Centre Assets
+    const centreSeal = cleanUrl((c && c.seal_url) || centreAuth.seal_url || (data && data.centreSeal)) || SEALS.centreSeal;
+    const centreSign = cleanUrl((c && c.signature_url) || centreAuth.signature_url || (data && data.centreSign)) || SEALS.centreSign;
+    const centreLogo = cleanUrl((c && c.logo_url) || centreAuth.logo_url || (data && data.centreLogo));
+
+    // Coordinator Assets (Priority to live coordinator user uploaded assets)
+    let coordSeal = '';
+    if (isCustom(coordAuth.seal_url)) coordSeal = cleanUrl(coordAuth.seal_url);
+    else if (isCustom(c && c.coordinator_seal_url)) coordSeal = cleanUrl(c.coordinator_seal_url);
+    else coordSeal = cleanUrl(coordAuth.seal_url) || cleanUrl(c && c.coordinator_seal_url) || cleanUrl(data && data.coordSeal) || SEALS.coordinatorSeal;
+
+    let coordSign = '';
+    if (isCustom(coordAuth.signature_url)) coordSign = cleanUrl(coordAuth.signature_url);
+    else if (isCustom(c && c.coordinator_signature_url)) coordSign = cleanUrl(c.coordinator_signature_url);
+    else coordSign = cleanUrl(coordAuth.signature_url) || cleanUrl(c && c.coordinator_signature_url) || cleanUrl(data && data.coordSign) || SEALS.coordinatorSign;
+
+    // Council / Head Office Assets
+    const councilLogo = cleanUrl(hoAuth.logo_url || (data && data.councilLogo) || SEALS.councilLogo) || '/assets/img/logo_council.svg';
+    const councilSeal = cleanUrl(hoAuth.seal_url || (c && c.council_seal_url) || (data && data.councilSeal)) || SEALS.councilSeal;
+    const councilSign = cleanUrl(hoAuth.signature_url || (c && c.council_signature_url) || (data && data.councilSign)) || SEALS.councilSign;
+    const chairmanSign = cleanUrl(hoAuth.chairman_signature_url || councilSign);
+
     const hoName = hoAuth.name || 'Executive Director & Controller of Examinations';
     const coordName = coordAuth.name || (c && c.coordinator_name) || 'Regional Coordinator';
     const directorName = (c && (c.director_name || c.name)) || centreAuth.director_name || 'Centre Director';
 
-    return { centreSeal, centreSign, coordSeal, coordSign, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName };
+    return { centreSeal, centreSign, centreLogo, coordSeal, coordSign, councilLogo, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName };
   }
 
   // 1. Accreditations Badge Strip (ISO, NITI Aayog NGO Darpan, IAF, MSME, PESC - NO Ashok Stambh)
@@ -146,7 +180,7 @@
     const q12 = quals.twelfth || quals['12th'] || { board: 'State Board / UP Board', year: '2022', marks: '395/500', pct: '79.0%' };
     const qGrad = quals.graduation || { board: 'University', year: '2025', marks: '1150/1500', pct: '76.6%' };
 
-    const { centreSeal, centreSign, coordSeal, coordSign, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
+    const { centreSeal, centreSign, centreLogo, coordSeal, coordSign, councilLogo, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
 
     return `
       <div class="official-admission-form printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
@@ -161,7 +195,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:8px;">
             <!-- Left: Centre Logo -->
             <div style="width:85px; height:85px; border-radius:50%; border:2px solid #d4af37; padding:2px; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              ${c.logo_url ? `<img src="${c.logo_url}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilSeal}" style="width:100%; height:100%; object-fit:contain;">`}
+              ${centreLogo ? `<img src="${centreLogo}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`}
             </div>
 
             <!-- Center: Names and Accreditations -->
@@ -182,8 +216,8 @@
 
             <!-- Right: Accreditation Badge (NO Ashok Stambh) -->
             <div style="width:85px; text-align:center; flex-shrink:0;">
-              <div style="width:52px; height:52px; margin:0 auto; border-radius:50%; border:1.5px solid #047857; display:flex; align-items:center; justify-content:center; background:#ecfdf5; box-shadow:0 2px 6px rgba(4,120,87,0.15);">
-                <img src="${councilSeal}" style="width:42px; height:42px;">
+              <div style="width:52px; height:52px; margin:0 auto; border-radius:50%; border:1.5px solid #047857; display:flex; align-items:center; justify-content:center; background:#ecfdf5; box-shadow:0 2px 6px rgba(4,120,87,0.15); overflow:hidden;">
+                <img src="${councilLogo}" style="width:36px; height:36px; object-fit:contain;">
               </div>
               <div style="font-size:0.62rem; font-weight:900; color:#08244c; margin-top:3px;">NITI Aayog</div>
               <div style="font-size:0.52rem; font-weight:800; color:#475569;">NGO DARPAN</div>
@@ -383,7 +417,7 @@
       `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
       `<div style="padding-top:25px; font-size:0.6rem; font-weight:800; color:#64748b;">PHOTO</div>`;
 
-    const { centreSeal, centreSign, coordSeal, coordSign, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
+    const { centreSeal, centreSign, centreLogo, coordSeal, coordSign, councilLogo, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
 
     return `
       <div class="official-certificate printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
@@ -398,7 +432,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:8px;">
             <!-- Left: Centre Logo -->
             <div style="width:85px; height:85px; border-radius:50%; border:2px solid #d4af37; padding:2px; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              ${c.logo_url ? `<img src="${c.logo_url}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilSeal}" style="width:100%; height:100%; object-fit:contain;">`}
+              ${centreLogo ? `<img src="${centreLogo}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`}
             </div>
 
             <!-- Center: Names and Accreditations -->
@@ -419,8 +453,8 @@
 
             <!-- Right: Accreditation Badge (NO Ashok Stambh) -->
             <div style="width:85px; text-align:center; flex-shrink:0;">
-              <div style="width:52px; height:52px; margin:0 auto; border-radius:50%; border:1.5px solid #047857; display:flex; align-items:center; justify-content:center; background:#ecfdf5; box-shadow:0 2px 6px rgba(4,120,87,0.15);">
-                <img src="${councilSeal}" style="width:42px; height:42px;">
+              <div style="width:52px; height:52px; margin:0 auto; border-radius:50%; border:1.5px solid #047857; display:flex; align-items:center; justify-content:center; background:#ecfdf5; box-shadow:0 2px 6px rgba(4,120,87,0.15); overflow:hidden;">
+                <img src="${councilLogo}" style="width:36px; height:36px; object-fit:contain;">
               </div>
               <div style="font-size:0.62rem; font-weight:900; color:#08244c; margin-top:3px;">NITI Aayog</div>
               <div style="font-size:0.52rem; font-weight:800; color:#475569;">NGO DARPAN</div>
@@ -569,7 +603,7 @@
     const finalGrade = percentage >= 85 ? 'A+' : percentage >= 70 ? 'A' : percentage >= 60 ? 'B+' : 'B';
     const resultText = percentage >= 60 ? 'PASSED IN FIRST DIVISION' : 'PASSED IN SECOND DIVISION';
 
-    const { centreSeal, centreSign, coordSeal, coordSign, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
+    const { centreSeal, centreSign, centreLogo, coordSeal, coordSign, councilLogo, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
 
     return `
       <div class="official-marksheet printable-area" style="width:100%; max-width:820px; margin:0 auto; background:#ffffff; border:8px solid #08244c; outline:3px solid #d4af37; outline-offset:-5px; padding:22px 26px; box-sizing:border-box; font-family:'Inter', Arial, sans-serif; color:#0f172a; position:relative; box-shadow:0 8px 30px rgba(0,0,0,0.12);">
@@ -584,7 +618,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:8px;">
             <!-- Left: Centre Logo -->
             <div style="width:85px; height:85px; border-radius:50%; border:2px solid #d4af37; padding:2px; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              ${c.logo_url ? `<img src="${c.logo_url}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilSeal}" style="width:100%; height:100%; object-fit:contain;">`}
+              ${centreLogo ? `<img src="${centreLogo}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`}
             </div>
 
             <!-- Center: Names and Accreditations -->
@@ -605,8 +639,8 @@
 
             <!-- Right: Accreditation Badge (NO Ashok Stambh) -->
             <div style="width:85px; text-align:center; flex-shrink:0;">
-              <div style="width:52px; height:52px; margin:0 auto; border-radius:50%; border:1.5px solid #047857; display:flex; align-items:center; justify-content:center; background:#ecfdf5; box-shadow:0 2px 6px rgba(4,120,87,0.15);">
-                <img src="${councilSeal}" style="width:42px; height:42px;">
+              <div style="width:52px; height:52px; margin:0 auto; border-radius:50%; border:1.5px solid #047857; display:flex; align-items:center; justify-content:center; background:#ecfdf5; box-shadow:0 2px 6px rgba(4,120,87,0.15); overflow:hidden;">
+                <img src="${councilLogo}" style="width:36px; height:36px; object-fit:contain;">
               </div>
               <div style="font-size:0.62rem; font-weight:900; color:#08244c; margin-top:3px;">NITI Aayog</div>
               <div style="font-size:0.52rem; font-weight:800; color:#475569;">NGO DARPAN</div>
@@ -758,7 +792,7 @@
       `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
       `<div style="padding-top:35px; font-size:0.7rem; font-weight:800; color:#64748b;">PHOTO</div>`;
 
-    const { centreSign, councilSeal, councilSign } = resolveSeals(data, c);
+    const { centreSign, centreLogo, councilLogo, councilSeal, councilSign } = resolveSeals(data, c);
 
     return `
       <div class="official-id-card-wrap" style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap; font-family:'Inter', Arial, sans-serif;">
@@ -771,7 +805,7 @@
           <!-- Top Header -->
           <div style="padding:4px 10px 6px; text-align:center;">
             <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
-              <img src="${councilSeal}" style="width:38px; height:38px; flex-shrink:0;">
+              <img src="${centreLogo || councilLogo}" style="width:38px; height:38px; flex-shrink:0; object-fit:contain;">
               <div>
                 <div style="font-size:0.95rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.1;">
                   ${esc(centreHindi)}

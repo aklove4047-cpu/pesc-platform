@@ -984,32 +984,80 @@ async function sendFranchiseApprovalEmail(env, app, centreCode, password) {
   };
 }
 
+function cleanImageUrl(val) {
+  if (!val || typeof val !== 'string') return '';
+  val = val.trim();
+  const m = val.match(/src=["']([^"']+)["']/i);
+  if (m) val = m[1].trim();
+  val = val.replace(/^["']|["']$/g, '').trim();
+  if (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image/') || val.startsWith('/')) {
+    return val;
+  }
+  return '';
+}
+
 function getAuthorities(centre) {
   const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
-  const coordUser = store.users.find(u => u.role === 'coordinator') || {};
   const c = centre || store.centres[0] || {};
+  
+  // Coordinator selection:
+  // 1. Check if centre has assigned coordinator
+  // 2. Check if any coordinator in store.users has custom seal/signature uploaded
+  // 3. Fallback to any coordinator
+  let coordUser = (c.assigned_coordinator_id && store.users.find(u => u.id === c.assigned_coordinator_id))
+    || store.users.find(u => u.role === 'coordinator' && (u.seal_url || u.signature_url))
+    || store.users.find(u => u.role === 'coordinator')
+    || {};
+
+  const isCustomCoord = (u) => u && !u.includes('seal_coordinator.svg') && !u.includes('sign_coordinator.svg');
+
+  const hoLogo = cleanImageUrl(adminUser.logo_url) || cleanImageUrl(store.site_settings && store.site_settings.logo_url) || '/assets/img/seal_council_head.svg';
+  const hoSeal = cleanImageUrl(adminUser.seal_url) || '/assets/img/seal_council_head.svg';
+  const hoSign = cleanImageUrl(adminUser.signature_url) || '/assets/img/sign_council_head.svg';
+  const chairmanSign = cleanImageUrl(adminUser.chairman_signature_url) || hoSign;
+
+  const coordSeal = (isCustomCoord(coordUser.seal_url) ? cleanImageUrl(coordUser.seal_url) : null)
+    || (isCustomCoord(c.coordinator_seal_url) ? cleanImageUrl(c.coordinator_seal_url) : null)
+    || cleanImageUrl(coordUser.seal_url)
+    || cleanImageUrl(c.coordinator_seal_url)
+    || '/assets/img/seal_coordinator.svg';
+
+  const coordSign = (isCustomCoord(coordUser.signature_url) ? cleanImageUrl(coordUser.signature_url) : null)
+    || (isCustomCoord(c.coordinator_signature_url) ? cleanImageUrl(c.coordinator_signature_url) : null)
+    || cleanImageUrl(coordUser.signature_url)
+    || cleanImageUrl(c.coordinator_signature_url)
+    || '/assets/img/sign_coordinator.svg';
+
+  const centreLogo = cleanImageUrl(c.logo_url);
+  const centreSeal = cleanImageUrl(c.seal_url) || '/assets/img/seal_centre_director.svg';
+  const centreSign = cleanImageUrl(c.signature_url) || '/assets/img/sign_centre_director.svg';
+
   return {
     head_office: {
       name: adminUser.name || 'Chhotu maurya',
       designation: adminUser.designation || 'Executive Director & Controller of Examinations',
-      seal_url: adminUser.seal_url || '/assets/img/seal_council_head.svg',
-      signature_url: adminUser.signature_url || '/assets/img/sign_council_head.svg',
-      chairman_signature_url: adminUser.chairman_signature_url || adminUser.signature_url || '/assets/img/sign_council_head.svg',
+      logo_url: hoLogo,
+      seal_url: hoSeal,
+      signature_url: hoSign,
+      chairman_signature_url: chairmanSign,
       mobile: adminUser.mobile || '+91 94152 00000',
       email: adminUser.email || 'admin@pescouncil.in'
     },
     coordinator: {
+      id: coordUser.id || 2,
       name: coordUser.name || 'Er. V. K. Maurya',
       state: coordUser.state || c.state || 'Uttar Pradesh',
-      seal_url: coordUser.seal_url || '/assets/img/seal_coordinator.svg',
-      signature_url: coordUser.signature_url || '/assets/img/sign_coordinator.svg'
+      seal_url: coordSeal,
+      signature_url: coordSign
     },
     centre: {
+      id: c.id,
       name: c.name || 'Authorized Training Centre',
       centre_code: c.centre_code || 'PESC00001',
       director_name: c.director_name || 'Centre Director',
-      seal_url: c.seal_url || '/assets/img/seal_centre_director.svg',
-      signature_url: c.signature_url || '/assets/img/sign_centre_director.svg'
+      logo_url: centreLogo,
+      seal_url: centreSeal,
+      signature_url: centreSign
     }
   };
 }
@@ -3112,17 +3160,31 @@ export default {
           if (body.designation !== undefined) adminUser.designation = String(body.designation).slice(0, 150);
           if (body.head_office !== undefined) adminUser.head_office = String(body.head_office).slice(0, 255);
           if (body.state !== undefined) adminUser.state = String(body.state).slice(0, 100);
-          if (body.photo_url !== undefined) adminUser.photo_url = body.photo_url;
-          if (body.seal_url !== undefined) adminUser.seal_url = body.seal_url;
-          if (body.signature_url !== undefined) adminUser.signature_url = body.signature_url;
-          if (body.chairman_signature_url !== undefined) adminUser.chairman_signature_url = body.chairman_signature_url;
+          if (body.photo_url !== undefined) adminUser.photo_url = cleanImageUrl(body.photo_url);
+          if (body.logo_url !== undefined) {
+            adminUser.logo_url = cleanImageUrl(body.logo_url);
+            if (!store.site_settings) store.site_settings = {};
+            store.site_settings.logo_url = adminUser.logo_url;
+            await persistToKV(env, 'site_settings', store.site_settings);
+          }
+          if (body.seal_url !== undefined) adminUser.seal_url = cleanImageUrl(body.seal_url);
+          if (body.signature_url !== undefined) adminUser.signature_url = cleanImageUrl(body.signature_url);
+          if (body.chairman_signature_url !== undefined) adminUser.chairman_signature_url = cleanImageUrl(body.chairman_signature_url);
           await persistToKV(env, 'users', store.users);
-          return jsonResponse({ ok: true, message: 'Admin profile updated successfully!', profile: adminUser });
+          return jsonResponse({
+            ok: true,
+            message: 'Admin profile updated successfully!',
+            profile: {
+              ...adminUser,
+              logo_url: adminUser.logo_url || (store.site_settings && store.site_settings.logo_url) || ''
+            }
+          });
         }
 
         return jsonResponse({
           profile: {
             ...adminUser,
+            logo_url: adminUser.logo_url || (store.site_settings && store.site_settings.logo_url) || '',
             verification_url: `https://${host}/verify`
           }
         });
@@ -3639,7 +3701,18 @@ export default {
         return jsonResponse({ certificates: store.certificates });
       }
       if (path === '/api/coordinator/profile') {
-        let coordUser = store.users.find(u => u.role === 'coordinator');
+        let coordUser = null;
+        if (cookies.pesc_auth) {
+          try {
+            const parsed = JSON.parse(decodeURIComponent(cookies.pesc_auth));
+            if (parsed.role === 'coordinator' && parsed.id) {
+              coordUser = store.users.find(u => u.id === parsed.id);
+            }
+          } catch (_) {}
+        }
+        if (!coordUser) {
+          coordUser = store.users.find(u => u.role === 'coordinator' && (u.seal_url || u.signature_url)) || store.users.find(u => u.role === 'coordinator');
+        }
         if (!coordUser) {
           coordUser = {
             id: 2,
@@ -3660,11 +3733,33 @@ export default {
           if (body.email) coordUser.email = String(body.email).slice(0, 150);
           if (body.mobile) coordUser.mobile = String(body.mobile).slice(0, 20);
           if (body.state) coordUser.state = String(body.state).slice(0, 100);
-          if (body.photo_url !== undefined) coordUser.photo_url = body.photo_url;
-          if (body.seal_url !== undefined) coordUser.seal_url = body.seal_url;
-          if (body.signature_url !== undefined) coordUser.signature_url = body.signature_url;
+          if (body.photo_url !== undefined) coordUser.photo_url = cleanImageUrl(body.photo_url);
+          if (body.seal_url !== undefined) coordUser.seal_url = cleanImageUrl(body.seal_url);
+          if (body.signature_url !== undefined) coordUser.signature_url = cleanImageUrl(body.signature_url);
+
+          // Immediately propagate coordinator updates to all centres so marksheet & certs use the new seals
+          for (const centre of store.centres) {
+            if (!centre.assigned_coordinator_id || centre.assigned_coordinator_id === coordUser.id) {
+              if (coordUser.seal_url) centre.coordinator_seal_url = coordUser.seal_url;
+              if (coordUser.signature_url) centre.coordinator_signature_url = coordUser.signature_url;
+              if (coordUser.name) centre.coordinator_name = coordUser.name;
+            }
+          }
+          for (const u of store.users) {
+            if (u.role === 'coordinator') {
+              if (coordUser.seal_url) u.seal_url = coordUser.seal_url;
+              if (coordUser.signature_url) u.signature_url = coordUser.signature_url;
+            }
+          }
+
           await persistToKV(env, 'users', store.users);
-          return jsonResponse({ ok: true, message: 'Profile updated successfully!', profile: coordUser });
+          await persistToKV(env, 'centres', store.centres);
+          return jsonResponse({
+            ok: true,
+            message: 'Profile updated successfully!',
+            profile: coordUser,
+            authorities: getAuthorities(store.centres[0])
+          });
         }
         return jsonResponse({ profile: coordUser });
       }
@@ -4225,9 +4320,9 @@ export default {
             if (body.phone) c.phone = body.phone.trim();
             if (body.email) c.email = body.email.trim();
             if (body.director_name) c.director_name = body.director_name.trim();
-            if (body.logo_url !== undefined) c.logo_url = String(body.logo_url).trim();
-            if (body.seal_url !== undefined) c.seal_url = String(body.seal_url).trim();
-            if (body.signature_url !== undefined) c.signature_url = String(body.signature_url).trim();
+            if (body.logo_url !== undefined) c.logo_url = cleanImageUrl(body.logo_url);
+            if (body.seal_url !== undefined) c.seal_url = cleanImageUrl(body.seal_url);
+            if (body.signature_url !== undefined) c.signature_url = cleanImageUrl(body.signature_url);
             if (body.center_photo || body.photo_url) {
               c.center_photo = String(body.center_photo || body.photo_url).trim();
               c.photo_url = c.center_photo;
@@ -4263,12 +4358,13 @@ export default {
         if (request.method === 'POST' || request.method === 'PUT') {
           try {
             const body = await request.json();
-            if (body.seal_url !== undefined) c.seal_url = String(body.seal_url).trim();
-            if (body.signature_url !== undefined) c.signature_url = String(body.signature_url).trim();
+            if (body.logo_url !== undefined) c.logo_url = cleanImageUrl(body.logo_url);
+            if (body.seal_url !== undefined) c.seal_url = cleanImageUrl(body.seal_url);
+            if (body.signature_url !== undefined) c.signature_url = cleanImageUrl(body.signature_url);
             await persistToKV(env, 'centres', store.centres);
             return jsonResponse({
               ok: true,
-              message: 'Centre stamp and signature saved successfully!',
+              message: 'Centre logo, stamp and signature saved successfully!',
               centre: c,
               authorities: getAuthorities(c)
             });
@@ -4278,6 +4374,7 @@ export default {
         }
         return jsonResponse({
           ok: true,
+          logo_url: c.logo_url || '',
           seal_url: c.seal_url || '',
           signature_url: c.signature_url || '',
           centre: c,

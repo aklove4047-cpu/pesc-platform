@@ -405,6 +405,25 @@ const views = {
             </div>
           </div>
 
+          <!-- Council Official Logo (Separate from Seal) -->
+          <div style="margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
+            <label class="label" style="font-weight:700; color:#334155;">Council / Head Office Official Logo (प्रतीक चिन्ह / मुख्य लोगो)</label>
+            <p class="muted" style="font-size:0.78rem; margin:2px 0 8px;">Yeh logo documents ke header aur NITI Aayog ke paas display hoga (Round seal se alag hai)</p>
+            <div style="display:flex; align-items:center; gap:14px; margin-top:8px; flex-wrap:wrap;">
+              <div id="adminLogoBox" style="width:75px; height:75px; border-radius:10px; background:#f8fafc; border:2px dashed #cbd5e1; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                ${p.logo_url ? `<img src="${esc(p.logo_url)}" style="max-width:100%; max-height:100%; object-fit:contain;" id="adminLogoImg">` : '<img src="/assets/img/logo_council.svg" style="max-width:65px; max-height:65px; object-fit:contain;" id="adminLogoImg">'}
+              </div>
+              <div style="flex:1; min-width:220px;">
+                <input type="file" id="adminFileLogo" accept="image/*" style="display:none;">
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+                  <button type="button" class="btn sm alt" onclick="$('#adminFileLogo').click()">📤 Upload Logo File</button>
+                  <span class="muted" style="font-size:0.78rem;">या URL पेस्ट करें:</span>
+                </div>
+                <input class="inp" id="adminUrlLogo" value="${esc(p.logo_url || '')}" placeholder="https://... ya logo image file upload karein" style="width:100%; font-size:0.85rem; padding:6px 10px;">
+              </div>
+            </div>
+          </div>
+
           <!-- Council Mohar -->
           <div style="margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid #f1f5f9;">
             <label class="label" style="font-weight:700; color:#334155;">Council Round Mohar (Official Seal)</label>
@@ -501,9 +520,22 @@ const views = {
     };
 
     bindAdminFile('adminFilePhoto', 'adminUrlPhoto', 'adminPhotoBox', true);
+    bindAdminFile('adminFileLogo', 'adminUrlLogo', 'adminLogoBox', false);
     bindAdminFile('adminFileMohar', 'adminUrlMohar', 'adminMoharBox', false);
     bindAdminFile('adminFileSign', 'adminUrlSign', 'adminSignBox', false);
     bindAdminFile('adminFileChairSign', 'adminUrlChairSign', 'adminChairSignBox', false);
+
+    // Live URL preview for Council Logo
+    const urlLogoInp = $('#adminUrlLogo');
+    if (urlLogoInp) {
+      urlLogoInp.oninput = () => {
+        const v = urlLogoInp.value.trim();
+        const box = $('#adminLogoBox');
+        if (box) {
+          box.innerHTML = v ? `<img src="${v}" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.outerHTML='<span style=\\'font-size:2rem;\\'>🏛️</span>'">` : '<img src="/assets/img/logo_council.svg" style="max-width:65px;max-height:65px;object-fit:contain;">';
+        }
+      };
+    }
 
     // Save Profile Form
     $('#adminProfileForm').onsubmit = async (e) => {
@@ -536,14 +568,15 @@ const views = {
       btn.textContent = 'Saving…';
       await guard(async () => {
         const photo_url = $('#adminUrlPhoto').value || null;
+        const logo_url = $('#adminUrlLogo') ? ($('#adminUrlLogo').value.trim() || null) : null;
         const seal_url = $('#adminUrlMohar').value || null;
         const signature_url = $('#adminUrlSign').value || null;
         const chairman_signature_url = $('#adminUrlChairSign').value || null;
         await api('/api/admin/profile', {
           method: 'POST',
-          body: { photo_url, seal_url, signature_url, chairman_signature_url }
+          body: { photo_url, logo_url, seal_url, signature_url, chairman_signature_url }
         });
-        toast('✅ Photo, Seals & Signatures saved successfully!');
+        toast('✅ Photo, Logo, Seals & Signatures saved successfully!');
       });
       btn.disabled = false;
       btn.textContent = '💾 Save Photo, Seals & Signatures';

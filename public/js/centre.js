@@ -118,32 +118,35 @@ window.setupImageUpload = function(fileInputId, urlInputId, previewBoxId, defaul
 
 // Global Save Mohar & Sign Handler
 window.saveMoharSign = async function() {
+  const logo_url = ($('#logoUrlInput') && $('#logoUrlInput').value.trim()) || '';
   const seal_url = ($('#sealUrlInput') && $('#sealUrlInput').value.trim()) || '';
   const signature_url = ($('#signUrlInput') && $('#signUrlInput').value.trim()) || '';
 
   try {
     await api('/api/centre/mohar-signature', {
       method: 'POST',
-      body: { seal_url, signature_url }
+      body: { logo_url, seal_url, signature_url }
     });
     await api('/api/centre/settings', {
       method: 'POST',
-      body: { seal_url, signature_url }
+      body: { logo_url, seal_url, signature_url }
     }).catch(() => null);
 
     if (typeof currentCentre !== 'undefined' && currentCentre) {
+      if (logo_url) currentCentre.logo_url = logo_url;
       currentCentre.seal_url = seal_url;
       currentCentre.signature_url = signature_url;
     }
     if (window._councilAuthorities && window._councilAuthorities.centre) {
+      if (logo_url) window._councilAuthorities.centre.logo_url = logo_url;
       window._councilAuthorities.centre.seal_url = seal_url;
       window._councilAuthorities.centre.signature_url = signature_url;
     }
 
-    if (typeof toast === 'function') toast('🎉 Stamp and Signature saved successfully to your centre profile!');
-    alert('✅ Stamp & Signature saved successfully!\n\nअब जब भी आप पेज को रीफ्रेश करेंगे, आपका मुहर और हस्ताक्षर हमेशा सेव रहेगा और सर्टिफिकेट व अंकतालिका पर प्रिंट होगा।');
+    if (typeof toast === 'function') toast('🎉 Logo, Stamp and Signature saved successfully to your centre profile!');
+    alert('✅ Logo, Stamp & Signature saved successfully!\n\nअब जब भी आप पेज को रीफ्रेश करेंगे, आपका लोगो, मुहर और हस्ताक्षर हमेशा सेव रहेगा और सर्टिफिकेट व अंकतालिका पर प्रिंट होगा।');
   } catch (err) {
-    alert('Failed to save stamp & signature: ' + (err.message || err));
+    alert('Failed to save logo, stamp & signature: ' + (err.message || err));
   }
 };
 
@@ -1647,7 +1650,24 @@ const views = {
         <p class="muted" style="margin:0;">Apna Mohar/Seal aur Director Sign खुद लगाएं – certificates aur marksheets par yahi stamp aur signature aayenge</p>
       </div>
 
-      <div class="grid" style="grid-template-columns: 1fr 1fr; gap:24px;">
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:24px;">
+        <!-- Centre Logo Box -->
+        <div class="card" style="background:#fff; padding:24px; text-align:center;">
+          <h3 style="margin:0 0 8px; color:#0f172a;">🏛️ Centre / Institute Logo</h3>
+          <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">Square/Circle official logo (Appears top-left on certificate &amp; marksheet)</p>
+
+          <div style="width:140px; height:140px; border:2px dashed #cbd5e1; border-radius:12px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; background:#f8fafc; overflow:hidden;" id="logoPreviewBox">
+            ${c.logo_url && (c.logo_url.startsWith('http') || c.logo_url.startsWith('data:image') || c.logo_url.startsWith('/')) ? `<img src="${esc(c.logo_url)}" style="width:100%; height:100%; object-fit:contain;" id="logoImgPreview">` : '<span style="font-size:3rem; color:#94a3b8;">🏛️</span>'}
+          </div>
+
+          <label class="btn sm alt" style="cursor:pointer; display:inline-block; margin-bottom:10px;">
+            📁 Select Logo File
+            <input type="file" id="logoFileInput" accept="image/*" style="display:none;">
+          </label>
+          <div style="font-size:0.78rem; color:#64748b;">Or paste logo image URL:</div>
+          <input id="logoUrlInput" placeholder="https://..." value="${esc(c.logo_url && (c.logo_url.startsWith('http') || c.logo_url.startsWith('data:image') || c.logo_url.startsWith('/')) ? c.logo_url : '')}" style="width:100%; padding:8px 10px; margin-top:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+        </div>
+
         <!-- Stamp / Mohar Box -->
         <div class="card" style="background:#fff; padding:24px; text-align:center;">
           <h3 style="margin:0 0 8px; color:#0f172a;">🏢 Institute Stamp / Mohar</h3>
@@ -1670,7 +1690,7 @@ const views = {
           <h3 style="margin:0 0 8px; color:#0f172a;">✒️ Director Authorized Signature</h3>
           <p class="muted" style="font-size:0.85rem; margin-bottom:16px;">Official director digital signature image</p>
 
-          <div style="width:200px; height:100px; border:2px dashed #cbd5e1; border-radius:8px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; background:#f8fafc; overflow:hidden;" id="signPreviewBox">
+          <div style="width:200px; height:100px; border:2px dashed #cbd5e1; border-radius:8px; margin:20px auto 16px; display:flex; align-items:center; justify-content:center; background:#f8fafc; overflow:hidden;" id="signPreviewBox">
             ${c.signature_url ? `<img src="${esc(c.signature_url)}" style="max-width:100%; max-height:100%; object-fit:contain;" id="signImgPreview">` : '<span style="font-size:2rem; color:#94a3b8;">✍️</span>'}
           </div>
 
@@ -1685,11 +1705,12 @@ const views = {
 
       <div style="margin-top:24px; text-align:center;">
         <button class="btn gold" style="padding:12px 32px; font-weight:700; font-size:1rem;" onclick="saveMoharSign()">
-          💾 Save Stamp &amp; Signature to Profile
+          💾 Save Logo, Stamp &amp; Signature to Profile
         </button>
       </div>
     `;
 
+    setupImageUpload('logoFileInput', 'logoUrlInput', 'logoPreviewBox', '🏛️');
     setupImageUpload('sealFileInput', 'sealUrlInput', 'moharPreviewBox', '🔴');
     setupImageUpload('signFileInput', 'signUrlInput', 'signPreviewBox', '✍️');
   },
@@ -2405,9 +2426,26 @@ const views = {
               <input name="pin" value="${esc(c.pin || '221001')}" maxlength="6">
             </div>
 
-            <div>
-              <label>Institute Logo Emoji / URL</label>
-              <input name="logo_url" value="${esc(c.logo_url || '🎓')}">
+            <div style="grid-column:span 2; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:12px; padding:16px;">
+              <label style="font-weight:700; color:#064e3b; margin-bottom:6px; display:block;">🏛️ Institute Official Logo (प्रतीक चिन्ह / लोगो)</label>
+              <p class="muted" style="font-size:0.8rem; margin:0 0 10px;">Yeh logo aapke certificate, marksheet aur admission form par sabse upar left circle me aayega.</p>
+              <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                <div style="width:80px; height:80px; border-radius:10px; border:2px solid #047857; background:#ffffff; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="centreLogoPreviewBox">
+                  ${c.logo_url && (c.logo_url.startsWith('http') || c.logo_url.startsWith('data:image') || c.logo_url.startsWith('/'))
+                    ? `<img src="${esc(c.logo_url)}" style="width:100%; height:100%; object-fit:contain;" id="centreLogoPreviewImg">`
+                    : `<span style="font-size:2.2rem;">🏛️</span>`}
+                </div>
+                <div style="flex:1; min-width:240px;">
+                  <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+                    <label class="btn sm gold" style="cursor:pointer; display:inline-block;">
+                      📁 Upload Logo File
+                      <input type="file" id="centreLogoFileInput" accept="image/*" style="display:none;">
+                    </label>
+                    <span style="font-size:0.75rem; color:#64748b;">(JPG/PNG file) ya direct URL paste karein:</span>
+                  </div>
+                  <input id="centreLogoUrlInput" name="logo_url" value="${esc(c.logo_url && (c.logo_url.startsWith('http') || c.logo_url.startsWith('data:image') || c.logo_url.startsWith('/')) ? c.logo_url : '')}" placeholder="https://... ya logo image file upload karein" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+                </div>
+              </div>
             </div>
 
             <div style="grid-column:span 2; display:flex; justify-content:flex-end; gap:12px; margin-top:16px;">
@@ -2514,6 +2552,32 @@ const views = {
           toast('Photo loaded! Click "Save Director Profile" to save.');
         };
         reader.readAsDataURL(file);
+      };
+    }
+
+    // Centre Logo file upload & live url handler
+    const logoFileInput = $('#centreLogoFileInput');
+    if (logoFileInput) {
+      logoFileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) { toast('Logo must be under 2MB', false); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if ($('#centreLogoUrlInput')) $('#centreLogoUrlInput').value = ev.target.result;
+          if ($('#centreLogoPreviewBox')) $('#centreLogoPreviewBox').innerHTML = `<img src="${ev.target.result}" style="width:100%; height:100%; object-fit:contain;">`;
+          toast('Centre logo loaded! Click "Save Centre Address & Info" to save.');
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+    const logoUrlInput = $('#centreLogoUrlInput');
+    if (logoUrlInput) {
+      logoUrlInput.oninput = () => {
+        const v = logoUrlInput.value.trim();
+        if ($('#centreLogoPreviewBox')) {
+          $('#centreLogoPreviewBox').innerHTML = v ? `<img src="${v}" style="width:100%; height:100%; object-fit:contain;" onerror="this.outerHTML='<span style=\\'font-size:2.2rem;\\'>🏛️</span>'">` : '<span style="font-size:2.2rem;">🏛️</span>';
+        }
       };
     }
 
@@ -4252,14 +4316,24 @@ async function loadMonthlyAtt() {
 
 // Mohar & Sign Save
 async function saveMoharSign() {
+  const logo = $('#logoUrlInput')?.value;
   const seal = $('#sealUrlInput')?.value;
   const sign = $('#signUrlInput')?.value;
   guard(async () => {
     await api('/api/centre/settings', {
-      method: 'PUT',
-      body: { seal_url: seal, signature_url: sign }
+      method: 'POST',
+      body: { logo_url: logo, seal_url: seal, signature_url: sign }
     });
-    toast('Official Stamp & Signature saved to centre profile!');
+    await api('/api/centre/mohar-signature', {
+      method: 'POST',
+      body: { logo_url: logo, seal_url: seal, signature_url: sign }
+    }).catch(() => null);
+    if (typeof currentCentre !== 'undefined' && currentCentre) {
+      if (logo) currentCentre.logo_url = logo;
+      if (seal) currentCentre.seal_url = seal;
+      if (sign) currentCentre.signature_url = sign;
+    }
+    toast('Official Logo, Stamp & Signature saved to centre profile!');
   });
 }
 
