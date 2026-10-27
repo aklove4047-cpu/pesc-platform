@@ -553,7 +553,7 @@ const CLEAN_SEED_MARKSHEET = {
   created_at: 1792376054616
 };
 
-const DATA_VERSION = 'v26_clean_zero_all_entities_2026';
+const DATA_VERSION = 'v27_clean_zero_fresh_deploy_2026';
 let kvLoaded = false;
 let lastKvSync = 0;
 
@@ -584,6 +584,9 @@ async function syncFromKV(env, force = false) {
     const currentVersion = await env.PESC_KV.get('data_version');
     if (currentVersion !== DATA_VERSION) {
       // Overwrite KV with 100% clean fresh zero state (all centres, coords, students deleted)
+      const existingUsers = (await env.PESC_KV.get('users', 'json')) || store.users || [];
+      const existingAdmin = (Array.isArray(existingUsers) && existingUsers.find(u => u.role === 'super_admin' || u.role === 'admin')) || CLEAN_ADMIN_USER;
+
       await Promise.all([
         env.PESC_KV.put('data_version', DATA_VERSION),
         env.PESC_KV.put('centres', JSON.stringify([])),
@@ -593,7 +596,7 @@ async function syncFromKV(env, force = false) {
         env.PESC_KV.put('marksheets', JSON.stringify([])),
         env.PESC_KV.put('coordinator_certificates', JSON.stringify([])),
         env.PESC_KV.put('wallet_topups', JSON.stringify([])),
-        env.PESC_KV.put('users', JSON.stringify([CLEAN_ADMIN_USER])),
+        env.PESC_KV.put('users', JSON.stringify([existingAdmin])),
       ]);
       store.centres = [];
       store.applications = [];
@@ -602,7 +605,7 @@ async function syncFromKV(env, force = false) {
       store.marksheets = [];
       store.coordinator_certificates = [];
       store.wallet_topups = [];
-      store.users = [CLEAN_ADMIN_USER];
+      store.users = [existingAdmin];
       kvLoaded = true;
       lastKvSync = now;
       return;
@@ -1257,24 +1260,13 @@ export default {
     if (path === '/api/public/coordinators') {
       const coords = store.users.filter(u => u.role === 'coordinator').map((u, i) => ({
         id: u.id,
-        name: u.name || 'Er. V. K. Maurya',
+        name: u.name,
         coordinator_code: `PESCOORD/${String(i + 1).padStart(3, '0')}`,
         state: u.state || 'Uttar Pradesh',
-        district: u.district || 'Varanasi Zone',
-        address: u.address || `${u.district || 'Civil Lines, Varanasi'}, ${u.state || 'Uttar Pradesh'}`,
+        district: u.district || '',
+        address: u.address || `${u.district || ''}, ${u.state || 'Uttar Pradesh'}`,
         photo_url: u.photo_url || '/assets/img/coord_rajesh.jpg'
       }));
-      if (coords.length === 0) {
-        coords.push({
-          id: 2,
-          name: 'Er. V. K. Maurya',
-          coordinator_code: 'PESCOORD/001',
-          state: 'Uttar Pradesh',
-          district: 'Varanasi Zone',
-          address: 'Civil Lines, Varanasi, Uttar Pradesh',
-          photo_url: '/assets/img/coord_rajesh.jpg'
-        });
-      }
       return jsonResponse({ coordinators: coords });
     }
 
@@ -1836,10 +1828,10 @@ export default {
         const em = String(email || '').toLowerCase().trim();
         const pw = String(password || '').trim();
 
-                // --- 1. Super Admin Login ---
+        // --- 1. Super Admin Login ---
         const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin');
         const adminPass = (adminUser && adminUser.password_plain) || 'admin123';
-        if ((em === 'admin@pescouncil.in' || em === 'admin') && (pw === adminPass || pw === 'admin123' || pw === 'Admin#12345678' || pw === 'admin')) {
+        if ((em === 'admin@pescouncil.in' || em === 'admin') && pw === adminPass) {
           const userObj = { id: (adminUser && adminUser.id) || 1, email: (adminUser && adminUser.email) || 'admin@pescouncil.in', name: (adminUser && adminUser.name) || 'Super Admin', role: 'super_admin' };
           return jsonResponse({ ok: true, user: userObj }, 200, {
             'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
@@ -1851,12 +1843,11 @@ export default {
         const matchedCoord = coordUsers.find(u => 
           (u.email && u.email.toLowerCase() === em) || 
           (u.mobile && u.mobile === em) || 
-          (u.id && String(u.id) === em) || 
-          (em === 'coordinator' || em === 'coord@pescouncil.in' || em === 'coordinator@pescouncil.in')
+          (u.id && String(u.id) === em)
         );
         if (matchedCoord) {
           const coordPass = matchedCoord.password_plain || 'Coord@123';
-          if (pw === coordPass || pw === 'coord123' || pw === 'Coord@123' || pw === 'Coordinator@12345' || pw === 'admin123' || pw === '123456') {
+          if (pw === coordPass) {
             const userObj = { id: matchedCoord.id, email: matchedCoord.email, name: matchedCoord.name || 'Regional Coordinator', role: 'coordinator', coordinator_id: matchedCoord.id };
             return jsonResponse({ ok: true, user: userObj }, 200, {
               'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
@@ -1875,7 +1866,7 @@ export default {
         if (c) {
           const cOwnerUser = store.users.find(u => u.centre_id === c.id && u.role === 'centre_owner');
           const centrePass = c.login_password || (cOwnerUser && cOwnerUser.password_plain) || 'owner123';
-          if (pw === centrePass || pw === 'owner123' || pw === 'Centre@123' || pw === 'Centre@12345' || pw === 'centre123' || pw === 'admin123' || pw === '123456' || pw.toLowerCase() === (c.centre_code || '').toLowerCase()) {
+          if (pw === centrePass) {
             if (c.status === 'terminated') return jsonResponse({ error: 'यह सेंटर फ्रैंचाइज़ी समाप्त (Terminate) कर दी गई है।' }, 403);
             if (c.status === 'suspended') return jsonResponse({ error: 'यह सेंटर वर्तमान में निलंबित (Suspended) है।' }, 403);
             const userObj = { id: c.id, email: c.email || `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id, centre_code: c.centre_code, centre_slug: c.slug };
@@ -1895,7 +1886,7 @@ export default {
         );
         if (s) {
           const stuPass = s.initial_password || s.password || 'Student@123';
-          if (pw === stuPass || pw === 'Student@123' || pw === 'Student@12345' || pw === 'student123' || pw === '123456' || pw === String(s.roll_no) || pw === s.student_code) {
+          if (pw === stuPass) {
             const userObj = { id: s.id, email: s.email || `${s.roll_no || s.student_code}@student.pescouncil.in`, name: s.name, role: 'student', student_id: s.id, roll_no: s.roll_no || s.student_code };
             return jsonResponse({ ok: true, user: userObj }, 200, {
               'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
@@ -1903,11 +1894,11 @@ export default {
           }
         }
 
-        // --- 5. Generic store.users fallback ---
+        // --- 5. Generic store.users fallback (strictly matching u.password_plain) ---
         const u = store.users.find(x => (x.email && x.email.toLowerCase() === em) || (x.username && x.username.toLowerCase() === em));
         if (u) {
-          const uPass = u.password_plain || '123456';
-          if (pw === uPass || pw === 'admin123' || pw === 'Admin#12345678' || pw === 'Coord@123' || pw === 'owner123') {
+          const uPass = u.password_plain || (u.role === 'super_admin' ? 'admin123' : u.role === 'coordinator' ? 'Coord@123' : u.role === 'centre_owner' ? 'owner123' : '123456');
+          if (pw === uPass) {
             const userObj = { id: u.id, email: u.email, name: u.name || 'User', role: u.role, centre_id: u.centre_id };
             return jsonResponse({ ok: true, user: userObj }, 200, {
               'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
@@ -2016,7 +2007,12 @@ export default {
           if (!targetC) return jsonResponse({ error: 'Centre not found' }, 404);
           const body = await request.json();
           targetC.login_password = String(body.password || 'owner123').trim();
+          const cOwner = store.users.find(u => u.centre_id === targetC.id && u.role === 'centre_owner');
+          if (cOwner) {
+            cOwner.password_plain = targetC.login_password;
+          }
           await persistToKV(env, 'centres', store.centres);
+          await persistToKV(env, 'users', store.users);
           return jsonResponse({ ok: true, message: `Password updated successfully for ${targetC.centre_code}!` });
         } catch (err) {
           return jsonResponse({ error: err.message }, 400);
@@ -2598,13 +2594,11 @@ export default {
           }
         }
         let coords = store.users.filter(u => u.role === 'coordinator');
-        if (!coords.length) {
-          coords.push({ id: 2, name: 'State Coordinator', email: 'coord@pescouncil.in', state: 'Uttar Pradesh', mobile: '+91 94150 12345', district: 'Gorakhpur', address: 'Regional Headquarters', qualification: 'MCA / M.Tech' });
-        }
         const enrichedCoords = coords.map(c => {
           const cert = getOrCreateWorkerCoordCert(c.id, c);
           return {
             ...c,
+            password: c.password_plain || 'Coord@123',
             cert_no: cert.cert_no,
             cert_status: cert.status,
             cert_token: cert.token,
@@ -2612,6 +2606,20 @@ export default {
           };
         });
         return jsonResponse({ coordinators: enrichedCoords });
+      }
+
+      if (path.match(/\/api\/admin\/coordinators\/\d+\/set-password/) && request.method === 'POST') {
+        try {
+          const coordId = +path.split('/')[4];
+          const coord = store.users.find(u => u.id === coordId && u.role === 'coordinator');
+          if (!coord) return jsonResponse({ error: 'Coordinator not found' }, 404);
+          const body = await request.json();
+          coord.password_plain = String(body.password || 'Coord@123').trim();
+          await persistToKV(env, 'users', store.users);
+          return jsonResponse({ ok: true, message: `Password updated successfully for ${coord.name}!` });
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
       }
 
       if (path.startsWith('/api/admin/coordinators/') && path.endsWith('/cert')) {
@@ -4824,6 +4832,26 @@ export default {
           }
         });
       }
+
+      if (path === '/api/centre/change-password' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const newPw = String(body.new_password || '').trim();
+          if (!newPw || newPw.length < 6) {
+            return jsonResponse({ error: 'Password must be at least 6 characters' }, 400);
+          }
+          c.login_password = newPw;
+          const cOwnerUser = store.users.find(u => u.centre_id === c.id && u.role === 'centre_owner');
+          if (cOwnerUser) {
+            cOwnerUser.password_plain = newPw;
+          }
+          await persistToKV(env, 'centres', store.centres);
+          await persistToKV(env, 'users', store.users);
+          return jsonResponse({ ok: true, message: 'Centre password changed successfully! Head Office has been updated with new password.' });
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
+      }
     }
 
     // --- Student APIs ---
@@ -5029,6 +5057,26 @@ export default {
       }
       if (path === '/api/student/tickets') {
         return jsonResponse({ tickets: [] });
+      }
+      if (path === '/api/student/change-password' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const newPw = String(body.new_password || '').trim();
+          if (!newPw || newPw.length < 6) {
+            return jsonResponse({ error: 'Password must be at least 6 characters' }, 400);
+          }
+          student.initial_password = newPw;
+          student.password = newPw;
+          const stuUser = store.users.find(u => u.id === student.user_id || u.email === student.email);
+          if (stuUser) {
+            stuUser.password_plain = newPw;
+          }
+          await persistToKV(env, 'students', store.students);
+          await persistToKV(env, 'users', store.users);
+          return jsonResponse({ ok: true, message: 'Student password changed successfully! Head Office has been updated.' });
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
       }
       return jsonResponse({ student: enrichedStudent, certificate: cert, marksheet: mrk });
     }

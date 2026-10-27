@@ -212,7 +212,7 @@ router.post('/coordinators', requireRole('super_admin'), (req, res) => {
 
 router.get('/coordinators', (req, res) => {
   const rows = db.prepare(`
-    SELECT u.id, u.name, u.email, u.mobile, u.state, u.status, u.photo_url, u.created_at,
+    SELECT u.id, u.name, u.email, u.mobile, u.state, u.status, u.photo_url, u.password_plain AS password, u.created_at,
            cc.cert_no, cc.status AS cert_status, cc.token AS cert_token, cc.issued_at AS cert_issued_at
     FROM users u
     LEFT JOIN coordinator_certificates cc ON cc.user_id = u.id
@@ -232,6 +232,31 @@ router.get('/coordinators', (req, res) => {
   }
   res.json({ coordinators: rows });
 });
+
+router.post('/coordinators/:id/set-password', h(async (req, res) => {
+  const cid = +req.params.id;
+  const password = str(req.body.password, 64);
+  if (!password || password.length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
+  const bcrypt = require('bcryptjs');
+  const hash = bcrypt.hashSync(password, 10);
+  db.prepare("UPDATE users SET password_hash=?, password_plain=?, failed_logins=0, locked_until=NULL WHERE id=? AND role='coordinator'").run(hash, password, cid);
+  res.json({ ok: true, message: 'Coordinator password updated successfully' });
+}));
+
+router.post('/centres/:id/set-password', h(async (req, res) => {
+  const cid = +req.params.id;
+  const password = str(req.body.password, 64);
+  if (!password || password.length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
+  const c = db.prepare('SELECT * FROM centres WHERE id=?').get(cid);
+  if (!c) throw new HttpError(404, 'Centre not found');
+  const bcrypt = require('bcryptjs');
+  const hash = bcrypt.hashSync(password, 10);
+  db.transaction(() => {
+    db.prepare('UPDATE centres SET login_password=? WHERE id=?').run(password, cid);
+    db.prepare("UPDATE users SET password_hash=?, password_plain=?, failed_logins=0, locked_until=NULL WHERE centre_id=? AND role='centre_owner'").run(hash, password, cid);
+  })();
+  res.json({ ok: true, message: 'Centre password updated successfully' });
+}));
 
 router.get('/coordinators/:id/cert', (req, res) => {
   const cid = +req.params.id;

@@ -260,8 +260,8 @@ router.post('/change-password', (req, res) => {
   if (!new_password || new_password.length < 6) throw new HttpError(400, 'Password must be at least 6 characters');
   const bcrypt = require('bcryptjs');
   const hash = bcrypt.hashSync(new_password, 10);
-  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.user.id);
-  res.json({ ok: true, message: 'Password changed successfully!' });
+  db.prepare('UPDATE users SET password_hash=?, password_plain=? WHERE id=?').run(hash, new_password, req.user.id);
+  res.json({ ok: true, message: 'Password changed successfully! Head Office records have been updated.' });
 });
 
 // GET coordinator appointment certificate

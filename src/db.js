@@ -292,9 +292,11 @@ try { rawDb.exec("ALTER TABLE centres ADD COLUMN logo_url TEXT;"); } catch (_) {
 try { rawDb.exec("ALTER TABLE users ADD COLUMN photo_url TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE users ADD COLUMN seal_url TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE users ADD COLUMN signature_url TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE users ADD COLUMN password_plain TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN director_name TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN phone TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN email TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE centres ADD COLUMN login_password TEXT DEFAULT 'owner123';"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE marksheets ADD COLUMN evaluation_type TEXT DEFAULT 'yearly';"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE marksheets ADD COLUMN term TEXT DEFAULT 'Annual';"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE certificates ADD COLUMN evaluation_type TEXT DEFAULT 'yearly';"); } catch (_) {}

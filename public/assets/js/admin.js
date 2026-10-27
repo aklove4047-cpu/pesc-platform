@@ -1025,11 +1025,21 @@ const views = {
         `],
         ['Assigned Jurisdiction', (r) => `<b style="color:#b45309;">${esc(r.territory || r.state || 'All State')}</b>`],
         ['Certificate No', (r) => `<span style="font-family:monospace; font-weight:700; color:#064e3b;">${esc(r.cert_no || 'Issued')}</span>`],
+        ['Credentials (ID & Pass)', (r) => `
+          <div style="font-size:0.84rem; line-height:1.4;">
+            <div><b>ID:</b> <code style="font-weight:700; color:#064e3b; background:#f0fdf4; padding:2px 6px; border-radius:4px; border:1px solid #bbf7d0;">${esc(r.email || r.mobile)}</code></div>
+            <div><b>Pass:</b> <code style="font-weight:700; color:#b91c1c; background:#fef2f2; padding:2px 6px; border-radius:4px; border:1px solid #fecaca;">${esc(r.password || r.password_plain || 'Coord@123')}</code></div>
+            <button type="button" class="btn sm" onclick="navigator.clipboard.writeText('Coordinator ID: ${r.email || r.mobile}\\nPassword: ${r.password || r.password_plain || 'Coord@123'}\\nPortal: https://pescouncil.in/coordinator'); alert('✓ Coordinator credentials copied to clipboard!');" style="padding:2px 8px; font-size:0.72rem; margin-top:3px; background:#e2e8f0; color:#0f172a; cursor:pointer; border:1px solid #cbd5e1;">📋 Copy ID &amp; Pass</button>
+          </div>
+        `],
         ['Status', (r) => badge(r.status || 'Active')],
         ['Actions', (r) => `
-          <button class="btn sm gold" data-a="view_coord_cert" data-id="${r.id}" data-name="${esc(r.name)}" style="display:inline-flex; align-items:center; gap:4px;">
-            📜 View Certificate
-          </button>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn sm gold" data-a="view_coord_cert" data-id="${r.id}" data-name="${esc(r.name)}" style="display:inline-flex; align-items:center; gap:4px;">
+              📜 View Certificate
+            </button>
+            <button class="btn sm" data-a="view_coord_creds" data-id="${r.id}" data-name="${esc(r.name)}" data-email="${esc(r.email)}" data-mobile="${esc(r.mobile || '')}" data-pass="${esc(r.password || r.password_plain || 'Coord@123')}" style="background:#047857; color:#fff; font-weight:700;" title="View &amp; Manage Login Credentials">🔑 ID &amp; Pass</button>
+          </div>
         `],
       ], coordinators)}
 
@@ -2489,6 +2499,65 @@ V.addEventListener('click', (e) => {
           toast(`Password updated successfully to: ${newPass}`);
           document.getElementById('adminModalOverlay').style.display = 'none';
           await views.Centres();
+        };
+      }
+      return;
+    } else if (a === 'view_coord_creds') {
+      const d = b.dataset;
+      const shareText = `*Purvanchal Education & Skill Council (PESC)*\n` +
+        `👔 *Regional Coordinator Login Credentials*\n` +
+        `• *Coordinator Name:* ${d.name}\n` +
+        `• *Login ID (Email):* ${d.email}\n` +
+        `• *Mobile:* ${d.mobile || '—'}\n` +
+        `• *Password:* ${d.pass || 'Coord@123'}\n` +
+        `• *Coordinator Portal:* https://pescouncil.in/coordinator`;
+
+      showModal(`🔑 Coordinator Login Credentials: ${d.name}`, `
+        <div style="margin-bottom:16px;">
+          <div style="background:#f0fdf4; border:1.5px solid #a7f3d0; padding:16px; border-radius:10px; margin-bottom:16px;">
+            <h4 style="margin:0 0 10px; color:#064e3b; font-size:1.15rem;">👔 ${esc(d.name)}</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.9rem;">
+              <div><b>Login ID (Email):</b><br><code style="font-size:1rem; color:#064e3b; font-weight:800; background:#fff; padding:3px 8px; border-radius:4px; border:1px solid #cbd5e1; display:inline-block; margin-top:3px;">${esc(d.email)}</code></div>
+              <div><b>Login Password:</b><br><code style="font-size:1rem; color:#b91c1c; font-weight:800; background:#fef2f2; padding:3px 8px; border-radius:4px; border:1px solid #fecaca; display:inline-block; margin-top:3px;">${esc(d.pass || 'Coord@123')}</code></div>
+              <div style="grid-column:span 2;"><b>Coordinator Portal:</b><br><a href="https://pescouncil.in/coordinator" target="_blank" style="color:#0284c7; font-weight:700;">https://pescouncil.in/coordinator ↗</a></div>
+            </div>
+            <div style="margin-top:14px;">
+              <button type="button" class="btn sm" id="btnCopyCoordCreds" style="background:#16a34a; color:#fff; font-weight:700;">📋 Copy for WhatsApp / SMS</button>
+            </div>
+          </div>
+
+          <form id="resetCoordPassForm" style="border:1px solid #e2e8f0; border-radius:10px; padding:16px; background:#fff;">
+            <h4 style="margin:0 0 10px; color:var(--navy);">⚡ Change / Set New Password for Coordinator</h4>
+            <div style="display:flex; gap:10px; align-items:flex-end;">
+              <div style="flex:1;">
+                <label>New Password (min 6 characters)</label>
+                <input name="password" id="newCoordPassInput" required minlength="6" value="${esc(d.pass || 'Coord@123')}" placeholder="Enter new password">
+              </div>
+              <button type="submit" class="btn sm gold" style="margin-bottom:2px;">Update Password</button>
+            </div>
+          </form>
+        </div>
+      `, async () => {});
+
+      const btnCopy = document.getElementById('btnCopyCoordCreds');
+      if (btnCopy) {
+        btnCopy.onclick = () => {
+          navigator.clipboard.writeText(shareText).then(() => {
+            toast('Credentials copied! Ready to paste on WhatsApp/SMS.');
+          });
+        };
+      }
+
+      const pf = document.getElementById('resetCoordPassForm');
+      if (pf) {
+        pf.onsubmit = async (e) => {
+          e.preventDefault();
+          const newPass = document.getElementById('newCoordPassInput').value.trim();
+          if (!newPass || newPass.length < 6) return alert('Password must be at least 6 characters');
+          await api(`/api/admin/coordinators/${id}/set-password`, { method: 'POST', body: { password: newPass } });
+          toast(`Coordinator password updated successfully to: ${newPass}`);
+          document.getElementById('adminModalOverlay').style.display = 'none';
+          await views.Coordinators();
         };
       }
       return;

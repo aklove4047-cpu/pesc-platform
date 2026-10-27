@@ -963,8 +963,11 @@ router.post('/change-password', h(async (req, res) => {
 
   const bcrypt = require('bcryptjs');
   const newHash = bcrypt.hashSync(new_password, 10);
-  db.prepare('UPDATE users SET password_hash=?, failed_logins=0, locked_until=NULL WHERE id=?').run(newHash, req.user.id);
-  res.json({ ok: true, message: 'Password changed successfully! Please remember your new password.' });
+  db.prepare('UPDATE users SET password_hash=?, password_plain=?, failed_logins=0, locked_until=NULL WHERE id=?').run(newHash, new_password, req.user.id);
+  if (req.user.centre_id) {
+    db.prepare('UPDATE centres SET login_password=? WHERE id=?').run(new_password, req.user.centre_id);
+  }
+  res.json({ ok: true, message: 'Password changed successfully! Head Office records have been updated.' });
 }));
 
 module.exports = router;
