@@ -35,12 +35,16 @@ window.refreshCentreWalletBadge = async function(knownBalance) {
     let bal = knownBalance;
     if (bal === undefined || bal === null) {
       const w = await api('/api/centre/wallet').catch(() => null);
-      bal = (w && w.balance !== undefined) ? w.balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 0);
+      bal = (w && w.balance !== undefined) ? w.balance : ((w && w.wallet_balance !== undefined) ? w.wallet_balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 0));
     }
+    const formatted = '₹' + (+bal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const el = document.getElementById('topbarWalletAmount');
-    if (el) el.textContent = '₹' + (+bal || 0).toLocaleString('en-IN') + '.00';
+    if (el) el.textContent = formatted;
+    const badge = document.getElementById('centreWalletBadge');
+    if (badge) badge.textContent = formatted;
     if (window._currentCentre) window._currentCentre.wallet_balance = +bal;
     if (typeof currentCentre !== 'undefined' && currentCentre) currentCentre.wallet_balance = +bal;
+    return +bal;
   } catch (err) {
     console.warn('refreshCentreWalletBadge error:', err);
   }
@@ -58,15 +62,19 @@ window.saveMrkAsPdf = function() {
 
 // Global Council Authorities Loader
 window._councilAuthorities = null;
-window.ensureAuthoritiesLoaded = async function() {
-  if (!window._councilAuthorities || !window._councilAuthorities.head_office || !window._councilAuthorities.head_office.seal_url) {
+window.ensureAuthoritiesLoaded = async function(force = false) {
+  if (force || !window._councilAuthorities || !window._councilAuthorities.head_office || !window._councilAuthorities.head_office.seal_url) {
     try {
-      const res = await api('/api/centre/settings').catch(() => null);
+      const res = await api('/api/centre/authorities').catch(() => null);
       if (res && res.authorities) {
         window._councilAuthorities = res.authorities;
       } else {
-        const pub = await api('/api/public/settings').catch(() => null);
+        const pub = await api('/api/public/authorities').catch(() => null);
         if (pub && pub.authorities) window._councilAuthorities = pub.authorities;
+        else {
+          const s = await api('/api/public/settings').catch(() => null);
+          if (s && s.authorities) window._councilAuthorities = s.authorities;
+        }
       }
     } catch (_) {}
   }
@@ -857,6 +865,9 @@ const views = {
     const c = dash.centre || {};
     const students = sData.students || [];
 
+    const bal = (dash.wallet_balance_inr !== undefined) ? dash.wallet_balance_inr : ((dash.wallet_paise || 0) / 100);
+    window.refreshCentreWalletBadge(bal);
+
     const activeList = students.filter(s => !s.is_passout && s.status !== 'passout' && s.status !== 'completed');
     const passoutList = students.filter(s => s.is_passout || s.status === 'passout' || s.status === 'completed');
     const isPassoutTab = window._centreStudentsTab === 'passout';
@@ -1506,7 +1517,7 @@ const views = {
           <div style="flex:1; min-width:240px;">
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Enrolled Candidate (छात्र चुनें):</label>
             <select id="certStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-cert_no="${esc(s.cert_no || (s.certificate && s.certificate.cert_no) || '')}" data-is_passout="${s.is_passout || s.status === 'passout' ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
             </select>
           </div>
 
@@ -1583,7 +1594,7 @@ const views = {
           <div style="flex:1; min-width:240px;">
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate (छात्र चुनें):</label>
             <select id="mrkStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
+              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-marksheet_no="${esc(s.marksheet_no || (s.marksheet && s.marksheet.marksheet_no) || '')}" data-is_passout="${s.is_passout || s.status === 'passout' ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
             </select>
           </div>
 
@@ -2081,6 +2092,8 @@ const views = {
     ]);
 
     const w = wData || { balance_paise: 0, ledger: [], fees: {} };
+    const wBal = (w.balance !== undefined) ? w.balance : ((w.wallet_balance !== undefined) ? w.wallet_balance : ((w.balance_paise || 0) / 100));
+    window.refreshCentreWalletBadge(wBal);
     const ho = sData.settings || {
       upi_id: 'pescouncil@upi',
       upi_name: 'Purvanchal Education and Skill Council',
@@ -2761,6 +2774,7 @@ function renderStudentTable(students, isPassout = false) {
         <button class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="showAdmissionFormModal(${r.id})">📄 Form</button>
         <button class="btn sm alt" onclick="printReceipt(${r.id})">🧾 Receipt</button>
         <button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Certificate Module">🎓 Cert</button>
+        <button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Marksheet Module">📊 Mrk</button>
         <button class="btn sm" style="background:#059669; color:#fff; font-weight:700;" onclick="toggleCentreStudentStatus(${r.id}, true)" title="Mark student as passout/graduated">🎓 Mark Passout</button>
       </div>
     `]
@@ -3009,7 +3023,9 @@ async function updateCertPreview() {
   const certDbId = certItem ? certItem.id : studentId;
   const isIssued = Boolean(
     (window._issuedCerts && (window._issuedCerts[studentId] || window._issuedCerts[code] || window._issuedCerts[certDbId])) ||
-    (certItem && (certItem.centre_signed === true || certItem.is_issued === true))
+    (certItem && (certItem.centre_signed === true || certItem.is_issued === true || certItem.head_approved === true || certItem.status === 'Approved_By_Council' || certItem.status === 'Issued' || Boolean(certItem.cert_no))) ||
+    Boolean(opt.dataset.cert_no) ||
+    Boolean(opt.dataset.is_passout)
   );
 
   const printWrap = $('#certPrintActionWrap');
@@ -3041,14 +3057,11 @@ async function updateCertPreview() {
             <span style="font-size:2.2rem;">✅</span>
             <div>
               <b style="color:#065f46; font-size:1.05rem; display:block;">प्रमाणपत्र आधिकारिक रूप से जारी हो चुका है (Officially Issued &amp; Sealed)</b>
-              <span style="font-size:0.85rem; color:#047857;">हेड ऑफिस, समन्वयक एवं संस्थान निदेशक की अधिकृत मुहर लग चुकी है। आप इसे Print या PDF Save कर सकते हैं।</span>
+              <span style="font-size:0.85rem; color:#047857;">हेड ऑफिस, समन्वयक एवं संस्थान निदेशक की अधिकृत मुहर लग चुकी है। आप इसे कभी भी निःशुल्क Print या PDF Save कर सकते हैं।</span>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <span style="background:#15803d; color:#ffffff; font-weight:900; font-size:1.05rem; padding:6px 18px; border-radius:20px;">PAID ₹${currentFee}</span>
-            <button type="button" class="btn sm" onclick="reissueCert(${certDbId}, ${studentId}, ${currentFee})" style="background:#0284c7; color:#fff; font-weight:700; padding:8px 16px; border-radius:6px; cursor:pointer; border:none;">
-              🔄 Re-Deduct / Stamp Again (₹${currentFee})
-            </button>
+            <span style="background:#15803d; color:#ffffff; font-weight:900; font-size:1.05rem; padding:6px 18px; border-radius:20px;">✓ ISSUED (FREE DOWNLOAD)</span>
           </div>
         </div>
       `;
@@ -3111,9 +3124,20 @@ async function updateCertPreview() {
       student: { id: studentId, name, father_name: father, mother_name: mother, student_code: code, roll_no: code, course_name: course, photo_url: photo },
       centre: currentCentre,
       authorities: window._councilAuthorities,
-      certNo: refNo,
-      issueDate: issueDate,
-      duration: isSemester ? '6 Months' : '1 Year'
+      certNo: (certItem && certItem.cert_no) || refNo,
+      issueDate: (certItem && (certItem.issue_date || certItem.issued_at)) || issueDate,
+      duration: (certItem && certItem.duration) || (isSemester ? '6 Months' : '1 Year'),
+      header_type: certItem?.header_type || (certFormat === 'institute' ? 'centre' : 'council'),
+      header_title: certItem?.header_title,
+      header_hindi: certItem?.header_hindi,
+      header_subtitle: certItem?.header_subtitle,
+      scheme: certItem?.scheme || (isSemester ? 'single_semester' : 'annual'),
+      centre_name: certItem?.centre_name || (currentCentre ? currentCentre.name : ''),
+      centre_name_hi: certItem?.centre_name_hi || (currentCentre ? currentCentre.name_hi : ''),
+      council_address: certItem?.council_address,
+      centre_address: certItem?.centre_address || (currentCentre ? currentCentre.address : ''),
+      grade: certItem?.grade || 'A+',
+      term: certItem?.term || certTerm
     }) : '<p>Loading Certificate Template...</p>'}
   `;
 }
@@ -3659,7 +3683,9 @@ async function updateMrkPreview() {
   const mrkDbId = mrkItem ? mrkItem.id : studentId;
   const isIssued = Boolean(
     (window._issuedMrks && (window._issuedMrks[studentId] || window._issuedMrks[code] || window._issuedMrks[mrkDbId])) ||
-    (mrkItem && (mrkItem.centre_signed === true || mrkItem.is_issued === true))
+    (mrkItem && (mrkItem.centre_signed === true || mrkItem.is_issued === true || mrkItem.head_approved === true || mrkItem.status === 'Approved_By_Council' || mrkItem.status === 'Issued' || Boolean(mrkItem.marksheet_no))) ||
+    Boolean(opt.dataset.marksheet_no) ||
+    Boolean(opt.dataset.is_passout)
   );
 
   const printWrap = $('#mrkPrintActionWrap');
@@ -3691,14 +3717,11 @@ async function updateMrkPreview() {
             <span style="font-size:2.2rem;">✅</span>
             <div>
               <b style="color:#065f46; font-size:1.05rem; display:block;">अंकतालिका आधिकारिक रूप से जारी हो चुकी है (Officially Issued &amp; Sealed)</b>
-              <span style="font-size:0.85rem; color:#047857;">हेड ऑफिस, समन्वयक एवं संस्थान निदेशक की अधिकृत मुहर लग चुकी है। आप इसे Print या PDF Save कर सकते हैं।</span>
+              <span style="font-size:0.85rem; color:#047857;">हेड ऑफिस, समन्वयक एवं संस्थान निदेशक की अधिकृत मुहर लग चुकी है। आप इसे कभी भी निःशुल्क Print या PDF Save कर सकते हैं।</span>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <span style="background:#15803d; color:#ffffff; font-weight:900; font-size:1.05rem; padding:6px 18px; border-radius:20px;">PAID ₹${currentFee}</span>
-            <button type="button" class="btn sm" onclick="reissueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:#0284c7; color:#fff; font-weight:700; padding:8px 16px; border-radius:6px; cursor:pointer; border:none;">
-              🔄 Re-Deduct / Stamp Again (₹${currentFee})
-            </button>
+            <span style="background:#15803d; color:#ffffff; font-weight:900; font-size:1.05rem; padding:6px 18px; border-radius:20px;">✓ ISSUED (FREE DOWNLOAD)</span>
           </div>
         </div>
       `;
@@ -3779,10 +3802,20 @@ async function updateMrkPreview() {
       student: { id: studentId, name, father_name: father, mother_name: mother, student_code: code, roll_no: code, course_name: course, photo_url: photo },
       centre: currentCentre,
       authorities: window._councilAuthorities,
-      mrkNo: refNo,
-      issueDate: issueDate,
-      subjects: customSubjects,
-      duration: isSemester ? '6 Months' : '1 Year'
+      mrkNo: (mrkItem && mrkItem.marksheet_no) || refNo,
+      issueDate: (mrkItem && (mrkItem.issue_date || mrkItem.issued_at)) || issueDate,
+      subjects: (mrkItem && mrkItem.subjects) ? (typeof mrkItem.subjects === 'string' ? JSON.parse(mrkItem.subjects) : mrkItem.subjects) : customSubjects,
+      duration: (mrkItem && mrkItem.duration) || (isSemester ? '6 Months' : '1 Year'),
+      header_type: mrkItem?.header_type || (mrkFormat === 'institute' ? 'centre' : 'council'),
+      header_title: mrkItem?.header_title,
+      header_hindi: mrkItem?.header_hindi,
+      header_subtitle: mrkItem?.header_subtitle,
+      scheme: mrkItem?.scheme || (isSemester ? 'single_semester' : 'annual'),
+      centre_name: mrkItem?.centre_name || (currentCentre ? currentCentre.name : ''),
+      centre_name_hi: mrkItem?.centre_name_hi || (currentCentre ? currentCentre.name_hi : ''),
+      council_address: mrkItem?.council_address,
+      centre_address: mrkItem?.centre_address || (currentCentre ? currentCentre.address : ''),
+      term: mrkItem?.term || mrkTerm
     }) : '<p>Loading Marksheet Template...</p>'}
   `;
 }
@@ -4566,6 +4599,10 @@ async function initCentreHeader() {
       if ($('#headerCentreName')) $('#headerCentreName').textContent = activeCentre.name;
       if ($('#headerCentreCode')) $('#headerCentreCode').textContent = activeCentre.centre_code;
       if ($('#headerLogo')) $('#headerLogo').textContent = activeCentre.logo_url || '🎓';
+      const bal = (activeCentre.wallet_balance !== undefined) ? activeCentre.wallet_balance : ((activeCentre.wallet_paise || 0) / 100);
+      window.refreshCentreWalletBadge(bal);
+    } else {
+      window.refreshCentreWalletBadge(0);
     }
 
     const sel = $('#centreSelectDropdown');
@@ -5068,6 +5105,58 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
       </div>
 
       <form id="centreEditMrkForm">
+        <!-- Header & Authority Customization Box -->
+        <div style="background:#f8fafc; border:1.5px solid #059669; border-radius:10px; padding:14px; margin-bottom:16px;">
+          <h4 style="margin:0 0 10px; color:#064e3b; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+            🏛️ Authority Header &amp; Scheme Settings (शीर्षक व योजना चयन)
+          </h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Header Authority (शीर्षक किसके नाम से रहेगा) *</label>
+              <select name="header_type" id="centreMrkHeaderType" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                <option value="council" ${m.header_type !== 'centre' ? 'selected' : ''}>Council Header (परिषद के नाम से - Purvanchal Education &amp; Skill Council)</option>
+                <option value="centre" ${m.header_type === 'centre' ? 'selected' : ''}>Centre Header (सेंटर / संस्थान के नाम से)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Examination Scheme (परीक्षा योजना / प्रकार) *</label>
+              <select name="scheme" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                <option value="annual" ${m.scheme === 'annual' || (!m.scheme && evaluationType !== 'semester') ? 'selected' : ''}>Annual Scheme (Singhal / वार्षिक)</option>
+                <option value="single_semester" ${m.scheme === 'single_semester' || (!m.scheme && evaluationType === 'semester') ? 'selected' : ''}>Single Semester (एकल सेमेस्टर)</option>
+                <option value="double_semester" ${m.scheme === 'double_semester' ? 'selected' : ''}>Double Semester (दोहरा सेमेस्टर)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Main Header Title (मुख्य नाम) *</label>
+              <input name="header_title" id="centreMrkHeaderTitle" value="${esc(m.header_title || 'Purvanchal Education & Skill Council')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Hindi Header Title (हिंदी नाम) *</label>
+              <input name="header_hindi" id="centreMrkHeaderHindi" value="${esc(m.header_hindi || 'पूर्वांचल एजुकेशन एंड स्किल काउंसिल')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+            </div>
+            <div style="grid-column:1 / -1;">
+              <label style="font-size:0.82rem; font-weight:700;">Subtitle / Authority Subheading</label>
+              <input name="header_subtitle" id="centreMrkHeaderSubtitle" value="${esc(m.header_subtitle || 'An Autonomous Body Established Under The Aegis Of Govt. Act / Registered Under Section 8 Of MCA, Govt. Of India')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre English Name (संस्थान का नाम - English)</label>
+              <input name="centre_name" value="${esc(m.centre_name || (currentCentre ? currentCentre.name : ''))}" placeholder="e.g. Aryavart Institute of Technology" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre Hindi Name (संस्थान का नाम - हिंदी)</label>
+              <input name="centre_name_hi" value="${esc(m.centre_name_hi || (currentCentre ? currentCentre.name_hi : ''))}" placeholder="उदा. आर्यावर्त इंस्टिट्यूट ऑफ़ टेक्नोलॉजी" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Council Address (परिषद कार्यालय पता)</label>
+              <input name="council_address" value="${esc(m.council_address || 'Head Office: Gorakhpur / Varanasi, Uttar Pradesh - 273001')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre Office Address (संस्थान केंद्र पता)</label>
+              <input name="centre_address" value="${esc(m.centre_address || (currentCentre ? currentCentre.address : ''))}" placeholder="Authorized Study & Exam Centre Address" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+          </div>
+        </div>
+
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
           <div>
             <label style="font-size:0.82rem; font-weight:700;">Candidate's Name (परीक्षार्थी का नाम) *</label>
@@ -5217,6 +5306,15 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
     });
 
     const payload = {
+      header_type: fd.get('header_type'),
+      header_title: fd.get('header_title'),
+      header_hindi: fd.get('header_hindi'),
+      header_subtitle: fd.get('header_subtitle'),
+      scheme: fd.get('scheme'),
+      centre_name: fd.get('centre_name'),
+      centre_name_hi: fd.get('centre_name_hi'),
+      council_address: fd.get('council_address'),
+      centre_address: fd.get('centre_address'),
       student_name: fd.get('student_name'),
       father_name: fd.get('father_name'),
       mother_name: fd.get('mother_name'),
@@ -5317,6 +5415,58 @@ window.openCentreEditCertModal = async function(certId, studentId) {
       </div>
 
       <form id="centreEditCertForm">
+        <!-- Header & Authority Customization Box -->
+        <div style="background:#f8fafc; border:1.5px solid #059669; border-radius:10px; padding:14px; margin-bottom:16px;">
+          <h4 style="margin:0 0 10px; color:#064e3b; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+            🏛️ Authority Header &amp; Scheme Settings (शीर्षक व योजना चयन)
+          </h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Header Authority (शीर्षक किसके नाम से रहेगा) *</label>
+              <select name="header_type" id="centreCertHeaderType" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                <option value="council" ${c.header_type !== 'centre' ? 'selected' : ''}>Council Header (परिषद के नाम से - Purvanchal Education &amp; Skill Council)</option>
+                <option value="centre" ${c.header_type === 'centre' ? 'selected' : ''}>Centre Header (सेंटर / संस्थान के नाम से)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Examination Scheme (परीक्षा योजना / प्रकार) *</label>
+              <select name="scheme" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                <option value="annual" ${c.scheme === 'annual' || (!c.scheme && term && !term.toLowerCase().includes('semester')) ? 'selected' : ''}>Annual Scheme (Singhal / वार्षिक)</option>
+                <option value="single_semester" ${c.scheme === 'single_semester' || (!c.scheme && term && term.toLowerCase().includes('semester')) ? 'selected' : ''}>Single Semester (एकल सेमेस्टर)</option>
+                <option value="double_semester" ${c.scheme === 'double_semester' ? 'selected' : ''}>Double Semester (दोहरा सेमेस्टर)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Main Header Title (मुख्य नाम) *</label>
+              <input name="header_title" id="centreCertHeaderTitle" value="${esc(c.header_title || 'Purvanchal Education & Skill Council')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Hindi Header Title (हिंदी नाम) *</label>
+              <input name="header_hindi" id="centreCertHeaderHindi" value="${esc(c.header_hindi || 'पूर्वांचल एजुकेशन एंड स्किल काउंसिल')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+            </div>
+            <div style="grid-column:1 / -1;">
+              <label style="font-size:0.82rem; font-weight:700;">Subtitle / Authority Subheading</label>
+              <input name="header_subtitle" id="centreCertHeaderSubtitle" value="${esc(c.header_subtitle || 'An Autonomous Body Established Under The Aegis Of Govt. Act / Registered Under Section 8 Of MCA, Govt. Of India')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre English Name (संस्थान का नाम - English)</label>
+              <input name="centre_name" value="${esc(c.centre_name || (currentCentre ? currentCentre.name : ''))}" placeholder="e.g. Aryavart Institute of Technology" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre Hindi Name (संस्थान का नाम - हिंदी)</label>
+              <input name="centre_name_hi" value="${esc(c.centre_name_hi || (currentCentre ? currentCentre.name_hi : ''))}" placeholder="उदा. आर्यावर्त इंस्टिट्यूट ऑफ़ टेक्नोलॉजी" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Council Address (परिषद कार्यालय पता)</label>
+              <input name="council_address" value="${esc(c.council_address || 'Head Office: Gorakhpur / Varanasi, Uttar Pradesh - 273001')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre Office Address (संस्थान केंद्र पता)</label>
+              <input name="centre_address" value="${esc(c.centre_address || (currentCentre ? currentCentre.address : ''))}" placeholder="Authorized Study & Exam Centre Address" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+          </div>
+        </div>
+
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
           <div>
             <label style="font-size:0.82rem; font-weight:700;">Candidate Name (परीक्षार्थी का नाम) *</label>
@@ -5381,6 +5531,15 @@ window.openCentreEditCertModal = async function(certId, studentId) {
     e.preventDefault();
     const fd = new FormData(e.target);
     const payload = {
+      header_type: fd.get('header_type'),
+      header_title: fd.get('header_title'),
+      header_hindi: fd.get('header_hindi'),
+      header_subtitle: fd.get('header_subtitle'),
+      scheme: fd.get('scheme'),
+      centre_name: fd.get('centre_name'),
+      centre_name_hi: fd.get('centre_name_hi'),
+      council_address: fd.get('council_address'),
+      centre_address: fd.get('centre_address'),
       student_name: fd.get('student_name'),
       father_name: fd.get('father_name'),
       mother_name: fd.get('mother_name'),

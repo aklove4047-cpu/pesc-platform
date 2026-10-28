@@ -1,15 +1,36 @@
+window.handleCoordinatorLogout = async function(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  try {
+    await api('/api/auth/logout', { method: 'POST' });
+  } catch (_) {}
+  try {
+    localStorage.removeItem('pesc_coord_session');
+  } catch (_) {}
+  if (typeof toast === 'function') toast('Signed out successfully ✓');
+  setTimeout(() => {
+    window.location.href = '/login';
+  }, 200);
+};
+
+function bindCoordinatorLogoutButtons() {
+  ['btnCoordLogout', 'out', 'btnCoordLogoutTabs', 'btnCoordLogoutCard'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.onclick = window.handleCoordinatorLogout;
+  });
+}
+bindCoordinatorLogoutButtons();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindCoordinatorLogoutButtons);
+}
+
 guard(async () => {
+  bindCoordinatorLogoutButtons();
   const me = await needRole(['coordinator', 'super_admin', 'admin']);
   if (!me) return;
 
-  $('#who').textContent = me.user.name + ` (${me.user.role.toUpperCase()})`;
-  $('#out').onclick = (e) => {
-    e.preventDefault();
-    guard(async () => {
-      await api('/api/auth/logout', { method: 'POST' });
-      location = '/login';
-    });
-  };
+  const whoEl = $('#who');
+  if (whoEl) whoEl.textContent = me.user.name + ` (${me.user.role.toUpperCase()})`;
+  bindCoordinatorLogoutButtons();
 
   const tabsEl = $('#tabs');
   const viewEl = $('#view');
@@ -241,7 +262,10 @@ guard(async () => {
             <div style="text-align:right;">
               ${co.seal_url ? `<img src="${esc(co.seal_url)}" style="height:60px;opacity:0.9;" onerror="this.style.display='none'" title="Office Mohar">` : ''}
               ${co.signature_url ? `<img src="${esc(co.signature_url)}" style="height:40px;opacity:0.9;margin-top:6px;display:block;margin-left:auto;" onerror="this.style.display='none'" title="Signature">` : ''}
-              ${!co.seal_url && !co.signature_url ? `<button class="btn sm" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;" onclick="R_Profile()">⚙️ Setup Profile</button>` : ''}
+              <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+                <button type="button" class="btn sm" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;" onclick="const b=document.querySelector('[data-tab=\'Profile\']'); if(b) b.click();">⚙️ Profile</button>
+                <button type="button" id="btnCoordLogoutCard" class="btn sm danger" style="background:#dc2626; color:#fff; border:1px solid rgba(255,255,255,0.4); font-weight:700; border-radius:6px; padding:6px 14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(0,0,0,0.25);" onclick="window.handleCoordinatorLogout(event)">🚪 Logout</button>
+              </div>
             </div>
           </div>
         </div>
@@ -312,14 +336,19 @@ guard(async () => {
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
             <div>
-              <h2 style="margin:0 0 4px;">Centres Under Your Jurisdiction</h2>
-              <p class="muted">Total ${centres.length} franchise institutes assigned</p>
+              <h2 style="margin:0 0 4px;">Centres Under Your Jurisdiction (संबद्ध केंद्र)</h2>
+              <p class="muted">Total <b>${centres.length}</b> franchise institutes affiliated under your regional coordination</p>
+            </div>
+            <div>
+              <button type="button" class="btn gold" onclick="openGrantAffiliationModal()" style="display:inline-flex; align-items:center; gap:8px; font-weight:800; background:#0284c7; color:#fff; border-color:#0369a1; padding:9px 18px; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); font-size:0.92rem; cursor:pointer;">
+                ➕ Grant New Centre Affiliation (नया सेंटर संबद्ध करें)
+              </button>
             </div>
           </div>
 
           <div id="centreCards">
             ${centres.length === 0
-              ? `<div style="text-align:center;padding:48px;color:#94a3b8;"><div style="font-size:3rem;">🏫</div><p>No centres assigned to your account.</p></div>`
+              ? `<div style="text-align:center;padding:48px;color:#94a3b8;"><div style="font-size:3rem;">🏫</div><p>No centres assigned to your account yet.</p><button type="button" class="btn" onclick="openGrantAffiliationModal()" style="margin-top:10px; background:#0284c7; color:#fff; font-weight:700;">➕ Grant First Affiliation Now</button></div>`
               : centres.map(c => `
                 <div class="centre-card" style="border:1px solid #e2e8f0;border-radius:12px;margin-bottom:16px;overflow:hidden;transition:box-shadow 0.2s;" id="cc_${c.id}">
                   <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;cursor:pointer;background:#f8fafc;" onclick="toggleCentreDetail(${c.id})">
@@ -364,8 +393,21 @@ guard(async () => {
         const d = await api(`/api/coordinator/centres/${id}`);
         const c = d.centre;
         box.innerHTML = `
+          <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; background:#f1f5f9; padding:10px 14px; border-radius:8px; border:1px solid #cbd5e1; align-items:center;">
+            <b style="font-size:0.86rem; color:#0f172a; margin-right:4px;">Centre Actions:</b>
+            <button type="button" class="btn sm" onclick="openEditCentreModal(${c.id})" style="background:#0284c7; color:#fff; font-weight:700; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+              ✏️ Edit Centre Details (एडिट करें)
+            </button>
+            <button type="button" class="btn sm" onclick="navigator.clipboard.writeText('Centre ID: ${esc(c.centre_code)}\\nPassword: ${esc(c.login_password || 'Centre@123')}\\nPortal: https://${esc(c.slug)}.pescouncil.in/portal'); alert('✓ Centre Login Credentials copied to clipboard!');" style="background:#047857; color:#fff; font-weight:700; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+              📋 Copy Login ID &amp; Password
+            </button>
+            <a href="https://${esc(c.slug)}.pescouncil.in" target="_blank" class="btn sm alt" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:700;">
+              🌐 Visit Centre Portal ↗
+            </a>
+          </div>
+
           <div class="grid" style="margin-bottom:16px;">
-            <div class="stat" style="padding:12px;"><span>Director</span><b>${esc(c.owner_name || 'N/A')}</b><p class="muted">${esc(c.owner_email || '')} · ${esc(c.owner_mobile || '')}</p></div>
+            <div class="stat" style="padding:12px;"><span>Director</span><b>${esc(c.owner_name || c.director_name || 'N/A')}</b><p class="muted">${esc(c.owner_email || c.email || '')} · ${esc(c.owner_mobile || c.phone || '')}</p></div>
             <div class="stat" style="padding:12px;"><span>Address</span><b style="font-size:0.9rem;">${esc(c.address || 'N/A')}</b><p class="muted">PIN: ${esc(c.pin || 'N/A')}</p></div>
             <div class="stat" style="padding:12px;"><span>Assets</span>
               <div style="display:flex;gap:8px;margin-top:4px;">
@@ -449,6 +491,302 @@ guard(async () => {
           document.querySelectorAll('[id^="detail_"]').forEach(d => { d.dataset.loaded = ''; d.style.display = 'none'; });
           document.querySelectorAll('[id^="arrow_"]').forEach(a => a.textContent = '▼');
         });
+      };
+
+      // ─── GRANT NEW AFFILIATION MODAL (BY COORDINATOR) ──────────────────
+      window.openGrantAffiliationModal = () => {
+        const existing = document.getElementById('grantAffiliationModal');
+        if (existing) existing.remove();
+
+        const defaultState = (me && me.user && me.user.state) || 'Uttar Pradesh';
+
+        const modal = document.createElement('div');
+        modal.id = 'grantAffiliationModal';
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;';
+
+        modal.innerHTML = `
+          <div style="background:#fff; border-radius:14px; width:700px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px rgba(0,0,0,0.35);">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 24px; background:linear-gradient(135deg, #1e3a8a, #0284c7); color:#fff; border-bottom:3px solid #d4af37;">
+              <div>
+                <h3 style="margin:0; font-size:1.25rem; color:#fff;">➕ Grant New Centre Affiliation (नया सेंटर संबद्ध करें)</h3>
+                <p style="margin:4px 0 0; font-size:0.82rem; color:#e0f2fe;">Regional Coordinator Authorized Centre Provisioning</p>
+              </div>
+              <button type="button" onclick="document.getElementById('grantAffiliationModal').remove()" style="background:none; border:none; color:#fff; font-size:1.8rem; cursor:pointer; line-height:1;">✕</button>
+            </div>
+            <div style="padding:22px; overflow-y:auto; flex:1;" id="grantAffiliationBody">
+              <form id="coordAffiliationForm">
+                <div style="margin-bottom:14px;">
+                  <label class="label">Centre / Institute Name *</label>
+                  <input name="name" required placeholder="e.g. Purvanchal Skills Computer Academy" class="inp">
+                </div>
+                <div style="margin-bottom:14px;">
+                  <label class="label">Director / Owner Full Name *</label>
+                  <input name="director_name" required placeholder="e.g. Manoj Sharma" class="inp">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                  <div>
+                    <label class="label">Mobile Number * (10 Digits)</label>
+                    <input name="mobile" required maxlength="10" placeholder="9876543210" class="inp">
+                  </div>
+                  <div>
+                    <label class="label">Email Address (For ID &amp; Password) *</label>
+                    <input name="email" type="email" required placeholder="director@centre.in" class="inp">
+                  </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                  <div>
+                    <label class="label">State *</label>
+                    <input name="state" required value="${esc(defaultState)}" class="inp">
+                  </div>
+                  <div>
+                    <label class="label">District *</label>
+                    <input name="district" required placeholder="e.g. Varanasi" class="inp">
+                  </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                  <div>
+                    <label class="label">Subdomain Website Slug (Optional)</label>
+                    <input name="slug" placeholder="e.g. purvanchal-skills" class="inp">
+                    <span class="muted" style="font-size:0.75rem;">(Leave blank to auto-generate from centre name)</span>
+                  </div>
+                  <div>
+                    <label class="label">Initial Login Password</label>
+                    <input name="password" value="Centre@123" class="inp">
+                  </div>
+                </div>
+                <div style="margin-bottom:14px;">
+                  <label class="label">Full Physical Address *</label>
+                  <input name="address" required placeholder="Full street address of the institute" class="inp">
+                </div>
+                <div style="margin-bottom:16px; background:#f0f9ff; border:1.5px dashed #0284c7; border-radius:8px; padding:12px;">
+                  <label class="label" style="color:#0369a1; display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span>📸 Director Passport Photo (Optional)</span>
+                    <span style="font-size:0.72rem; color:#64748b; font-weight:normal;">Certificate me print hogi</span>
+                  </label>
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <div id="coordPhotoPreviewBox" style="width:64px; height:76px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; display:grid; place-items:center; overflow:hidden; flex-shrink:0;">
+                      <span style="font-size:0.7rem; color:#94a3b8;">No Photo</span>
+                    </div>
+                    <div style="flex:1;">
+                      <input type="file" id="coordDirectorPhotoFile" accept="image/*" style="font-size:0.82rem; width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px; background:#fff;">
+                      <input type="hidden" name="director_photo" id="coordDirectorPhotoBase64">
+                    </div>
+                  </div>
+                </div>
+                <button type="submit" id="btnSubmitAffiliation" style="width:100%; background:#0284c7; color:#fff; font-weight:800; font-size:1rem; padding:12px; border:none; border-radius:8px; cursor:pointer; box-shadow:0 2px 8px rgba(2,132,199,0.3);">
+                  ⚡ Grant Affiliation &amp; Issue Centre Credentials →
+                </button>
+              </form>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Bind Photo Upload
+        const photoFile = document.getElementById('coordDirectorPhotoFile');
+        const photoBase64 = document.getElementById('coordDirectorPhotoBase64');
+        const photoPreview = document.getElementById('coordPhotoPreviewBox');
+        if (photoFile) {
+          photoFile.onchange = async () => {
+            const f = photoFile.files[0];
+            if (!f) return;
+            if (f.size > 2 * 1024 * 1024) { alert('Photo size must be under 2MB'); return; }
+            const b64 = await imgToBase64(f);
+            if (photoBase64) photoBase64.value = b64;
+            if (photoPreview) photoPreview.innerHTML = `<img src="${b64}" style="width:100%; height:100%; object-fit:cover;">`;
+          };
+        }
+
+        // Form Submit
+        const formEl = document.getElementById('coordAffiliationForm');
+        formEl.onsubmit = async (e) => {
+          e.preventDefault();
+          const btn = document.getElementById('btnSubmitAffiliation');
+          btn.disabled = true;
+          btn.textContent = '⏳ Provisioning Centre & Granting Affiliation...';
+
+          const fd = new FormData(formEl);
+          const payload = Object.fromEntries(fd.entries());
+          if (photoBase64 && photoBase64.value) {
+            payload.director_photo = photoBase64.value;
+            payload.photo_url = photoBase64.value;
+          }
+
+          try {
+            const res = await api('/api/coordinator/centres', { method: 'POST', body: payload });
+            const c = res.centre || {};
+            const creds = res.credentials || {};
+
+            document.getElementById('grantAffiliationBody').innerHTML = `
+              <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:20px; text-align:center; margin-bottom:16px;">
+                <div style="font-size:2.6rem; margin-bottom:8px;">🎉</div>
+                <h3 style="color:#166534; margin:0 0 6px;">Affiliation Granted Successfully!</h3>
+                <p style="color:#15803d; font-size:0.9rem; margin:0 0 16px;">New centre has been officially affiliated under your regional coordination.</p>
+                <div style="background:#ffffff; border:1px solid #bbf7d0; border-radius:8px; padding:14px; text-align:left; font-size:0.9rem; margin-bottom:16px; line-height:1.6;">
+                  <div><b>Centre Name:</b> ${esc(c.name)}</div>
+                  <div><b>Centre Code:</b> <code style="font-weight:800; color:#064e3b; background:#f0fdf4; padding:2px 8px; border-radius:4px; border:1px solid #86efac;">${esc(c.centre_code)}</code></div>
+                  <div><b>Director Name:</b> ${esc(c.director_name)}</div>
+                  <div><b>Portal Website:</b> <a href="https://${esc(c.slug)}.pescouncil.in" target="_blank" style="color:#0284c7; font-weight:700;">https://${esc(c.slug)}.pescouncil.in ↗</a></div>
+                  <hr style="margin:10px 0; border:none; border-top:1px solid #e2e8f0;">
+                  <div style="color:#b91c1c;"><b>Login ID:</b> <code style="font-weight:800; color:#064e3b;">${esc(creds.login_id || c.centre_code)}</code></div>
+                  <div style="color:#b91c1c;"><b>Password:</b> <code style="font-weight:800; color:#b91c1c;">${esc(creds.password || 'Centre@123')}</code></div>
+                  <div style="font-size:0.78rem; color:#64748b; margin-top:4px;">Centre Director can login at https://${esc(c.slug)}.pescouncil.in/portal</div>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                  <button type="button" class="btn" style="background:#047857; color:#fff; font-weight:700;" onclick="navigator.clipboard.writeText('Centre ID: ${esc(creds.login_id || c.centre_code)}\\nPassword: ${esc(creds.password || 'Centre@123')}\\nPortal: https://${esc(c.slug)}.pescouncil.in/portal'); alert('✓ Credentials copied to clipboard!');">
+                    📋 Copy Login ID &amp; Password
+                  </button>
+                  <button type="button" class="btn alt" onclick="document.getElementById('grantAffiliationModal').remove(); R['Assigned Centres']();">
+                    ✓ Done &amp; Refresh List
+                  </button>
+                </div>
+              </div>
+            `;
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = '⚡ Grant Affiliation & Issue Centre Credentials →';
+            alert('✕ Error: ' + (err.message || 'Failed to grant affiliation'));
+          }
+        };
+      };
+
+      // ─── EDIT AFFILIATED CENTRE MODAL (BY COORDINATOR) ─────────────────
+      window.openEditCentreModal = async (centreId) => {
+        const existing = document.getElementById('editCentreModal');
+        if (existing) existing.remove();
+
+        let c;
+        try {
+          const res = await api(`/api/coordinator/centres/${centreId}`);
+          c = res.centre || {};
+        } catch (e) {
+          alert('Failed to load centre details: ' + e.message);
+          return;
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'editCentreModal';
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;';
+
+        modal.innerHTML = `
+          <div style="background:#fff; border-radius:14px; width:700px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px rgba(0,0,0,0.35);">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 24px; background:linear-gradient(135deg, #071a33, #0a2a5e); color:#fff; border-bottom:3px solid #d4af37;">
+              <div>
+                <h3 style="margin:0; font-size:1.25rem; color:#fde047;">✏️ Edit Affiliated Centre Details (एडिट करें)</h3>
+                <p style="margin:4px 0 0; font-size:0.82rem; color:#cbd5e1;">Centre: <b>${esc(c.name)}</b> (${esc(c.centre_code)})</p>
+              </div>
+              <button type="button" onclick="document.getElementById('editCentreModal').remove()" style="background:none; border:none; color:#fde047; font-size:1.8rem; cursor:pointer; line-height:1;">✕</button>
+            </div>
+            <div style="padding:22px; overflow-y:auto; flex:1;">
+              <form id="coordEditCentreForm">
+                <div style="margin-bottom:14px;">
+                  <label class="label">Centre / Institute Name *</label>
+                  <input name="name" required value="${esc(c.name || '')}" class="inp">
+                </div>
+                <div style="margin-bottom:14px;">
+                  <label class="label">Director / Owner Full Name *</label>
+                  <input name="director_name" required value="${esc(c.director_name || c.owner_name || '')}" class="inp">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                  <div>
+                    <label class="label">Mobile Number *</label>
+                    <input name="mobile" required maxlength="15" value="${esc(c.phone || c.owner_mobile || '')}" class="inp">
+                  </div>
+                  <div>
+                    <label class="label">Email Address *</label>
+                    <input name="email" type="email" required value="${esc(c.email || c.owner_email || '')}" class="inp">
+                  </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                  <div>
+                    <label class="label">State *</label>
+                    <input name="state" required value="${esc(c.state || 'Uttar Pradesh')}" class="inp">
+                  </div>
+                  <div>
+                    <label class="label">District *</label>
+                    <input name="district" required value="${esc(c.district || '')}" class="inp">
+                  </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                  <div>
+                    <label class="label">Full Physical Address *</label>
+                    <input name="address" required value="${esc(c.address || '')}" class="inp">
+                  </div>
+                  <div>
+                    <label class="label">PIN Code</label>
+                    <input name="pin" value="${esc(c.pin || '221001')}" class="inp">
+                  </div>
+                </div>
+                <div style="margin-bottom:16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                  <label class="label" style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span>📸 Director Passport Photo</span>
+                    <span style="font-size:0.72rem; color:#64748b; font-weight:normal;">Certificate photo</span>
+                  </label>
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <div id="editPhotoPreviewBox" style="width:64px; height:76px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; display:grid; place-items:center; overflow:hidden; flex-shrink:0;">
+                      ${c.director_photo || c.photo_url ? `<img src="${esc(c.director_photo || c.photo_url)}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:0.7rem; color:#94a3b8;">No Photo</span>'}
+                    </div>
+                    <div style="flex:1;">
+                      <input type="file" id="editDirectorPhotoFile" accept="image/*" style="font-size:0.82rem; width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px; background:#fff;">
+                      <input type="hidden" name="director_photo" id="editDirectorPhotoBase64" value="${c.director_photo || c.photo_url || ''}">
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                  <button type="button" class="btn alt" onclick="document.getElementById('editCentreModal').remove()">Cancel</button>
+                  <button type="submit" id="btnSubmitEditCentre" class="btn" style="background:#0284c7; color:#fff; font-weight:700;">
+                    💾 Save Centre Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const photoFile = document.getElementById('editDirectorPhotoFile');
+        const photoBase64 = document.getElementById('editDirectorPhotoBase64');
+        const photoPreview = document.getElementById('editPhotoPreviewBox');
+        if (photoFile) {
+          photoFile.onchange = async () => {
+            const f = photoFile.files[0];
+            if (!f) return;
+            if (f.size > 2 * 1024 * 1024) { alert('Photo size must be under 2MB'); return; }
+            const b64 = await imgToBase64(f);
+            if (photoBase64) photoBase64.value = b64;
+            if (photoPreview) photoPreview.innerHTML = `<img src="${b64}" style="width:100%; height:100%; object-fit:cover;">`;
+          };
+        }
+
+        const editForm = document.getElementById('coordEditCentreForm');
+        editForm.onsubmit = async (e) => {
+          e.preventDefault();
+          const btn = document.getElementById('btnSubmitEditCentre');
+          btn.disabled = true;
+          btn.textContent = '⏳ Saving...';
+
+          const fd = new FormData(editForm);
+          const payload = Object.fromEntries(fd.entries());
+          if (photoBase64 && photoBase64.value) {
+            payload.director_photo = photoBase64.value;
+            payload.photo_url = photoBase64.value;
+          }
+
+          try {
+            await api(`/api/coordinator/centres/${centreId}/edit`, { method: 'POST', body: payload });
+            toast('✅ Centre details updated successfully!');
+            document.getElementById('editCentreModal').remove();
+            R['Assigned Centres']();
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = '💾 Save Centre Changes';
+            alert('✕ Error: ' + (err.message || 'Failed to update centre'));
+          }
+        };
       };
     },
 
@@ -904,6 +1242,15 @@ guard(async () => {
             </div>
           </div>
 
+          <!-- Logout & Session Management -->
+          <div class="card" style="grid-column:1/-1; border:1.5px solid #fecaca; background:#fff5f5; border-radius:12px; padding:20px;">
+            <h3 style="margin:0 0 8px; color:#991b1b; display:flex; align-items:center; gap:8px;">🚪 Session &amp; Sign Out</h3>
+            <p class="muted" style="margin:0 0 14px; font-size:0.88rem; color:#7f1d1d;">Safely sign out from the Coordinator Workspace on this device.</p>
+            <button type="button" onclick="window.handleCoordinatorLogout(event)" class="btn danger" style="background:#dc2626; color:#ffffff; font-weight:700; border:none; border-radius:8px; padding:9px 20px; font-size:0.9rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 3px 10px rgba(220,38,38,0.3);">
+              🚪 Logout from Coordinator Panel
+            </button>
+          </div>
+
         </div>
       `;
 
@@ -994,4 +1341,14 @@ guard(async () => {
   };
 
   tabs(tabsEl, Object.keys(R), (k) => R[k]());
+
+  // Dedicated prominent Logout button on the right edge of tabs
+  const logoutTabBtn = document.createElement('button');
+  logoutTabBtn.id = 'btnCoordLogoutTabs';
+  logoutTabBtn.type = 'button';
+  logoutTabBtn.style.cssText = 'margin-left:auto; background:#dc2626; color:#ffffff !important; border:1px solid rgba(255,255,255,0.3); font-weight:700; cursor:pointer; padding:8px 18px; border-radius:9px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(220,38,38,0.35);';
+  logoutTabBtn.innerHTML = '🚪 Logout';
+  logoutTabBtn.title = 'Sign Out of Coordinator Workspace';
+  logoutTabBtn.onclick = window.handleCoordinatorLogout;
+  tabsEl.appendChild(logoutTabBtn);
 });

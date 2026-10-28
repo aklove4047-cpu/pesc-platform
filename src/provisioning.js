@@ -32,9 +32,10 @@ const STEPS = [
     if (resolveSlug(a.slug)) throw new Error('Slug already taken');
     const owner = db.prepare('SELECT id FROM users WHERE email=?').get(a.email.toLowerCase());
     const code = nextCentreCode();
-    // Auto-assign coordinator (matching state or first active coordinator)
-    const coord = db.prepare("SELECT id FROM users WHERE role='coordinator' AND (state=? OR status='active') ORDER BY id ASC LIMIT 1").get(a.state);
-    const coordId = coord ? coord.id : null;
+    // Auto-assign coordinator (applicant choice, matching state, or first active coordinator)
+    const specificCoord = a.coordinator_id ? db.prepare("SELECT id FROM users WHERE id=? AND role='coordinator'").get(a.coordinator_id) : null;
+    const fallbackCoord = db.prepare("SELECT id FROM users WHERE role='coordinator' AND (state=? OR status='active') ORDER BY id ASC LIMIT 1").get(a.state);
+    const coordId = specificCoord ? specificCoord.id : (fallbackCoord ? fallbackCoord.id : null);
     const certNo = `PESC/ATC/2026/${code}`;
     const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
     const r = db.prepare(`INSERT INTO centres(centre_code,name,slug,owner_user_id,coordinator_id,state,district,address,pin,director_name,director_photo,phone,email,affiliation_cert_no,affiliation_issue_date,affiliation_valid_thru,affiliation_session,status,created_at)

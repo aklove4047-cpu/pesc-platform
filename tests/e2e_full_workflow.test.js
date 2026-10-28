@@ -401,3 +401,139 @@ test('8. Student logs in with Student@123, views profile, admission form, I-card
   assert.equal(idCard.status, 200);
   assert.ok(idCard.json.id_card);
 });
+
+test('9. Head Office can delete a coordinator and records are cleaned up cleanly', async () => {
+  // Create a temporary coordinator to delete
+  const tempEmail = `tempcoord-${Date.now()}@pesc.test`;
+  const addRes = await call('POST', '/api/admin/coordinators', {
+    cookie: hoCookie,
+    body: {
+      name: 'Temp Coordinator To Delete',
+      email: tempEmail,
+      mobile: '9111222333',
+      state: 'Bihar'
+    }
+  });
+  assert.equal(addRes.status, 201);
+  const tempCoordId = addRes.json.id;
+
+  // Confirm it exists in list
+  const listRes = await call('GET', '/api/admin/coordinators', { cookie: hoCookie });
+  assert.equal(listRes.status, 200);
+  assert.ok(listRes.json.coordinators.some(c => c.id === tempCoordId));
+
+  // Delete coordinator
+  const delRes = await call('DELETE', `/api/admin/coordinators/${tempCoordId}`, { cookie: hoCookie });
+  assert.equal(delRes.status, 200);
+  assert.equal(delRes.json.ok, true);
+
+  // Check it is no longer in list
+  const listAfter = await call('GET', '/api/admin/coordinators', { cookie: hoCookie });
+  assert.equal(listAfter.status, 200);
+  assert.ok(!listAfter.json.coordinators.some(c => c.id === tempCoordId));
+
+  // Check certificate endpoint returns 404
+  const certRes = await call('GET', `/api/admin/coordinators/${tempCoordId}/cert`, { cookie: hoCookie });
+  assert.equal(certRes.status, 404);
+});
+
+test('10. Coordinator grants affiliation, edits centre, public applies under coordinator, and HO views coordinator affiliations', async () => {
+  const coordAffilEmail = `varanasi_${Date.now()}@pescouncil.test`;
+  
+  // 1. Coordinator grants new centre affiliation directly from coordinator portal
+  const grantRes = await call('POST', '/api/coordinator/centres', {
+    cookie: coordCookie,
+    body: {
+      name: 'Varanasi Computer Institute',
+      director_name: 'Ramesh Gupta',
+      mobile: '9839012345',
+      email: coordAffilEmail,
+      state: 'Uttar Pradesh',
+      district: 'Varanasi',
+      address: 'Sigra, Varanasi',
+      pin: '221002',
+      password: 'Centre@999'
+    }
+  });
+  assert.equal(grantRes.status, 201);
+  assert.equal(grantRes.json.ok, true);
+  assert.ok(grantRes.json.credentials.login_id);
+  assert.equal(grantRes.json.credentials.password, 'Centre@999');
+  const coordCentreId = grantRes.json.centre.id;
+  assert.ok(coordCentreId);
+
+  // Verify in database that coordinator_id is set
+  const dbCentre = db.prepare('SELECT * FROM centres WHERE id=?').get(coordCentreId);
+  assert.equal(dbCentre.coordinator_id, coordId, 'Centre is affiliated under this coordinator');
+
+  // 2. Coordinator edits the centre details
+  const editRes = await call('POST', `/api/coordinator/centres/${coordCentreId}/edit`, {
+    cookie: coordCookie,
+    body: {
+      name: 'Varanasi Advanced Computer Institute',
+      director_name: 'Ramesh Kumar Gupta',
+      mobile: '9839054321',
+      state: 'Uttar Pradesh',
+      district: 'Varanasi',
+      address: 'Rathyatra, Sigra, Varanasi',
+      pin: '221010'
+    }
+  });
+  assert.equal(editRes.status, 200);
+  assert.equal(editRes.json.ok, true);
+  assert.equal(editRes.json.centre.name, 'Varanasi Advanced Computer Institute');
+
+  const dbCentreUpdated = db.prepare('SELECT * FROM centres WHERE id=?').get(coordCentreId);
+  assert.equal(dbCentreUpdated.name, 'Varanasi Advanced Computer Institute');
+  assert.equal(dbCentreUpdated.director_name, 'Ramesh Kumar Gupta');
+  assert.equal(dbCentreUpdated.phone, '9839054321');
+
+  // 3. Public applies for franchise with specific coordinator chosen in the form
+  const publicSlug = `public-applied-${Date.now()}`;
+  const publicApply = await call('POST', '/api/public/apply', {
+    body: {
+      centre_name: 'Gorakhpur Digital Hub',
+      owner_name: 'Suresh Verma',
+      mobile: '9450098765',
+      email: `suresh_${Date.now()}@pescouncil.test`,
+      address: 'Golghar, Gorakhpur',
+      state: 'Uttar Pradesh',
+      district: 'Gorakhpur',
+      pin: '273001',
+      slug: publicSlug,
+      coordinator_id: coordId,
+      terms: 'on',
+      declaration: 'on'
+    }
+  });
+  assert.equal(publicApply.status, 201);
+  assert.equal(publicApply.json.coordinator_id, coordId);
+  const publicAppId = publicApply.json.id;
+
+  // Head Office approves application
+  const approvePubRes = await call('POST', `/api/admin/applications/${publicAppId}/decision`, {
+    cookie: hoCookie,
+    body: { decision: 'Approved' }
+  });
+  assert.equal(approvePubRes.status, 200);
+
+  const pubCentre = db.prepare('SELECT * FROM centres WHERE slug=?').get(publicSlug);
+  assert.ok(pubCentre);
+  assert.equal(pubCentre.coordinator_id, coordId, 'Provisioned centre has chosen coordinator assigned');
+
+  // 4. Head Office checks coordinator affiliations ("Dekhna hai ki kya s coordinator ne kitna affiliation kiya aur uska ye ye centre hai")
+  const hoCoordsRes = await call('GET', '/api/admin/coordinators', { cookie: hoCookie });
+  assert.equal(hoCoordsRes.status, 200);
+  const matchedCoord = hoCoordsRes.json.coordinators.find(c => c.id === coordId);
+  assert.ok(matchedCoord, 'Coordinator found in HO list');
+  assert.ok(matchedCoord.centres_count >= 2, 'HO can see coordinator has 2+ centres affiliated');
+  assert.ok(matchedCoord.centres.some(c => c.name === 'Varanasi Advanced Computer Institute'), 'HO can see Varanasi institute under this coordinator');
+  assert.ok(matchedCoord.centres.some(c => c.name === 'Gorakhpur Digital Hub'), 'HO can see Gorakhpur hub under this coordinator');
+
+  // Check coordinator-specific centres list endpoint
+  const hoCoordCentres = await call('GET', `/api/admin/coordinators/${coordId}/centres`, { cookie: hoCookie });
+  assert.equal(hoCoordCentres.status, 200);
+  assert.ok(hoCoordCentres.json.centres.length >= 2);
+});
+
+

@@ -91,8 +91,8 @@ function renderOfficialCouncilHeader(opts = {}) {
 
 // Global Council Authorities Loader for Head Office Admin Console
 window._councilAuthorities = null;
-window.ensureAuthoritiesLoaded = async function() {
-  if (!window._councilAuthorities || !window._councilAuthorities.head_office || !window._councilAuthorities.head_office.seal_url) {
+window.ensureAuthoritiesLoaded = async function(force = false) {
+  if (force || !window._councilAuthorities || !window._councilAuthorities.head_office || !window._councilAuthorities.head_office.seal_url) {
     try {
       const res = await api('/api/admin/authorities');
       if (res && res.authorities) {
@@ -102,6 +102,10 @@ window.ensureAuthoritiesLoaded = async function() {
       try {
         const pub = await api('/api/public/authorities');
         if (pub && pub.authorities) window._councilAuthorities = pub.authorities;
+        else {
+          const s = await api('/api/public/settings');
+          if (s && s.authorities) window._councilAuthorities = s.authorities;
+        }
       } catch (e) {}
     }
   }
@@ -321,6 +325,24 @@ function renderOfficialCouncilFooter(opts = {}) {
     </div>
   `;
 }
+
+// Platform Data Wipe Handler
+window.handleResetPlatformData = async function() {
+  const conf = confirm('⚠️ WARNING: Are you sure you want to delete ALL franchises, ALL students, and ALL coordinators?\\n\\nThis will wipe all test/demo data completely clean so you can add everything fresh.\\n\\nOnly the Super Admin login and Council settings will be retained.\\n\\nClick OK to confirm data wipe.');
+  if (!conf) return;
+  const conf2 = prompt('Type "RESET" to confirm permanent wipe:');
+  if (conf2 !== 'RESET') {
+    toast('Wipe cancelled', false);
+    return;
+  }
+  try {
+    const res = await api('/api/admin/reset-platform-data', { method: 'POST' });
+    alert('✅ ' + (res.message || 'All franchises, students, and coordinators have been wiped completely!'));
+    window.location.reload();
+  } catch (err) {
+    alert('Error: ' + (err.message || err));
+  }
+};
 
 const views = {
   async Dashboard() {
@@ -608,6 +630,7 @@ const views = {
           method: 'POST',
           body: { photo_url, logo_url, seal_url, signature_url, chairman_signature_url }
         });
+        await window.ensureAuthoritiesLoaded(true);
         toast('✅ Photo, Logo, Seals & Signatures saved successfully!');
       });
       btn.disabled = false;
@@ -651,6 +674,7 @@ const views = {
         </div>
       `],
       ['Centre & Portal Website', (r) => `<b>${esc(r.centre_name)}</b><br><a href="https://${r.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management' : esc(r.slug)}.pescouncil.in" target="_blank" style="color:#047857; font-weight:700; text-decoration:none;">${r.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management' : esc(r.slug)}.pescouncil.in ↗</a> · <span class="muted">${esc(r.district)}</span>`],
+      ['Regional Coordinator', (r) => r.coordinator_name ? `<b style="color:#0284c7;">👔 ${esc(r.coordinator_name)}</b>` : `<span class="muted">Direct Head Office</span>`],
       ['Status', (r) => badge(r.status)],
       ['Provisioning Status', (r) => r.job_id ? `${badge(r.job_status)}${r.job_error ? `<br><span class="muted">${esc(r.job_error)}</span>` : ''}<br>` + (r.log || []).map((l) => `<span class="muted">${l.ok ? '✓' : '✗'} ${esc(l.step)}: ${esc(l.detail)}</span>`).join('<br>') : '—'],
       ['Actions', (r) => `
@@ -678,6 +702,9 @@ const views = {
           <h2>Affiliated Centres Management</h2>
           <p class="muted">Manage accredited computer centres, assign vocational courses, and appoint regional coordinators</p>
         </div>
+        <div>
+          <button class="btn sm danger" onclick="handleResetPlatformData()" style="font-weight:800; background:#dc2626; color:#fff; border-radius:6px; padding:8px 16px;" title="Wipe all centres, students, and coordinators clean">🗑️ Reset All Franchises, Students &amp; Coordinators</button>
+        </div>
       </div>
       ${table([
         ['Code', (r) => `<b style="font-family:monospace; color:var(--navy);">${esc(r.centre_code)}</b>`],
@@ -702,6 +729,7 @@ const views = {
           return `<a href="https://${pSub}" target="_blank" style="color:#047857; font-family:monospace; font-weight:700; text-decoration:none;">${pSub} ↗</a>`;
         }],
         ['Location', (r) => `${esc(r.district)}, ${esc(r.state)}`],
+        ['Regional Coordinator', (r) => r.coordinator_name ? `<b style="color:#0284c7; font-size:0.85rem;">👔 ${esc(r.coordinator_name)}</b>` : `<span class="muted" style="font-size:0.82rem;">Direct Head Office</span>`],
         ['Students', (r) => `<button class="btn sm" data-a="view_centre_students" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff;" title="Manage this centre's students">👥 ${r.students} Students</button>`],
         ['Status', (r) => r.status === 'terminated' ? '<span class="badge" style="background:#fee2e2; color:#991b1b; font-weight:800; border:1px solid #f87171;">🔴 TERMINATED</span>' : badge(r.status)],
         ['Actions', (r) => `
@@ -728,6 +756,13 @@ const views = {
         <div><label>State *</label><input name="state" required value="Uttar Pradesh"></div>
         <div><label>District *</label><input name="district" required placeholder="e.g. Lucknow"></div>
         <div><label>Portal Website Name (e.g. yourname.pescouncil.in) *</label><input name="slug" required placeholder="e.g. modernskill"></div>
+        <div>
+          <label>Regional Coordinator</label>
+          <select name="coordinator_id" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; background:#fff;">
+            <option value="">-- Direct Council Head Office --</option>
+            ${coordinators.map(c => `<option value="${c.id}">👔 ${esc(c.name)} (${esc(c.state || '')})</option>`).join('')}
+          </select>
+        </div>
         <div><label>Initial Wallet Credit (₹)</label><input name="initial_credit_rupees" type="number" min="0" value="10000"></div>
         <div><label>Temporary Password</label><input name="password" value="Centre@12345"></div>
         <div style="align-self:end;"><button class="btn gold">⚡ Create &amp; Activate Centre</button></div>
@@ -998,6 +1033,7 @@ const views = {
 
   async Coordinators() {
     const { coordinators } = await api('/api/admin/coordinators');
+    V._coords = coordinators;
     V.innerHTML = `
       <h2>Regional Coordinators &amp; State Appointments</h2>
       <p class="muted" style="margin-bottom:16px;">Appoint regional coordinators, record full residential &amp; jurisdiction credentials, issue official appointment certificates, and monitor territorial accreditations</p>
@@ -1017,13 +1053,28 @@ const views = {
             <span class="muted">${esc(r.district || '')}${r.district ? ', ' : ''}${esc(r.state || 'Uttar Pradesh')} - ${esc(r.pin || '221001')}</span>
           </div>
         `],
-        ['Aadhaar &amp; Qualification', (r) => `
+        ['Qualification & Jurisdiction', (r) => `
           <div style="font-size:0.86rem;">
             <b style="color:#0a2a5e;">${esc(r.qualification || 'Post Graduate')}</b><br>
-            <span class="muted" style="font-family:monospace;">ID: ${esc(r.aadhar_no || 'Verified')}</span>
+            <span class="muted">${esc(r.territory || r.state || 'All State')}</span>
           </div>
         `],
         ['Assigned Jurisdiction', (r) => `<b style="color:#b45309;">${esc(r.territory || r.state || 'All State')}</b>`],
+        ['Affiliated Centres', (r) => {
+          const cnt = r.centres_count !== undefined ? r.centres_count : (r.centres ? r.centres.length : 0);
+          return `
+            <div style="text-align:center;">
+              <span class="badge ${cnt > 0 ? 'blue' : ''}" style="font-weight:800; font-size:0.85rem; padding:3px 8px;">
+                ${cnt} ${cnt === 1 ? 'Centre' : 'Centres'}
+              </span>
+              <div style="margin-top:6px;">
+                <button type="button" class="btn sm" data-a="view_coord_centres" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff; font-weight:700; font-size:0.75rem; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;" title="Click to view all centres affiliated under this coordinator">
+                  🏢 View Centres (${cnt})
+                </button>
+              </div>
+            </div>
+          `;
+        }],
         ['Certificate No', (r) => `<span style="font-family:monospace; font-weight:700; color:#064e3b;">${esc(r.cert_no || 'Issued')}</span>`],
         ['Credentials (ID & Pass)', (r) => `
           <div style="font-size:0.84rem; line-height:1.4;">
@@ -1039,12 +1090,13 @@ const views = {
               📜 View Certificate
             </button>
             <button class="btn sm" data-a="view_coord_creds" data-id="${r.id}" data-name="${esc(r.name)}" data-email="${esc(r.email)}" data-mobile="${esc(r.mobile || '')}" data-pass="${esc(r.password || r.password_plain || 'Coord@123')}" style="background:#047857; color:#fff; font-weight:700;" title="View &amp; Manage Login Credentials">🔑 ID &amp; Pass</button>
+            <button type="button" class="btn sm danger" data-a="del_coord" data-id="${r.id}" data-name="${esc(r.name)}" title="Delete Coordinator" style="display:inline-flex; align-items:center; gap:4px; font-weight:700; background:#dc2626; color:#fff;">🗑️ Delete</button>
           </div>
         `],
       ], coordinators)}
 
       <h3 style="margin-top:28px; color:#0a2a5e;">➕ Appoint New Regional Coordinator (Full Details Required)</h3>
-      <p class="muted" style="margin-bottom:14px;">All details including full street address, district, state, PIN, mobile, Aadhaar and qualification are required for statutory appointment credentials.</p>
+      <p class="muted" style="margin-bottom:14px;">All details including full street address, district, state, PIN, mobile, passport photo and qualification are required for statutory appointment credentials.</p>
       
       <form id="kf" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:22px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-bottom:14px;">
@@ -1060,8 +1112,20 @@ const views = {
           <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">PIN Code *</label><input name="pin" required maxlength="10" placeholder="273001" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr 2fr; gap:14px; margin-bottom:18px;">
-          <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Aadhaar / National ID No. *</label><input name="aadhar_no" required placeholder="XXXX-XXXX-XXXX" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+        <!-- Coordinator Passport Photo Upload -->
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px; background:#f8fafc; padding:12px; border-radius:8px; border:1px dashed #cbd5e1;">
+          <div id="coordPhotoPreviewBox" style="width:64px; height:80px; border-radius:6px; background:#ffffff; border:2px solid #0284c7; display:grid; place-items:center; overflow:hidden; flex-shrink:0;">
+            <span style="font-size:1.8rem;">👔</span>
+          </div>
+          <div>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Coordinator Passport Photo (पासपोर्ट फोटो)</label>
+            <span class="muted" style="font-size:0.78rem; display:block; margin-bottom:6px;">Upload official passport photo for appointment certificate and regional identity credentials.</span>
+            <input type="file" id="coordPhotoFileInput" accept="image/*" style="font-size:0.82rem; border:1px solid #cbd5e1; border-radius:6px; padding:4px 8px; background:#fff;">
+            <input type="hidden" name="photo_url" id="coordPhotoUrlInput" value="">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 2fr; gap:14px; margin-bottom:18px;">
           <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Highest Qualification *</label><input name="qualification" required placeholder="e.g. MCA / M.Tech / B.Ed" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
           <div><label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Assigned Jurisdiction / Territory Details *</label><input name="territory" required placeholder="e.g. Eastern UP Zone (Gorakhpur, Varanasi, Azamgarh, Mau)" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
         </div>
@@ -1073,6 +1137,23 @@ const views = {
         </div>
       </form>
     `;
+
+    const coordFileInput = document.getElementById('coordPhotoFileInput');
+    if (coordFileInput) {
+      coordFileInput.onchange = () => {
+        const file = coordFileInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const b64 = ev.target.result;
+          const urlInput = document.getElementById('coordPhotoUrlInput');
+          const previewBox = document.getElementById('coordPhotoPreviewBox');
+          if (urlInput) urlInput.value = b64;
+          if (previewBox) previewBox.innerHTML = `<img src="${b64}" style="width:100%; height:100%; object-fit:cover;">`;
+        };
+        reader.readAsDataURL(file);
+      };
+    }
   },
 
   async Website_CMS() {
@@ -2521,8 +2602,9 @@ V.addEventListener('click', (e) => {
               <div><b>Login Password:</b><br><code style="font-size:1rem; color:#b91c1c; font-weight:800; background:#fef2f2; padding:3px 8px; border-radius:4px; border:1px solid #fecaca; display:inline-block; margin-top:3px;">${esc(d.pass || 'Coord@123')}</code></div>
               <div style="grid-column:span 2;"><b>Coordinator Portal:</b><br><a href="https://pescouncil.in/coordinator" target="_blank" style="color:#0284c7; font-weight:700;">https://pescouncil.in/coordinator ↗</a></div>
             </div>
-            <div style="margin-top:14px;">
+            <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
               <button type="button" class="btn sm" id="btnCopyCoordCreds" style="background:#16a34a; color:#fff; font-weight:700;">📋 Copy for WhatsApp / SMS</button>
+              <button type="button" class="btn sm danger" id="btnModalDelCoord" style="background:#dc2626; color:#fff; font-weight:700;">🗑️ Delete Coordinator</button>
             </div>
           </div>
 
@@ -2545,6 +2627,17 @@ V.addEventListener('click', (e) => {
           navigator.clipboard.writeText(shareText).then(() => {
             toast('Credentials copied! Ready to paste on WhatsApp/SMS.');
           });
+        };
+      }
+
+      const btnModalDel = document.getElementById('btnModalDelCoord');
+      if (btnModalDel) {
+        btnModalDel.onclick = async () => {
+          if (!confirm(`⚠️ WARNING: क्या आप सच में रीजनल कोऑर्डिनेटर '${d.name}' को डिलीट (Delete) करना चाहते हैं?\n\n- कोऑर्डिनेटर का खाता और पोर्टल लॉगिन तुरंत समाप्त हो जाएगा।\n- आवंटित केंद्रों से यह कोऑर्डिनेटर हट जाएगा।\n\nClick OK to confirm deletion.`)) return;
+          await api(`/api/admin/coordinators/${id}`, { method: 'DELETE' });
+          toast(`✓ Regional Coordinator '${d.name}' deleted successfully!`);
+          document.getElementById('adminModalOverlay').style.display = 'none';
+          await views.Coordinators();
         };
       }
 
@@ -2701,9 +2794,31 @@ V.addEventListener('click', (e) => {
       if (!confirm('Are you sure you want to permanently delete this announcement?')) return;
       await api(`/api/admin/notices/${id}`, { method: 'DELETE' });
       toast('Notice deleted!');
+    } else if (a === 'view_coord_centres') {
+      const coordName = b.dataset.name || 'Regional Coordinator';
+      const coordId = +id;
+      const coord = (V._coords || []).find(x => x.id === coordId);
+      let centres = coord && coord.centres ? coord.centres : null;
+      if (!centres) {
+        try {
+          const res = await api(`/api/admin/coordinators/${coordId}/centres`);
+          centres = res.centres || [];
+        } catch (_) {
+          centres = [];
+        }
+      }
+      showCoordinatorCentresModal(coordName, centres);
+      return;
     } else if (a === 'view_coord_cert') {
       const { certificate } = await api(`/api/admin/coordinators/${id}/cert`);
       showAdminCoordCertModal(certificate);
+      return;
+    } else if (a === 'del_coord') {
+      const cName = b.dataset.name || 'this coordinator';
+      if (!confirm(`⚠️ WARNING: क्या आप सच में रीजनल कोऑर्डिनेटर '${cName}' को डिलीट (Delete) करना चाहते हैं?\n\n- कोऑर्डिनेटर का खाता और पोर्टल लॉगिन तुरंत समाप्त हो जाएगा।\n- आवंटित केंद्रों से यह कोऑर्डिनेटर हट जाएगा।\n\nClick OK to confirm deletion.`)) return;
+      await api(`/api/admin/coordinators/${id}`, { method: 'DELETE' });
+      toast(`✓ Regional Coordinator '${cName}' deleted successfully!`);
+      await views.Coordinators();
       return;
     } else if (a === 'view_official_mrk') {
       let mrk = (window._adminMarksheets || []).find(x => x.id === +id);
@@ -2751,6 +2866,95 @@ function showAdminCoordCertModal(cert) {
       </div>
     </div>
   `;
+  document.body.appendChild(modal);
+}
+
+function showCoordinatorCentresModal(coordName, centres) {
+  const existing = document.getElementById('coordCentresModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'coordCentresModal';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;';
+
+  const rowsHtml = (!centres || centres.length === 0) ? `
+    <div style="text-align:center; padding:44px 20px; color:#64748b;">
+      <div style="font-size:3.2rem; margin-bottom:10px;">🏫</div>
+      <h3 style="font-size:1.15rem; margin:0 0 6px; color:#1e293b;">इस रीजनल कोऑर्डिनेटर के अंतर्गत कोई सेंटर संबद्ध नहीं है</h3>
+      <p style="font-size:0.86rem; margin:0; color:#64748b;">No centres are currently affiliated under ${esc(coordName)}.</p>
+    </div>
+  ` : `
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:0.88rem; text-align:left;">
+        <thead>
+          <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1; color:#1e293b;">
+            <th style="padding:11px 14px;">Centre Code</th>
+            <th style="padding:11px 14px;">Centre / Institute Name</th>
+            <th style="padding:11px 14px;">Director &amp; Contacts</th>
+            <th style="padding:11px 14px;">District / State</th>
+            <th style="padding:11px 14px;">Affiliation Cert No</th>
+            <th style="padding:11px 14px; text-align:center;">Status</th>
+            <th style="padding:11px 14px; text-align:center;">Live Portal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${centres.map(c => `
+            <tr style="border-bottom:1px solid #e2e8f0; transition:background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+              <td style="padding:11px 14px; white-space:nowrap;">
+                <code style="font-weight:800; color:#064e3b; background:#f0fdf4; padding:3px 8px; border-radius:4px; border:1px solid #bbf7d0; font-size:0.9rem;">${esc(c.centre_code)}</code>
+              </td>
+              <td style="padding:11px 14px;">
+                <b style="color:#0f172a; font-size:0.95rem;">${esc(c.name)}</b>
+                ${c.address ? `<div class="muted" style="font-size:0.78rem; margin-top:2px;">📍 ${esc(c.address)}</div>` : ''}
+              </td>
+              <td style="padding:11px 14px;">
+                <div style="font-weight:700; color:#0a2a5e;">${esc(c.director_name || 'Centre Director')}</div>
+                <div class="muted" style="font-size:0.78rem; line-height:1.4;">
+                  📞 ${esc(c.phone || c.mobile || '—')}<br>
+                  ✉️ ${esc(c.email || '—')}
+                </div>
+              </td>
+              <td style="padding:11px 14px; white-space:nowrap;">
+                <b>${esc(c.district || '')}</b><br>
+                <span class="muted" style="font-size:0.8rem;">${esc(c.state || 'Uttar Pradesh')}</span>
+              </td>
+              <td style="padding:11px 14px; font-family:monospace; font-weight:700; color:#0369a1; font-size:0.84rem; white-space:nowrap;">
+                ${esc(c.affiliation_cert_no || ('PESC/ATC/2026/' + c.centre_code))}
+              </td>
+              <td style="padding:11px 14px; text-align:center; white-space:nowrap;">
+                <span class="badge ${c.status === 'active' ? 'Valid' : 'Pending'}">${esc(c.status || 'Active')}</span>
+              </td>
+              <td style="padding:11px 14px; text-align:center; white-space:nowrap;">
+                <a href="https://${c.slug}.pescouncil.in" target="_blank" style="color:#0284c7; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:3px;">
+                  ${esc(c.slug)} ↗
+                </a>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  modal.innerHTML = `
+    <div style="background:#fff; border-radius:14px; width:1000px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.35);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 24px; background:linear-gradient(135deg, #071a33, #0a2a5e); color:#fff; border-bottom:3px solid #d4af37;">
+        <div>
+          <h3 style="margin:0; font-size:1.25rem; color:#fde047;">🏢 Affiliated Centres – Regional Coordinator: ${esc(coordName)}</h3>
+          <p style="margin:4px 0 0; font-size:0.85rem; color:#cbd5e1;">Total <b>${(centres || []).length}</b> affiliated institute centre${(centres || []).length === 1 ? '' : 's'} under this coordinator's jurisdiction</p>
+        </div>
+        <button type="button" onclick="document.getElementById('coordCentresModal').remove()" style="background:none; border:none; color:#fde047; font-size:1.8rem; cursor:pointer; line-height:1; padding:0 6px;">✕</button>
+      </div>
+      <div style="padding:22px; overflow-y:auto; flex:1;">
+        ${rowsHtml}
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 22px; background:#f8fafc; border-top:1px solid #e2e8f0;">
+        <span class="muted" style="font-size:0.82rem;">Council Head Office Master Jurisdiction Control</span>
+        <button type="button" class="btn alt" onclick="document.getElementById('coordCentresModal').remove()">Close</button>
+      </div>
+    </div>
+  `;
+
   document.body.appendChild(modal);
 }
 
@@ -3223,7 +3427,7 @@ async function showAdminOfficialMarksheetModal(mrk) {
   const existing = document.getElementById('officialMarksheetModal');
   if (existing) existing.remove();
 
-  await window.ensureAuthoritiesLoaded();
+  await window.ensureAuthoritiesLoaded(true);
 
   let m = mrk;
   if (!m.subjects || !m.student_name) {
@@ -3403,7 +3607,7 @@ async function showAdminOfficialCertModal(cert) {
   const existing = document.getElementById('officialCertModal');
   if (existing) existing.remove();
 
-  await window.ensureAuthoritiesLoaded();
+  await window.ensureAuthoritiesLoaded(true);
 
   let c = cert;
   if (!c.student_name || !c.course_name) {
@@ -3551,6 +3755,58 @@ window.openAdminEditMarksheetModal = async function(marksheetId) {
       </div>
 
       <form id="adminEditMrkForm">
+        <!-- Header & Authority Customization Box -->
+        <div style="background:#f8fafc; border:1.5px solid #0284c7; border-radius:10px; padding:14px; margin-bottom:16px;">
+          <h4 style="margin:0 0 10px; color:#072a60; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+            🏛️ Authority Header &amp; Scheme Settings (शीर्षक व योजना चयन)
+          </h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Header Authority (शीर्षक किसके नाम से रहेगा) *</label>
+              <select name="header_type" id="adminMrkHeaderType" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                <option value="council" ${mrk.header_type !== 'centre' ? 'selected' : ''}>Council Header (परिषद के नाम से - Purvanchal Education &amp; Skill Council)</option>
+                <option value="centre" ${mrk.header_type === 'centre' ? 'selected' : ''}>Centre Header (सेंटर / संस्थान के नाम से)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Examination Scheme (परीक्षा योजना / प्रकार) *</label>
+              <select name="scheme" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                <option value="annual" ${mrk.scheme === 'annual' || (!mrk.scheme && mrk.evaluation_type !== 'semester') ? 'selected' : ''}>Annual Scheme (Singhal / वार्षिक)</option>
+                <option value="single_semester" ${mrk.scheme === 'single_semester' || (!mrk.scheme && mrk.evaluation_type === 'semester') ? 'selected' : ''}>Single Semester (एकल सेमेस्टर)</option>
+                <option value="double_semester" ${mrk.scheme === 'double_semester' ? 'selected' : ''}>Double Semester (दोहरा सेमेस्टर)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Main Header Title (मुख्य नाम) *</label>
+              <input name="header_title" id="adminMrkHeaderTitle" value="${esc(mrk.header_title || 'Purvanchal Education & Skill Council')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Hindi Header Title (हिंदी नाम) *</label>
+              <input name="header_hindi" id="adminMrkHeaderHindi" value="${esc(mrk.header_hindi || 'पूर्वांचल एजुकेशन एंड स्किल काउंसिल')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+            </div>
+            <div style="grid-column:1 / -1;">
+              <label style="font-size:0.82rem; font-weight:700;">Subtitle / Authority Subheading</label>
+              <input name="header_subtitle" id="adminMrkHeaderSubtitle" value="${esc(mrk.header_subtitle || 'An Autonomous Body Established Under The Aegis Of Govt. Act / Registered Under Section 8 Of MCA, Govt. Of India')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre English Name (संस्थान का नाम - English)</label>
+              <input name="centre_name" value="${esc(mrk.centre_name || '')}" placeholder="e.g. Aryavart Institute of Technology" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre Hindi Name (संस्थान का नाम - हिंदी)</label>
+              <input name="centre_name_hi" value="${esc(mrk.centre_name_hi || '')}" placeholder="उदा. आर्यावर्त इंस्टिट्यूट ऑफ़ टेक्नोलॉजी" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Council Address (परिषद कार्यालय पता)</label>
+              <input name="council_address" value="${esc(mrk.council_address || 'Head Office: Gorakhpur / Varanasi, Uttar Pradesh - 273001')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre Office Address (संस्थान केंद्र पता)</label>
+              <input name="centre_address" value="${esc(mrk.centre_address || '')}" placeholder="Authorized Study & Exam Centre Address" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+          </div>
+        </div>
+
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
           <div>
             <label style="font-size:0.82rem; font-weight:700;">Candidate's Name (परीक्षार्थी का नाम) *</label>
@@ -3698,6 +3954,15 @@ window.openAdminEditMarksheetModal = async function(marksheetId) {
     });
 
     const payload = {
+      header_type: fd.get('header_type'),
+      header_title: fd.get('header_title'),
+      header_hindi: fd.get('header_hindi'),
+      header_subtitle: fd.get('header_subtitle'),
+      scheme: fd.get('scheme'),
+      centre_name: fd.get('centre_name'),
+      centre_name_hi: fd.get('centre_name_hi'),
+      council_address: fd.get('council_address'),
+      centre_address: fd.get('centre_address'),
       student_name: fd.get('student_name'),
       father_name: fd.get('father_name'),
       mother_name: fd.get('mother_name'),
@@ -3772,6 +4037,58 @@ window.openAdminEditCertModal = async function(certId) {
       </div>
 
       <form id="adminEditCertForm">
+        <!-- Header & Authority Customization Box -->
+        <div style="background:#f8fafc; border:1.5px solid #0284c7; border-radius:10px; padding:14px; margin-bottom:16px;">
+          <h4 style="margin:0 0 10px; color:#072a60; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+            🏛️ Authority Header &amp; Scheme Settings (शीर्षक व योजना चयन)
+          </h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Header Authority (शीर्षक किसके नाम से रहेगा) *</label>
+              <select name="header_type" id="adminCertHeaderType" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                <option value="council" ${cert.header_type !== 'centre' ? 'selected' : ''}>Council Header (परिषद के नाम से - Purvanchal Education &amp; Skill Council)</option>
+                <option value="centre" ${cert.header_type === 'centre' ? 'selected' : ''}>Centre Header (सेंटर / संस्थान के नाम से)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Examination Scheme (परीक्षा योजना / प्रकार) *</label>
+              <select name="scheme" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                <option value="annual" ${cert.scheme === 'annual' || (!cert.scheme && cert.evaluation_type !== 'semester') ? 'selected' : ''}>Annual Scheme (Singhal / वार्षिक)</option>
+                <option value="single_semester" ${cert.scheme === 'single_semester' || (!cert.scheme && cert.evaluation_type === 'semester') ? 'selected' : ''}>Single Semester (एकल सेमेस्टर)</option>
+                <option value="double_semester" ${cert.scheme === 'double_semester' ? 'selected' : ''}>Double Semester (दोहरा सेमेस्टर)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Main Header Title (मुख्य नाम) *</label>
+              <input name="header_title" id="adminCertHeaderTitle" value="${esc(cert.header_title || 'Purvanchal Education & Skill Council')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Hindi Header Title (हिंदी नाम) *</label>
+              <input name="header_hindi" id="adminCertHeaderHindi" value="${esc(cert.header_hindi || 'पूर्वांचल एजुकेशन एंड स्किल काउंसिल')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+            </div>
+            <div style="grid-column:1 / -1;">
+              <label style="font-size:0.82rem; font-weight:700;">Subtitle / Authority Subheading</label>
+              <input name="header_subtitle" id="adminCertHeaderSubtitle" value="${esc(cert.header_subtitle || 'An Autonomous Body Established Under The Aegis Of Govt. Act / Registered Under Section 8 Of MCA, Govt. Of India')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre English Name (संस्थान का नाम - English)</label>
+              <input name="centre_name" value="${esc(cert.centre_name || '')}" placeholder="e.g. Aryavart Institute of Technology" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre Hindi Name (संस्थान का नाम - हिंदी)</label>
+              <input name="centre_name_hi" value="${esc(cert.centre_name_hi || '')}" placeholder="उदा. आर्यावर्त इंस्टिट्यूट ऑफ़ टेक्नोलॉजी" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Council Address (परिषद कार्यालय पता)</label>
+              <input name="council_address" value="${esc(cert.council_address || 'Head Office: Gorakhpur / Varanasi, Uttar Pradesh - 273001')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Centre Office Address (संस्थान केंद्र पता)</label>
+              <input name="centre_address" value="${esc(cert.centre_address || '')}" placeholder="Authorized Study & Exam Centre Address" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+          </div>
+        </div>
+
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
           <div>
             <label style="font-size:0.82rem; font-weight:700;">Candidate Name (परीक्षार्थी का नाम) *</label>
@@ -3832,6 +4149,15 @@ window.openAdminEditCertModal = async function(certId) {
     e.preventDefault();
     const fd = new FormData(e.target);
     const payload = {
+      header_type: fd.get('header_type'),
+      header_title: fd.get('header_title'),
+      header_hindi: fd.get('header_hindi'),
+      header_subtitle: fd.get('header_subtitle'),
+      scheme: fd.get('scheme'),
+      centre_name: fd.get('centre_name'),
+      centre_name_hi: fd.get('centre_name_hi'),
+      council_address: fd.get('council_address'),
+      centre_address: fd.get('centre_address'),
       student_name: fd.get('student_name'),
       father_name: fd.get('father_name'),
       mother_name: fd.get('mother_name'),

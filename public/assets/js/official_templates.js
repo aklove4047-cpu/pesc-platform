@@ -78,10 +78,40 @@
     return { centreSeal, centreSign, centreLogo, coordSeal, coordSign, councilLogo, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName };
   }
 
-  // 1. Accreditations Badge Strip (ISO, NITI Aayog NGO Darpan, IAF, MSME, PESC - NO Ashok Stambh)
-  function renderAccreditationBadgesHtml() {
+  // Helper to ensure Hindi and English institute names are cleanly distinct (no duplicate English)
+  function resolveCentreNames(c, data) {
+    const rawEng = (data && data.centre_name) || (c && c.name) || 'PURVANCHAL EDUCATION CENTRE';
+    const centreEnglish = String(rawEng).trim().toUpperCase();
+    let rawHi = (data && data.centre_name_hi) || (c && c.hindi_name) || '';
+    let centreHindi = String(rawHi).trim();
+    if (!centreHindi || centreHindi.toUpperCase() === centreEnglish) {
+      centreHindi = 'प्रशिक्षण एवं कौशल संस्थान';
+    }
+    return { centreEnglish, centreHindi };
+  }
+
+  // 1. Accreditations Badge Strip + Official Dual Address Footer (Council Head Office + Centre Office)
+  function renderAccreditationBadgesHtml(councilAddress, centreAddress) {
+    const hoAddr = councilAddress || 'Purvanchal Education & Skill Council, Main Road, Shahgarh, Azamgarh, Uttar Pradesh - 276139 | Helpline: info@pescouncil.in | Web: pescouncil.in';
+    const cAddr = centreAddress || '';
     return `
-      <div style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:14px; padding-top:8px; border-top:1.5px solid #cbd5e1; flex-wrap:wrap;">
+      <!-- Dual Address Official Footer -->
+      <div style="margin-top:14px; padding:7px 12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; font-size:0.68rem; line-height:1.4; color:#334155; text-align:left;">
+        <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:240px;">
+            <b style="color:#08244c; display:flex; align-items:center; gap:4px;">🏛️ Head Office Address:</b>
+            <span>${esc(hoAddr)}</span>
+          </div>
+          ${cAddr ? `
+          <div style="flex:1; min-width:240px; border-left:1px dashed #cbd5e1; padding-left:12px;">
+            <b style="color:#047857; display:flex; align-items:center; gap:4px;">🏫 Study Centre Office:</b>
+            <span>${esc(cAddr)}</span>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:8px; padding-top:6px; border-top:1px solid #e2e8f0; flex-wrap:wrap;">
         <div style="text-align:center;">
           <div style="width:36px; height:36px; border:1.5px solid #0369a1; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:0.58rem; color:#0369a1; background:#f0f9ff;">ISO</div>
           <div style="font-size:0.5rem; font-weight:800; color:#475569; margin-top:1px;">9001:2015</div>
@@ -402,8 +432,8 @@
     const rollNo = s.roll_no || `Pesc-${String(s.id || '00008').padStart(5, '0')}`;
     const issueDate = data.issueDate || new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    const centreHindi = c.hindi_name || c.name || 'प्रीति इंस्टीट्यूट ऑफ टेक्नोलॉजी';
-    const centreEnglish = (c.name || 'PREETI INSTITUTE OF TECHNOLOGY').toUpperCase();
+    const { centreEnglish, centreHindi } = resolveCentreNames(c, data);
+    const centreCode = c.centre_code || 'PESC00001';
     const courseName = s.course_name || s.course || 'Nursery Teacher Training';
     const percentage = data.percentage || s.percentage || '74.57';
     const grade = data.grade || s.grade || 'A';
@@ -411,6 +441,39 @@
     const examVenue = data.examVenue || c.address || `${c.district || 'Shahgarh'}, Uttar Pradesh`;
     const fromDate = data.fromDate || '01-09-2025';
     const toDate = data.toDate || '12-09-2026';
+
+    const headerType = String(data.header_type || (data.headerMode || 'centre')).toLowerCase();
+    const isCouncilHeader = (headerType === 'council');
+
+    const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
+    const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);
+    const displaySubtitle = (data.header_subtitle || '').trim() || (isCouncilHeader 
+      ? 'AUTONOMOUS NATIONAL COUNCIL FOR VOCATIONAL & TECHNICAL EDUCATION' 
+      : 'RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD');
+    const subTagline = isCouncilHeader 
+      ? `RUN UNDER TRUST ACT REG. GOVT. OF INDIA | AN ISO 9001:2015 CERTIFIED COUNCIL<div style="font-size:0.75rem; font-weight:800; color:#047857; margin-top:3px;">Authorised Training Centre: <u>${esc(centreEnglish)}</u> (${esc(centreHindi)}) &bull; Centre Code: <b>${esc(centreCode)}</b></div>`
+      : `RECOGNIZED BY GOVERNMENT OF INDIA | AN ISO 9001:2015 CERTIFIED CENTRE &bull; Centre Code: ${esc(centreCode)}`;
+
+    const scheme = String(data.scheme || (data.evaluation_type === 'semester' ? 'single_semester' : (data.term && data.term.toLowerCase().includes('semester') ? 'single_semester' : 'annual'))).toLowerCase();
+    let certMainTitle = 'CERTIFICATE';
+    let certSubTitle = 'OF COMPLETION';
+    let certHindiBadge = '(प्रमाण पत्र)';
+    if (scheme === 'single_semester' || scheme.includes('single')) {
+      certMainTitle = 'CERTIFICATE';
+      certSubTitle = 'OF PROFICIENCY (SEMESTER)';
+      certHindiBadge = '(एकल सेमेस्टर योग्यता प्रमाण पत्र)';
+    } else if (scheme === 'double_semester' || scheme.includes('double') || scheme.includes('dual')) {
+      certMainTitle = 'DIPLOMA';
+      certSubTitle = 'CERTIFICATE (TWO SEMESTERS)';
+      certHindiBadge = '(द्वि-सेमेस्टर डिप्लोमा प्रमाण पत्र)';
+    } else {
+      certMainTitle = 'CERTIFICATE';
+      certSubTitle = 'OF DIPLOMA / COMPLETION';
+      certHindiBadge = '(वार्षिक डिप्लोमा / प्रमाण पत्र)';
+    }
+
+    const councilAddress = data.council_address || 'Purvanchal Education & Skill Council, Main Road, Shahgarh, Azamgarh, Uttar Pradesh - 276139 | Helpline: info@pescouncil.in | Web: pescouncil.in';
+    const centreAddress = data.centre_address || (c.address ? `${c.address}, ${c.district || ''}, ${c.state || ''} - ${c.pin || ''}` : `${c.district || 'Azamgarh'}, ${c.state || 'Uttar Pradesh'}`);
 
     const photoUrl = s.photo_url || s.photo || '';
     const photoHtml = photoUrl ? 
@@ -430,24 +493,26 @@
         <div style="position:relative; z-index:1;">
           <!-- Top Header -->
           <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:8px;">
-            <!-- Left: Centre Logo -->
+            <!-- Left: Centre Logo or Council Logo -->
             <div style="width:85px; height:85px; border-radius:50%; border:2px solid #d4af37; padding:2px; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              ${centreLogo ? `<img src="${centreLogo}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`}
+              ${isCouncilHeader 
+                ? `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`
+                : (centreLogo ? `<img src="${centreLogo}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`)}
             </div>
 
             <!-- Center: Names and Accreditations -->
             <div style="text-align:center; flex:1;">
-              <div style="font-size:2rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
-                ${esc(centreHindi)}
+              <div style="font-size:1.85rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
+                ${esc(displayHindi)}
               </div>
-              <div style="font-size:1.3rem; font-weight:900; color:#08244c; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
-                ${esc(centreEnglish)}
+              <div style="font-size:1.25rem; font-weight:900; color:#08244c; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
+                ${esc(displayEnglish)}
               </div>
               <div style="display:inline-block; background:#fef08a; color:#854d0e; font-size:0.68rem; font-weight:800; padding:2px 14px; border-radius:12px; border:1px solid #fde047; text-transform:uppercase; margin:3px 0; letter-spacing:0.5px;">
-                RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD
+                ${esc(displaySubtitle)}
               </div>
               <div style="font-size:0.65rem; font-weight:800; color:#0f172a; text-transform:uppercase; letter-spacing:0.3px;">
-                RECOGNIZED BY GOVERNMENT OF INDIA | AN ISO 9001:2015 CERTIFIED CENTRE
+                ${subTagline}
               </div>
             </div>
 
@@ -480,8 +545,11 @@
             </div>
           </div>
 
-          <!-- 3D Golden Ribbon: CERTIFICATE OF COMPLETION -->
-          ${render3DGoldRibbon('CERTIFICATE', 'OF COMPLETION')}
+          <!-- 3D Golden Ribbon: CERTIFICATE -->
+          ${render3DGoldRibbon(certMainTitle, certSubTitle)}
+          <div style="text-align:center; font-size:0.85rem; color:#854d0e; font-weight:800; margin:-4px 0 10px;">
+            ${certHindiBadge}
+          </div>
 
           <!-- Certificate Body -->
           <div style="text-align:center; font-size:0.92rem; color:#0f172a; line-height:2.2; margin:10px auto;">
@@ -508,7 +576,7 @@
               WITH GRADE &nbsp;<b style="border-bottom:1.5px solid #334155; padding:0 16px; font-size:1.15rem; color:#15803d;">${esc(grade)}</b> &nbsp; FROM OUR AUTHORIZED STUDY CENTRE
             </div>
             <div style="font-size:1.3rem; font-weight:900; color:#08244c; text-transform:uppercase; margin:4px 0;">
-              ${esc(c.name || centreEnglish)}
+              ${esc(centreEnglish)}
             </div>
             <div style="font-size:0.75rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.4px;">
               HE / SHE HAS BEEN AWARDED WITH THE CERTIFICATE / DIPLOMA OF SAID JOB ROLE / COURSE
@@ -561,7 +629,7 @@
             </div>
           </div>
 
-          ${renderAccreditationBadgesHtml()}
+          ${renderAccreditationBadgesHtml(councilAddress, centreAddress)}
         </div>
       </div>
     `;
@@ -578,10 +646,43 @@
     const rollNo = s.roll_no || `Pesc-${String(s.id || '00008').padStart(5, '0')}`;
     const issueDate = data.issueDate || new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    const centreHindi = c.hindi_name || c.name || 'प्रीति इंस्टीट्यूट ऑफ टेक्नोलॉजी';
-    const centreEnglish = (c.name || 'PREETI INSTITUTE OF TECHNOLOGY').toUpperCase();
+    const { centreEnglish, centreHindi } = resolveCentreNames(c, data);
+    const centreCode = c.centre_code || 'PESC00001';
     const courseName = s.course_name || s.course || 'Nursery Teacher Training';
     const duration = data.duration || (s.duration_months ? `${Math.round(s.duration_months/12) || 1} Year` : '1 Year');
+
+    const headerType = String(data.header_type || (data.headerMode || 'centre')).toLowerCase();
+    const isCouncilHeader = (headerType === 'council');
+
+    const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
+    const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);
+    const displaySubtitle = (data.header_subtitle || '').trim() || (isCouncilHeader 
+      ? 'AUTONOMOUS NATIONAL COUNCIL FOR VOCATIONAL & TECHNICAL EDUCATION' 
+      : 'RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD');
+    const subTagline = isCouncilHeader 
+      ? `RUN UNDER TRUST ACT REG. GOVT. OF INDIA | AN ISO 9001:2015 CERTIFIED COUNCIL<div style="font-size:0.75rem; font-weight:800; color:#047857; margin-top:3px;">Authorised Training Centre: <u>${esc(centreEnglish)}</u> (${esc(centreHindi)}) &bull; Centre Code: <b>${esc(centreCode)}</b></div>`
+      : `RECOGNIZED BY GOVERNMENT OF INDIA | AN ISO 9001:2015 CERTIFIED CENTRE &bull; Centre Code: ${esc(centreCode)}`;
+
+    const scheme = String(data.scheme || (data.evaluation_type === 'semester' ? 'single_semester' : (data.term && data.term.toLowerCase().includes('semester') ? 'single_semester' : 'annual'))).toLowerCase();
+    let mrkMainTitle = 'MARKSHEET';
+    let mrkSubTitle = 'STATEMENT OF MARKS';
+    let mrkHindiBadge = '(अंक तालिका)';
+    if (scheme === 'single_semester' || scheme.includes('single')) {
+      mrkMainTitle = 'MARKSHEET';
+      mrkSubTitle = 'SINGLE SEMESTER EXAMINATION';
+      mrkHindiBadge = '(एकल सेमेस्टर अंक तालिका)';
+    } else if (scheme === 'double_semester' || scheme.includes('double') || scheme.includes('dual')) {
+      mrkMainTitle = 'MARKSHEET';
+      mrkSubTitle = 'DUAL SEMESTER (SEMESTER I & II COMBINED)';
+      mrkHindiBadge = '(द्वि-सेमेस्टर संयुक्त अंक तालिका)';
+    } else {
+      mrkMainTitle = 'MARKSHEET';
+      mrkSubTitle = 'STATEMENT OF MARKS (ANNUAL)';
+      mrkHindiBadge = '(वार्षिक अंक तालिका)';
+    }
+
+    const councilAddress = data.council_address || 'Purvanchal Education & Skill Council, Main Road, Shahgarh, Azamgarh, Uttar Pradesh - 276139 | Helpline: info@pescouncil.in | Web: pescouncil.in';
+    const centreAddress = data.centre_address || (c.address ? `${c.address}, ${c.district || ''}, ${c.state || ''} - ${c.pin || ''}` : `${c.district || 'Azamgarh'}, ${c.state || 'Uttar Pradesh'}`);
 
     const photoUrl = s.photo_url || s.photo || '';
     const photoHtml = photoUrl ? 
@@ -616,24 +717,26 @@
         <div style="position:relative; z-index:1;">
           <!-- Top Header -->
           <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:8px;">
-            <!-- Left: Centre Logo -->
+            <!-- Left: Centre Logo or Council Logo -->
             <div style="width:85px; height:85px; border-radius:50%; border:2px solid #d4af37; padding:2px; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              ${centreLogo ? `<img src="${centreLogo}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`}
+              ${isCouncilHeader 
+                ? `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`
+                : (centreLogo ? `<img src="${centreLogo}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`)}
             </div>
 
             <!-- Center: Names and Accreditations -->
             <div style="text-align:center; flex:1;">
-              <div style="font-size:2rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
-                ${esc(centreHindi)}
+              <div style="font-size:1.85rem; font-weight:900; color:#08244c; font-family:'Rozha One', 'Tiro Devanagari Hindi', serif; line-height:1.15; margin:0;">
+                ${esc(displayHindi)}
               </div>
-              <div style="font-size:1.3rem; font-weight:900; color:#08244c; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
-                ${esc(centreEnglish)}
+              <div style="font-size:1.25rem; font-weight:900; color:#08244c; letter-spacing:0.5px; text-transform:uppercase; margin-top:2px;">
+                ${esc(displayEnglish)}
               </div>
               <div style="display:inline-block; background:#fef08a; color:#854d0e; font-size:0.68rem; font-weight:800; padding:2px 14px; border-radius:12px; border:1px solid #fde047; text-transform:uppercase; margin:3px 0; letter-spacing:0.5px;">
-                RUN BY - REGISTERED PURVANCHAL SHIKSHA PARISHAD
+                ${esc(displaySubtitle)}
               </div>
               <div style="font-size:0.65rem; font-weight:800; color:#0f172a; text-transform:uppercase; letter-spacing:0.3px;">
-                RECOGNIZED BY GOVERNMENT OF INDIA | AN ISO 9001:2015 CERTIFIED CENTRE
+                ${subTagline}
               </div>
             </div>
 
@@ -666,8 +769,11 @@
             </div>
           </div>
 
-          <!-- 3D Golden Ribbon: MARKSHEET / STATEMENT OF MARKS -->
-          ${render3DGoldRibbon('MARKSHEET', 'STATEMENT OF MARKS')}
+          <!-- 3D Golden Ribbon: MARKSHEET -->
+          ${render3DGoldRibbon(mrkMainTitle, mrkSubTitle)}
+          <div style="text-align:center; font-size:0.85rem; color:#854d0e; font-weight:800; margin:-4px 0 10px;">
+            ${mrkHindiBadge}
+          </div>
 
           <!-- Candidate Details & Course Line -->
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.86rem; font-weight:800; color:#0f172a; margin-bottom:8px; line-height:1.6;">
@@ -765,7 +871,7 @@
             </div>
           </div>
 
-          ${renderAccreditationBadgesHtml()}
+          ${renderAccreditationBadgesHtml(councilAddress, centreAddress)}
         </div>
       </div>
     `;
@@ -906,8 +1012,7 @@
   // =========================================================================
   function renderAffiliationCertificateHtml(data) {
     const cert = data.certificate || data.cert || data || {};
-    const centreHindi = cert.hindi_name || cert.name || 'प्रीति इंस्टीट्यूट ऑफ टेक्नोलॉजी';
-    const centreEnglish = (cert.name || 'PREETI INSTITUTE OF TECHNOLOGY').toUpperCase();
+    const { centreEnglish, centreHindi } = resolveCentreNames(cert, cert);
     const certNo = cert.cert_no || cert.affiliation_cert_no || `PESC-AFF-2026-${cert.centre_code || '0001'}`;
     const centreCode = cert.centre_code || 'PESC00001';
     const directorName = cert.director_name || 'Centre Director';
@@ -917,7 +1022,7 @@
     const status = cert.status || 'Active';
     const authorizedCourses = cert.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Nursery Teacher Training (NTT), Web Development, Graphic Design, Hardware & Networking';
 
-    const { councilSeal, councilSign, coordSeal, coordSign } = resolveSeals(cert, cert);
+    const { councilSeal, councilSign, coordSeal, coordSign, councilLogo } = resolveSeals(cert, cert);
     const coordName = cert.coordinator_name || 'Regional Coordinator';
     const coordTerritory = cert.coordinator_territory || cert.state || 'Uttar Pradesh';
 
@@ -942,7 +1047,7 @@
             
             <div style="text-align:center;">
               <div style="width:62px; height:62px; margin:0 auto 4px; display:flex; align-items:center; justify-content:center;">
-                <img src="${councilSeal}" style="width:60px; height:60px; object-fit:contain;">
+                <img src="${councilLogo || '/assets/img/logo_council.svg'}" style="width:60px; height:60px; object-fit:contain;">
               </div>
               <h2 style="margin:0; font-size:1.45rem; color:#08244c; letter-spacing:0.5px; font-weight:900; text-transform:uppercase;">
                 PURVANCHAL EDUCATION &amp; SKILL COUNCIL
@@ -1071,7 +1176,7 @@
     const validUntilStr = cert.valid_until ? new Date(cert.valid_until).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '31 March 2029';
 
     // Must be Head Office Seal and Head Office Director General Signature (NOT Coordinator's own signature)
-    const { councilSeal, councilSign } = resolveSeals(cert, cert);
+    const { councilSeal, councilSign, councilLogo } = resolveSeals(cert, cert);
 
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=https%3A%2F%2Fpescouncil.in%2Fverify%2Fcoordinator%2F${encodeURIComponent(cert.token || 'valid')}`;
 
@@ -1094,7 +1199,7 @@
             
             <div style="text-align:center;">
               <div style="width:62px; height:62px; margin:0 auto 4px; display:flex; align-items:center; justify-content:center;">
-                <img src="${councilSeal}" style="width:60px; height:60px; object-fit:contain;">
+                <img src="${councilLogo || '/assets/img/logo_council.svg'}" style="width:60px; height:60px; object-fit:contain;">
               </div>
               <h2 style="margin:0; font-size:1.45rem; color:#08244c; letter-spacing:0.5px; font-weight:900; text-transform:uppercase;">
                 PURVANCHAL EDUCATION &amp; SKILL COUNCIL
@@ -1140,7 +1245,6 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; margin-top:10px; font-size:0.84rem; color:#1e293b;">
                 <div><b>Assigned Territory:</b> <span style="color:#b45309; font-weight:800;">${esc(territory)}</span></div>
                 <div><b>Qualification:</b> <span style="font-weight:700;">${esc(qualification)}</span></div>
-                <div><b>Aadhaar / Gov ID:</b> <span style="font-family:monospace; font-weight:800; color:#0369a1;">${esc(aadharNo)}</span></div>
                 <div><b>Official Contact:</b> <span style="font-weight:700;">${esc(mobile)}</span></div>
                 <div style="grid-column:1 / -1; margin-top:2px;">
                   <b>Official Residential / Office Address:</b><br>

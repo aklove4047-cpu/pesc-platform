@@ -21,7 +21,10 @@ router.get('/stats', (req, res) => {
 
 router.get('/applications', (req, res) => {
   const { size, offset } = paginate(req); const st = str(req.query.status, 30);
-  const rows = db.prepare(`SELECT a.*, j.status AS job_status, j.error AS job_error, j.id AS job_id FROM franchise_applications a LEFT JOIN provisioning_jobs j ON j.application_id=a.id
+  const rows = db.prepare(`SELECT a.*, co.name AS coordinator_name, j.status AS job_status, j.error AS job_error, j.id AS job_id
+    FROM franchise_applications a
+    LEFT JOIN users co ON co.id=a.coordinator_id
+    LEFT JOIN provisioning_jobs j ON j.application_id=a.id
     ${st ? 'WHERE a.status=?' : ''} ORDER BY a.id DESC LIMIT ? OFFSET ?`).all(...(st ? [st] : []), size, offset);
   for (const r of rows) if (r.job_id) r.log = db.prepare('SELECT step,ok,detail FROM provisioning_logs WHERE job_id=? ORDER BY id').all(r.job_id);
   res.json({ applications: rows });
@@ -62,8 +65,11 @@ router.post('/applications/:id/decision', h(async (req, res) => {
 
 router.get('/centres', (req, res) => {
   const { size, offset } = paginate(req);
-  res.json({ centres: db.prepare(`SELECT c.id,c.centre_code,c.name,c.slug,c.state,c.district,c.status,c.coordinator_id,
-    (SELECT COUNT(*) FROM students s WHERE s.centre_id=c.id) AS students FROM centres c ORDER BY c.id DESC LIMIT ? OFFSET ?`).all(size, offset) });
+  res.json({ centres: db.prepare(`SELECT c.id,c.centre_code,c.name,c.slug,c.state,c.district,c.status,c.coordinator_id,c.director_name,c.director_photo,c.phone,c.email,c.login_password,
+    co.name AS coordinator_name,
+    (SELECT COUNT(*) FROM students s WHERE s.centre_id=c.id) AS students FROM centres c
+    LEFT JOIN users co ON co.id=c.coordinator_id
+    ORDER BY c.id DESC LIMIT ? OFFSET ?`).all(size, offset) });
 });
 const setStatus = (to, from) => (req, res) => {
   const reason = str(req.body.reason, 300); if (!reason) throw new HttpError(400, 'Reason is required');
@@ -195,12 +201,19 @@ router.put('/courses/:id/curriculum', (req, res) => {
 router.post('/coordinators', requireRole('super_admin'), (req, res) => {
   const email = str(req.body.email).toLowerCase(), name = str(req.body.name, 100), state = str(req.body.state, 60);
   const mobile = str(req.body.mobile || req.body.phone, 20) || null;
+  const district = str(req.body.district, 60) || null;
+  const address = str(req.body.address, 300) || null;
+  const pin = str(req.body.pin, 10) || null;
+  const qualification = str(req.body.qualification, 100) || null;
+  const territory = str(req.body.territory, 100) || null;
+  const photo_url = req.body.photo_url || null;
   const initialPassword = String(req.body.password || req.body.initial_password || 'Coord@123').trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !name) throw new HttpError(400, 'Name and valid email required');
   if (db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) throw new HttpError(409, 'Email already used');
   const bcrypt = require('bcryptjs');
   const hashed = bcrypt.hashSync(initialPassword, 10);
-  const r = db.prepare("INSERT INTO users(email,name,mobile,password_hash,role,state,status,created_at) VALUES(?,?,?,?,'coordinator',?,'active',?)").run(email, name, mobile, hashed, state, now());
+  const r = db.prepare("INSERT INTO users(email,name,mobile,password_hash,password_plain,role,state,district,address,pin,qualification,territory,photo_url,status,created_at) VALUES(?,?,?,?,?,'coordinator',?,?,?,?,?,?,?,'active',?)")
+    .run(email, name, mobile, hashed, initialPassword, state, district, address, pin, qualification, territory, photo_url, now());
   const token = rand(32);
   db.prepare('INSERT INTO setup_tokens(token_hash,user_id,expires_at) VALUES(?,?,?)').run(sha(token), r.lastInsertRowid, now() + 48 * 3600e3);
   notify.queue('email', email, 'password_reset', { url: `${cfg.PUBLIC_URL}/setup?token=${token}` });
@@ -212,7 +225,7 @@ router.post('/coordinators', requireRole('super_admin'), (req, res) => {
 
 router.get('/coordinators', (req, res) => {
   const rows = db.prepare(`
-    SELECT u.id, u.name, u.email, u.mobile, u.state, u.status, u.photo_url, u.password_plain AS password, u.created_at,
+    SELECT u.id, u.name, u.email, u.mobile, u.state, u.district, u.address, u.qualification, u.territory, u.status, u.photo_url, u.password_plain AS password, u.created_at,
            cc.cert_no, cc.status AS cert_status, cc.token AS cert_token, cc.issued_at AS cert_issued_at
     FROM users u
     LEFT JOIN coordinator_certificates cc ON cc.user_id = u.id
@@ -229,8 +242,19 @@ router.get('/coordinators', (req, res) => {
         r.cert_issued_at = c.issued_at;
       }
     }
+    const centres = db.prepare(`SELECT id, centre_code, name, slug, director_name, phone, email, district, state, address, status, affiliation_cert_no, created_at
+      FROM centres WHERE coordinator_id=? ORDER BY id DESC`).all(r.id);
+    r.centres_count = centres.length;
+    r.centres = centres;
   }
   res.json({ coordinators: rows });
+});
+
+router.get('/coordinators/:id/centres', (req, res) => {
+  const cid = +req.params.id;
+  const centres = db.prepare(`SELECT id, centre_code, name, slug, director_name, phone, email, district, state, address, status, affiliation_cert_no, created_at
+    FROM centres WHERE coordinator_id=? ORDER BY id DESC`).all(cid);
+  res.json({ centres });
 });
 
 router.post('/coordinators/:id/set-password', h(async (req, res) => {
@@ -260,7 +284,7 @@ router.post('/centres/:id/set-password', h(async (req, res) => {
 
 router.get('/coordinators/:id/cert', (req, res) => {
   const cid = +req.params.id;
-  const u = db.prepare('SELECT id, name, email, mobile, state, photo_url, seal_url, signature_url, created_at FROM users WHERE id=? AND role="coordinator"').get(cid);
+  const u = db.prepare("SELECT id, name, email, mobile, state, photo_url, seal_url, signature_url, created_at FROM users WHERE id=? AND role='coordinator'").get(cid);
   if (!u) throw new HttpError(404, 'Coordinator not found');
   const cert = getOrCreateCoordinatorCert(u.id, u);
   res.json({
@@ -276,6 +300,24 @@ router.get('/coordinators/:id/cert', (req, res) => {
       verification_url: `${cfg.PUBLIC_URL}/verify/coordinator/${cert.token}`,
     }
   });
+});
+
+// Delete coordinator
+router.delete('/coordinators/:id', (req, res) => {
+  const cid = +req.params.id;
+  const u = db.prepare("SELECT * FROM users WHERE id=? AND role='coordinator'").get(cid);
+  if (!u) throw new HttpError(404, 'Coordinator not found');
+
+  db.transaction(() => {
+    db.prepare('UPDATE centres SET coordinator_id=NULL WHERE coordinator_id=?').run(cid);
+    db.prepare('DELETE FROM coordinator_certificates WHERE user_id=?').run(cid);
+    db.prepare('DELETE FROM setup_tokens WHERE user_id=?').run(cid);
+    db.prepare('DELETE FROM sessions WHERE user_id=?').run(cid);
+    db.prepare("DELETE FROM users WHERE id=? AND role='coordinator'").run(cid);
+  })();
+
+  audit(req, 'coordinator.delete', 'user', cid, 'ok', `Deleted coordinator ${u.name} (${u.email})`);
+  res.json({ ok: true, message: 'Coordinator deleted successfully' });
 });
 
 router.get('/audit', (req, res) => {
@@ -768,6 +810,7 @@ router.post('/centres/direct-create', h(async (req, res) => {
   const slug = str(b.slug, 30).toLowerCase();
   const password = str(b.password, 64) || 'Centre@12345';
   const initialCreditRupees = Math.max(0, +b.initial_credit_rupees || 0);
+  const coordinator_id = (b.coordinator_id && !isNaN(+b.coordinator_id)) ? +b.coordinator_id : null;
 
   if (!name || !owner_name || !email || !slug) throw new HttpError(400, 'Name, owner name, email, and subdomain are required');
   if (resolveSlug(slug)) throw new HttpError(409, 'Subdomain is already taken');
@@ -782,8 +825,8 @@ router.post('/centres/direct-create', h(async (req, res) => {
       .run(email, owner_name, mobile, hashed, state, now());
     const ownerUserId = u.lastInsertRowid;
 
-    const c = db.prepare("INSERT INTO centres(centre_code,name,slug,owner_user_id,state,district,address,pin,status,created_at) VALUES(?,?,?,?,?,?,?,?, 'active', ?)")
-      .run(centreCode, name, slug, ownerUserId, state, district, address, pin, now());
+    const c = db.prepare("INSERT INTO centres(centre_code,name,slug,owner_user_id,coordinator_id,state,district,address,pin,status,created_at) VALUES(?,?,?,?,?,?,?,?,?, 'active', ?)")
+      .run(centreCode, name, slug, ownerUserId, coordinator_id, state, district, address, pin, now());
     const centreId = c.lastInsertRowid;
 
     db.prepare('UPDATE users SET centre_id=? WHERE id=?').run(centreId, ownerUserId);

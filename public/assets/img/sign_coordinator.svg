@@ -3,6 +3,4 @@
         fill="none" stroke="#6b21a8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 35 56 Q 110 60 176 46" 
         fill="none" stroke="#6b21a8" stroke-width="2.2" stroke-linecap="round"/>
-  <circle cx="182" cy="46" r="2" fill="#6b21a8"/>
-  <text x="35" y="65" font-family="'Segoe UI', sans-serif" font-size="7" font-weight="700" fill="#64748b">Er. V. K. Maurya (Coord.)</text>
 </svg>

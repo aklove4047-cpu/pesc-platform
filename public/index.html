@@ -869,6 +869,17 @@
           <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Director / Owner Full Name *</label>
           <input name="owner_name" required placeholder="e.g. Sunil Kumar" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;">
         </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px; color:#0369a1;">
+            👔 Regional Coordinator (किस Coordinator के अंतर्गत सेंटर खुल रहा है)
+          </label>
+          <select name="coordinator_id" id="applyCoordinatorSelect" style="width:100%; padding:10px 12px; border:1.5px solid #0284c7; border-radius:8px; background:#f0f9ff; font-size:0.88rem; font-weight:600; color:#0f172a;">
+            <option value="">-- Direct Council Head Office (कोई कोऑर्डिनेटर नहीं) --</option>
+          </select>
+          <span style="font-size:0.74rem; color:#64748b; margin-top:3px; display:block;">
+            यदि आपके क्षेत्र में अधिकृत रीजनल कोऑर्डिनेटर नियुक्त हैं तो उन्हें चुनें, अन्यथा डायरेक्ट हेड ऑफिस चुनें।
+          </span>
+        </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
           <div>
             <label style="font-size:0.84rem; font-weight:700; display:block; margin-bottom:4px;">Mobile Number *</label>
@@ -1069,6 +1080,11 @@
                 <div class="badge-code-bottom">Coordinator Code: ${escapeHtml(c.coordinator_code || 'PESCOORD/001')}</div>
               </div>
             `).join('');
+          }
+          const applyCoordSelect = document.getElementById('applyCoordinatorSelect');
+          if (applyCoordSelect) {
+            applyCoordSelect.innerHTML = '<option value="">-- Direct Council Head Office (कोई कोऑर्डिनेटर नहीं) --</option>' +
+              cRes.coordinators.map(c => `<option value="${c.id}">👔 ${escapeHtml(c.name)} (${escapeHtml(c.state || 'All State')}${c.district ? ' - ' + escapeHtml(c.district) : ''})</option>`).join('');
           }
         }
       } catch (e) {

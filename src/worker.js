@@ -553,7 +553,7 @@ const CLEAN_SEED_MARKSHEET = {
   created_at: 1792376054616
 };
 
-const DATA_VERSION = 'v27_clean_zero_fresh_deploy_2026';
+const DATA_VERSION = 'v29_wipe_all_franchises_students_coords_clean_2026';
 let kvLoaded = false;
 let lastKvSync = 0;
 
@@ -1014,10 +1014,11 @@ function getAuthorities(centre) {
 
   const isCustomCoord = (u) => u && !u.includes('seal_coordinator.svg') && !u.includes('sign_coordinator.svg');
 
-  const hoLogo = cleanImageUrl(adminUser.logo_url) || cleanImageUrl(store.site_settings && store.site_settings.logo_url) || '/assets/img/logo_council.svg';
-  const hoSeal = cleanImageUrl(adminUser.seal_url) || '/assets/img/seal_council_head.svg';
-  const hoSign = cleanImageUrl(adminUser.signature_url) || '/assets/img/sign_council_head.svg';
-  const chairmanSign = cleanImageUrl(adminUser.chairman_signature_url) || hoSign;
+  const s = store.site_settings || {};
+  const hoLogo = cleanImageUrl(adminUser.logo_url) || cleanImageUrl(s.logo_url) || '/assets/img/logo_council.svg';
+  const hoSeal = cleanImageUrl(adminUser.seal_url) || cleanImageUrl(s.seal_url || s.council_seal_url) || '/assets/img/seal_council_head.svg';
+  const hoSign = cleanImageUrl(adminUser.signature_url) || cleanImageUrl(s.signature_url || s.council_signature_url) || '/assets/img/sign_council_head.svg';
+  const chairmanSign = cleanImageUrl(adminUser.chairman_signature_url) || cleanImageUrl(s.chairman_signature_url) || hoSign;
 
   const coordSeal = (isCustomCoord(coordUser.seal_url) ? cleanImageUrl(coordUser.seal_url) : null)
     || (isCustomCoord(c.coordinator_seal_url) ? cleanImageUrl(c.coordinator_seal_url) : null)
@@ -1235,6 +1236,13 @@ export default {
           logo_url: s.logo_url || ho.logo_url || '/assets/img/logo_council.svg'
         },
         authorities: auth
+      });
+    }
+
+    if (path === '/api/public/authorities') {
+      return jsonResponse({
+        ok: true,
+        authorities: getAuthorities(null)
       });
     }
 
@@ -1501,6 +1509,7 @@ export default {
           centre_name: body.centre_name || 'Vocational Training Centre',
           director_photo: (body.director_photo || body.photo_url || '').trim(),
           photo_url: (body.director_photo || body.photo_url || '').trim(),
+          coordinator_id: (body.coordinator_id && !isNaN(+body.coordinator_id)) ? +body.coordinator_id : null,
           mobile: body.mobile,
           email: (body.email || '').toLowerCase(),
           address: body.address,
@@ -1944,6 +1953,40 @@ export default {
           students_total: store.students.length,
           certificates_total: store.certificates.length,
           marksheets_total: store.marksheets.length
+        });
+      }
+
+      if (path === '/api/admin/authorities') {
+        return jsonResponse({
+          ok: true,
+          authorities: getAuthorities(null)
+        });
+      }
+
+      if (path === '/api/admin/reset-platform-data' && (request.method === 'POST' || request.method === 'DELETE')) {
+        const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || CLEAN_ADMIN_USER;
+        store.centres = [];
+        store.applications = [];
+        store.students = [];
+        store.certificates = [];
+        store.marksheets = [];
+        store.coordinator_certificates = [];
+        store.wallet_topups = [];
+        store.users = [adminUser];
+        await Promise.all([
+          env.PESC_KV.put('centres', JSON.stringify([])),
+          env.PESC_KV.put('applications', JSON.stringify([])),
+          env.PESC_KV.put('students', JSON.stringify([])),
+          env.PESC_KV.put('certificates', JSON.stringify([])),
+          env.PESC_KV.put('marksheets', JSON.stringify([])),
+          env.PESC_KV.put('coordinator_certificates', JSON.stringify([])),
+          env.PESC_KV.put('wallet_topups', JSON.stringify([])),
+          env.PESC_KV.put('users', JSON.stringify([adminUser])),
+          env.PESC_KV.put('data_version', DATA_VERSION)
+        ]);
+        return jsonResponse({
+          ok: true,
+          message: 'All franchises, students, and coordinators have been wiped completely. Ready for fresh setup!'
         });
       }
 
@@ -2494,6 +2537,16 @@ export default {
         if (body.grade !== undefined) cert.grade = String(body.grade).trim();
         if (body.cert_no !== undefined) cert.cert_no = String(body.cert_no).trim();
         if (body.issue_date !== undefined) cert.issued_at = body.issue_date;
+        if (body.header_type !== undefined) cert.header_type = String(body.header_type).trim();
+        if (body.header_title !== undefined) cert.header_title = String(body.header_title).trim();
+        if (body.header_hindi !== undefined) cert.header_hindi = String(body.header_hindi).trim();
+        if (body.header_subtitle !== undefined) cert.header_subtitle = String(body.header_subtitle).trim();
+        if (body.centre_name !== undefined) cert.centre_name = String(body.centre_name).trim();
+        if (body.centre_name_hi !== undefined) cert.centre_name_hi = String(body.centre_name_hi).trim();
+        if (body.council_address !== undefined) cert.council_address = String(body.council_address).trim();
+        if (body.centre_address !== undefined) cert.centre_address = String(body.centre_address).trim();
+        if (body.scheme !== undefined) cert.scheme = String(body.scheme).trim();
+        if (body.evaluation_type !== undefined) cert.evaluation_type = String(body.evaluation_type).trim();
 
         const stu = store.students.find(s => s.id === cert.student_id);
         if (stu) {
@@ -2534,6 +2587,15 @@ export default {
         if (body.evaluation_type !== undefined) mrk.evaluation_type = String(body.evaluation_type).trim();
         if (body.marksheet_no !== undefined) mrk.marksheet_no = String(body.marksheet_no).trim();
         if (body.issue_date !== undefined) mrk.issue_date = body.issue_date;
+        if (body.header_type !== undefined) mrk.header_type = String(body.header_type).trim();
+        if (body.header_title !== undefined) mrk.header_title = String(body.header_title).trim();
+        if (body.header_hindi !== undefined) mrk.header_hindi = String(body.header_hindi).trim();
+        if (body.header_subtitle !== undefined) mrk.header_subtitle = String(body.header_subtitle).trim();
+        if (body.centre_name !== undefined) mrk.centre_name = String(body.centre_name).trim();
+        if (body.centre_name_hi !== undefined) mrk.centre_name_hi = String(body.centre_name_hi).trim();
+        if (body.council_address !== undefined) mrk.council_address = String(body.council_address).trim();
+        if (body.centre_address !== undefined) mrk.centre_address = String(body.centre_address).trim();
+        if (body.scheme !== undefined) mrk.scheme = String(body.scheme).trim();
 
         if (body.subjects !== undefined) {
           mrk.subjects = typeof body.subjects === 'string' ? body.subjects : JSON.stringify(body.subjects);
@@ -2596,6 +2658,21 @@ export default {
         let coords = store.users.filter(u => u.role === 'coordinator');
         const enrichedCoords = coords.map(c => {
           const cert = getOrCreateWorkerCoordCert(c.id, c);
+          const myCentres = store.centres.filter(cn => cn.coordinator_id === c.id || cn.assigned_coordinator_id === c.id).map(cn => ({
+            id: cn.id,
+            centre_code: cn.centre_code,
+            name: cn.name,
+            slug: cn.slug,
+            district: cn.district,
+            state: cn.state,
+            phone: cn.phone || cn.mobile,
+            email: cn.email,
+            director_name: cn.director_name,
+            director_photo: cn.director_photo || cn.photo_url,
+            status: cn.status,
+            affiliation_cert_no: cn.affiliation_cert_no,
+            created_at: cn.created_at
+          }));
           return {
             ...c,
             password: c.password_plain || 'Coord@123',
@@ -2603,9 +2680,17 @@ export default {
             cert_status: cert.status,
             cert_token: cert.token,
             cert_issued_at: cert.issued_at,
+            centres_count: myCentres.length,
+            centres: myCentres
           };
         });
         return jsonResponse({ coordinators: enrichedCoords });
+      }
+
+      if (path.match(/\/api\/admin\/coordinators\/\d+\/centres/) && request.method === 'GET') {
+        const coordId = +path.split('/')[4];
+        const myCentres = store.centres.filter(cn => cn.coordinator_id === coordId || cn.assigned_coordinator_id === coordId);
+        return jsonResponse({ centres: myCentres });
       }
 
       if (path.match(/\/api\/admin\/coordinators\/\d+\/set-password/) && request.method === 'POST') {
@@ -2649,6 +2734,33 @@ export default {
             verification_url: `https://${host}/verify/coordinator/${cert.token}`,
           }
         });
+      }
+
+      if (path.match(/^\/api\/admin\/coordinators\/\d+$/) && request.method === 'DELETE') {
+        try {
+          const coordId = +path.split('/')[4];
+          const idx = store.users.findIndex(u => u.id === coordId && u.role === 'coordinator');
+          if (idx === -1) return jsonResponse({ error: 'Coordinator not found' }, 404);
+          const deleted = store.users[idx];
+          store.users.splice(idx, 1);
+          if (store.centres) {
+            store.centres.forEach(c => {
+              if (c.coordinator_id === coordId || c.assigned_coordinator_id === coordId) {
+                c.coordinator_id = null;
+                c.assigned_coordinator_id = null;
+              }
+            });
+            await persistToKV(env, 'centres', store.centres);
+          }
+          if (store.coordinator_certificates) {
+            store.coordinator_certificates = store.coordinator_certificates.filter(cc => cc.user_id !== coordId);
+            await persistToKV(env, 'coordinator_certificates', store.coordinator_certificates);
+          }
+          await persistToKV(env, 'users', store.users);
+          return jsonResponse({ ok: true, message: `Coordinator ${deleted.name} deleted successfully` });
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
       }
 
       if (path === '/api/admin/applications') {
@@ -3021,7 +3133,11 @@ export default {
         app.status = 'Approved';
 
         const newCode = `PESC${String(store.centres.length + 1).padStart(5, '0')}`;
-        const activeCoordinator = store.users.find(u => u.role === 'coordinator' && u.status === 'active') || store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'State Coordinator' };
+        const activeCoordinator = (app.coordinator_id && store.users.find(u => u.id === app.coordinator_id))
+          || (app.state && store.users.find(u => u.role === 'coordinator' && u.state === app.state))
+          || store.users.find(u => u.role === 'coordinator' && u.status === 'active')
+          || store.users.find(u => u.role === 'coordinator')
+          || { id: 2, name: 'State Coordinator' };
 
         const newCentre = {
           id: store.centres.length + 1,
@@ -3043,6 +3159,7 @@ export default {
           login_password: 'owner123',
           wallet_balance: 0,
           wallet_paise: 0,
+          coordinator_id: activeCoordinator.id,
           assigned_coordinator_id: activeCoordinator.id,
           coordinator_name: activeCoordinator.name,
           coordinator_seal_url: activeCoordinator.seal_url || '/assets/img/seal_coordinator.svg',
@@ -3306,10 +3423,21 @@ export default {
             if (!store.site_settings) store.site_settings = {};
             store.site_settings.logo_url = adminUser.logo_url;
           }
-          if (body.seal_url !== undefined) adminUser.seal_url = cleanImageUrl(body.seal_url);
-          if (body.signature_url !== undefined) adminUser.signature_url = cleanImageUrl(body.signature_url);
-          if (body.chairman_signature_url !== undefined) adminUser.chairman_signature_url = cleanImageUrl(body.chairman_signature_url);
           if (!store.site_settings) store.site_settings = {};
+          if (body.seal_url !== undefined) {
+            adminUser.seal_url = cleanImageUrl(body.seal_url);
+            store.site_settings.seal_url = adminUser.seal_url;
+            store.site_settings.council_seal_url = adminUser.seal_url;
+          }
+          if (body.signature_url !== undefined) {
+            adminUser.signature_url = cleanImageUrl(body.signature_url);
+            store.site_settings.signature_url = adminUser.signature_url;
+            store.site_settings.council_signature_url = adminUser.signature_url;
+          }
+          if (body.chairman_signature_url !== undefined) {
+            adminUser.chairman_signature_url = cleanImageUrl(body.chairman_signature_url);
+            store.site_settings.chairman_signature_url = adminUser.chairman_signature_url;
+          }
           if (body.email) store.site_settings.email = adminUser.email;
           if (body.mobile !== undefined) {
             store.site_settings.phone = adminUser.mobile;
@@ -3393,12 +3521,12 @@ export default {
         if (userRole === 'coordinator') {
           cert.coordinator_approved = true;
           cert.coordinator_approved_at = Date.now();
-          cert.coordinator_approved_by = 'Er. V. K. Maurya (Regional Coordinator)';
+          cert.coordinator_approved_by = body.approved_by || 'Regional Coordinator';
           cert.coordinator_mohar_applied = true;
         } else {
           cert.head_approved = true;
           cert.head_approved_at = Date.now();
-          cert.head_approved_by = 'S. N. Mishra (Council Head)';
+          cert.head_approved_by = body.approved_by || 'Council Head Office';
           cert.head_seal_applied = true;
         }
 
@@ -3457,12 +3585,12 @@ export default {
         if (userRole === 'coordinator') {
           mrk.coordinator_approved = true;
           mrk.coordinator_approved_at = Date.now();
-          mrk.coordinator_approved_by = 'Er. V. K. Maurya (Regional Coordinator)';
+          mrk.coordinator_approved_by = body.approved_by || 'Regional Coordinator';
           mrk.coordinator_mohar_applied = true;
         } else {
           mrk.head_approved = true;
           mrk.head_approved_at = Date.now();
-          mrk.head_approved_by = 'S. N. Mishra (Council Head)';
+          mrk.head_approved_by = body.approved_by || 'Council Head Office';
           mrk.head_seal_applied = true;
         }
 
@@ -3814,8 +3942,85 @@ export default {
         });
       }
       if (path === '/api/coordinator/centres') {
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            const activeCoordinator = store.users.find(u => u.role === 'coordinator' && u.status === 'active') || store.users.find(u => u.role === 'coordinator') || { id: 2, name: 'State Coordinator' };
+            const nextId = store.centres.length + 1;
+            const newCode = `PESC${String(nextId).padStart(5, '0')}`;
+            const rawSlug = (body.slug || body.name || body.centre_name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            const slug = rawSlug || `centre${nextId}`;
+            const dirName = body.director_name || body.owner_name || 'Centre Director';
+            const phone = body.mobile || body.phone || '9876543210';
+            const email = (body.email || `director@${slug}.pescouncil.in`).toLowerCase();
+            const password = body.password || 'Centre@123';
+            const certNo = `PESC/ATC/2026/${newCode}`;
+            const todayStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            const newCentre = {
+              id: nextId,
+              centre_code: newCode,
+              name: body.name || body.centre_name || 'Authorized Training Centre',
+              slug: slug,
+              director_name: dirName,
+              director_photo: (body.director_photo || body.photo_url || '').trim(),
+              photo_url: (body.director_photo || body.photo_url || '').trim(),
+              phone: phone,
+              email: email,
+              state: body.state || activeCoordinator.state || 'Uttar Pradesh',
+              district: body.district || '',
+              address: body.address || '',
+              pin: body.pin || '221001',
+              coordinator_id: activeCoordinator.id,
+              assigned_coordinator_id: activeCoordinator.id,
+              coordinator_name: activeCoordinator.name,
+              coordinator_seal_url: activeCoordinator.seal_url || '/assets/img/seal_coordinator.svg',
+              coordinator_signature_url: activeCoordinator.signature_url || '/assets/img/sign_coordinator.svg',
+              affiliation_cert_no: certNo,
+              affiliation_issue_date: todayStr,
+              affiliation_valid_thru: '31-03-2029',
+              affiliation_session: '2026 - 2029',
+              login_password: password,
+              wallet_balance: 0,
+              wallet_paise: 0,
+              status: 'active',
+              created_at: Date.now()
+            };
+
+            store.centres.push(newCentre);
+
+            // Add centre owner user
+            const newUserId = store.users.length + 1;
+            store.users.push({
+              id: newUserId,
+              email: email,
+              name: dirName,
+              mobile: phone,
+              role: 'centre_owner',
+              centre_id: newCentre.id,
+              password_plain: password,
+              status: 'active'
+            });
+
+            await persistToKV(env, 'centres', store.centres);
+            await persistToKV(env, 'users', store.users);
+
+            return jsonResponse({
+              ok: true,
+              message: 'New Centre Affiliation granted successfully!',
+              centre: newCentre,
+              credentials: {
+                login_id: newCode,
+                password: password,
+                portal_url: `https://${slug}.pescouncil.in/portal`
+              }
+            }, 201);
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
         const enriched = store.centres.map(c => {
-          const owner = store.users.find(u => u.id === c.owner_user_id) || {};
+          const owner = store.users.find(u => u.id === c.owner_user_id || u.centre_id === c.id) || {};
           const sCount = store.students.filter(s => s.centre_id === c.id).length;
           const certCount = store.certificates.filter(x => x.centre_id === c.id && x.status === 'Valid').length;
           const certPending = store.certificates.filter(x => x.centre_id === c.id && x.status === 'Pending').length;
@@ -3834,6 +4039,48 @@ export default {
           };
         });
         return jsonResponse({ centres: enriched });
+      }
+
+      if ((path.match(/^\/api\/coordinator\/centres\/\d+$/) && (request.method === 'PUT' || request.method === 'POST')) ||
+          (path.match(/^\/api\/coordinator\/centres\/\d+\/edit$/) && request.method === 'POST')) {
+        const centreId = +path.split('/')[4];
+        const c = store.centres.find(x => x.id === centreId);
+        if (!c) return jsonResponse({ error: 'Centre not found' }, 404);
+        try {
+          const body = await request.json();
+          if (body.name !== undefined) c.name = String(body.name).trim();
+          if (body.director_name !== undefined) c.director_name = String(body.director_name).trim();
+          if (body.mobile !== undefined || body.phone !== undefined) c.phone = String(body.mobile || body.phone).trim();
+          if (body.email !== undefined) c.email = String(body.email).trim().toLowerCase();
+          if (body.state !== undefined) c.state = String(body.state).trim();
+          if (body.district !== undefined) c.district = String(body.district).trim();
+          if (body.address !== undefined) c.address = String(body.address).trim();
+          if (body.pin !== undefined) c.pin = String(body.pin).trim();
+          if (body.director_photo !== undefined) {
+            c.director_photo = String(body.director_photo).trim();
+            c.photo_url = String(body.director_photo).trim();
+          }
+
+          // Update owner user
+          const owner = store.users.find(u => (u.centre_id === c.id && u.role === 'centre_owner') || u.id === c.owner_user_id);
+          if (owner) {
+            if (c.director_name) owner.name = c.director_name;
+            if (c.phone) owner.mobile = c.phone;
+            if (c.email) owner.email = c.email;
+            if (c.director_photo) owner.photo_url = c.director_photo;
+          }
+
+          await persistToKV(env, 'centres', store.centres);
+          await persistToKV(env, 'users', store.users);
+
+          return jsonResponse({
+            ok: true,
+            message: 'Centre details updated successfully!',
+            centre: c
+          });
+        } catch (err) {
+          return jsonResponse({ error: err.message }, 400);
+        }
       }
       if (path.startsWith('/api/coordinator/centres/')) {
         const centreId = +path.replace('/api/coordinator/centres/', '');
@@ -3986,6 +4233,20 @@ export default {
       } else {
         const targetSlug = queryParamSlug || headerSlug;
         c = (targetSlug ? resolveSlug(targetSlug) : null) || store.centres[0];
+      }
+
+      if (!c) {
+        c = {
+          id: 0,
+          name: 'Purvanchal Council Centre',
+          centre_code: 'PESC00001',
+          slug: 'main',
+          wallet_balance: 0,
+          wallet_paise: 0,
+          wallet_ledger: [],
+          status: 'active',
+          director_name: 'Centre Director'
+        };
       }
 
       if (path === '/api/centre/dashboard') {
@@ -4321,6 +4582,13 @@ export default {
       });
     }
 
+    if (path === '/api/centre/authorities') {
+      return jsonResponse({
+        ok: true,
+        authorities: getAuthorities(c)
+      });
+    }
+
     if (path === '/api/centre/wallet') {
       const bal = c.wallet_balance !== undefined ? c.wallet_balance : 0;
       const balPaise = c.wallet_paise !== undefined ? c.wallet_paise : (bal * 100);
@@ -4383,6 +4651,16 @@ export default {
         if (body.grade !== undefined) cert.grade = String(body.grade).trim();
         if (body.cert_no !== undefined) cert.cert_no = String(body.cert_no).trim();
         if (body.issue_date !== undefined) cert.issued_at = body.issue_date;
+        if (body.header_type !== undefined) cert.header_type = String(body.header_type).trim();
+        if (body.header_title !== undefined) cert.header_title = String(body.header_title).trim();
+        if (body.header_hindi !== undefined) cert.header_hindi = String(body.header_hindi).trim();
+        if (body.header_subtitle !== undefined) cert.header_subtitle = String(body.header_subtitle).trim();
+        if (body.centre_name !== undefined) cert.centre_name = String(body.centre_name).trim();
+        if (body.centre_name_hi !== undefined) cert.centre_name_hi = String(body.centre_name_hi).trim();
+        if (body.council_address !== undefined) cert.council_address = String(body.council_address).trim();
+        if (body.centre_address !== undefined) cert.centre_address = String(body.centre_address).trim();
+        if (body.scheme !== undefined) cert.scheme = String(body.scheme).trim();
+        if (body.evaluation_type !== undefined) cert.evaluation_type = String(body.evaluation_type).trim();
 
         const stu = store.students.find(s => s.id === cert.student_id);
         if (stu) {
@@ -4423,6 +4701,15 @@ export default {
         if (body.evaluation_type !== undefined) mrk.evaluation_type = String(body.evaluation_type).trim();
         if (body.marksheet_no !== undefined) mrk.marksheet_no = String(body.marksheet_no).trim();
         if (body.issue_date !== undefined) mrk.issue_date = body.issue_date;
+        if (body.header_type !== undefined) mrk.header_type = String(body.header_type).trim();
+        if (body.header_title !== undefined) mrk.header_title = String(body.header_title).trim();
+        if (body.header_hindi !== undefined) mrk.header_hindi = String(body.header_hindi).trim();
+        if (body.header_subtitle !== undefined) mrk.header_subtitle = String(body.header_subtitle).trim();
+        if (body.centre_name !== undefined) mrk.centre_name = String(body.centre_name).trim();
+        if (body.centre_name_hi !== undefined) mrk.centre_name_hi = String(body.centre_name_hi).trim();
+        if (body.council_address !== undefined) mrk.council_address = String(body.council_address).trim();
+        if (body.centre_address !== undefined) mrk.centre_address = String(body.centre_address).trim();
+        if (body.scheme !== undefined) mrk.scheme = String(body.scheme).trim();
 
         if (body.subjects !== undefined) {
           mrk.subjects = typeof body.subjects === 'string' ? body.subjects : JSON.stringify(body.subjects);

@@ -2,7 +2,8 @@ const router = require('express').Router();
 const db = require('../db');
 const cfg = require('../config');
 const { requireRole } = require('../auth');
-const { HttpError, str, paginate, now, getOrCreateCoordinatorCert } = require('../lib');
+const { HttpError, str, paginate, now, getOrCreateCoordinatorCert, h, nextCentreCode, audit } = require('../lib');
+const { resolveSlug } = require('../tenant');
 
 router.use(requireRole('super_admin', 'admin', 'coordinator'));
 
@@ -283,5 +284,161 @@ router.get('/appointment-cert', (req, res) => {
     }
   });
 });
+
+// Grant new centre affiliation directly by regional coordinator
+router.post('/centres', h(async (req, res) => {
+  const coordId = req.user.role === 'coordinator' ? req.user.id : (+req.body.coordinator_id || req.user.id);
+  const b = req.body || {};
+  const name = str(b.name || b.centre_name, 150);
+  const director_name = str(b.director_name || b.owner_name, 100);
+  const email = str(b.email || b.owner_email, 150).toLowerCase();
+  const mobile = str(b.mobile || b.phone, 15);
+  const state = str(b.state, 60) || req.user.state || 'Uttar Pradesh';
+  const district = str(b.district, 60);
+  const address = str(b.address, 300) || `${district}, ${state}`;
+  const pin = str(b.pin, 10) || '221001';
+  const director_photo = b.director_photo || b.photo_url || null;
+  const password = str(b.password, 64) || 'Centre@123';
+
+  if (!name || !director_name || !email || !mobile) {
+    throw new HttpError(400, 'Centre name, director name, email, and mobile are required');
+  }
+  if (!/^[6-9]\d{9}$/.test(mobile)) {
+    throw new HttpError(400, 'Enter a valid 10-digit mobile number');
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    throw new HttpError(400, 'Enter a valid email address');
+  }
+
+  // Generate unique slug
+  let rawSlug = str(b.slug, 30).toLowerCase() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (!rawSlug || rawSlug.length < 3) rawSlug = `centre-${mobile.slice(-4)}`;
+  let slug = rawSlug;
+  let counterIdx = 1;
+  while (resolveSlug(slug) || db.prepare('SELECT 1 FROM centres WHERE slug=?').get(slug)) {
+    slug = `${rawSlug}-${counterIdx++}`;
+  }
+
+  if (db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) {
+    throw new HttpError(409, 'This email is already registered in the system');
+  }
+
+  const bcrypt = require('bcryptjs');
+  const hashed = bcrypt.hashSync(password, 10);
+
+  const result = db.transaction(() => {
+    const centreCode = nextCentreCode();
+    const certNo = `PESC/ATC/2026/${centreCode}`;
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+
+    const u = db.prepare("INSERT INTO users(email,name,mobile,password_hash,password_plain,role,state,status,photo_url,created_at) VALUES(?,?,?,?,?,'centre_owner',?,'active',?,?)")
+      .run(email, director_name, mobile, hashed, password, state, director_photo, now());
+    const ownerUserId = u.lastInsertRowid;
+
+    const c = db.prepare(`INSERT INTO centres(centre_code,name,slug,owner_user_id,coordinator_id,state,district,address,pin,director_name,director_photo,phone,email,affiliation_cert_no,affiliation_issue_date,affiliation_valid_thru,affiliation_session,login_password,status,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'active',?)`)
+      .run(centreCode, name, slug, ownerUserId, coordId, state, district, address, pin, director_name, director_photo, mobile, email, certNo, todayStr, '31-03-2029', '2026 - 2029 (3 Academic Years)', password, now());
+    const centreId = c.lastInsertRowid;
+
+    db.prepare('UPDATE users SET centre_id=? WHERE id=?').run(centreId, ownerUserId);
+
+    // Assign all active courses by default
+    const allCourses = db.prepare('SELECT id FROM courses WHERE active=1').all();
+    for (const co of allCourses) {
+      db.prepare('INSERT OR IGNORE INTO centre_courses(centre_id, course_id) VALUES(?,?)').run(centreId, co.id);
+    }
+
+    // Initialize wallet
+    db.prepare('INSERT OR IGNORE INTO wallets(centre_id, balance_paise) VALUES(?, 0)').run(centreId);
+
+    audit(req, 'coordinator.grant_affiliation', 'centre', centreId, 'ok', `Coordinator ${req.user.name} granted affiliation to ${name} (${centreCode})`);
+
+    return {
+      id: centreId,
+      centre_code: centreCode,
+      name,
+      slug,
+      director_name,
+      mobile,
+      email,
+      state,
+      district,
+      address,
+      affiliation_cert_no: certNo,
+      login_password: password
+    };
+  })();
+
+  res.status(201).json({
+    ok: true,
+    message: 'New Centre Affiliation granted successfully!',
+    centre: result,
+    credentials: {
+      login_id: result.centre_code,
+      password,
+      portal_url: `https://${result.slug}.${cfg.BASE_DOMAIN}/portal`
+    }
+  });
+}));
+
+// Edit affiliated centre details by coordinator
+const handleCentreEdit = h(async (req, res) => {
+  const { isCoord, coordId } = getScope(req);
+  const centreId = +req.params.id;
+  const c = db.prepare(`SELECT * FROM centres WHERE id=? ${isCoord ? 'AND coordinator_id=?' : ''}`).get(centreId, ...(isCoord ? [coordId] : []));
+  if (!c) throw new HttpError(404, 'Centre not found or not in your jurisdiction');
+
+  const b = req.body || {};
+  const name = b.name !== undefined ? str(b.name, 150) : c.name;
+  const director_name = b.director_name !== undefined ? str(b.director_name, 100) : c.director_name;
+  const phone = b.phone !== undefined || b.mobile !== undefined ? str(b.phone || b.mobile, 15) : c.phone;
+  const email = b.email !== undefined ? str(b.email, 150).toLowerCase() : c.email;
+  const state = b.state !== undefined ? str(b.state, 60) : c.state;
+  const district = b.district !== undefined ? str(b.district, 60) : c.district;
+  const address = b.address !== undefined ? str(b.address, 300) : c.address;
+  const pin = b.pin !== undefined ? str(b.pin, 10) : c.pin;
+  const director_photo = b.director_photo !== undefined ? (b.director_photo || null) : c.director_photo;
+  const seal_url = b.seal_url !== undefined ? (b.seal_url || null) : c.seal_url;
+  const signature_url = b.signature_url !== undefined ? (b.signature_url || null) : c.signature_url;
+
+  db.transaction(() => {
+    db.prepare(`UPDATE centres SET
+      name = ?,
+      director_name = ?,
+      phone = ?,
+      email = ?,
+      state = ?,
+      district = ?,
+      address = ?,
+      pin = ?,
+      director_photo = ?,
+      seal_url = ?,
+      signature_url = ?
+      WHERE id=?`).run(
+      name, director_name, phone, email, state, district, address, pin, director_photo, seal_url, signature_url, centreId
+    );
+
+    // Also update centre owner user
+    if (c.owner_user_id) {
+      db.prepare(`UPDATE users SET
+        name = COALESCE(?, name),
+        mobile = COALESCE(?, mobile),
+        email = COALESCE(?, email),
+        photo_url = COALESCE(?, photo_url)
+        WHERE id=?`).run(director_name, phone, email, director_photo, c.owner_user_id);
+    }
+  })();
+
+  audit(req, 'coordinator.edit_centre', 'centre', centreId, 'ok', `Coordinator ${req.user.name} updated centre ${name}`);
+
+  res.json({
+    ok: true,
+    message: 'Centre details updated successfully!',
+    centre: { id: centreId, name, director_name, phone, email, state, district, address, pin, director_photo }
+  });
+});
+
+router.put('/centres/:id', handleCentreEdit);
+router.post('/centres/:id/edit', handleCentreEdit);
 
 module.exports = router;

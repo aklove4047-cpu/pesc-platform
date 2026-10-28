@@ -293,6 +293,11 @@ try { rawDb.exec("ALTER TABLE users ADD COLUMN photo_url TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE users ADD COLUMN seal_url TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE users ADD COLUMN signature_url TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE users ADD COLUMN password_plain TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE users ADD COLUMN district TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE users ADD COLUMN address TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE users ADD COLUMN pin TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE users ADD COLUMN qualification TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE users ADD COLUMN territory TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN director_name TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN phone TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN email TEXT;"); } catch (_) {}
@@ -303,6 +308,7 @@ try { rawDb.exec("ALTER TABLE certificates ADD COLUMN evaluation_type TEXT DEFAU
 try { rawDb.exec("ALTER TABLE certificates ADD COLUMN term TEXT DEFAULT 'Annual';"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE courses ADD COLUMN subjects TEXT DEFAULT '[]';"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE franchise_applications ADD COLUMN photo_url TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE franchise_applications ADD COLUMN coordinator_id INTEGER;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN director_photo TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN hindi_name TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN affiliation_cert_no TEXT;"); } catch (_) {}
