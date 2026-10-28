@@ -3630,75 +3630,6 @@ export default {
       });
     }
 
-    // --- Centre Sign & Final Issue to Student with Wallet Deduction ---
-    if ((path.includes('/certificates/') && path.includes('/sign-issue')) || (path.includes('/cert/') && path.includes('/sign-issue'))) {
-      const parts = path.split('/');
-      const signIssueIdx = parts.indexOf('sign-issue');
-      const cId = signIssueIdx > 0 ? +parts[signIssueIdx - 1] || 1 : 1;
-      let cert = store.certificates.find(x => x.id === cId || x.student_id === cId);
-      if (!cert) {
-        cert = { id: cId, student_id: cId, centre_id: c ? c.id : 1, status: 'Valid', marksheet_no: 'PESC-C-' + String(cId).padStart(5, '0') };
-        store.certificates.push(cert);
-      }
-      let body = {};
-      try { body = await request.json(); } catch (_) {}
-      const fee = +body.fee || +url.searchParams.get('fee') || 200;
-      let activeCentre = c || store.centres[0];
-      let bal = (activeCentre && activeCentre.wallet_balance !== undefined) ? activeCentre.wallet_balance : 5000;
-      if (bal >= fee) {
-        bal -= fee;
-        if (activeCentre) activeCentre.wallet_balance = bal;
-        await persistToKV(env, 'centres', store.centres);
-      }
-      cert.centre_signed = true;
-      cert.centre_signed_at = Date.now();
-      cert.centre_signed_by = (activeCentre && activeCentre.director_name) || 'Dr. Ramesh Kumar';
-      cert.head_approved = true;
-      cert.coordinator_approved = true;
-      cert.status = 'Valid';
-      await persistToKV(env, 'certificates', store.certificates);
-      return jsonResponse({
-        ok: true,
-        message: `सर्टिफिकेट जारी! ₹${fee} सेंटर वॉलेट से कटे।`,
-        certificate: cert,
-        wallet_balance: bal
-      });
-    }
-
-    if ((path.includes('/marksheets/') && path.includes('/sign-issue')) || (path.includes('/mrk/') && path.includes('/sign-issue'))) {
-      const parts = path.split('/');
-      const signIssueIdx = parts.indexOf('sign-issue');
-      const mId = signIssueIdx > 0 ? +parts[signIssueIdx - 1] || 1 : 1;
-      let mrk = store.marksheets.find(x => x.id === mId || x.student_id === mId);
-      if (!mrk) {
-        mrk = { id: mId, student_id: mId, centre_id: c ? c.id : 1, status: 'Valid', marksheet_no: 'PESC-M-' + String(mId).padStart(5, '0') };
-        store.marksheets.push(mrk);
-      }
-      let body = {};
-      try { body = await request.json(); } catch (_) {}
-      const fee = +body.fee || +url.searchParams.get('fee') || 100;
-      let activeCentre = c || store.centres[0];
-      let bal = (activeCentre && activeCentre.wallet_balance !== undefined) ? activeCentre.wallet_balance : 5000;
-      if (bal >= fee) {
-        bal -= fee;
-        if (activeCentre) activeCentre.wallet_balance = bal;
-        await persistToKV(env, 'centres', store.centres);
-      }
-      mrk.centre_signed = true;
-      mrk.centre_signed_at = Date.now();
-      mrk.centre_signed_by = (activeCentre && activeCentre.director_name) || 'Dr. Ramesh Kumar';
-      mrk.head_approved = true;
-      mrk.coordinator_approved = true;
-      mrk.status = 'Approved';
-      await persistToKV(env, 'marksheets', store.marksheets);
-      return jsonResponse({
-        ok: true,
-        message: `अंकतालिका जारी! ₹${fee} सेंटर वॉलेट से कटे।`,
-        marksheet: mrk,
-        wallet_balance: bal
-      });
-    }
-
     // --- Centre Request Dual Approval for Student ---
     if (path === '/api/centre/request-dual-approval' && request.method === 'POST') {
       try {
@@ -4759,29 +4690,45 @@ export default {
         const certId = signIssueIdx > 0 ? +parts[signIssueIdx - 1] || 1 : 1;
         let cert = store.certificates.find(x => x.id === certId || x.student_id === certId);
         if (!cert) {
-          cert = { id: certId, student_id: certId, centre_id: c.id, status: 'Valid' };
+          cert = { id: certId, student_id: certId, centre_id: (c && c.id) ? c.id : 1, status: 'Valid' };
           store.certificates.push(cert);
         }
         let body = {};
         if (request.method === 'POST' || request.method === 'PUT') {
           try { body = await request.json(); } catch (_) {}
         }
-        const fee = +body.fee || +url.searchParams.get('fee') || 200;
-        let bal = c.wallet_balance !== undefined ? c.wallet_balance : 5000;
-        if (bal >= fee) {
-          bal -= fee;
-          c.wallet_balance = bal;
-          await persistToKV(env, 'centres', store.centres);
+        const studentId = body.student_id || cert.student_id;
+        const student = store.students.find(s => s.id === studentId);
+        const course = student ? store.courses.find(co => co.id === student.course_id) : null;
+        const fee = (body.fee !== undefined && !isNaN(+body.fee)) ? +body.fee : (course ? (course.single_fee_rupees || 100) : 100);
+        let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
+        if (bal < fee) {
+          return jsonResponse({
+            error: `सेंटर वॉलेट में अपर्याप्त बैलेंस है! आवश्यक: ₹${fee}, उपलब्ध: ₹${bal}। कृपया पहले वॉलेट रिचार्ज करें।`
+          }, 402);
         }
+        bal -= fee;
+        if (c) c.wallet_balance = bal;
+        await persistToKV(env, 'centres', store.centres);
+
         cert.centre_signed = true;
+        cert.centre_signed_at = Date.now();
+        cert.centre_signed_by = (c && c.director_name) || 'Centre Director';
         cert.head_approved = true;
         cert.coordinator_approved = true;
         cert.status = 'Valid';
         cert.issued_at = Date.now();
+        if (!cert.cert_no || cert.cert_no.includes('Pending')) {
+          const year = new Date().getFullYear();
+          cert.cert_no = `PESC/${year}/${String(cert.id || certId).padStart(6, '0')}`;
+        }
+        if (!cert.token) {
+          cert.token = 'cert-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
         await persistToKV(env, 'certificates', store.certificates);
         return jsonResponse({
           ok: true,
-          message: `Certificate officially issued! ₹${fee} deducted from Centre Wallet.`,
+          message: `प्रमाणपत्र सफलतापूर्वक जारी किया गया! ₹${fee} सेंटर वॉलेट से कटे।`,
           certificate: cert,
           wallet_balance: bal
         });
@@ -4793,29 +4740,45 @@ export default {
         const mrkId = signIssueIdx > 0 ? +parts[signIssueIdx - 1] || 1 : 1;
         let mrk = store.marksheets.find(x => x.id === mrkId || x.student_id === mrkId);
         if (!mrk) {
-          mrk = { id: mrkId, student_id: mrkId, centre_id: c.id, status: 'Valid' };
+          mrk = { id: mrkId, student_id: mrkId, centre_id: (c && c.id) ? c.id : 1, status: 'Valid' };
           store.marksheets.push(mrk);
         }
         let body = {};
         if (request.method === 'POST' || request.method === 'PUT') {
           try { body = await request.json(); } catch (_) {}
         }
-        const fee = +body.fee || +url.searchParams.get('fee') || 100;
-        let bal = c.wallet_balance !== undefined ? c.wallet_balance : 5000;
-        if (bal >= fee) {
-          bal -= fee;
-          c.wallet_balance = bal;
-          await persistToKV(env, 'centres', store.centres);
+        const studentId = body.student_id || mrk.student_id;
+        const student = store.students.find(s => s.id === studentId);
+        const course = student ? store.courses.find(co => co.id === student.course_id) : null;
+        const fee = (body.fee !== undefined && !isNaN(+body.fee)) ? +body.fee : (course ? (course.single_fee_rupees || 100) : 100);
+        let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
+        if (bal < fee) {
+          return jsonResponse({
+            error: `सेंटर वॉलेट में अपर्याप्त बैलेंस है! आवश्यक: ₹${fee}, उपलब्ध: ₹${bal}। कृपया पहले वॉलेट रिचार्ज करें।`
+          }, 402);
         }
+        bal -= fee;
+        if (c) c.wallet_balance = bal;
+        await persistToKV(env, 'centres', store.centres);
+
         mrk.centre_signed = true;
+        mrk.centre_signed_at = Date.now();
+        mrk.centre_signed_by = (c && c.director_name) || 'Centre Director';
         mrk.head_approved = true;
         mrk.coordinator_approved = true;
-        mrk.status = 'Valid';
+        mrk.status = 'Approved';
         mrk.issued_at = Date.now();
+        if (!mrk.marksheet_no || mrk.marksheet_no.includes('Pending')) {
+          const year = new Date().getFullYear();
+          mrk.marksheet_no = `PESC/MRK/${year}/${String(mrk.id || mrkId).padStart(6, '0')}`;
+        }
+        if (!mrk.token) {
+          mrk.token = 'mrk-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
         await persistToKV(env, 'marksheets', store.marksheets);
         return jsonResponse({
           ok: true,
-          message: `Marksheet officially issued! ₹${fee} deducted from Centre Wallet.`,
+          message: `अंकतालिका सफलतापूर्वक जारी की गई! ₹${fee} सेंटर वॉलेट से कटे।`,
           marksheet: mrk,
           wallet_balance: bal
         });

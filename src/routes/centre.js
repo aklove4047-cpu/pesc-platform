@@ -508,7 +508,7 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
   }
 
   try {
-    wallet.debit(cid(req), fee, `fee:marksheet:${mid}`, 'Marksheet issue fee', req.user.id);
+    wallet.debit(cid(req), fee, `fee:marksheet:${mid}:${Date.now()}`, 'Marksheet issue fee', req.user.id);
   } catch (e) {
     if (e.status === 409 && /Insufficient/i.test(e.message)) {
       throw new HttpError(402, 'Insufficient wallet balance for marksheet issuance');
@@ -553,7 +553,7 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
   }
 
   try {
-    wallet.debit(cid(req), fee, `fee:certificate:${certId}`, 'Certificate issue fee', req.user.id);
+    wallet.debit(cid(req), fee, `fee:certificate:${certId}:${Date.now()}`, 'Certificate issue fee', req.user.id);
   } catch (e) {
     if (e.status === 409 && /Insufficient/i.test(e.message)) {
       throw new HttpError(402, 'Insufficient wallet balance for certificate issuance');
