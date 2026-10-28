@@ -1842,26 +1842,6 @@ const views = {
       updateSemCertPreview();
     }
   },
-          <div id="semCertPrintActionWrap" style="display:none;">
-            <div style="display:flex; gap:8px;">
-              <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Semester Certificate</button>
-              <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Prescribed Council Fee Notice -->
-        <div id="semCertFeeNotice" style="margin-bottom:16px;"></div>
-
-        <div id="semCertPreview" class="printable-area" style="background:#ffffff; border:10px double #047857; padding:40px; border-radius:12px; max-width:880px; margin:0 auto; text-align:center;">
-          <!-- Dynamically rendered -->
-        </div>
-      </div>
-    `;
-
-    $('#semCertStudentSelect').onchange = updateSemCertPreview;
-    updateSemCertPreview();
-  },
 
   // 8. Mohar + Signature Upload (Apna Mohar/Seal aur Sign khud lagayega)
   async MoharSignature() {
@@ -4093,9 +4073,6 @@ async function updateMrkPreview(targetStudentId) {
       const saved = localStorage.getItem('pesc_custom_marks_' + studentId);
       if (saved) customSubjects = JSON.parse(saved);
     } catch (_) {}
-  }
-      { code: 'NTT-06', name: 'Internal Project', max: 100, min: 40, obt: 80, grade: 'A+' }
-    ];
   }
 
   $('#mrkPreviewContainer').innerHTML = `

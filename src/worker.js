@@ -728,7 +728,7 @@ function slugOf(hostHeader) {
     if (host.endsWith('.' + b)) {
       const sub = host.slice(0, -(b.length + 1));
       if (sub.includes('.')) return { kind: 'invalid' };
-      if (['www', 'admin', 'api', 'mail', 'support', 'verify', 'login', 'portal', 'student', 'coordinator', 'app', 'static'].includes(sub)) return { kind: 'main' };
+      if (['www', 'admin', 'api', 'mail', 'support', 'verify', 'login', 'portal', 'centre', 'center', 'student', 'coordinator', 'app', 'static'].includes(sub)) return { kind: 'main' };
       return { kind: 'tenant', slug: sub };
     }
   }
@@ -1204,10 +1204,17 @@ export default {
       }
     }
 
+    // Direct Centre Portal Routing aliases
+    if (['/centre', '/centre/', '/center', '/center/', '/centre-portal', '/center-portal'].includes(path)) {
+      const newUrl = new URL(request.url);
+      newUrl.pathname = '/portal';
+      return env.ASSETS.fetch(new Request(newUrl.toString(), request));
+    }
+
     // Direct slug redirect: e.g. /aryavart-institute-of-technology-management -> https://aryavart-institute-of-technology-management.pescouncil.in/
     if (path.length > 1 && !path.includes('.') && !path.startsWith('/api') && !path.startsWith('/assets')) {
       const cleanSlug = path.replace(/^\//, '').split('/')[0].toLowerCase();
-      const reservedList = ['portal', 'admin', 'coordinator', 'student', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz'];
+      const reservedList = ['portal', 'centre', 'center', 'centre-portal', 'center-portal', 'admin', 'coordinator', 'student', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz'];
       if (!reservedList.includes(cleanSlug)) {
         const directCentre = resolveSlug(cleanSlug);
         if (directCentre) {
@@ -5376,7 +5383,7 @@ export default {
         newUrl.pathname = '/student';
         return env.ASSETS.fetch(new Request(newUrl, request));
       }
-      if (sub === 'portal' && (path === '/' || path === '')) {
+      if ((sub === 'portal' || sub === 'centre' || sub === 'center') && (path === '/' || path === '')) {
         const newUrl = new URL(request.url);
         newUrl.pathname = '/portal';
         return env.ASSETS.fetch(new Request(newUrl, request));
