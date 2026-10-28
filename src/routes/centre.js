@@ -145,10 +145,11 @@ router.get('/dashboard', (req, res) => {
 router.get('/students', (req, res) => {
   const { size, offset } = paginate(req);
   const q = `%${str(req.query.q, 50)}%`;
-  const rows = db.prepare(`SELECT s.id, s.student_code, s.name, s.father_name, s.mobile, s.email, s.dob, s.status, s.session,
-    s.fee_total, s.fee_paid, s.photo_url, s.initial_password, s.course_id,
-    co.name AS course, co.code AS course_code, co.duration_months,
-    cert.id AS certificate_id, cert.cert_no, mrk.id AS marksheet_id, mrk.marksheet_no,
+  const rows = db.prepare(`SELECT s.id, s.student_code, s.name, s.father_name, s.mother_name, s.mobile, s.email, s.dob, s.status, s.session,
+    s.fee_total, s.fee_paid, s.photo_url, s.initial_password, s.course_id, s.evaluation_type, s.term,
+    co.name AS course, co.code AS course_code, co.duration_months, co.subjects AS course_subjects,
+    cert.id AS certificate_id, cert.cert_no, cert.status AS cert_status,
+    mrk.id AS marksheet_id, mrk.marksheet_no, mrk.status AS marksheet_status,
     CASE WHEN s.status='passout' OR s.status='completed' OR cert.id IS NOT NULL OR mrk.id IS NOT NULL THEN 1 ELSE 0 END AS is_passout
     FROM students s
     JOIN courses co ON co.id=s.course_id
@@ -285,9 +286,13 @@ router.post('/students', h(async (req, res) => {
       userId = u.id;
     }
 
-    const r = db.prepare(`INSERT INTO students(student_code,centre_id,user_id,name,father_name,mother_name,category,blood_group,address,qualifications,mobile,email,dob,course_id,session,fee_total,fee_paid,photo_url,initial_password,created_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .run(code, cid(req), userId, name, father_name, mother_name, category, blood_group, address, qualifications, mobile, studentEmail, dob, course_id, session, fee_total, fee_paid, photo_url, defaultPw, now());
+    const isSemester = (b.course_type && b.course_type.toLowerCase().includes('semester')) || b.evaluation_type === 'semester';
+    const evalType = isSemester ? 'semester' : 'annual';
+    const termVal = b.term || (isSemester ? 'Semester 1' : 'Annual');
+
+    const r = db.prepare(`INSERT INTO students(student_code,centre_id,user_id,name,father_name,mother_name,category,blood_group,address,qualifications,mobile,email,dob,course_id,session,fee_total,fee_paid,photo_url,initial_password,evaluation_type,term,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .run(code, cid(req), userId, name, father_name, mother_name, category, blood_group, address, qualifications, mobile, studentEmail, dob, course_id, session, fee_total, fee_paid, photo_url, defaultPw, evalType, termVal, now());
     fees.charge(cid(req), 'admission', r.lastInsertRowid, req.user.id); // rolls the whole admission back if balance is short (35 Rs)
     return r.lastInsertRowid;
   })();
@@ -431,24 +436,72 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
   const sid = +req.params.id;
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM marksheets WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
-  const fee = Math.round(+req.body.fee || 150) * 100;
+  
+  // Look up course fee dynamically from courses table
+  let courseFeePaise = 10000; // default ₹100
+  if (s && s.course_id) {
+    const co = db.prepare('SELECT single_fee_paise, semester_fee_paise FROM courses WHERE id=?').get(s.course_id);
+    if (co) {
+      const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
+      courseFeePaise = isSem ? (co.semester_fee_paise || 20000) : (co.single_fee_paise || 10000);
+    }
+  }
+  const fee = (req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee >= 0)
+    ? Math.round(+req.body.fee * 100)
+    : courseFeePaise;
   
   const token = crypto.randomBytes(16).toString('hex');
   const mrkNo = `PESC-MRK-2026-${String(s.id).padStart(5, '0')}`;
   
   let mid = db.prepare('SELECT id FROM marksheets WHERE student_id=?').get(s.id)?.id;
   if (!mid) {
-    const subjects = JSON.stringify([
-      { code: 'NTT-01', name: 'Child Psychology', max_marks: 100, min_marks: 40, marks_obtained: 78, grade: 'A' },
-      { code: 'NTT-02', name: 'School Organization', max_marks: 100, min_marks: 40, marks_obtained: 72, grade: 'B+' },
-      { code: 'NTT-03', name: 'Methods of Teaching', max_marks: 100, min_marks: 40, marks_obtained: 85, grade: 'A+' },
-      { code: 'NTT-04', name: 'Practical', max_marks: 100, min_marks: 40, marks_obtained: 85, grade: 'A+' },
-      { code: 'NTT-05', name: 'Viva-Voce', max_marks: 100, min_marks: 40, marks_obtained: 78, grade: 'A+' },
-      { code: 'NTT-06', name: 'Internal Assessment', max_marks: 100, min_marks: 40, marks_obtained: 80, grade: 'A+' }
-    ]);
-    const r = db.prepare(`INSERT INTO marksheets(marksheet_no, token, student_id, centre_id, course_id, exam_session, roll_no, subjects, total_max, total_obtained, percentage, grade, result, status, issue_date, requested_by, created_at)
-      VALUES(?,?,?,?,?,'2025-2026',?,?,700,522,74.57,'A','PASS','Approved',?,?,?)`)
-      .run(mrkNo, token, s.id, cid(req), s.course_id, s.student_code, subjects, now(), req.user.id, now());
+    let subjects = null;
+    let totalMax = 0;
+    let totalObt = 0;
+    if (s.course_id) {
+      const co = db.prepare('SELECT subjects, name FROM courses WHERE id=?').get(s.course_id);
+      if (co && co.subjects) {
+        try {
+          const parsed = typeof co.subjects === 'string' ? JSON.parse(co.subjects) : co.subjects;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            subjects = parsed.map((sub, idx) => {
+              const max = sub.total_max || sub.max || sub.max_marks || ((+sub.max_theory || 0) + (+sub.max_practical || 0)) || 100;
+              const obt = sub.obt || sub.marks_obtained || sub.marks || ((+sub.obt_theory || 0) + (+sub.obt_practical || 0)) || Math.round(max * 0.76);
+              const min = sub.min || sub.min_marks || Math.round(max * 0.33);
+              const pct = max > 0 ? (obt / max) * 100 : 0;
+              const grade = sub.grade || (pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : pct >= 50 ? 'B' : 'C');
+              totalMax += max;
+              totalObt += obt;
+              return {
+                code: sub.code || `SUB-0${idx + 1}`,
+                name: sub.name || `Subject ${idx + 1}`,
+                max, min, obt, grade,
+                max_marks: max, min_marks: min, marks_obtained: obt
+              };
+            });
+          }
+        } catch (_) {}
+      }
+    }
+    if (!subjects || subjects.length === 0) {
+      subjects = [
+        { code: 'DCA101', name: 'Information Technology & MS Windows', max: 100, min: 40, obt: 78, grade: 'A', max_marks: 100, min_marks: 40, marks_obtained: 78 },
+        { code: 'DCA102', name: 'Office Automation Tools (Word, Excel, PPT)', max: 100, min: 40, obt: 72, grade: 'B+', max_marks: 100, min_marks: 40, marks_obtained: 72 },
+        { code: 'DCA103', name: 'Financial Accounting & Tally Prime GST', max: 100, min: 40, obt: 85, grade: 'A+', max_marks: 100, min_marks: 40, marks_obtained: 85 },
+        { code: 'DCA104', name: 'Internet Applications & Cyber Security', max: 100, min: 40, obt: 80, grade: 'A', max_marks: 100, min_marks: 40, marks_obtained: 80 },
+        { code: 'DCA105', name: 'Practical Assessment & Lab Project', max: 100, min: 40, obt: 88, grade: 'A+', max_marks: 100, min_marks: 40, marks_obtained: 88 }
+      ];
+      totalMax = 500;
+      totalObt = 403;
+    }
+    const pct = totalMax > 0 ? +((totalObt / totalMax) * 100).toFixed(2) : 74.57;
+    const grade = pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : 'B';
+    const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
+    const evalType = isSem ? 'semester' : 'yearly';
+    const termVal = req.body.term || (isSem ? 'Semester 1' : 'Annual');
+    const r = db.prepare(`INSERT INTO marksheets(marksheet_no, token, student_id, centre_id, course_id, exam_session, roll_no, subjects, total_max, total_obtained, percentage, grade, result, status, issue_date, evaluation_type, term, requested_by, created_at)
+      VALUES(?,?,?,?,?,'2025-2026',?,?,?,?,?,?,'PASS','Approved',?,?,?,?,?)`)
+      .run(mrkNo, token, s.id, cid(req), s.course_id, s.student_code, JSON.stringify(subjects), totalMax, totalObt, pct, grade, now(), evalType, termVal, req.user.id, now());
     mid = r.lastInsertRowid;
   } else {
     db.prepare("UPDATE marksheets SET status='Approved', issue_date=? WHERE id=?").run(now(), mid);
@@ -470,16 +523,30 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
   const sid = +req.params.id;
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM certificates WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
-  const fee = Math.round(+req.body.fee || 200) * 100;
+  
+  let courseFeePaise = 20000;
+  if (s && s.course_id) {
+    const co = db.prepare('SELECT single_fee_paise, semester_fee_paise FROM courses WHERE id=?').get(s.course_id);
+    if (co) {
+      const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
+      courseFeePaise = isSem ? (co.semester_fee_paise || 60000) : (co.single_fee_paise || 20000);
+    }
+  }
+  const fee = (req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee >= 0)
+    ? Math.round(+req.body.fee * 100)
+    : courseFeePaise;
   
   const token = crypto.randomBytes(16).toString('hex');
   const certNo = `PESC-CERT-2026-${String(s.id).padStart(5, '0')}`;
   
   let certId = db.prepare('SELECT id FROM certificates WHERE student_id=?').get(s.id)?.id;
   if (!certId) {
-    const r = db.prepare(`INSERT INTO certificates(token, student_id, centre_id, course_id, cert_no, status, issued_at, requested_by, created_at)
-      VALUES(?,?,?,?,?,'Valid',?,?,?)`)
-      .run(token, s.id, cid(req), s.course_id, certNo, now(), req.user.id, now());
+    const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
+    const evalType = isSem ? 'semester' : 'yearly';
+    const termVal = req.body.term || (isSem ? 'Semester 1' : 'Annual');
+    const r = db.prepare(`INSERT INTO certificates(token, student_id, centre_id, course_id, cert_no, status, evaluation_type, term, issued_at, requested_by, created_at)
+      VALUES(?,?,?,?,?,'Valid',?,?,?,?,?)`)
+      .run(token, s.id, cid(req), s.course_id, certNo, evalType, termVal, now(), req.user.id, now());
     certId = r.lastInsertRowid;
   } else {
     db.prepare("UPDATE certificates SET status='Valid', cert_no=COALESCE(cert_no, ?), issued_at=? WHERE id=?").run(certNo, now(), certId);

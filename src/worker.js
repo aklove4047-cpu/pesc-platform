@@ -3669,7 +3669,7 @@ export default {
       }
       let body = {};
       try { body = await request.json(); } catch (_) {}
-      const fee = +body.fee || +url.searchParams.get('fee') || 150;
+      const fee = +body.fee || +url.searchParams.get('fee') || 100;
       let activeCentre = c || store.centres[0];
       let bal = (activeCentre && activeCentre.wallet_balance !== undefined) ? activeCentre.wallet_balance : 5000;
       if (bal >= fee) {
@@ -4793,7 +4793,7 @@ export default {
         if (request.method === 'POST' || request.method === 'PUT') {
           try { body = await request.json(); } catch (_) {}
         }
-        const fee = +body.fee || +url.searchParams.get('fee') || 150;
+        const fee = +body.fee || +url.searchParams.get('fee') || 100;
         let bal = c.wallet_balance !== undefined ? c.wallet_balance : 5000;
         if (bal >= fee) {
           bal -= fee;

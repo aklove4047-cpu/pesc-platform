@@ -320,6 +320,11 @@ try { rawDb.exec("ALTER TABLE students ADD COLUMN category TEXT;"); } catch (_) 
 try { rawDb.exec("ALTER TABLE students ADD COLUMN blood_group TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE students ADD COLUMN address TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE students ADD COLUMN qualifications TEXT DEFAULT '{}';"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN evaluation_type TEXT DEFAULT 'annual';"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN term TEXT DEFAULT 'Annual';"); } catch (_) {}
+try {
+  rawDb.exec("UPDATE students SET evaluation_type='semester' WHERE id IN (SELECT student_id FROM marksheets WHERE evaluation_type='semester') OR id IN (SELECT student_id FROM certificates WHERE evaluation_type='semester');");
+} catch (_) {}
 
 // Default standard subjects for accredited courses
 const DEFAULT_COURSE_SUBJECTS = {

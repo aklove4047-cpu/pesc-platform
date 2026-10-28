@@ -1106,7 +1106,10 @@ guard(async () => {
             student: stuObj,
             centre: centreObj,
             mrkNo: m.marksheet_no || 'PESC-MARKS-2026-0007',
-            issueDate: '04-10-2026'
+            issueDate: m.issue_date ? new Date(m.issue_date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '04-10-2026',
+            subjects: m.subjects,
+            scheme: m.evaluation_type === 'semester' ? 'single_semester' : 'annual',
+            term: m.term || 'Annual Examination'
           }) : '<p>Loading template...</p>'}
         </div>
       `;

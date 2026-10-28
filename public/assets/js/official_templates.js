@@ -689,14 +689,95 @@
       `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
       `<div style="padding-top:25px; font-size:0.6rem; font-weight:800; color:#64748b;">PHOTO</div>`;
 
-    const subjects = data.subjects || [
-      { code: 'NTT-01', name: 'Child Psychology', max: 100, min: 40, obt: 78, grade: 'A' },
-      { code: 'NTT-02', name: 'School Organization', max: 100, min: 40, obt: 72, grade: 'B+' },
-      { code: 'NTT-03', name: 'Methods of Teaching', max: 100, min: 40, obt: 83, grade: 'A+' },
-      { code: 'NTT-04', name: 'Arts & Craft', max: 100, min: 40, obt: 85, grade: 'A+' },
-      { code: 'NTT-05', name: 'Lesson Plan', max: 100, min: 40, obt: 75, grade: 'A' },
-      { code: 'NTT-06', name: 'Practical & Assignment', max: 100, min: 40, obt: 89, grade: 'A+' }
-    ];
+    let rawSubjects = data.subjects;
+    if (typeof rawSubjects === 'string') {
+      try { rawSubjects = JSON.parse(rawSubjects); } catch (_) { rawSubjects = null; }
+    }
+    if (!Array.isArray(rawSubjects) || rawSubjects.length === 0) {
+      const cUpper = String(courseName || '').toUpperCase();
+      if (cUpper.includes('ADCA')) {
+        rawSubjects = [
+          { code: 'ADCA-01', name: 'Information Technology & Operating Systems', max: 100, min: 40, obt: 82, grade: 'A+' },
+          { code: 'ADCA-02', name: 'Office Automation & Advanced Excel', max: 100, min: 40, obt: 79, grade: 'A' },
+          { code: 'ADCA-03', name: 'Financial Accounting & Tally Prime GST', max: 100, min: 40, obt: 88, grade: 'A+' },
+          { code: 'ADCA-04', name: 'DTP, Photoshop & Graphic Designing', max: 100, min: 40, obt: 76, grade: 'A' },
+          { code: 'ADCA-05', name: 'Web Designing Concepts & Internet', max: 100, min: 40, obt: 84, grade: 'A+' },
+          { code: 'ADCA-06', name: 'Practical Assessment & Lab Project', max: 100, min: 40, obt: 90, grade: 'A+' }
+        ];
+      } else if (cUpper.includes('DCA')) {
+        rawSubjects = [
+          { code: 'DCA-01', name: 'Information Technology & MS Windows', max: 100, min: 40, obt: 80, grade: 'A' },
+          { code: 'DCA-02', name: 'Office Automation (Word, Excel, PowerPoint)', max: 100, min: 40, obt: 75, grade: 'A' },
+          { code: 'DCA-03', name: 'Financial Accounting with Tally', max: 100, min: 40, obt: 83, grade: 'A+' },
+          { code: 'DCA-04', name: 'Internet Applications & Cyber Ethics', max: 100, min: 40, obt: 78, grade: 'A' },
+          { code: 'DCA-05', name: 'Practical Lab Work & Viva', max: 100, min: 40, obt: 86, grade: 'A+' }
+        ];
+      } else if (cUpper.includes('PGDCA')) {
+        rawSubjects = [
+          { code: 'PGDCA-01', name: 'Fundamentals of Computer & IT', max: 100, min: 40, obt: 81, grade: 'A' },
+          { code: 'PGDCA-02', name: 'Programming Concepts & C/C++', max: 100, min: 40, obt: 77, grade: 'A' },
+          { code: 'PGDCA-03', name: 'Database Management Systems (RDBMS)', max: 100, min: 40, obt: 85, grade: 'A+' },
+          { code: 'PGDCA-04', name: 'Web Technologies & Scripting', max: 100, min: 40, obt: 82, grade: 'A+' },
+          { code: 'PGDCA-05', name: 'Software Engineering & Project', max: 100, min: 40, obt: 89, grade: 'A+' }
+        ];
+      } else if (cUpper.includes('YOGA')) {
+        rawSubjects = [
+          { code: 'DY-01', name: 'Foundations and History of Yoga', max: 100, min: 40, obt: 84, grade: 'A+' },
+          { code: 'DY-02', name: 'Anatomy and Physiology for Yogic Practice', max: 100, min: 40, obt: 78, grade: 'A' },
+          { code: 'DY-03', name: 'Patanjali Yoga Sutras & Philosophy', max: 100, min: 40, obt: 80, grade: 'A' },
+          { code: 'DY-04', name: 'Yogic Diet & Naturopathy', max: 100, min: 40, obt: 86, grade: 'A+' },
+          { code: 'DY-05', name: 'Practical Asana, Pranayama & Viva', max: 100, min: 40, obt: 91, grade: 'A+' }
+        ];
+      } else {
+        rawSubjects = [
+          { code: 'NTT-01', name: 'Child Psychology', max: 100, min: 40, obt: 78, grade: 'A' },
+          { code: 'NTT-02', name: 'School Organization', max: 100, min: 40, obt: 72, grade: 'B+' },
+          { code: 'NTT-03', name: 'Methods of Teaching', max: 100, min: 40, obt: 83, grade: 'A+' },
+          { code: 'NTT-04', name: 'Arts & Craft', max: 100, min: 40, obt: 85, grade: 'A+' },
+          { code: 'NTT-05', name: 'Lesson Plan', max: 100, min: 40, obt: 75, grade: 'A' },
+          { code: 'NTT-06', name: 'Practical & Assignment', max: 100, min: 40, obt: 89, grade: 'A+' }
+        ];
+      }
+    }
+
+    const subjects = rawSubjects.map((sub, idx) => {
+      if (!sub || typeof sub !== 'object') {
+        return { code: `SUB-0${idx+1}`, name: String(sub || `Subject ${idx+1}`), max: 100, min: 40, obt: 75, grade: 'A' };
+      }
+      const code = sub.code || sub.subject_code || sub.paper_code || `SUB-0${idx+1}`;
+      const name = sub.name || sub.subject_name || sub.paper_name || `Subject ${idx+1}`;
+      
+      let max = sub.max !== undefined ? +sub.max : undefined;
+      if (max === undefined && sub.max_marks !== undefined) max = +sub.max_marks;
+      if (max === undefined && sub.total_max !== undefined) max = +sub.total_max;
+      if (max === undefined && (sub.max_theory !== undefined || sub.max_practical !== undefined)) {
+        max = (+sub.max_theory || 0) + (+sub.max_practical || 0);
+      }
+      if (max === undefined || isNaN(max) || max <= 0) max = 100;
+
+      let obt = sub.obt !== undefined ? +sub.obt : undefined;
+      if (obt === undefined && sub.marks_obtained !== undefined) obt = +sub.marks_obtained;
+      if (obt === undefined && sub.marks !== undefined) obt = +sub.marks;
+      if (obt === undefined && (sub.obt_theory !== undefined || sub.obt_practical !== undefined)) {
+        obt = (+sub.obt_theory || 0) + (+sub.obt_practical || 0);
+      }
+      if (obt === undefined && (sub.theory !== undefined || sub.practical !== undefined)) {
+        obt = (+sub.theory || 0) + (+sub.practical || 0);
+      }
+      if (obt === undefined || isNaN(obt)) obt = Math.round(max * 0.76);
+
+      let min = sub.min !== undefined ? +sub.min : undefined;
+      if (min === undefined && sub.min_marks !== undefined) min = +sub.min_marks;
+      if (min === undefined || isNaN(min)) min = Math.round(max * 0.33);
+
+      let grade = sub.grade || sub.letter_grade;
+      if (!grade) {
+        const pct = max > 0 ? (obt / max) * 100 : 0;
+        grade = pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : pct >= 50 ? 'B' : pct >= 40 ? 'C' : 'D';
+      }
+
+      return { code, name, max, min, obt, grade };
+    });
 
     const maxTotal = subjects.reduce((sum, sub) => sum + (+sub.max || 100), 0);
     const obtTotal = subjects.reduce((sum, sub) => sum + (+sub.obt || 0), 0);

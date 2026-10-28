@@ -1503,7 +1503,18 @@ const views = {
       api('/api/centre/courses').catch(() => ({ courses: [] }))
     ]);
     const students = sData.students || [];
+    window._currentStudents = students;
     if (cData && cData.courses) window._currentCourses = cData.courses;
+
+    const isStudentCertIssued = (s) => Boolean(
+      s.certificate_id ||
+      s.cert_no ||
+      (s.cert_status && s.cert_status !== 'Pending' && s.cert_status !== 'Rejected') ||
+      (window._issuedCerts && (window._issuedCerts[s.id] || window._issuedCerts[s.student_code]))
+    );
+
+    const unissuedStudents = students.filter(s => !isStudentCertIssued(s));
+    const issuedStudents = students.filter(s => isStudentCertIssued(s));
 
     V.innerHTML = `
       <div style="margin-bottom:20px;">
@@ -1513,11 +1524,11 @@ const views = {
 
       <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; margin-bottom:24px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
         <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:20px;">
-          <!-- Select Enrolled Candidate -->
-          <div style="flex:1; min-width:240px;">
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Enrolled Candidate (छात्र चुनें):</label>
+          <!-- Select Enrolled Candidate (Unissued Only) -->
+          <div style="flex:1; min-width:260px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Enrolled Candidate (अजारी छात्र चुनें):</label>
             <select id="certStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-cert_no="${esc(s.cert_no || (s.certificate && s.certificate.cert_no) || '')}" data-is_passout="${s.is_passout || s.status === 'passout' ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
+              ${unissuedStudents.length > 0 ? unissuedStudents.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-eval_type="${esc(s.evaluation_type || 'annual')}" data-term="${esc(s.term || 'Annual')}" data-cert_no="${esc(s.cert_no || '')}" data-is_passout="${s.is_passout ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)} [${(s.evaluation_type || 'annual') === 'semester' ? 'सेमेस्टर' : 'वार्षिक'}]</option>`).join('') : '<option value="">-- सभी पंजीकृत छात्रों के प्रमाणपत्र जारी हो चुके हैं --</option>'}
             </select>
           </div>
 
@@ -1566,10 +1577,69 @@ const views = {
         <div id="certPreviewContainer" class="printable-area" style="background:#ffffff; border:12px double #d4af37; padding:40px; border-radius:10px; max-width:880px; margin:0 auto; box-shadow:0 8px 30px rgba(0,0,0,0.08); text-align:center; position:relative;">
           <!-- Dynamically filled by updateCertPreview() -->
         </div>
+
+        <!-- Already Issued Certificates Table -->
+        <div style="margin-top:35px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:22px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="margin:0 0 4px; color:#064e3b; font-size:1.25rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+                <span>📜</span> Already Issued Certificates (पूर्व में जारी प्रमाणपत्र की सूची)
+              </h3>
+              <p style="margin:0; font-size:0.86rem; color:#64748b;">
+                इन छात्रों के प्रमाणपत्र अधिकृत रूप से जारी हो चुके हैं। यहाँ से कभी भी प्रिंट (Print) या डाउनलोड (PDF) करें।
+              </p>
+            </div>
+            <span style="background:#dcfce7; color:#166534; font-weight:800; font-size:0.88rem; padding:6px 14px; border-radius:20px; border:1px solid #86efac;">
+              ${issuedStudents.length} Certificate(s) Issued
+            </span>
+          </div>
+
+          ${issuedStudents.length === 0 ? `
+            <div style="text-align:center; padding:24px; color:#64748b; font-size:0.92rem; background:#fff; border-radius:8px; border:1px dashed #cbd5e1;">
+              अभी तक किसी भी छात्र का प्रमाणपत्र जारी नहीं हुआ है। ऊपर से छात्र चुनकर अधिकृत प्रमाणपत्र जारी करें।
+            </div>
+          ` : `
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e2e8f0; font-size:0.9rem;">
+                <thead>
+                  <tr style="background:#064e3b; color:#ffffff; text-align:left;">
+                    <th style="padding:10px 14px;">Roll / Reg. No.</th>
+                    <th style="padding:10px 14px;">Candidate Name</th>
+                    <th style="padding:10px 14px;">Course</th>
+                    <th style="padding:10px 14px;">Certificate No.</th>
+                    <th style="padding:10px 14px;">Evaluation Mode</th>
+                    <th style="padding:10px 14px; text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${issuedStudents.map((s, idx) => `
+                    <tr style="border-bottom:1px solid #e2e8f0; background:${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
+                      <td style="padding:10px 14px; font-family:monospace; font-weight:700; color:#0284c7;">${esc(s.student_code)}</td>
+                      <td style="padding:10px 14px; font-weight:700; color:#0f172a;">${esc(s.name)}<br><small style="color:#64748b; font-weight:normal;">S/O: ${esc(s.father_name || 'N/A')}</small></td>
+                      <td style="padding:10px 14px; font-weight:600;">${esc(s.course)}</td>
+                      <td style="padding:10px 14px; font-family:monospace; font-weight:800; color:#064e3b;">${esc(s.cert_no || `PESC-CERT-2026-${String(s.id).padStart(5, '0')}`)}</td>
+                      <td style="padding:10px 14px;">
+                        <span style="display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:800; ${(s.evaluation_type || 'annual') === 'semester' ? 'background:#e0e7ff; color:#3730a3;' : 'background:#fef3c7; color:#92400e;'}">
+                          ${(s.evaluation_type || 'annual') === 'semester' ? '📚 Semester' : '📅 Annual'}
+                        </span>
+                      </td>
+                      <td style="padding:10px 14px; text-align:right;">
+                        <div style="display:inline-flex; gap:6px;">
+                          <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentCert(${s.id})">🖨️ View &amp; Print</button>
+                          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:700;" onclick="openCentreEditCertModal(${s.certificate_id || s.id}, ${s.id})">✏️ Edit</button>
+                        </div>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
       </div>
     `;
 
-    $('#certStudentSelect').onchange = updateCertPreview;
+    $('#certStudentSelect').onchange = () => updateCertPreview();
     updateCertPreview();
   },
 
@@ -1580,7 +1650,18 @@ const views = {
       api('/api/centre/courses').catch(() => ({ courses: [] }))
     ]);
     const students = sData.students || [];
+    window._currentStudents = students;
     if (cData && cData.courses) window._currentCourses = cData.courses;
+
+    const isStudentMrkIssued = (s) => Boolean(
+      s.marksheet_id ||
+      s.marksheet_no ||
+      (s.marksheet_status && s.marksheet_status !== 'Pending' && s.marksheet_status !== 'Rejected') ||
+      (window._issuedMrks && (window._issuedMrks[s.id] || window._issuedMrks[s.student_code]))
+    );
+
+    const unissuedStudents = students.filter(s => !isStudentMrkIssued(s));
+    const issuedStudents = students.filter(s => isStudentMrkIssued(s));
 
     V.innerHTML = `
       <div style="margin-bottom:20px;">
@@ -1590,11 +1671,11 @@ const views = {
 
       <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
         <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:20px;">
-          <!-- Select Candidate -->
-          <div style="flex:1; min-width:240px;">
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate (छात्र चुनें):</label>
+          <!-- Select Candidate (Unissued Only) -->
+          <div style="flex:1; min-width:260px;">
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate (अजारी छात्र चुनें):</label>
             <select id="mrkStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-marksheet_no="${esc(s.marksheet_no || (s.marksheet && s.marksheet.marksheet_no) || '')}" data-is_passout="${s.is_passout || s.status === 'passout' ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
+              ${unissuedStudents.length > 0 ? unissuedStudents.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-eval_type="${esc(s.evaluation_type || 'annual')}" data-term="${esc(s.term || 'Annual')}" data-marksheet_no="${esc(s.marksheet_no || '')}" data-is_passout="${s.is_passout ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)} [${(s.evaluation_type || 'annual') === 'semester' ? 'सेमेस्टर' : 'वार्षिक'}]</option>`).join('') : '<option value="">-- सभी पंजीकृत छात्रों की अंकतालिका जारी हो चुकी है --</option>'}
             </select>
           </div>
 
@@ -1642,17 +1723,79 @@ const views = {
         <div id="mrkPreviewContainer" class="printable-area" style="background:#ffffff; border:2px solid #0f172a; padding:30px; border-radius:8px; max-width:850px; margin:0 auto; box-shadow:0 8px 30px rgba(0,0,0,0.06);">
           <!-- Filled by updateMrkPreview() -->
         </div>
+
+        <!-- Already Issued Marksheets Table -->
+        <div style="margin-top:35px; background:#f8fafc; border:2px solid #cbd5e1; border-radius:14px; padding:22px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="margin:0 0 4px; color:#064e3b; font-size:1.25rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+                <span>📑</span> Already Issued Marksheets (पूर्व में जारी अंकतालिका की सूची)
+              </h3>
+              <p style="margin:0; font-size:0.86rem; color:#64748b;">
+                इन छात्रों की अंकतालिका अधिकृत रूप से जारी हो चुकी है। यहाँ से कभी भी प्रिंट (Print), डाउनलोड (PDF) या मार्क्स एडिट (Edit Marks) करें।
+              </p>
+            </div>
+            <span style="background:#dcfce7; color:#166534; font-weight:800; font-size:0.88rem; padding:6px 14px; border-radius:20px; border:1px solid #86efac;">
+              ${issuedStudents.length} Marksheet(s) Issued
+            </span>
+          </div>
+
+          ${issuedStudents.length === 0 ? `
+            <div style="text-align:center; padding:24px; color:#64748b; font-size:0.92rem; background:#fff; border-radius:8px; border:1px dashed #cbd5e1;">
+              अभी तक किसी भी छात्र की अंकतालिका जारी नहीं हुई है। ऊपर से छात्र चुनकर अधिकृत अंकतालिका जारी करें।
+            </div>
+          ` : `
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e2e8f0; font-size:0.9rem;">
+                <thead>
+                  <tr style="background:#08244c; color:#ffffff; text-align:left;">
+                    <th style="padding:10px 14px;">Roll / Reg. No.</th>
+                    <th style="padding:10px 14px;">Candidate Name</th>
+                    <th style="padding:10px 14px;">Course</th>
+                    <th style="padding:10px 14px;">Marksheet No.</th>
+                    <th style="padding:10px 14px;">Evaluation Mode</th>
+                    <th style="padding:10px 14px; text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${issuedStudents.map((s, idx) => `
+                    <tr style="border-bottom:1px solid #e2e8f0; background:${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
+                      <td style="padding:10px 14px; font-family:monospace; font-weight:700; color:#0284c7;">${esc(s.student_code)}</td>
+                      <td style="padding:10px 14px; font-weight:700; color:#0f172a;">${esc(s.name)}<br><small style="color:#64748b; font-weight:normal;">S/O: ${esc(s.father_name || 'N/A')}</small></td>
+                      <td style="padding:10px 14px; font-weight:600;">${esc(s.course)}</td>
+                      <td style="padding:10px 14px; font-family:monospace; font-weight:800; color:#08244c;">${esc(s.marksheet_no || `PESC-MRK-2026-${String(s.id).padStart(5, '0')}`)}</td>
+                      <td style="padding:10px 14px;">
+                        <span style="display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:800; ${(s.evaluation_type || 'annual') === 'semester' ? 'background:#e0e7ff; color:#3730a3;' : 'background:#fef3c7; color:#92400e;'}">
+                          ${(s.evaluation_type || 'annual') === 'semester' ? '📚 Semester' : '📅 Annual'}
+                        </span>
+                      </td>
+                      <td style="padding:10px 14px; text-align:right;">
+                        <div style="display:inline-flex; gap:6px;">
+                          <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${s.id})">🖨️ View &amp; Print</button>
+                          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:700;" onclick="openCentreEditMrkModal(${s.marksheet_id || s.id}, ${s.id})">✏️ Edit Marks</button>
+                        </div>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
       </div>
     `;
 
-    $('#mrkStudentSelect').onchange = updateMrkPreview;
+    $('#mrkStudentSelect').onchange = () => updateMrkPreview();
     updateMrkPreview();
   },
 
   // 7. Certificate Semester (Ek hi Certificate pe saare Semester ka Grade)
   async CertificateSemester() {
     const sData = await api('/api/centre/students');
-    const students = sData.students || [];
+    const allStudents = sData.students || [];
+    window._currentStudents = allStudents;
+    // Rule: Only students admitted under semester mode can have semester certificate issued
+    const students = allStudents.filter(s => (s.evaluation_type === 'semester' || (s.term && s.term.toLowerCase().includes('semester'))));
 
     V.innerHTML = `
       <div style="margin-bottom:20px;">
@@ -1661,13 +1804,44 @@ const views = {
       </div>
 
       <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
-          <div style="flex:1; max-width:400px;">
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Choose Student (छात्र चुनें):</label>
-            <select id="semCertStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
-            </select>
+        ${students.length === 0 ? `
+          <div style="background:#fefce8; border:1.5px solid #fde047; padding:18px 24px; border-radius:12px; margin-bottom:20px; color:#854d0e;">
+            <h4 style="margin:0 0 6px; font-size:1.05rem;">ℹ️ कोई सेमेस्टर छात्र उपलब्ध नहीं है (No Semester Students Found)</h4>
+            <p style="margin:0; font-size:0.88rem;">
+              नियम के अनुसार केवल वही छात्र सेमेस्टर प्रमाणपत्र प्राप्त कर सकते हैं जिनका प्रवेश <b>Semester</b> प्रणाली में हुआ हो। वार्षिक छात्रों के प्रमाणपत्र <b>'5. Certificate Printing'</b> से जारी करें।
+            </p>
           </div>
+        ` : `
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+            <div style="flex:1; max-width:400px;">
+              <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Choose Student (छात्र चुनें):</label>
+              <select id="semCertStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
+                ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)}</option>`).join('')}
+              </select>
+            </div>
+            <div id="semCertPrintActionWrap" style="display:none;">
+              <div style="display:flex; gap:8px;">
+                <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Semester Certificate</button>
+                <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prescribed Council Fee Notice -->
+          <div id="semCertFeeNotice" style="margin-bottom:16px;"></div>
+
+          <div id="semCertPreview" class="printable-area" style="background:#ffffff; border:10px double #047857; padding:40px; border-radius:12px; max-width:880px; margin:0 auto; text-align:center;">
+            <!-- Dynamically rendered -->
+          </div>
+        `}
+      </div>
+    `;
+
+    if ($('#semCertStudentSelect')) {
+      $('#semCertStudentSelect').onchange = updateSemCertPreview;
+      updateSemCertPreview();
+    }
+  },
           <div id="semCertPrintActionWrap" style="display:none;">
             <div style="display:flex; gap:8px;">
               <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Semester Certificate</button>
@@ -2795,26 +2969,28 @@ window.toggleCentreStudentStatus = async function(studentId, isPassout) {
   }
 };
 
-window.viewIssuedStudentCert = function(studentId) {
-  switchModule('CertificatePrinting');
+window.viewIssuedStudentCert = async function(studentId) {
+  if (typeof activeTab !== 'undefined' && activeTab !== 'CertificatePrinting') {
+    switchModule('CertificatePrinting');
+    await new Promise(r => setTimeout(r, 120));
+  }
+  updateCertPreview(studentId);
   setTimeout(() => {
-    const sel = document.getElementById('certStudentSelect');
-    if (sel) {
-      sel.value = String(studentId);
-      if (typeof updateCertPreview === 'function') updateCertPreview();
-    }
-  }, 200);
+    const cont = document.getElementById('certPreviewContainer');
+    if (cont) cont.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
 };
 
-window.viewIssuedStudentMrk = function(studentId) {
-  switchModule('MarksheetPrinting');
+window.viewIssuedStudentMrk = async function(studentId) {
+  if (typeof activeTab !== 'undefined' && activeTab !== 'MarksheetPrinting') {
+    switchModule('MarksheetPrinting');
+    await new Promise(r => setTimeout(r, 120));
+  }
+  updateMrkPreview(studentId);
   setTimeout(() => {
-    const sel = document.getElementById('mrkStudentSelect');
-    if (sel) {
-      sel.value = String(studentId);
-      if (typeof updateMrkPreview === 'function') updateMrkPreview();
-    }
-  }, 200);
+    const cont = document.getElementById('mrkPreviewContainer');
+    if (cont) cont.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
 };
 
 // Image 2: Official Printable Student Admission Form Modal
@@ -2904,9 +3080,10 @@ if (!window._issuedMrks) window._issuedMrks = {};
 window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
   const sel = $('#certStudentSelect');
   const opt = sel ? sel.selectedOptions[0] : null;
-  const stuName = opt ? opt.dataset.name : 'छात्र';
-  const regNo = opt ? opt.dataset.code : '';
-  const fee = feeAmount || 200;
+  const stu = (window._currentStudents || []).find(s => s.id == studentId) || {};
+  const stuName = stu.name || (opt ? opt.dataset.name : 'छात्र');
+  const regNo = stu.student_code || (opt ? opt.dataset.code : '');
+  const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 200;
 
   const confirmed = confirm(`⚠️ प्रमाणपत्र जारीकरण एवं सत्यापन (Official Certificate Issuance):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) का अधिकृत प्रमाणपत्र जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित प्रमाणपत्र जनरेट हो जाएगा और प्रिंट/PDF विकल्प खुल जाएगा।`);
   if (!confirmed) return;
@@ -2924,12 +3101,18 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
       if (wEl) wEl.textContent = `₹${res.wallet_balance}`;
     }
 
+    window._issuedCerts = window._issuedCerts || {};
     window._issuedCerts[studentId] = true;
     if (regNo) window._issuedCerts[regNo] = true;
     window._issuedCerts[targetId] = true;
 
     toast(`🎉 ₹${fee} वॉलेट से कट गया! हेड ऑफिस एवं समन्वयक मुहर सहित प्रमाणपत्र जारी हो गया।`);
-    await updateCertPreview();
+    if (typeof views !== 'undefined' && typeof views.CertificatePrinting === 'function') {
+      await views.CertificatePrinting();
+      updateCertPreview(studentId);
+    } else {
+      await updateCertPreview(studentId);
+    }
   } catch (err) {
     alert(`❌ प्रमाणपत्र जारी नहीं हो सका: ${err.message || 'त्रुटि'}\nकृपया जांचें कि सेंटर वॉलेट में पर्याप्त बैलेंस है अथवा नहीं।`);
   }
@@ -2957,6 +3140,14 @@ function setCertFormat(fmt) {
 }
 
 function setCertEvalPattern(pat) {
+  const sel = $('#certStudentSelect');
+  const opt = sel ? sel.selectedOptions[0] : null;
+  const stu = (window._currentStudents || []).find(s => s.id == (opt ? +opt.value : 0));
+  const evalType = (stu && stu.evaluation_type) || (opt ? opt.dataset.eval_type : 'annual') || 'annual';
+  if (pat === 'semester' && !evalType.toLowerCase().includes('semester')) {
+    alert('⚠️ यह छात्र वार्षिक (Annual) प्रवेश प्रणाली में नामांकित है।\n\nकेवल वही छात्र सेमेस्टर प्रमाणपत्र प्राप्त कर सकते हैं जिनका प्रवेश सेमेस्टर प्रणाली में हुआ हो।');
+    return;
+  }
   certEvalPattern = pat;
   const bYearly = $('#btnCertEvalYearly');
   const bSem = $('#btnCertEvalSemester');
@@ -2985,19 +3176,65 @@ function setCertEvalPattern(pat) {
   updateCertPreview();
 }
 
-async function updateCertPreview() {
+async function updateCertPreview(targetStudentId) {
   await window.ensureAuthoritiesLoaded();
+  let studentId = targetStudentId;
+  let opt = null;
   const sel = $('#certStudentSelect');
-  if (!sel) return;
-  const opt = sel.selectedOptions[0];
-  if (!opt) return;
-  const studentId = +sel.value;
-  const name = opt.dataset.name;
-  const father = opt.dataset.father || 'N/A';
-  const mother = opt.dataset.mother || 'N/A';
-  const code = opt.dataset.code || 'PESC-26-00008';
-  const course = opt.dataset.course;
-  const photo = opt.dataset.photo || '';
+  if (!studentId && sel) {
+    opt = sel.selectedOptions[0];
+    if (opt && opt.value) studentId = +opt.value;
+  }
+  if (!studentId) {
+    const cCont = $('#certPreviewContainer');
+    if (cCont) {
+      cCont.innerHTML = `
+        <div style="text-align:center; padding:30px 15px; color:#475569;">
+          <div style="font-size:2.5rem; margin-bottom:8px;">✅</div>
+          <h3 style="margin:0 0 6px; color:#064e3b;">सभी नामांकित छात्रों के प्रमाणपत्र जारी हो चुके हैं</h3>
+          <p style="margin:0; font-size:0.9rem;">नीचे "पूर्व में जारी प्रमाणपत्र की सूची (Already Issued Certificates)" से किसी भी छात्र का प्रमाणपत्र देखें व प्रिंट करें।</p>
+        </div>
+      `;
+    }
+    const feeEl = $('#certFeeNotice');
+    if (feeEl) feeEl.innerHTML = '';
+    const pWrap = $('#certPrintActionWrap');
+    if (pWrap) pWrap.style.display = 'none';
+    return;
+  }
+
+  const stu = (window._currentStudents || []).find(s => s.id == studentId) || {};
+  const name = stu.name || (opt ? opt.dataset.name : 'छात्र');
+  const father = stu.father_name || (opt ? opt.dataset.father : 'N/A') || 'N/A';
+  const mother = stu.mother_name || (opt ? opt.dataset.mother : 'N/A') || 'N/A';
+  const code = stu.student_code || (opt ? opt.dataset.code : '') || 'PESC-26-00008';
+  const course = stu.course || (opt ? opt.dataset.course : '') || '';
+  const photo = stu.photo_url || stu.photo || (opt ? opt.dataset.photo : '') || '';
+  const evalType = (stu.evaluation_type || (opt ? opt.dataset.eval_type : 'annual') || 'annual').toLowerCase();
+  const isSemesterAdmitted = evalType.includes('semester');
+
+  // Enforce evaluation mode rule:
+  const bYearly = $('#btnCertEvalYearly');
+  const bSem = $('#btnCertEvalSemester');
+  if (bSem) {
+    if (!isSemesterAdmitted) {
+      bSem.disabled = true;
+      bSem.style.opacity = '0.45';
+      bSem.style.cursor = 'not-allowed';
+      bSem.title = 'यह छात्र वार्षिक (Annual) प्रवेश में है - केवल वार्षिक प्रमाणपत्र ही जारी हो सकता है';
+      certEvalPattern = 'yearly';
+      if (bYearly) bYearly.className = 'btn gold sm active';
+      bSem.className = 'btn alt sm';
+    } else {
+      bSem.disabled = false;
+      bSem.style.opacity = '1';
+      bSem.style.cursor = 'pointer';
+      bSem.title = '';
+      certEvalPattern = 'semester';
+      if (bSem) bSem.className = 'btn gold sm active';
+      if (bYearly) bYearly.className = 'btn alt sm';
+    }
+  }
 
   const certTerm = ($('#certTermSelect') && $('#certTermSelect').value) || (certEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
   const isSemester = certEvalPattern === 'semester';
@@ -3009,8 +3246,8 @@ async function updateCertPreview() {
     const target = String(course || '').toUpperCase().trim();
     return cCode === target || cName === target || (cCode && target.includes(cCode)) || (cName && target.includes(cName));
   });
-  const singleFee = foundCourse ? (foundCourse.single_fee_rupees || Math.round((foundCourse.single_fee_paise || 20000)/100)) : 200;
-  const semFee = foundCourse ? (foundCourse.semester_fee_rupees || Math.round((foundCourse.semester_fee_paise || 60000)/100)) : 600;
+  const singleFee = foundCourse ? (foundCourse.single_fee_rupees !== undefined ? foundCourse.single_fee_rupees : Math.round((foundCourse.single_fee_paise || 20000)/100)) : 200;
+  const semFee = foundCourse ? (foundCourse.semester_fee_rupees !== undefined ? foundCourse.semester_fee_rupees : Math.round((foundCourse.semester_fee_paise || 60000)/100)) : 600;
   const currentFee = isSemester ? semFee : singleFee;
 
   // Check Dual-Approval Status from backend
@@ -3022,10 +3259,13 @@ async function updateCertPreview() {
 
   const certDbId = certItem ? certItem.id : studentId;
   const isIssued = Boolean(
+    (targetStudentId && (stu.cert_no || stu.certificate_id)) ||
+    stu.certificate_id ||
+    stu.cert_no ||
     (window._issuedCerts && (window._issuedCerts[studentId] || window._issuedCerts[code] || window._issuedCerts[certDbId])) ||
-    (certItem && (certItem.centre_signed === true || certItem.is_issued === true || certItem.head_approved === true || certItem.status === 'Approved_By_Council' || certItem.status === 'Issued' || Boolean(certItem.cert_no))) ||
-    Boolean(opt.dataset.cert_no) ||
-    Boolean(opt.dataset.is_passout)
+    (certItem && (certItem.centre_signed === true || certItem.is_issued === true || certItem.head_approved === true || certItem.status === 'Approved_By_Council' || certItem.status === 'Valid' || certItem.status === 'Issued' || Boolean(certItem.cert_no))) ||
+    Boolean(opt && opt.dataset && opt.dataset.cert_no) ||
+    Boolean(stu.is_passout)
   );
 
   const printWrap = $('#certPrintActionWrap');
@@ -3145,6 +3385,14 @@ async function updateCertPreview() {
 let mrkEvalPattern = 'yearly';
 
 function setMrkEvalPattern(pat) {
+  const sel = $('#mrkStudentSelect');
+  const opt = sel ? sel.selectedOptions[0] : null;
+  const stu = (window._currentStudents || []).find(s => s.id == (opt ? +opt.value : 0));
+  const evalType = (stu && stu.evaluation_type) || (opt ? opt.dataset.eval_type : 'annual') || 'annual';
+  if (pat === 'semester' && !evalType.toLowerCase().includes('semester')) {
+    alert('⚠️ यह छात्र वार्षिक (Annual) प्रवेश प्रणाली में नामांकित है।\n\nकेवल वही छात्र सेमेस्टर अंकतालिका प्राप्त कर सकते हैं जिनका प्रवेश सेमेस्टर प्रणाली में हुआ हो।');
+    return;
+  }
   mrkEvalPattern = pat;
   const bYearly = $('#btnMrkEvalYearly');
   const bSem = $('#btnMrkEvalSemester');
@@ -3608,9 +3856,10 @@ function setMrkFormat(fmt) {
 window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
   const sel = $('#mrkStudentSelect');
   const opt = sel ? sel.selectedOptions[0] : null;
-  const stuName = opt ? opt.dataset.name : 'छात्र';
-  const regNo = opt ? opt.dataset.code : '';
-  const fee = feeAmount || 150;
+  const stu = (window._currentStudents || []).find(s => s.id == studentId) || {};
+  const stuName = stu.name || (opt ? opt.dataset.name : 'छात्र');
+  const regNo = stu.student_code || (opt ? opt.dataset.code : '');
+  const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 100;
 
   const confirmed = confirm(`⚠️ अंकतालिका जारीकरण एवं सत्यापन (Official Marksheet Issuance):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) की अधिकृत अंकतालिका जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जनरेट हो जाएगी और प्रिंट/PDF विकल्प खुल जाएगा।`);
   if (!confirmed) return;
@@ -3628,36 +3877,88 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
       if (wEl) wEl.textContent = `₹${res.wallet_balance}`;
     }
 
+    window._issuedMrks = window._issuedMrks || {};
     window._issuedMrks[studentId] = true;
     if (regNo) window._issuedMrks[regNo] = true;
     window._issuedMrks[targetId] = true;
 
     toast(`🎉 ₹${fee} वॉलेट से कट गया! हेड ऑफिस एवं समन्वयक मुहर सहित अंकतालिका जारी हो गई।`);
-    await updateMrkPreview();
+    if (typeof views !== 'undefined' && typeof views.MarksheetPrinting === 'function') {
+      await views.MarksheetPrinting();
+      updateMrkPreview(studentId);
+    } else {
+      await updateMrkPreview(studentId);
+    }
   } catch (err) {
     alert(`❌ अंकतालिका जारी नहीं हो सकी: ${err.message || 'त्रुटि'}\nकृपया जांचें कि सेंटर वॉलेट में पर्याप्त बैलेंस है अथवा नहीं।`);
   }
 };
 
 window.reissueMrk = async function(mrkDbId, studentId, feeAmount) {
-  const fee = feeAmount || 150;
+  const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 100;
   if (!confirm(`क्या आप पुनः ₹${fee} वॉलेट से काटकर अंकतालिका को री-स्टैम्प / री-इशू करना चाहते हैं?`)) return;
   return window.signAndIssueMrk(mrkDbId, studentId, fee);
 };
 
-async function updateMrkPreview() {
+async function updateMrkPreview(targetStudentId) {
   await window.ensureAuthoritiesLoaded();
+  let studentId = targetStudentId;
+  let opt = null;
   const sel = $('#mrkStudentSelect');
-  if (!sel) return;
-  const opt = sel.selectedOptions[0];
-  if (!opt) return;
-  const studentId = +sel.value;
-  const name = opt.dataset.name;
-  const father = opt.dataset.father || 'N/A';
-  const mother = opt.dataset.mother || 'N/A';
-  const code = opt.dataset.code;
-  const course = opt.dataset.course;
-  const photo = opt.dataset.photo || '';
+  if (!studentId && sel) {
+    opt = sel.selectedOptions[0];
+    if (opt && opt.value) studentId = +opt.value;
+  }
+  if (!studentId) {
+    const cCont = $('#mrkPreviewContainer');
+    if (cCont) {
+      cCont.innerHTML = `
+        <div style="text-align:center; padding:30px 15px; color:#475569;">
+          <div style="font-size:2.5rem; margin-bottom:8px;">✅</div>
+          <h3 style="margin:0 0 6px; color:#064e3b;">सभी नामांकित छात्रों की अंकतालिका जारी हो चुकी है</h3>
+          <p style="margin:0; font-size:0.9rem;">नीचे "पूर्व में जारी अंकतालिका की सूची (Already Issued Marksheets)" से किसी भी छात्र की अंकतालिका देखें व प्रिंट करें।</p>
+        </div>
+      `;
+    }
+    const feeEl = $('#mrkFeeNotice');
+    if (feeEl) feeEl.innerHTML = '';
+    const pWrap = $('#mrkPrintActionWrap');
+    if (pWrap) pWrap.style.display = 'none';
+    return;
+  }
+
+  const stu = (window._currentStudents || []).find(s => s.id == studentId) || {};
+  const name = stu.name || (opt ? opt.dataset.name : 'छात्र');
+  const father = stu.father_name || (opt ? opt.dataset.father : 'N/A') || 'N/A';
+  const mother = stu.mother_name || (opt ? opt.dataset.mother : 'N/A') || 'N/A';
+  const code = stu.student_code || (opt ? opt.dataset.code : '') || '';
+  const course = stu.course || (opt ? opt.dataset.course : '') || '';
+  const photo = stu.photo_url || stu.photo || (opt ? opt.dataset.photo : '') || '';
+  const evalType = (stu.evaluation_type || (opt ? opt.dataset.eval_type : 'annual') || 'annual').toLowerCase();
+  const isSemesterAdmitted = evalType.includes('semester');
+
+  // Enforce evaluation mode rule:
+  const bYearly = $('#btnMrkEvalYearly');
+  const bSem = $('#btnMrkEvalSemester');
+  if (bSem) {
+    if (!isSemesterAdmitted) {
+      bSem.disabled = true;
+      bSem.style.opacity = '0.45';
+      bSem.style.cursor = 'not-allowed';
+      bSem.title = 'यह छात्र वार्षिक (Annual) प्रवेश में है - केवल वार्षिक अंकतालिका ही जारी हो सकती है';
+      mrkEvalPattern = 'yearly';
+      if (bYearly) bYearly.className = 'btn gold sm active';
+      bSem.className = 'btn alt sm';
+    } else {
+      bSem.disabled = false;
+      bSem.style.opacity = '1';
+      bSem.style.cursor = 'pointer';
+      bSem.title = '';
+      mrkEvalPattern = 'semester';
+      if (bSem) bSem.className = 'btn gold sm active';
+      if (bYearly) bYearly.className = 'btn alt sm';
+    }
+  }
 
   const mrkTerm = ($('#mrkTermSelect') && $('#mrkTermSelect').value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
   const isSemester = mrkEvalPattern === 'semester';
@@ -3669,8 +3970,8 @@ async function updateMrkPreview() {
     const target = String(course || '').toUpperCase().trim();
     return cCode === target || cName === target || (cCode && target.includes(cCode)) || (cName && target.includes(cName));
   });
-  const singleFee = 150;
-  const semFee = 250;
+  const singleFee = foundCourse ? (foundCourse.single_fee_rupees !== undefined ? foundCourse.single_fee_rupees : Math.round((foundCourse.single_fee_paise || 10000)/100)) : 100;
+  const semFee = foundCourse ? (foundCourse.semester_fee_rupees !== undefined ? foundCourse.semester_fee_rupees : Math.round((foundCourse.semester_fee_paise || 20000)/100)) : 200;
   const currentFee = isSemester ? semFee : singleFee;
 
   // Check Dual-Approval Status from backend
@@ -3682,10 +3983,13 @@ async function updateMrkPreview() {
 
   const mrkDbId = mrkItem ? mrkItem.id : studentId;
   const isIssued = Boolean(
+    (targetStudentId && (stu.marksheet_no || stu.marksheet_id)) ||
+    stu.marksheet_id ||
+    stu.marksheet_no ||
     (window._issuedMrks && (window._issuedMrks[studentId] || window._issuedMrks[code] || window._issuedMrks[mrkDbId])) ||
-    (mrkItem && (mrkItem.centre_signed === true || mrkItem.is_issued === true || mrkItem.head_approved === true || mrkItem.status === 'Approved_By_Council' || mrkItem.status === 'Issued' || Boolean(mrkItem.marksheet_no))) ||
-    Boolean(opt.dataset.marksheet_no) ||
-    Boolean(opt.dataset.is_passout)
+    (mrkItem && (mrkItem.centre_signed === true || mrkItem.is_issued === true || mrkItem.head_approved === true || mrkItem.status === 'Approved_By_Council' || mrkItem.status === 'Approved' || mrkItem.status === 'Issued' || Boolean(mrkItem.marksheet_no))) ||
+    Boolean(opt && opt.dataset && opt.dataset.marksheet_no) ||
+    Boolean(stu.is_passout)
   );
 
   const printWrap = $('#mrkPrintActionWrap');
@@ -3774,20 +4078,22 @@ async function updateMrkPreview() {
     return;
   }
 
-  let customSubjects = window._customMarksheetData && window._customMarksheetData[studentId];
+  let customSubjects = (mrkItem && mrkItem.subjects) ? (typeof mrkItem.subjects === 'string' ? JSON.parse(mrkItem.subjects) : mrkItem.subjects) : null;
+  if (!customSubjects && foundCourse && foundCourse.subjects) {
+    try {
+      const coSubs = typeof foundCourse.subjects === 'string' ? JSON.parse(foundCourse.subjects) : foundCourse.subjects;
+      if (Array.isArray(coSubs) && coSubs.length > 0) customSubjects = coSubs;
+    } catch (_) {}
+  }
+  if (!customSubjects && window._customMarksheetData && window._customMarksheetData[studentId]) {
+    customSubjects = window._customMarksheetData[studentId];
+  }
   if (!customSubjects) {
     try {
       const saved = localStorage.getItem('pesc_custom_marks_' + studentId);
       if (saved) customSubjects = JSON.parse(saved);
     } catch (_) {}
   }
-  if (!customSubjects) {
-    customSubjects = [
-      { code: 'NTT-01', name: 'Child Psychology', max: 100, min: 40, obt: 78, grade: 'A' },
-      { code: 'NTT-02', name: 'School Organization', max: 100, min: 40, obt: 72, grade: 'B+' },
-      { code: 'NTT-03', name: 'Methods of Teaching', max: 100, min: 40, obt: 85, grade: 'A+' },
-      { code: 'NTT-04', name: 'Practical Assessment', max: 100, min: 40, obt: 85, grade: 'A+' },
-      { code: 'NTT-05', name: 'Viva-Voce Exam', max: 100, min: 40, obt: 78, grade: 'A+' },
       { code: 'NTT-06', name: 'Internal Project', max: 100, min: 40, obt: 80, grade: 'A+' }
     ];
   }
@@ -4031,105 +4337,7 @@ window.requestDualApproval = async function(studentId, type) {
   }
 };
 
-window.signAndIssueCert = async function(certId, studentId, customFee) {
-  try {
-    const certFee = Number(customFee) || 200;
-    const w = await api('/api/centre/wallet').catch(() => ({ balance: 5000 }));
-    const bal = (w && w.balance !== undefined) ? w.balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 5000);
-    if (bal < certFee) {
-      alert(`⚠️ Insufficient Wallet Balance!\n\nCurrent Balance: ₹${bal}\nRequired Fee: ₹${certFee}\n\nPlease recharge your Centre Wallet via Head Office to issue this certificate.`);
-      return;
-    }
-    const conf = confirm(`⚡ Confirm Wallet Payment & Official Issuance\n\n• Certificate Fee: ₹${certFee}\n• Current Wallet Balance: ₹${bal}\n• Balance After Deduction: ₹${bal - certFee}\n\nक्या आप ₹${certFee} सेंटर वॉलेट से काटकर हेड ऑफिस व कोऑर्डिनेटर मुहर सहित सर्टिफिकेट जारी करना चाहते हैं?`);
-    if (!conf) return;
-
-    let res = null;
-    try {
-      res = await api(`/api/centre/certificates/${certId || studentId || 1}/sign-issue`, { method: 'POST', body: { fee: certFee, student_id: studentId } });
-    } catch (e1) {
-      try {
-        res = await api(`/api/centre/certificates/${studentId || certId || 1}/sign-issue?fee=${certFee}`, { method: 'GET' });
-      } catch (e2) {
-        console.warn('API error, issuing locally:', e2);
-        res = { ok: true, wallet_balance: Math.max(0, bal - certFee) };
-      }
-    }
-
-    window._issuedCerts = window._issuedCerts || {};
-    if (studentId) window._issuedCerts[studentId] = true;
-    if (certId) window._issuedCerts[certId] = true;
-    const sel = document.getElementById('certStudentSelect');
-    if (sel && sel.selectedOptions && sel.selectedOptions[0]) {
-      const c = sel.selectedOptions[0].dataset.code;
-      if (c) window._issuedCerts[c] = true;
-    }
-
-    const newBal = (res && res.wallet_balance !== undefined) ? res.wallet_balance : Math.max(0, bal - certFee);
-    if (currentCentre) currentCentre.wallet_balance = newBal;
-    if (typeof window.refreshCentreWalletBadge === 'function') {
-      window.refreshCentreWalletBadge(newBal);
-    }
-    const wEl = document.getElementById('centreWalletBadge');
-    if (wEl) wEl.textContent = `₹${newBal}`;
-
-    alert(`🎉 ₹${certFee} सेंटर वॉलेट से कट गए हैं!\n\nसर्टिफिकेट पर हेड ऑफिस व कोऑर्डिनेटर मुहर लगाकर आधिकारिक रूप से जारी कर दिया गया है। अब आप इसे Print या Save PDF कर सकते हैं।`);
-    if (typeof updateCertPreview === 'function') updateCertPreview();
-    const cont = document.getElementById('certPreviewContainer');
-    if (cont) cont.scrollIntoView({ behavior: 'smooth' });
-  } catch (err) {
-    alert('Failed to issue certificate: ' + (err.message || err));
-  }
-};
-
-window.signAndIssueMrk = async function(mrkId, studentId, customFee) {
-  try {
-    const mrkFee = Number(customFee) || 150;
-    const w = await api('/api/centre/wallet').catch(() => ({ balance: 5000 }));
-    const bal = (w && w.balance !== undefined) ? w.balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 5000);
-    if (bal < mrkFee) {
-      alert(`⚠️ Insufficient Wallet Balance!\n\nCurrent Balance: ₹${bal}\nRequired Fee: ₹${mrkFee}\n\nPlease recharge your Centre Wallet via Head Office to issue this marksheet.`);
-      return;
-    }
-    const conf = confirm(`⚡ Confirm Wallet Payment & Official Issuance\n\n• Marksheet Fee: ₹${mrkFee}\n• Current Wallet Balance: ₹${bal}\n• Balance After Deduction: ₹${bal - mrkFee}\n\nक्या आप ₹${mrkFee} सेंटर वॉलेट से काटकर हेड ऑफिस व कोऑर्डिनेटर मुहर सहित अंकतालिका जारी करना चाहते हैं?`);
-    if (!conf) return;
-
-    let res = null;
-    try {
-      res = await api(`/api/centre/marksheets/${mrkId || studentId || 1}/sign-issue`, { method: 'POST', body: { fee: mrkFee, student_id: studentId } });
-    } catch (e1) {
-      try {
-        res = await api(`/api/centre/marksheets/${studentId || mrkId || 1}/sign-issue?fee=${mrkFee}`, { method: 'GET' });
-      } catch (e2) {
-        console.warn('API error, issuing locally:', e2);
-        res = { ok: true, wallet_balance: Math.max(0, bal - mrkFee) };
-      }
-    }
-
-    window._issuedMrks = window._issuedMrks || {};
-    if (studentId) window._issuedMrks[studentId] = true;
-    if (mrkId) window._issuedMrks[mrkId] = true;
-    const sel = document.getElementById('mrkStudentSelect');
-    if (sel && sel.selectedOptions && sel.selectedOptions[0]) {
-      const c = sel.selectedOptions[0].dataset.code;
-      if (c) window._issuedMrks[c] = true;
-    }
-
-    const newBal = (res && res.wallet_balance !== undefined) ? res.wallet_balance : Math.max(0, bal - mrkFee);
-    if (currentCentre) currentCentre.wallet_balance = newBal;
-    if (typeof window.refreshCentreWalletBadge === 'function') {
-      window.refreshCentreWalletBadge(newBal);
-    }
-    const wEl = document.getElementById('centreWalletBadge');
-    if (wEl) wEl.textContent = `₹${newBal}`;
-
-    alert(`🎉 ₹${mrkFee} सेंटर वॉलेट से कट गए हैं!\n\nअंकतालिका पर हेड ऑफिस व कोऑर्डिनेटर मुहर लगाकर आधिकारिक रूप से जारी कर दिया गया है। अब आप इसे Print या Save PDF कर सकते हैं।`);
-    if (typeof updateMrkPreview === 'function') updateMrkPreview();
-    const cont = document.getElementById('mrkPreviewContainer');
-    if (cont) cont.scrollIntoView({ behavior: 'smooth' });
-  } catch (err) {
-    alert('Failed to issue marksheet: ' + (err.message || err));
-  }
-};
+// End of issuance handlers
 
 window.showUploadStudentPhotoModal = function(studentId) {
   const existing = document.getElementById('uploadStudentPhotoModal');
