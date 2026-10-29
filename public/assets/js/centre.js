@@ -622,7 +622,12 @@ function renderOfficialCouncilFooter(opts = {}) {
     addressBarHtml = `
       <div style="margin-top:16px; border-top:2px solid #072a60; padding-top:8px; text-align:center; background:rgba(248,250,252,0.85); border-radius:6px; padding:10px 14px; margin-bottom:12px; border:1px solid #cbd5e1;">
         <div style="font-size:0.86rem; font-weight:900; color:#072a60; letter-spacing:0.3px; margin-bottom:3px;">
-          🏛️ <b>MAIN HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
+          🏛️ <b>MAIN HEAD OFFICE:</b> ${esc(ho.address || 'Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India')}
+        </div>
+        <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px; display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+          <span>📞 <b>Helpline:</b> ${esc(ho.mobile || '+91 91290 85551')}</span>
+          <span>✉️ <b>Email:</b> ${esc(ho.email || 'info@pescouncil.in')}</span>
+          <span>🌐 <b>Website:</b> <a href="${esc(ho.website || 'https://pescouncil.in')}" target="_blank" style="color:#072a60; font-weight:900; text-decoration:underline;">${esc((ho.website || 'https://pescouncil.in').replace(/^https?:\/\//, ''))}</a></span>
         </div>
         <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
           📍 <b>PLACE OF ISSUE:</b> Central Examination Board &amp; Regional Council Office, Uttar Pradesh
@@ -639,6 +644,11 @@ function renderOfficialCouncilFooter(opts = {}) {
         <div style="font-size:0.86rem; font-weight:900; color:#064e3b; letter-spacing:0.3px; margin-bottom:3px;">
           🏫 <b>INSTITUTE CAMPUS:</b> ${esc(cName)} (${esc(cCode)}), ${esc(cAddress)}
         </div>
+        <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px; display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+          <span>📞 <b>Helpline:</b> ${esc(cPhone || ho.mobile || '+91 91290 85551')}</span>
+          <span>✉️ <b>Email:</b> ${esc(cEmail || ho.email || 'info@pescouncil.in')}</span>
+          <span>🌐 <b>Website:</b> <a href="https://${esc(centreSlug)}.pescouncil.in" target="_blank" style="color:#047857; font-weight:900; text-decoration:underline;">${esc(centreSlug)}.pescouncil.in</a></span>
+        </div>
         <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
           📍 <b>PLACE OF ISSUE:</b> ${esc(cDistrict || 'Shahganj')}, ${esc(cState || 'Uttar Pradesh')} &bull; Director Incharge: ${esc(directorName)}
         </div>
@@ -652,7 +662,12 @@ function renderOfficialCouncilFooter(opts = {}) {
     addressBarHtml = `
       <div style="margin-top:16px; border-top:2px solid #072a60; padding-top:8px; text-align:center; background:rgba(248,250,252,0.85); border-radius:6px; padding:10px 14px; margin-bottom:12px; border:1px solid #cbd5e1;">
         <div style="font-size:0.86rem; font-weight:900; color:#072a60; letter-spacing:0.3px; margin-bottom:3px;">
-          🏛️ <b>COUNCIL HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
+          🏛️ <b>COUNCIL HEAD OFFICE:</b> ${esc(ho.address || 'Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India')}
+        </div>
+        <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px; display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+          <span>📞 <b>Helpline:</b> ${esc(ho.mobile || '+91 91290 85551')}</span>
+          <span>✉️ <b>Email:</b> ${esc(ho.email || 'info@pescouncil.in')}</span>
+          <span>🌐 <b>Website:</b> <a href="${esc(ho.website || 'https://pescouncil.in')}" target="_blank" style="color:#072a60; font-weight:900; text-decoration:underline;">${esc((ho.website || 'https://pescouncil.in').replace(/^https?:\/\//, ''))}</a></span>
         </div>
         <div style="font-size:0.84rem; font-weight:900; color:#064e3b; margin-top:3px; margin-bottom:3px;">
           🏫 <b>STUDY CENTRE CAMPUS:</b> ${esc(cName)} (${esc(cCode)}), ${esc(cAddress)}
@@ -2840,6 +2855,7 @@ const views = {
 
   // 18. Affiliation Certificate / मान्यता प्रमाण पत्र
   async AffiliationCert() {
+    await window.ensureAuthoritiesLoaded(true);
     const res = await api('/api/centre/affiliation-cert');
     const cert = res.certificate || {};
 
@@ -2855,7 +2871,7 @@ const views = {
       </div>
 
       <div id="printCertArea">
-        ${window.OfficialTemplates && window.OfficialTemplates.renderAffiliationCertificateHtml ? window.OfficialTemplates.renderAffiliationCertificateHtml({ certificate: cert }) : 'Loading Certificate...'}
+        ${window.OfficialTemplates && window.OfficialTemplates.renderAffiliationCertificateHtml ? window.OfficialTemplates.renderAffiliationCertificateHtml({ certificate: cert, authorities: window._councilAuthorities }) : 'Loading Certificate...'}
       </div>
     `;
   }
@@ -3762,6 +3778,23 @@ function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
           return patObj[tKeys[0]];
         }
       }
+    }
+  }
+
+  // 1b. Check if course has subjects defined by Head Office
+  if (foundCourse && foundCourse.subjects) {
+    let subList = foundCourse.subjects;
+    if (typeof subList === 'string') {
+      try { subList = JSON.parse(subList); } catch(e) { subList = []; }
+    }
+    if (Array.isArray(subList) && subList.length > 0) {
+      return subList.map((s, idx) => ({
+        code: (typeof s === 'object' && s.code) ? s.code : `${foundCourse.code || 'SUB'}-${idx + 1}`,
+        name: (typeof s === 'object' && s.name) ? s.name : String(s),
+        theory: (typeof s === 'object' && (s.max_theory || s.theory)) ? (+s.max_theory || +s.theory) : 50,
+        practical: (typeof s === 'object' && (s.max_practical || s.practical)) ? (+s.max_practical || +s.practical) : 50,
+        max_marks: (typeof s === 'object' && (s.total_max || s.max_marks)) ? (+s.total_max || +s.max_marks) : 100
+      }));
     }
   }
 

@@ -969,7 +969,11 @@ router.get('/affiliation-cert', (req, res) => {
   }
 
   // Head Office
-  const ho = db.prepare("SELECT id, name, email, seal_url, signature_url FROM users WHERE role='super_admin' ORDER BY id ASC LIMIT 1").get() || {};
+  const ho = db.prepare("SELECT id, name, email, mobile, logo_url, website, seal_url, signature_url FROM users WHERE role='super_admin' ORDER BY id ASC LIMIT 1").get() || {};
+  const hoLogo = ho.logo_url || '/assets/img/logo_council.svg';
+  const hoSeal = ho.seal_url || '/assets/img/seal_council_head.svg';
+  const hoSign = ho.signature_url || '/assets/img/sign_council_head.svg';
+  const hoWebsite = ho.website || 'https://pescouncil.in';
 
   const courses = db.prepare(`SELECT co.code FROM courses co JOIN centre_courses cc ON cc.course_id=co.id WHERE cc.centre_id=? AND co.active=1`).all(c.id);
   const authorized_courses = courses.length ? courses.map(x => x.code).join(', ') : 'DCA, ADCA, TALLY, CCC, PGDCA, DTP';
@@ -984,6 +988,8 @@ router.get('/affiliation-cert', (req, res) => {
       slug: c.slug,
       director_name: c.director_name || (owner ? owner.name : 'Centre Director'),
       director_photo,
+      council_logo_url: hoLogo,
+      logo_url: hoLogo,
       address: c.address || `${c.district}, ${c.state}`,
       district: c.district,
       state: c.state,
@@ -1004,8 +1010,13 @@ router.get('/affiliation-cert', (req, res) => {
       },
       head_office: {
         name: ho.name || 'Head Office',
-        seal_url: ho.seal_url || null,
-        signature_url: ho.signature_url || null,
+        logo_url: hoLogo,
+        seal_url: hoSeal,
+        signature_url: hoSign,
+        mobile: ho.mobile || '+91 91290 85551',
+        email: ho.email || 'info@pescouncil.in',
+        website: hoWebsite,
+        address: 'Head Office: Gorakhpur / Lucknow, UP - 273001'
       }
     }
   });

@@ -367,6 +367,57 @@ const COURSE_CURRICULUM_DATA = {
   }
 };
 
+function extractSubjectsFromCurriculum(cur, defaultCode = 'SUB') {
+  if (!cur || typeof cur !== 'object') return [];
+  const subsMap = new Map();
+  ['yearly', 'semester'].forEach(pat => {
+    const terms = cur[pat] || {};
+    Object.values(terms).forEach(list => {
+      if (Array.isArray(list)) {
+        list.forEach((s, idx) => {
+          const name = (s.name || (typeof s === 'string' ? s : '')).trim();
+          if (name && !subsMap.has(name.toLowerCase())) {
+            const th = (s.theory !== undefined ? +s.theory : (s.max_theory !== undefined ? +s.max_theory : 50)) || 50;
+            const pr = (s.practical !== undefined ? +s.practical : (s.max_practical !== undefined ? +s.max_practical : 50)) || 50;
+            subsMap.set(name.toLowerCase(), {
+              code: s.code || `${defaultCode}-${subsMap.size + 1}`,
+              name: name,
+              max_theory: th,
+              max_practical: pr,
+              total_max: s.max_marks || s.total_max || (th + pr)
+            });
+          }
+        });
+      }
+    });
+  });
+  return Array.from(subsMap.values());
+}
+
+function buildCurriculumFromSubjects(subsList, courseCode = 'COURSE') {
+  if (!Array.isArray(subsList) || !subsList.length) return null;
+  const mapped = subsList.map((s, idx) => {
+    const th = (s.theory !== undefined ? +s.theory : (s.max_theory !== undefined ? +s.max_theory : 50)) || 50;
+    const pr = (s.practical !== undefined ? +s.practical : (s.max_practical !== undefined ? +s.max_practical : 50)) || 50;
+    return {
+      code: s.code || `${courseCode}-${idx + 1}`,
+      name: s.name || (typeof s === 'string' ? s : `Subject ${idx + 1}`),
+      theory: th,
+      practical: pr,
+      max_marks: s.max_marks || s.total_max || (th + pr)
+    };
+  });
+  return {
+    yearly: {
+      'Annual Examination': mapped
+    },
+    semester: {
+      'Semester 1': mapped.slice(0, Math.ceil(mapped.length / 2) || 1),
+      'Semester 2': mapped.slice(Math.ceil(mapped.length / 2))
+    }
+  };
+}
+
 function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
   const norm = String(courseNameOrCode || '').toUpperCase().trim();
   const pattern = (evalPattern === 'semester') ? 'semester' : 'yearly';
@@ -392,6 +443,28 @@ function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
       if (keys.length && cur[pattern][keys[0]] && Array.isArray(cur[pattern][keys[0]]) && cur[pattern][keys[0]].length) {
         return cur[pattern][keys[0]];
       }
+    }
+  }
+
+  // 2. Check if course in store.courses has subjects configured by Head Office
+  if (co && co.subjects) {
+    let rawSubs = null;
+    try { rawSubs = typeof co.subjects === 'string' ? JSON.parse(co.subjects) : co.subjects; } catch (_) {}
+    if (Array.isArray(rawSubs) && rawSubs.length > 0) {
+      return rawSubs.map((s, idx) => {
+        const th = (s.theory !== undefined ? +s.theory : (s.max_theory !== undefined ? +s.max_theory : 50)) || 50;
+        const pr = (s.practical !== undefined ? +s.practical : (s.max_practical !== undefined ? +s.max_practical : 50)) || 50;
+        return {
+          code: s.code || `${co.code || 'SUB'}${idx + 1}`,
+          name: s.name || (typeof s === 'string' ? s : `Subject ${idx + 1}`),
+          theory: th,
+          max_theory: th,
+          practical: pr,
+          max_practical: pr,
+          max_marks: s.max_marks || s.total_max || (th + pr),
+          total_max: s.total_max || s.max_marks || (th + pr)
+        };
+      });
     }
   }
 
@@ -1046,6 +1119,7 @@ function getAuthorities(centre) {
       chairman_signature_url: chairmanSign,
       mobile: adminUser.mobile || (store.site_settings && store.site_settings.mobile) || '+91 94152 00000',
       email: adminUser.email || (store.site_settings && store.site_settings.email) || 'admin@pescouncil.in',
+      website: adminUser.website || (store.site_settings && store.site_settings.website) || 'https://pescouncil.in',
       address: adminUser.head_office || (store.site_settings && store.site_settings.address) || 'Purvanchal Education & Skill Council, Head Office, shahgarh/ Azamgarh, UP',
       head_office: adminUser.head_office || (store.site_settings && store.site_settings.head_office) || 'Purvanchal Education & Skill Council, Head Office, shahgarh/ Azamgarh, UP'
     },
@@ -2170,6 +2244,11 @@ export default {
 
         const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
         const coordUser = (targetC.assigned_coordinator_id ? store.users.find(u => u.id === targetC.assigned_coordinator_id) : null) || store.users.find(u => u.role === 'coordinator') || {};
+        const s = store.site_settings || {};
+        const hoLogo = cleanImageUrl(adminUser.logo_url) || cleanImageUrl(s.logo_url) || '/assets/img/logo_council.svg';
+        const hoSeal = cleanImageUrl(adminUser.seal_url) || cleanImageUrl(s.seal_url || s.council_seal_url) || '/assets/img/seal_council_head.svg';
+        const hoSign = cleanImageUrl(adminUser.signature_url) || cleanImageUrl(s.signature_url || s.council_signature_url) || '/assets/img/sign_council_head.svg';
+        const hoWebsite = adminUser.website || s.website || 'https://pescouncil.in';
         return jsonResponse({
           ok: true,
           certificate: {
@@ -2191,15 +2270,24 @@ export default {
             status: targetC.status || 'active',
             authorized_courses: targetC.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking',
             qr_url: `https://pescouncil.in/verify?code=${targetC.centre_code}`,
-            council_seal_url: adminUser.seal_url || null,
-            council_signature_url: adminUser.signature_url || null,
+            council_logo_url: hoLogo,
+            council_logo: hoLogo,
+            logo_url: hoLogo,
+            council_seal_url: hoSeal,
+            council_signature_url: hoSign,
             coordinator_seal_url: coordUser.seal_url || targetC.coordinator_seal_url || null,
             coordinator_signature_url: coordUser.signature_url || targetC.coordinator_signature_url || null,
             coordinator_name: coordUser.name || targetC.coordinator_name || 'Regional Coordinator',
             coordinator_territory: coordUser.territory || coordUser.state || targetC.state || 'Assigned Territory',
             head_office: {
-              seal_url: adminUser.seal_url || null,
-              signature_url: adminUser.signature_url || null,
+              name: adminUser.name || 'Head Office',
+              logo_url: hoLogo,
+              seal_url: hoSeal,
+              signature_url: hoSign,
+              mobile: adminUser.mobile || s.mobile || '+91 94152 00000',
+              email: adminUser.email || s.email || 'admin@pescouncil.in',
+              website: hoWebsite,
+              address: adminUser.head_office || s.address || 'Purvanchal Education & Skill Council, Head Office, Shahgarh, Azamgarh, UP - 276001'
             },
             coordinator: {
               name: coordUser.name || targetC.coordinator_name || 'Regional Coordinator',
@@ -2322,9 +2410,25 @@ export default {
           try {
             const body = await request.json();
             if (body.curriculum) {
-              target.curriculum = typeof body.curriculum === 'string' ? body.curriculum : JSON.stringify(body.curriculum);
-              if (typeof body.curriculum === 'object') {
-                COURSE_CURRICULUM_DATA[target.code] = body.curriculum;
+              const curObj = typeof body.curriculum === 'string' ? JSON.parse(body.curriculum) : body.curriculum;
+              target.curriculum = JSON.stringify(curObj);
+              COURSE_CURRICULUM_DATA[target.code] = curObj;
+              const extracted = extractSubjectsFromCurriculum(curObj, target.code);
+              if (extracted.length) {
+                target.subjects = JSON.stringify(extracted);
+              }
+            }
+            if (body.subjects) {
+              const rawSubs = typeof body.subjects === 'string' ? JSON.parse(body.subjects) : body.subjects;
+              if (Array.isArray(rawSubs) && rawSubs.length) {
+                target.subjects = JSON.stringify(rawSubs);
+                if (!body.curriculum) {
+                  const synCur = buildCurriculumFromSubjects(rawSubs, target.code);
+                  if (synCur) {
+                    target.curriculum = JSON.stringify(synCur);
+                    COURSE_CURRICULUM_DATA[target.code] = synCur;
+                  }
+                }
               }
             }
             if (body.single_fee_rupees !== undefined) {
@@ -2363,10 +2467,24 @@ export default {
           else if (body.semester_fee_paise !== undefined) target.semester_fee_paise = +body.semester_fee_paise;
           if (body.active !== undefined) target.active = body.active ? 1 : 0;
           if (body.curriculum !== undefined) {
-            target.curriculum = typeof body.curriculum === 'string' ? body.curriculum : JSON.stringify(body.curriculum);
+            const curObj = typeof body.curriculum === 'string' ? JSON.parse(body.curriculum) : body.curriculum;
+            target.curriculum = JSON.stringify(curObj);
+            COURSE_CURRICULUM_DATA[target.code] = curObj;
+            const extracted = extractSubjectsFromCurriculum(curObj, target.code);
+            if (extracted.length) {
+              target.subjects = JSON.stringify(extracted);
+            }
           }
           if (body.subjects !== undefined) {
+            const rawSubs = typeof body.subjects === 'string' ? JSON.parse(body.subjects) : body.subjects;
             target.subjects = typeof body.subjects === 'object' ? JSON.stringify(body.subjects) : String(body.subjects);
+            if (Array.isArray(rawSubs) && rawSubs.length && !body.curriculum) {
+              const synCur = buildCurriculumFromSubjects(rawSubs, target.code);
+              if (synCur) {
+                target.curriculum = JSON.stringify(synCur);
+                COURSE_CURRICULUM_DATA[target.code] = synCur;
+              }
+            }
           }
           await persistToKV(env, 'courses', store.courses);
           return jsonResponse({ ok: true, message: 'Course updated successfully!', course: target });
@@ -3424,6 +3542,11 @@ export default {
           if (body.designation !== undefined) adminUser.designation = String(body.designation).slice(0, 150);
           if (body.head_office !== undefined) adminUser.head_office = String(body.head_office).slice(0, 255);
           if (body.state !== undefined) adminUser.state = String(body.state).slice(0, 100);
+          if (body.website !== undefined) {
+            adminUser.website = String(body.website).trim();
+            if (!store.site_settings) store.site_settings = {};
+            store.site_settings.website = adminUser.website;
+          }
           if (body.photo_url !== undefined) adminUser.photo_url = cleanImageUrl(body.photo_url);
           if (body.logo_url !== undefined) {
             adminUser.logo_url = cleanImageUrl(body.logo_url);
@@ -3463,6 +3586,7 @@ export default {
             message: 'Admin profile updated successfully!',
             profile: {
               ...adminUser,
+              website: adminUser.website || (store.site_settings && store.site_settings.website) || 'https://pescouncil.in',
               logo_url: adminUser.logo_url || (store.site_settings && store.site_settings.logo_url) || ''
             }
           });
@@ -3471,6 +3595,7 @@ export default {
         return jsonResponse({
           profile: {
             ...adminUser,
+            website: adminUser.website || (store.site_settings && store.site_settings.website) || 'https://pescouncil.in',
             logo_url: adminUser.logo_url || (store.site_settings && store.site_settings.logo_url) || '',
             verification_url: `https://${host}/verify`
           }
@@ -4410,6 +4535,14 @@ export default {
         const centreCourses = store.courses.filter(co => co.active !== 0).map(co => {
           const sysFeePaise = co.fee_paise || 550000;
           const sellFeePaise = c.course_prices[co.id] !== undefined ? c.course_prices[co.id] : (sysFeePaise * 1.5);
+          let subStr = co.subjects || '[]';
+          let cur = null;
+          try { cur = typeof co.curriculum === 'string' ? JSON.parse(co.curriculum) : co.curriculum; } catch(_) {}
+          if (!cur || !Object.keys(cur).length) cur = COURSE_CURRICULUM_DATA[co.code];
+          if (!subStr || subStr === '[]' || subStr === 'null') {
+            const ext = extractSubjectsFromCurriculum(cur, co.code);
+            if (ext.length) subStr = JSON.stringify(ext);
+          }
           return {
             id: co.id,
             code: co.code,
@@ -4420,8 +4553,8 @@ export default {
             semester_fee_paise: co.semester_fee_paise || 60000,
             single_fee_rupees: Math.round((co.single_fee_paise || 20000) / 100),
             semester_fee_rupees: Math.round((co.semester_fee_paise || 60000) / 100),
-            curriculum: co.curriculum || (COURSE_CURRICULUM_DATA[co.code] ? JSON.stringify(COURSE_CURRICULUM_DATA[co.code]) : '{}'),
-            subjects: co.subjects || '[]',
+            curriculum: co.curriculum || (cur ? JSON.stringify(cur) : '{}'),
+            subjects: subStr,
             system_fee_paise: sysFeePaise,
             selling_price_paise: sellFeePaise,
             fee_rupees: Math.round(sellFeePaise / 100),
@@ -4982,6 +5115,11 @@ export default {
       if (path === '/api/centre/affiliation-cert') {
         const coord = store.users.find(u => u.role === 'coordinator' && (u.id === c.assigned_coordinator_id || u.state === c.state)) || store.users.find(u => u.role === 'coordinator') || {};
         const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin') || {};
+        const s = store.site_settings || {};
+        const hoLogo = cleanImageUrl(adminUser.logo_url) || cleanImageUrl(s.logo_url) || '/assets/img/logo_council.svg';
+        const hoSeal = cleanImageUrl(adminUser.seal_url) || cleanImageUrl(s.seal_url || s.council_seal_url) || '/assets/img/seal_council_head.svg';
+        const hoSign = cleanImageUrl(adminUser.signature_url) || cleanImageUrl(s.signature_url || s.council_signature_url) || '/assets/img/sign_council_head.svg';
+        const hoWebsite = adminUser.website || s.website || 'https://pescouncil.in';
         return jsonResponse({
           ok: true,
           certificate: {
@@ -5011,13 +5149,22 @@ export default {
             coordinator_signature: coord.signature_url || c.coordinator_signature_url || null,
             coordinator_signature_url: coord.signature_url || c.coordinator_signature_url || null,
             coordinator_territory: coord.territory || coord.state || c.state || 'Assigned Territory',
-            council_seal_url: adminUser.seal_url || null,
-            council_signature_url: adminUser.signature_url || null,
-            head_office_seal: adminUser.seal_url || null,
-            head_office_signature: adminUser.signature_url || null,
+            council_logo_url: hoLogo,
+            council_logo: hoLogo,
+            logo_url: hoLogo,
+            council_seal_url: hoSeal,
+            council_signature_url: hoSign,
+            head_office_seal: hoSeal,
+            head_office_signature: hoSign,
             head_office: {
-              seal_url: adminUser.seal_url || null,
-              signature_url: adminUser.signature_url || null,
+              name: adminUser.name || 'Head Office',
+              logo_url: hoLogo,
+              seal_url: hoSeal,
+              signature_url: hoSign,
+              mobile: adminUser.mobile || s.mobile || '+91 94152 00000',
+              email: adminUser.email || s.email || 'admin@pescouncil.in',
+              website: hoWebsite,
+              address: adminUser.head_office || s.address || 'Purvanchal Education & Skill Council, Head Office, Shahgarh, Azamgarh, UP - 276001'
             },
             coordinator: {
               name: coord.name || 'Regional Coordinator',

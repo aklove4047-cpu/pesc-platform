@@ -188,6 +188,8 @@
     }
 
     function renderOfficialCouncilFooter(opts = {}) {
+      const auth = opts.authorities || (typeof window !== 'undefined' && window._councilAuthorities) || {};
+      const ho = auth.head_office || {};
       const directorName = opts.directorName || 'Authorized Signatory';
       const centreCode = opts.centreCode || 'PESC00001';
       const centreSlug = opts.centreSlug || (opts.centreCode ? opts.centreCode.toLowerCase() : 'main');
@@ -263,7 +265,12 @@
         <!-- Official Head Office, Place of Issue & Contact Bar (Sirf Neeche Hi Saare Address) -->
         <div style="margin-top:16px; border-top:2px solid #072a60; padding-top:8px; text-align:center; background:rgba(248,250,252,0.85); border-radius:6px; padding:10px 14px; margin-bottom:12px; border:1px solid #cbd5e1;">
           <div style="font-size:0.86rem; font-weight:900; color:#072a60; letter-spacing:0.3px; margin-bottom:3px;">
-            🏛️ <b>MAIN HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
+            🏛️ <b>MAIN HEAD OFFICE:</b> ${esc(ho.address || 'Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India')}
+          </div>
+          <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px; display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+            <span>📞 <b>Helpline:</b> ${esc(ho.mobile || '+91 91290 85551')}</span>
+            <span>✉️ <b>Email:</b> ${esc(ho.email || 'info@pescouncil.in')}</span>
+            <span>🌐 <b>Website:</b> <a href="${esc(ho.website || 'https://pescouncil.in')}" target="_blank" style="color:#072a60; font-weight:900; text-decoration:underline;">${esc((ho.website || 'https://pescouncil.in').replace(/^https?:\/\//, ''))}</a></span>
           </div>
           <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
             📍 <b>PLACE OF ISSUE:</b> Central Examination Board &amp; Regional Council Office, Uttar Pradesh

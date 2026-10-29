@@ -38,10 +38,10 @@
   }
 
   function resolveSeals(data, c) {
-    const auth = (data && data.authorities) || (typeof window !== 'undefined' && window._councilAuthorities) || {};
-    const hoAuth = auth.head_office || {};
-    const coordAuth = auth.coordinator || {};
-    const centreAuth = auth.centre || {};
+    const auth = (data && data.authorities) || (c && c.authorities) || (typeof window !== 'undefined' && window._councilAuthorities) || {};
+    const hoAuth = auth.head_office || (data && data.head_office) || (c && c.head_office) || {};
+    const coordAuth = auth.coordinator || (data && data.coordinator) || (c && c.coordinator) || {};
+    const centreAuth = auth.centre || (data && data.centre) || (c && c.centre) || {};
 
     const isCustom = (url) => {
       const u = cleanUrl(url);
@@ -66,9 +66,17 @@
     else coordSign = cleanUrl(coordAuth.signature_url) || cleanUrl(c && c.coordinator_signature_url) || cleanUrl(data && data.coordSign) || SEALS.coordinatorSign;
 
     // Council / Head Office Assets
-    const councilLogo = cleanUrl(hoAuth.logo_url || (data && data.councilLogo) || SEALS.councilLogo) || '/assets/img/logo_council.svg';
-    const councilSeal = cleanUrl(hoAuth.seal_url || (c && c.council_seal_url) || (data && data.councilSeal)) || SEALS.councilSeal;
-    const councilSign = cleanUrl(hoAuth.signature_url || (c && c.council_signature_url) || (data && data.councilSign)) || SEALS.councilSign;
+    const councilLogo = cleanUrl(
+      (data && (data.council_logo_url || data.councilLogo || data.logo_url)) ||
+      (c && (c.council_logo_url || c.council_logo || c.logo_url)) ||
+      (hoAuth && hoAuth.logo_url) ||
+      (data && data.head_office && data.head_office.logo_url) ||
+      (c && c.head_office && c.head_office.logo_url) ||
+      (typeof window !== 'undefined' && window._councilAuthorities && window._councilAuthorities.head_office && window._councilAuthorities.head_office.logo_url) ||
+      SEALS.councilLogo
+    ) || '/assets/img/logo_council.svg';
+    const councilSeal = cleanUrl((data && (data.council_seal_url || data.councilSeal)) || (c && (c.council_seal_url || c.councilSeal)) || hoAuth.seal_url || (data && data.head_office && data.head_office.seal_url) || (c && c.head_office && c.head_office.seal_url) || SEALS.councilSeal) || '/assets/img/seal_council_head.svg';
+    const councilSign = cleanUrl((data && (data.council_signature_url || data.councilSign)) || (c && (c.council_signature_url || c.councilSign)) || hoAuth.signature_url || (data && data.head_office && data.head_office.signature_url) || (c && c.head_office && c.head_office.signature_url) || SEALS.councilSign) || '/assets/img/sign_council_head.svg';
     const chairmanSign = cleanUrl(hoAuth.chairman_signature_url || councilSign);
 
     const hoName = hoAuth.name || 'Executive Director & Controller of Examinations';
@@ -1103,7 +1111,8 @@
     const status = cert.status || 'Active';
     const authorizedCourses = cert.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Nursery Teacher Training (NTT), Web Development, Graphic Design, Hardware & Networking';
 
-    const { councilSeal, councilSign, coordSeal, coordSign, councilLogo } = resolveSeals(cert, cert);
+    const authObj = data.authorities || cert.authorities || (typeof window !== 'undefined' && window._councilAuthorities) || {};
+    const { councilSeal, councilSign, coordSeal, coordSign, councilLogo } = resolveSeals({ ...cert, authorities: authObj }, cert);
     const coordName = cert.coordinator_name || 'Regional Coordinator';
     const coordTerritory = cert.coordinator_territory || cert.state || 'Uttar Pradesh';
 

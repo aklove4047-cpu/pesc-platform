@@ -298,6 +298,8 @@ try { rawDb.exec("ALTER TABLE users ADD COLUMN address TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE users ADD COLUMN pin TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE users ADD COLUMN qualification TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE users ADD COLUMN territory TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE users ADD COLUMN logo_url TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE users ADD COLUMN website TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN director_name TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN phone TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN email TEXT;"); } catch (_) {}

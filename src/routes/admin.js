@@ -6,6 +6,9 @@ const cfg = require('../config');
 const { requireRole } = require('../auth');
 const { HttpError, now, sha, rand, str, h, audit, paginate, getOrCreateCoordinatorCert } = require('../lib');
 
+try { db.prepare("ALTER TABLE users ADD COLUMN logo_url TEXT").run(); } catch (_) {}
+try { db.prepare("ALTER TABLE users ADD COLUMN website TEXT").run(); } catch (_) {}
+
 router.use(requireRole('super_admin', 'admin'));
 
 router.get('/stats', (req, res) => {
@@ -170,8 +173,58 @@ router.put('/courses/:id', (req, res) => {
   const singleFee = b.single_fee_rupees !== undefined ? Math.round(+b.single_fee_rupees * 100) : (b.single_fee_paise !== undefined ? +b.single_fee_paise : (c.single_fee_paise || 20000));
   const semFee = b.semester_fee_rupees !== undefined ? Math.round(+b.semester_fee_rupees * 100) : (b.semester_fee_paise !== undefined ? +b.semester_fee_paise : (c.semester_fee_paise || 60000));
   const active = b.active !== undefined ? (b.active ? 1 : 0) : c.active;
-  const curriculum = b.curriculum !== undefined ? (typeof b.curriculum === 'string' ? b.curriculum : JSON.stringify(b.curriculum)) : (c.curriculum || '{}');
-  const subjects = b.subjects !== undefined ? (typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects)) : c.subjects;
+  let curriculum = b.curriculum !== undefined ? (typeof b.curriculum === 'string' ? b.curriculum : JSON.stringify(b.curriculum)) : (c.curriculum || '{}');
+  let subjects = b.subjects !== undefined ? (typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects)) : c.subjects;
+
+  if (b.subjects && !b.curriculum) {
+    try {
+      const rawSubs = typeof b.subjects === 'string' ? JSON.parse(b.subjects) : b.subjects;
+      if (Array.isArray(rawSubs) && rawSubs.length) {
+        const mapped = rawSubs.map((s, idx) => {
+          const th = (s.theory !== undefined ? +s.theory : (s.max_theory !== undefined ? +s.max_theory : 50)) || 50;
+          const pr = (s.practical !== undefined ? +s.practical : (s.max_practical !== undefined ? +s.max_practical : 50)) || 50;
+          return {
+            code: s.code || `${code}-${idx + 1}`,
+            name: s.name || s,
+            theory: th,
+            practical: pr,
+            max_marks: s.max_marks || s.total_max || (th + pr)
+          };
+        });
+        curriculum = JSON.stringify({
+          yearly: { 'Annual Examination': mapped },
+          semester: { 'Semester 1': mapped.slice(0, Math.ceil(mapped.length / 2) || 1), 'Semester 2': mapped.slice(Math.ceil(mapped.length / 2)) }
+        });
+      }
+    } catch (_) {}
+  } else if (b.curriculum && !b.subjects) {
+    try {
+      const curObj = typeof b.curriculum === 'string' ? JSON.parse(b.curriculum) : b.curriculum;
+      const subsMap = new Map();
+      ['yearly', 'semester'].forEach(pat => {
+        const terms = curObj[pat] || {};
+        Object.values(terms).forEach(list => {
+          if (Array.isArray(list)) {
+            list.forEach((s, idx) => {
+              const name = (s.name || s || '').trim();
+              if (name && !subsMap.has(name.toLowerCase())) {
+                const th = (s.theory !== undefined ? +s.theory : (s.max_theory !== undefined ? +s.max_theory : 50)) || 50;
+                const pr = (s.practical !== undefined ? +s.practical : (s.max_practical !== undefined ? +s.max_practical : 50)) || 50;
+                subsMap.set(name.toLowerCase(), {
+                  code: s.code || `${code}-${subsMap.size + 1}`,
+                  name: name,
+                  max_theory: th,
+                  max_practical: pr,
+                  total_max: s.max_marks || s.total_max || (th + pr)
+                });
+              }
+            });
+          }
+        });
+      });
+      if (subsMap.size) subjects = JSON.stringify(Array.from(subsMap.values()));
+    } catch (_) {}
+  }
 
   db.prepare('UPDATE courses SET code=?, name=?, duration_months=?, fee_paise=?, total_marks=?, single_fee_paise=?, semester_fee_paise=?, curriculum=?, subjects=?, active=? WHERE id=?')
     .run(code, name, dur, fee, totalMarks, singleFee, semFee, curriculum, subjects, active, cid);
@@ -180,22 +233,77 @@ router.put('/courses/:id', (req, res) => {
   res.json({ ok: true, message: 'Course updated successfully' });
 });
 
-router.put('/courses/:id/curriculum', (req, res) => {
+const handleCourseCurriculum = (req, res) => {
   const cid = +req.params.id;
   const c = db.prepare('SELECT * FROM courses WHERE id=?').get(cid);
   if (!c) throw new HttpError(404, 'Course not found');
 
   const b = req.body;
-  const curriculum = b.curriculum ? (typeof b.curriculum === 'string' ? b.curriculum : JSON.stringify(b.curriculum)) : (c.curriculum || '{}');
+  let curriculum = b.curriculum ? (typeof b.curriculum === 'string' ? b.curriculum : JSON.stringify(b.curriculum)) : (c.curriculum || '{}');
+  let subjects = b.subjects ? (typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects)) : c.subjects;
+
+  if (b.curriculum) {
+    try {
+      const curObj = typeof b.curriculum === 'string' ? JSON.parse(b.curriculum) : b.curriculum;
+      const subsMap = new Map();
+      ['yearly', 'semester'].forEach(pat => {
+        const terms = curObj[pat] || {};
+        Object.values(terms).forEach(list => {
+          if (Array.isArray(list)) {
+            list.forEach((s, idx) => {
+              const name = (s.name || s || '').trim();
+              if (name && !subsMap.has(name.toLowerCase())) {
+                const th = (s.theory !== undefined ? +s.theory : (s.max_theory !== undefined ? +s.max_theory : 50)) || 50;
+                const pr = (s.practical !== undefined ? +s.practical : (s.max_practical !== undefined ? +s.max_practical : 50)) || 50;
+                subsMap.set(name.toLowerCase(), {
+                  code: s.code || `${c.code}-${subsMap.size + 1}`,
+                  name: name,
+                  max_theory: th,
+                  max_practical: pr,
+                  total_max: s.max_marks || s.total_max || (th + pr)
+                });
+              }
+            });
+          }
+        });
+      });
+      if (subsMap.size) subjects = JSON.stringify(Array.from(subsMap.values()));
+    } catch (_) {}
+  } else if (b.subjects) {
+    try {
+      const rawSubs = typeof b.subjects === 'string' ? JSON.parse(b.subjects) : b.subjects;
+      if (Array.isArray(rawSubs) && rawSubs.length) {
+        const mapped = rawSubs.map((s, idx) => {
+          const th = (s.theory !== undefined ? +s.theory : (s.max_theory !== undefined ? +s.max_theory : 50)) || 50;
+          const pr = (s.practical !== undefined ? +s.practical : (s.max_practical !== undefined ? +s.max_practical : 50)) || 50;
+          return {
+            code: s.code || `${c.code}-${idx + 1}`,
+            name: s.name || s,
+            theory: th,
+            practical: pr,
+            max_marks: s.max_marks || s.total_max || (th + pr)
+          };
+        });
+        curriculum = JSON.stringify({
+          yearly: { 'Annual Examination': mapped },
+          semester: { 'Semester 1': mapped.slice(0, Math.ceil(mapped.length / 2) || 1), 'Semester 2': mapped.slice(Math.ceil(mapped.length / 2)) }
+        });
+      }
+    } catch (_) {}
+  }
+
   const singleFee = b.single_fee_rupees !== undefined ? Math.round(+b.single_fee_rupees * 100) : (b.single_fee_paise !== undefined ? +b.single_fee_paise : (c.single_fee_paise || 20000));
   const semFee = b.semester_fee_rupees !== undefined ? Math.round(+b.semester_fee_rupees * 100) : (b.semester_fee_paise !== undefined ? +b.semester_fee_paise : (c.semester_fee_paise || 60000));
 
-  db.prepare('UPDATE courses SET curriculum=?, single_fee_paise=?, semester_fee_paise=? WHERE id=?')
-    .run(curriculum, singleFee, semFee, cid);
+  db.prepare('UPDATE courses SET curriculum=?, subjects=?, single_fee_paise=?, semester_fee_paise=? WHERE id=?')
+    .run(curriculum, subjects, singleFee, semFee, cid);
 
   audit(req, 'course.curriculum_update', 'course', cid, 'ok', `Updated curriculum for ${c.code}`);
   res.json({ ok: true, message: 'Curriculum & exam fees saved successfully' });
-});
+};
+
+router.put('/courses/:id/curriculum', handleCourseCurriculum);
+router.post('/courses/:id/curriculum', handleCourseCurriculum);
 
 // Coordinators are created by super admin; initial password provided for immediate panel access.
 router.post('/coordinators', requireRole('super_admin'), (req, res) => {
@@ -1029,7 +1137,11 @@ router.get('/centres/:id/affiliation-cert', (req, res) => {
   }
 
   // Head Office super admin
-  const ho = db.prepare("SELECT id, name, email, seal_url, signature_url FROM users WHERE role='super_admin' ORDER BY id ASC LIMIT 1").get() || {};
+  const ho = db.prepare("SELECT id, name, email, mobile, logo_url, website, seal_url, signature_url FROM users WHERE role='super_admin' ORDER BY id ASC LIMIT 1").get() || {};
+  const hoLogo = ho.logo_url || '/assets/img/logo_council.svg';
+  const hoSeal = ho.seal_url || '/assets/img/seal_council_head.svg';
+  const hoSign = ho.signature_url || '/assets/img/sign_council_head.svg';
+  const hoWebsite = ho.website || 'https://pescouncil.in';
 
   const courses = db.prepare(`SELECT co.code FROM courses co JOIN centre_courses cc ON cc.course_id=co.id WHERE cc.centre_id=? AND co.active=1`).all(cid);
   const authorized_courses = courses.length ? courses.map(x => x.code).join(', ') : 'DCA, ADCA, TALLY, CCC, PGDCA, DTP';
@@ -1044,6 +1156,8 @@ router.get('/centres/:id/affiliation-cert', (req, res) => {
       slug: c.slug,
       director_name: c.director_name || (owner ? owner.name : 'Centre Director'),
       director_photo,
+      council_logo_url: hoLogo,
+      logo_url: hoLogo,
       address: c.address || `${c.district}, ${c.state}`,
       district: c.district,
       state: c.state,
@@ -1064,14 +1178,19 @@ router.get('/centres/:id/affiliation-cert', (req, res) => {
       },
       head_office: {
         name: ho.name || 'Head Office',
-        seal_url: ho.seal_url || null,
-        signature_url: ho.signature_url || null,
+        logo_url: hoLogo,
+        seal_url: hoSeal,
+        signature_url: hoSign,
+        mobile: ho.mobile || '+91 91290 85551',
+        email: ho.email || 'info@pescouncil.in',
+        website: hoWebsite,
+        address: 'Head Office: Gorakhpur / Lucknow, UP - 273001'
       }
     }
   });
 });
 
-router.post('/centres/:id/affiliation-cert', (req, res) => {
+const handleAffiliationCertUpdate = (req, res) => {
   const cid = +req.params.id;
   const b = req.body || {};
   db.prepare(`UPDATE centres SET
@@ -1096,22 +1215,27 @@ router.post('/centres/:id/affiliation-cert', (req, res) => {
   );
   audit(req, 'centre.affiliation_cert_update', 'centre', cid, 'ok');
   res.json({ ok: true, message: 'Affiliation certificate details updated successfully!' });
-});
+};
+
+router.post('/centres/:id/affiliation-cert', handleAffiliationCertUpdate);
+router.put('/centres/:id/affiliation-cert', handleAffiliationCertUpdate);
 
 // Admin Profile Endpoints
 router.get('/profile', (req, res) => {
-  let u = db.prepare('SELECT id, name, email, mobile, role, state, photo_url, seal_url, signature_url, created_at FROM users WHERE id=?').get(req.user.id);
+  let u = db.prepare('SELECT id, name, email, mobile, role, state, photo_url, logo_url, seal_url, signature_url, website, address, created_at FROM users WHERE id=?').get(req.user.id);
   if (!u) u = req.user;
   res.json({
     profile: {
       ...u,
       designation: 'Executive Director & Controller of Examinations',
-      head_office: 'Purvanchal Education & Skill Council, Head Office, Gorakhpur / Lucknow, UP',
+      head_office: u.address || 'Purvanchal Education & Skill Council, Head Office, Gorakhpur / Lucknow, UP',
       badge_id: 'PESC-HQ-001',
       state: u.state || 'National Headquarters (India)',
+      logo_url: u.logo_url || null,
       seal_url: u.seal_url || null,
       signature_url: u.signature_url || null,
-      photo_url: u.photo_url || null
+      photo_url: u.photo_url || null,
+      website: u.website || 'https://pescouncil.in'
     }
   });
 });
@@ -1122,9 +1246,12 @@ router.post('/profile', (req, res) => {
   const email = str(b.email, 150);
   const mobile = str(b.mobile, 20);
   const photo_url = b.photo_url || null;
+  const logo_url = b.logo_url || null;
   const seal_url = b.seal_url || null;
   const signature_url = b.signature_url || null;
   const state = str(b.state, 100);
+  const website = str(b.website, 200);
+  const address = str(b.head_office || b.address, 300);
 
   try {
     db.prepare(`UPDATE users SET
@@ -1132,11 +1259,14 @@ router.post('/profile', (req, res) => {
       email=COALESCE(?, email),
       mobile=COALESCE(?, mobile),
       photo_url=COALESCE(?, photo_url),
+      logo_url=COALESCE(?, logo_url),
       seal_url=COALESCE(?, seal_url),
       signature_url=COALESCE(?, signature_url),
-      state=COALESCE(?, state)
+      state=COALESCE(?, state),
+      website=COALESCE(?, website),
+      address=COALESCE(?, address)
       WHERE id=?`)
-      .run(name || null, email || null, mobile || null, photo_url, seal_url, signature_url, state || null, req.user.id);
+      .run(name || null, email || null, mobile || null, photo_url, logo_url, seal_url, signature_url, state || null, website || null, address || null, req.user.id);
   } catch (err) {
     console.error('Admin profile update error:', err);
   }

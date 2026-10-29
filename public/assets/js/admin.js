@@ -201,7 +201,12 @@ function renderOfficialCouncilFooter(opts = {}) {
     <!-- Official Head Office, Place of Issue & Contact Bar (Sirf Neeche Hi Saare Address) -->
     <div style="margin-top:16px; border-top:2px solid #072a60; padding-top:8px; text-align:center; background:rgba(248,250,252,0.85); border-radius:6px; padding:10px 14px; margin-bottom:12px; border:1px solid #cbd5e1;">
       <div style="font-size:0.86rem; font-weight:900; color:#072a60; letter-spacing:0.3px; margin-bottom:3px;">
-        🏛️ <b>MAIN HEAD OFFICE:</b> Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India
+        🏛️ <b>MAIN HEAD OFFICE:</b> ${esc(ho.address || 'Purvanchal Shiksha Parishad, Shahgarh, Azamgarh, Uttar Pradesh - 276001, India')}
+      </div>
+      <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px; display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+        <span>📞 <b>Helpline:</b> ${esc(ho.mobile || '+91 91290 85551')}</span>
+        <span>✉️ <b>Email:</b> ${esc(ho.email || 'info@pescouncil.in')}</span>
+        <span>🌐 <b>Website:</b> <a href="${esc(ho.website || 'https://pescouncil.in')}" target="_blank" style="color:#072a60; font-weight:900; text-decoration:underline;">${esc((ho.website || 'https://pescouncil.in').replace(/^https?:\/\//, ''))}</a></span>
       </div>
       <div style="font-size:0.8rem; font-weight:800; color:#0f172a; margin-bottom:4px;">
         📍 <b>PLACE OF ISSUE:</b> Central Examination Board &amp; Regional Council Office, Uttar Pradesh
@@ -427,6 +432,10 @@ const views = {
               <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">Head Office Jurisdiction &amp; Address</label>
               <input class="inp" id="pOffice" value="${esc(p.head_office || 'Purvanchal Education & Skill Council, Head Office, Gorakhpur / Lucknow, UP')}" placeholder="Council National Secretariat Address" style="width:100%;">
             </div>
+            <div style="margin-bottom:14px;">
+              <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">Official Council Website (वेबसाइट)</label>
+              <input class="inp" id="pWebsite" value="${esc(p.website || 'https://pescouncil.in')}" placeholder="https://pescouncil.in" style="width:100%;">
+            </div>
             <div style="margin-bottom:18px;">
               <label class="label" style="font-weight:700; color:#334155; margin-bottom:5px; display:block;">State / Territory Jurisdiction</label>
               <input class="inp" id="pState" value="${esc(p.state || 'National Headquarters (India)')}" placeholder="e.g. National Headquarters (India)" style="width:100%;">
@@ -604,9 +613,10 @@ const views = {
         const designation = $('#pDesignation').value.trim();
         const head_office = $('#pOffice').value.trim();
         const state = $('#pState').value.trim();
+        const website = $('#pWebsite') ? $('#pWebsite').value.trim() : 'https://pescouncil.in';
         await api('/api/admin/profile', {
           method: 'POST',
-          body: { name, email, mobile, designation, head_office, state }
+          body: { name, email, mobile, designation, head_office, state, website }
         });
         toast('✅ Admin Profile updated successfully!');
         if ($('#who')) $('#who').textContent = name || 'Super Admin';
@@ -2060,6 +2070,7 @@ function showAdminIdCardModal(p) {
 }
 
 async function showAffiliationCertModal(cId) {
+  await window.ensureAuthoritiesLoaded(true);
   const res = await api(`/api/admin/centres/${cId}/affiliation-cert`);
   const cert = res.certificate || {};
 
@@ -2070,7 +2081,7 @@ async function showAffiliationCertModal(cId) {
         <button type="button" onclick="window.print()" class="btn gold sm" style="font-weight:700; padding:7px 14px;">🖨️ Print Official Certificate</button>
       </div>
       <div id="printCertArea">
-        ${window.OfficialTemplates && window.OfficialTemplates.renderAffiliationCertificateHtml ? window.OfficialTemplates.renderAffiliationCertificateHtml({ certificate: cert }) : 'Loading Certificate...'}
+        ${window.OfficialTemplates && window.OfficialTemplates.renderAffiliationCertificateHtml ? window.OfficialTemplates.renderAffiliationCertificateHtml({ certificate: cert, authorities: window._councilAuthorities }) : 'Loading Certificate...'}
       </div>
     </div>
   `, null, '920px');
@@ -2980,22 +2991,39 @@ async function openCourseCurriculumEditor(courseId) {
   if (!curData.yearly) curData.yearly = {};
   if (!curData.semester) curData.semester = {};
 
+  let courseSubs = [];
+  try {
+    courseSubs = typeof (course && course.subjects) === 'string' ? JSON.parse(course.subjects || '[]') : ((course && course.subjects) || (res && res.subjects) || []);
+  } catch (_) { courseSubs = []; }
+
   if (!Object.keys(curData.yearly).length) {
-    curData.yearly = {
-      'Annual Examination': [
-        { code: `${cCode}-Y101`, name: 'Theory & Core Fundamentals', theory: 45, practical: 45, max_marks: 100 },
-        { code: `${cCode}-Y102`, name: 'Applied Professional Skills & Technology', theory: 44, practical: 46, max_marks: 100 },
-        { code: `${cCode}-Y103`, name: 'Industry Practicum & Viva-Voce', theory: 48, practical: 48, max_marks: 100 }
-      ],
-      '1st Year': [
-        { code: `${cCode}-Y101`, name: 'Theory & Core Fundamentals', theory: 45, practical: 45, max_marks: 100 },
-        { code: `${cCode}-Y102`, name: 'Applied Professional Skills & Technology', theory: 44, practical: 46, max_marks: 100 }
-      ],
-      '2nd Year': [
-        { code: `${cCode}-Y201`, name: 'Advanced Applications & Specialization', theory: 45, practical: 45, max_marks: 100 },
-        { code: `${cCode}-Y202`, name: 'Comprehensive Project & Grand Viva', theory: 48, practical: 48, max_marks: 100 }
-      ]
-    };
+    if (Array.isArray(courseSubs) && courseSubs.length > 0) {
+      curData.yearly = {
+        'Annual Examination': courseSubs.map((s, idx) => ({
+          code: (typeof s === 'object' && s.code) ? s.code : `${cCode}-Y${101 + idx}`,
+          name: (typeof s === 'object' && s.name) ? s.name : String(s),
+          theory: (typeof s === 'object' && (s.theory || s.max_theory)) ? (+s.theory || +s.max_theory) : 45,
+          practical: (typeof s === 'object' && (s.practical || s.max_practical)) ? (+s.practical || +s.max_practical) : 45,
+          max_marks: (typeof s === 'object' && (s.max_marks || s.total_max)) ? (+s.max_marks || +s.total_max) : 100
+        }))
+      };
+    } else {
+      curData.yearly = {
+        'Annual Examination': [
+          { code: `${cCode}-Y101`, name: 'Theory & Core Fundamentals', theory: 45, practical: 45, max_marks: 100 },
+          { code: `${cCode}-Y102`, name: 'Applied Professional Skills & Technology', theory: 44, practical: 46, max_marks: 100 },
+          { code: `${cCode}-Y103`, name: 'Industry Practicum & Viva-Voce', theory: 48, practical: 48, max_marks: 100 }
+        ],
+        '1st Year': [
+          { code: `${cCode}-Y101`, name: 'Theory & Core Fundamentals', theory: 45, practical: 45, max_marks: 100 },
+          { code: `${cCode}-Y102`, name: 'Applied Professional Skills & Technology', theory: 44, practical: 46, max_marks: 100 }
+        ],
+        '2nd Year': [
+          { code: `${cCode}-Y201`, name: 'Advanced Applications & Specialization', theory: 45, practical: 45, max_marks: 100 },
+          { code: `${cCode}-Y202`, name: 'Comprehensive Project & Grand Viva', theory: 48, practical: 48, max_marks: 100 }
+        ]
+      };
+    }
   }
   if (!Object.keys(curData.semester).length) {
     curData.semester = {
@@ -3357,11 +3385,30 @@ async function openCourseCurriculumEditor(courseId) {
         const sFee = (sFeeInput && +sFeeInput.value) || 200;
         const semFeeVal = (semFeeInput && +semFeeInput.value) || 600;
 
+        let allSubs = [];
+        const termsArr = Object.values(curData[activeEval] || curData.yearly || {});
+        termsArr.forEach(arr => {
+          if (Array.isArray(arr)) {
+            arr.forEach(s => {
+              if (s && s.name && !allSubs.some(x => x.name === s.name)) {
+                allSubs.push({
+                  code: s.code || `${cCode}-${allSubs.length + 1}`,
+                  name: s.name,
+                  max_theory: +s.theory || 70,
+                  max_practical: +s.practical || 30,
+                  total_max: +s.max_marks || 100
+                });
+              }
+            });
+          }
+        });
+
         try {
           await api(`/api/admin/courses/${courseId}/curriculum`, {
             method: 'POST',
             body: {
               curriculum: curData,
+              subjects: allSubs,
               single_fee_rupees: sFee,
               semester_fee_rupees: semFeeVal
             }
