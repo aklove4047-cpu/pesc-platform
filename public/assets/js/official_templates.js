@@ -65,13 +65,13 @@
     else if (isCustom(c && c.coordinator_signature_url)) coordSign = cleanUrl(c.coordinator_signature_url);
     else coordSign = cleanUrl(coordAuth.signature_url) || cleanUrl(c && c.coordinator_signature_url) || cleanUrl(data && data.coordSign) || SEALS.coordinatorSign;
 
-    // Council / Head Office Assets
+    // Council / Head Office Assets (Strictly isolated from centre's uploaded logo)
     const councilLogo = cleanUrl(
-      (data && (data.council_logo_url || data.councilLogo || data.logo_url)) ||
-      (c && (c.council_logo_url || c.council_logo || c.logo_url)) ||
+      (data && (data.council_logo_url || data.councilLogo)) ||
       (hoAuth && hoAuth.logo_url) ||
       (data && data.head_office && data.head_office.logo_url) ||
       (c && c.head_office && c.head_office.logo_url) ||
+      (c && (c.council_logo_url || c.council_logo)) ||
       (typeof window !== 'undefined' && window._councilAuthorities && window._councilAuthorities.head_office && window._councilAuthorities.head_office.logo_url) ||
       SEALS.councilLogo
     ) || '/assets/img/logo_council.svg';
@@ -450,8 +450,8 @@
     const fromDate = data.fromDate || '01-09-2025';
     const toDate = data.toDate || '12-09-2026';
 
-    const headerType = String(data.header_type || (data.headerMode || 'centre')).toLowerCase();
-    const isCouncilHeader = (headerType === 'council');
+    const headerType = String(data.header_type || (data.headerMode || (data.format === 'council' ? 'council' : 'centre'))).toLowerCase();
+    const isCouncilHeader = (headerType === 'council' || data.format === 'council' || data.design_format === 'council');
 
     const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
     const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);
@@ -659,8 +659,8 @@
     const courseName = s.course_name || s.course || 'Nursery Teacher Training';
     const duration = data.duration || (s.duration_months ? `${Math.round(s.duration_months/12) || 1} Year` : '1 Year');
 
-    const headerType = String(data.header_type || (data.headerMode || 'centre')).toLowerCase();
-    const isCouncilHeader = (headerType === 'council');
+    const headerType = String(data.header_type || (data.headerMode || (data.format === 'council' ? 'council' : 'centre'))).toLowerCase();
+    const isCouncilHeader = (headerType === 'council' || data.format === 'council' || data.design_format === 'council');
 
     const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
     const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);

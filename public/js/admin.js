@@ -1568,7 +1568,7 @@ const views = {
             <button type="button" class="btn sm alt" data-a="edit_student" data-id="${r.id}" title="Edit Student Particulars">✏️ Edit</button>
             <button type="button" class="btn sm" data-a="view_student_creds" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff;" title="View Credentials">🔑 ID/Pass</button>
             <button type="button" class="btn sm" style="background:#64748b; color:#fff;" onclick="toggleStudentStatus(${r.id}, 'active')" title="Move Back to Active Enrolled List">📋 Revert Active</button>
-            <button type="button" class="btn sm danger" data-a="del_student" data-id="${r.id}" data-name="${esc(r.name)}" title="Delete Student Record">🗑️</button>
+            <button type="button" class="btn sm danger" onclick="window.confirmDeleteStudent(${r.id}, '${esc(r.name)}', '${esc(r.student_code)}')" title="Delete Student Record" style="background:#dc2626; color:#fff; font-weight:700;">🗑️ Delete</button>
           </div>
         `]
       ], passoutList, filterCid ? `No passout students found for this centre.` : 'No passout students found yet.') : table([
@@ -1585,7 +1585,7 @@ const views = {
             <button type="button" class="btn sm gold" data-a="c_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}" title="Issue Certificate">📜 Cert</button>
             <button type="button" class="btn sm gold" data-a="m_direct_issue" data-id="${r.id}" data-name="${esc(r.name)}" title="Issue Marksheet">📊 Marksheet</button>
             <button type="button" class="btn sm" style="background:#059669; color:#fff;" onclick="toggleStudentStatus(${r.id}, 'passout')" title="Mark Student as Passed Out">🎓 Passout</button>
-            <button type="button" class="btn sm danger" data-a="del_student" data-id="${r.id}" data-name="${esc(r.name)}" title="Delete Student">🗑️</button>
+            <button type="button" class="btn sm danger" onclick="window.confirmDeleteStudent(${r.id}, '${esc(r.name)}', '${esc(r.student_code)}')" title="Delete Student" style="background:#dc2626; color:#fff; font-weight:700;">🗑️ Delete</button>
           </div>
         `],
       ], activeList, filterCid ? `No active enrolled candidates found for ${activeCentre ? activeCentre.name : 'this centre'}.` : 'No active enrolled candidates registered across centres.')}
@@ -2267,7 +2267,21 @@ async function showEditAffiliationCertModal(cId) {
       });
     }
   }, 60);
-}
+window.confirmDeleteStudent = async function(id, name, code) {
+  const conf = confirm(`⚠️ स्थायी विलोपन (Permanent Delete Student):\n\nक्या आप छात्र "${name}" (${code || id}) को पोर्टल से हमेशा के लिए हटाना चाहते हैं?\n\nयह छात्र, इसकी समस्त अंकतालिका, प्रमाणपत्र एवं लॉगिन क्रेडेंशियल हमेशा के लिए डिलीट हो जाएंगे।\n\nडिलीट करने के लिए 'OK' पर क्लिक करें।`);
+  if (!conf) return;
+  try {
+    await api(`/api/admin/students/${id}`, { method: 'DELETE' });
+    toast(`छात्र "${name}" को सफलतापूर्वक हमेशा के लिए डिलीट कर दिया गया!`);
+    const overlay = document.getElementById('adminModalOverlay');
+    if (overlay) overlay.style.display = 'none';
+    if (typeof views !== 'undefined' && typeof views.Students === 'function') {
+      await views.Students();
+    }
+  } catch (err) {
+    alert('Error deleting student: ' + (err.message || err));
+  }
+};
 
 V.addEventListener('click', (e) => {
   const b = e.target.closest('[data-a]');
@@ -2355,9 +2369,12 @@ V.addEventListener('click', (e) => {
               </select>
             </div>
           </div>
-          <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
-            <button type="button" class="btn alt" onclick="document.getElementById('adminModalOverlay').style.display='none'">Cancel</button>
-            <button type="submit" class="btn gold">Save Student Profile</button>
+          <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <button type="button" class="btn danger" style="background:#dc2626; color:#fff; font-weight:700;" onclick="window.confirmDeleteStudent(${id}, '${esc(s.name)}', '${esc(s.student_code)}')">🗑️ Delete Student (स्थायी रूप से हटाएं)</button>
+            <div style="display:flex; gap:10px;">
+              <button type="button" class="btn alt" onclick="document.getElementById('adminModalOverlay').style.display='none'">Cancel</button>
+              <button type="submit" class="btn gold">Save Student Profile</button>
+            </div>
           </div>
         </form>
       `, async (formData) => {
@@ -2387,8 +2404,9 @@ V.addEventListener('click', (e) => {
               <div><b>Registered Mobile:</b><br><span style="color:#334155;">${esc(c.mobile || '—')}</span></div>
               <div><b>Login Password:</b><br><code style="font-size:1.1rem; background:#fef08a; padding:3px 8px; border-radius:4px; border:1px solid #fde047; display:inline-block; margin-top:3px; color:#854d0e; font-weight:bold;">${esc(c.password)}</code></div>
             </div>
-            <div style="margin-top:14px;">
+            <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
               <button type="button" class="btn sm" id="btnCopyCreds" style="background:#16a34a; color:#fff;">📋 Copy Login Message for WhatsApp/SMS</button>
+              <button type="button" class="btn sm danger" style="background:#dc2626; color:#fff; font-weight:700;" onclick="window.confirmDeleteStudent(${id}, '${esc(c.name)}', '${esc(c.student_code)}')">🗑️ Delete Student</button>
             </div>
           </div>
 
@@ -2448,10 +2466,7 @@ V.addEventListener('click', (e) => {
       }
       return;
     } else if (a === 'del_student') {
-      if (!confirm(`Are you sure you want to permanently delete candidate ${b.dataset.name}? This will remove all their records.`)) return;
-      await api(`/api/admin/students/${id}`, { method: 'DELETE' });
-      toast('Student deleted successfully!');
-      await views.Students();
+      await window.confirmDeleteStudent(id, b.dataset.name, b.dataset.code || id);
       return;
     } else if (a === 'edit_curriculum') {
       await openCourseCurriculumEditor(+id);

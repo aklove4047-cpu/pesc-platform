@@ -1513,18 +1513,28 @@ const views = {
 
   // 5. Certificate Printing (3 Options: Council Only / Institute Only / Both Dual)
   async CertificatePrinting() {
-    const [sData, cData] = await Promise.all([
+    const [sData, cData, crtData] = await Promise.all([
       api('/api/centre/students'),
-      api('/api/centre/courses').catch(() => ({ courses: [] }))
+      api('/api/centre/courses').catch(() => ({ courses: [] })),
+      api('/api/centre/certificates').catch(() => ({ certificates: [] }))
     ]);
     const students = sData.students || [];
     window._currentStudents = students;
     if (cData && cData.courses) window._currentCourses = cData.courses;
 
+    const issuedCertMap = new Set();
+    (crtData.certificates || []).forEach(c => {
+      if (c.student_id) issuedCertMap.add(Number(c.student_id));
+      if (c.student_code) issuedCertMap.add(String(c.student_code).trim());
+      if (c.roll_no) issuedCertMap.add(String(c.roll_no).trim());
+    });
+
     const isStudentCertIssued = (s) => Boolean(
       s.certificate_id ||
       s.cert_no ||
       (s.cert_status && s.cert_status !== 'Pending' && s.cert_status !== 'Rejected') ||
+      issuedCertMap.has(Number(s.id)) ||
+      (s.student_code && issuedCertMap.has(String(s.student_code).trim())) ||
       (window._issuedCerts && (window._issuedCerts[s.id] || window._issuedCerts[s.student_code]))
     );
 
@@ -1660,18 +1670,28 @@ const views = {
 
   // 6. Marksheet Printing (Yearly + Semester-Wise)
   async MarksheetPrinting() {
-    const [sData, cData] = await Promise.all([
+    const [sData, cData, mData] = await Promise.all([
       api('/api/centre/students'),
-      api('/api/centre/courses').catch(() => ({ courses: [] }))
+      api('/api/centre/courses').catch(() => ({ courses: [] })),
+      api('/api/centre/marksheets').catch(() => ({ marksheets: [] }))
     ]);
     const students = sData.students || [];
     window._currentStudents = students;
     if (cData && cData.courses) window._currentCourses = cData.courses;
 
+    const issuedMrkMap = new Set();
+    (mData.marksheets || []).forEach(m => {
+      if (m.student_id) issuedMrkMap.add(Number(m.student_id));
+      if (m.student_code) issuedMrkMap.add(String(m.student_code).trim());
+      if (m.roll_no) issuedMrkMap.add(String(m.roll_no).trim());
+    });
+
     const isStudentMrkIssued = (s) => Boolean(
       s.marksheet_id ||
       s.marksheet_no ||
       (s.marksheet_status && s.marksheet_status !== 'Pending' && s.marksheet_status !== 'Rejected') ||
+      issuedMrkMap.has(Number(s.id)) ||
+      (s.student_code && issuedMrkMap.has(String(s.student_code).trim())) ||
       (window._issuedMrks && (window._issuedMrks[s.id] || window._issuedMrks[s.student_code]))
     );
 
@@ -3086,9 +3106,10 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
 
   try {
     const targetId = certDbId || studentId || 1;
+    const chosenCertHeader = certFormat === 'institute' ? 'centre' : (certFormat === 'dual' ? 'dual' : 'council');
     const res = await api(`/api/centre/certificates/${targetId}/sign-issue`, {
       method: 'POST',
-      body: { fee: fee, student_id: studentId }
+      body: { fee: fee, student_id: studentId, header_type: chosenCertHeader }
     });
 
     if (res.wallet_balance !== undefined) {
@@ -3363,7 +3384,8 @@ async function updateCertPreview(targetStudentId) {
       certNo: (certItem && certItem.cert_no) || refNo,
       issueDate: (certItem && (certItem.issue_date || certItem.issued_at)) || issueDate,
       duration: (certItem && certItem.duration) || (isSemester ? '6 Months' : '1 Year'),
-      header_type: certItem?.header_type || (certFormat === 'institute' ? 'centre' : 'council'),
+      header_type: certFormat === 'council' ? 'council' : (certFormat === 'dual' ? 'dual' : (certFormat === 'institute' ? 'centre' : (certItem?.header_type || 'council'))),
+      format: certFormat,
       header_title: certItem?.header_title,
       header_hindi: certItem?.header_hindi,
       header_subtitle: certItem?.header_subtitle,
@@ -3879,9 +3901,10 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
 
   try {
     const targetId = mrkDbId || studentId || 1;
+    const chosenMrkHeader = mrkFormat === 'institute' ? 'centre' : (mrkFormat === 'dual' ? 'dual' : 'council');
     const res = await api(`/api/centre/marksheets/${targetId}/sign-issue`, {
       method: 'POST',
-      body: { fee: fee, student_id: studentId }
+      body: { fee: fee, student_id: studentId, header_type: chosenMrkHeader }
     });
 
     if (res.wallet_balance !== undefined) {
@@ -4122,7 +4145,8 @@ async function updateMrkPreview(targetStudentId) {
       issueDate: (mrkItem && (mrkItem.issue_date || mrkItem.issued_at)) || issueDate,
       subjects: (mrkItem && mrkItem.subjects) ? (typeof mrkItem.subjects === 'string' ? JSON.parse(mrkItem.subjects) : mrkItem.subjects) : customSubjects,
       duration: (mrkItem && mrkItem.duration) || (isSemester ? '6 Months' : '1 Year'),
-      header_type: mrkItem?.header_type || (mrkFormat === 'institute' ? 'centre' : 'council'),
+      header_type: mrkFormat === 'council' ? 'council' : (mrkFormat === 'dual' ? 'dual' : (mrkFormat === 'institute' ? 'centre' : (mrkItem?.header_type || 'centre'))),
+      format: mrkFormat,
       header_title: mrkItem?.header_title,
       header_hindi: mrkItem?.header_hindi,
       header_subtitle: mrkItem?.header_subtitle,

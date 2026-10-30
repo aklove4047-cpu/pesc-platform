@@ -521,6 +521,9 @@ router.delete('/students/:id', (req, res) => {
       db.prepare('DELETE FROM sessions WHERE user_id=?').run(s.user_id);
       db.prepare('DELETE FROM users WHERE id=?').run(s.user_id);
     }
+    if (s.student_code) {
+      db.prepare("DELETE FROM users WHERE username=? OR email=?").run(s.student_code, s.student_code);
+    }
     db.prepare('DELETE FROM students WHERE id=?').run(sid);
   })();
 

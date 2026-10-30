@@ -3468,11 +3468,19 @@ export default {
         }
 
         if (request.method === 'DELETE') {
-          store.students = store.students.filter(s => s.id !== sId);
-          store.certificates = store.certificates.filter(c => c.student_id !== sId);
-          store.marksheets = store.marksheets.filter(m => m.student_id !== sId);
+          const sidNum = Number(sId);
+          const targetCode = student ? student.student_code : null;
+          store.students = store.students.filter(s => Number(s.id) !== sidNum);
+          store.certificates = store.certificates.filter(c => Number(c.student_id) !== sidNum && (!targetCode || c.student_code !== targetCode));
+          store.marksheets = store.marksheets.filter(m => Number(m.student_id) !== sidNum && (!targetCode || m.student_code !== targetCode));
           if (student && student.user_id) {
-            store.users = store.users.filter(u => u.id !== student.user_id);
+            store.users = store.users.filter(u => Number(u.id) !== Number(student.user_id));
+          }
+          if (targetCode) {
+            store.users = store.users.filter(u => u.username !== targetCode && (!u.student_code || u.student_code !== targetCode));
+          }
+          if (store.student_attendance) {
+            store.student_attendance = store.student_attendance.filter(a => Number(a.student_id) !== sidNum);
           }
           await Promise.all([
             persistToKV(env, 'students', store.students),
@@ -4467,19 +4475,30 @@ export default {
             return jsonResponse({ error: err.message }, 400);
           }
         }
-        const stus = store.students.filter(s => s.centre_id === c.id).map(s => {
-          const cert = store.certificates.find(x => x.student_id === s.id && x.centre_id === c.id);
-          const mrk = store.marksheets.find(x => x.student_id === s.id && x.centre_id === c.id);
-          const isPassout = s.status === 'passout' || s.status === 'completed' || !!cert || !!mrk;
+        const centreIdNum = Number(c.id);
+        const stus = store.students.filter(s => Number(s.centre_id) === centreIdNum).map(s => {
+          const sIdNum = Number(s.id);
+          const sCodeStr = String(s.student_code || '').trim();
+          const cert = store.certificates.find(x => 
+            (Number(x.student_id) === sIdNum || (sCodeStr && (String(x.student_code || '').trim() === sCodeStr || String(x.roll_no || '').trim() === sCodeStr))) &&
+            (Number(x.centre_id) === centreIdNum || !x.centre_id)
+          );
+          const mrk = store.marksheets.find(x => 
+            (Number(x.student_id) === sIdNum || (sCodeStr && (String(x.student_code || '').trim() === sCodeStr || String(x.roll_no || '').trim() === sCodeStr))) &&
+            (Number(x.centre_id) === centreIdNum || !x.centre_id)
+          );
+          const isPassout = s.status === 'passout' || s.status === 'completed' || !!cert || !!mrk || !!s.certificate_id || !!s.marksheet_id;
           return {
             ...s,
             is_passout: isPassout,
-            has_certificate: !!cert,
-            has_marksheet: !!mrk,
-            certificate_id: cert ? cert.id : null,
-            marksheet_id: mrk ? mrk.id : null,
-            cert_no: cert ? cert.cert_no : null,
-            marksheet_no: mrk ? mrk.marksheet_no : null
+            has_certificate: !!cert || !!s.certificate_id,
+            has_marksheet: !!mrk || !!s.marksheet_id,
+            certificate_id: cert ? cert.id : (s.certificate_id || null),
+            marksheet_id: mrk ? mrk.id : (s.marksheet_id || null),
+            cert_no: cert ? cert.cert_no : (s.cert_no || null),
+            marksheet_no: mrk ? mrk.marksheet_no : (s.marksheet_no || null),
+            cert_status: cert ? (cert.status || 'Valid') : (s.cert_status || (s.certificate_id ? 'Valid' : 'Pending')),
+            marksheet_status: mrk ? (mrk.status || 'Approved') : (s.marksheet_status || (s.marksheet_id ? 'Approved' : 'Pending'))
           };
         });
         return jsonResponse({ students: stus });
@@ -4687,12 +4706,16 @@ export default {
       }
 
       if (path === '/api/centre/certificates') {
-        const certs = store.certificates.filter(x => x.centre_id === c.id);
+        const cIdNum = Number(c.id);
+        const centreStudentIds = new Set(store.students.filter(s => Number(s.centre_id) === cIdNum).map(s => Number(s.id)));
+        const certs = store.certificates.filter(x => Number(x.centre_id) === cIdNum || centreStudentIds.has(Number(x.student_id)));
         return jsonResponse({ ok: true, certificates: certs });
       }
 
       if (path === '/api/centre/marksheets') {
-        const mrks = store.marksheets.filter(x => x.centre_id === c.id);
+        const cIdNum = Number(c.id);
+        const centreStudentIds = new Set(store.students.filter(s => Number(s.centre_id) === cIdNum).map(s => Number(s.id)));
+        const mrks = store.marksheets.filter(x => Number(x.centre_id) === cIdNum || centreStudentIds.has(Number(x.student_id)));
         return jsonResponse({ ok: true, marksheets: mrks });
       }
 
@@ -4830,8 +4853,8 @@ export default {
         if (request.method === 'POST' || request.method === 'PUT') {
           try { body = await request.json(); } catch (_) {}
         }
-        const studentId = body.student_id || cert.student_id;
-        const student = store.students.find(s => s.id === studentId);
+        const studentId = Number(body.student_id || cert.student_id);
+        const student = store.students.find(s => Number(s.id) === studentId || (body.student_code && s.student_code === body.student_code));
         const course = student ? store.courses.find(co => co.id === student.course_id) : null;
         const fee = (body.fee !== undefined && !isNaN(+body.fee)) ? +body.fee : (course ? (course.single_fee_rupees || 100) : 100);
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
@@ -4844,6 +4867,10 @@ export default {
         if (c) c.wallet_balance = bal;
         await persistToKV(env, 'centres', store.centres);
 
+        cert.student_id = student ? Number(student.id) : studentId;
+        cert.centre_id = (c && c.id) ? Number(c.id) : (student ? Number(student.centre_id) : 1);
+        if (student && student.student_code) cert.student_code = student.student_code;
+        if (body.header_type) cert.header_type = body.header_type;
         cert.centre_signed = true;
         cert.centre_signed_at = Date.now();
         cert.centre_signed_by = (c && c.director_name) || 'Centre Director';
@@ -4857,6 +4884,13 @@ export default {
         }
         if (!cert.token) {
           cert.token = 'cert-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+        if (student) {
+          student.certificate_id = cert.id;
+          student.cert_no = cert.cert_no;
+          student.cert_status = 'Valid';
+          student.is_passout = true;
+          await persistToKV(env, 'students', store.students);
         }
         await persistToKV(env, 'certificates', store.certificates);
         return jsonResponse({
@@ -4880,8 +4914,8 @@ export default {
         if (request.method === 'POST' || request.method === 'PUT') {
           try { body = await request.json(); } catch (_) {}
         }
-        const studentId = body.student_id || mrk.student_id;
-        const student = store.students.find(s => s.id === studentId);
+        const studentId = Number(body.student_id || mrk.student_id);
+        const student = store.students.find(s => Number(s.id) === studentId || (body.student_code && s.student_code === body.student_code));
         const course = student ? store.courses.find(co => co.id === student.course_id) : null;
         const fee = (body.fee !== undefined && !isNaN(+body.fee)) ? +body.fee : (course ? (course.single_fee_rupees || 100) : 100);
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
@@ -4894,6 +4928,10 @@ export default {
         if (c) c.wallet_balance = bal;
         await persistToKV(env, 'centres', store.centres);
 
+        mrk.student_id = student ? Number(student.id) : studentId;
+        mrk.centre_id = (c && c.id) ? Number(c.id) : (student ? Number(student.centre_id) : 1);
+        if (student && student.student_code) mrk.student_code = student.student_code;
+        if (body.header_type) mrk.header_type = body.header_type;
         mrk.centre_signed = true;
         mrk.centre_signed_at = Date.now();
         mrk.centre_signed_by = (c && c.director_name) || 'Centre Director';
@@ -4907,6 +4945,13 @@ export default {
         }
         if (!mrk.token) {
           mrk.token = 'mrk-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+        if (student) {
+          student.marksheet_id = mrk.id;
+          student.marksheet_no = mrk.marksheet_no;
+          student.marksheet_status = 'Approved';
+          student.is_passout = true;
+          await persistToKV(env, 'students', store.students);
         }
         await persistToKV(env, 'marksheets', store.marksheets);
         return jsonResponse({
