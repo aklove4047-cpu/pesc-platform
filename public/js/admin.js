@@ -2267,6 +2267,8 @@ async function showEditAffiliationCertModal(cId) {
       });
     }
   }, 60);
+}
+
 window.confirmDeleteStudent = async function(id, name, code) {
   const conf = confirm(`⚠️ स्थायी विलोपन (Permanent Delete Student):\n\nक्या आप छात्र "${name}" (${code || id}) को पोर्टल से हमेशा के लिए हटाना चाहते हैं?\n\nयह छात्र, इसकी समस्त अंकतालिका, प्रमाणपत्र एवं लॉगिन क्रेडेंशियल हमेशा के लिए डिलीट हो जाएंगे।\n\nडिलीट करने के लिए 'OK' पर क्लिक करें।`);
   if (!conf) return;
