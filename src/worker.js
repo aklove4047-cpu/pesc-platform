@@ -652,7 +652,7 @@ const CLEAN_ADMIN_USER = {
 async function syncFromKV(env, force = false) {
   if (!env || !env.PESC_KV) return;
   const now = Date.now();
-  if (!force && kvLoaded) return;
+  if (!force && kvLoaded && (now - lastKvSync < 5000)) return;
   try {
     const currentVersion = await env.PESC_KV.get('data_version');
     if (currentVersion !== DATA_VERSION) {
@@ -1924,7 +1924,7 @@ export default {
         if ((em === 'admin@pescouncil.in' || em === 'admin') && pw === adminPass) {
           const userObj = { id: (adminUser && adminUser.id) || 1, email: (adminUser && adminUser.email) || 'admin@pescouncil.in', name: (adminUser && adminUser.name) || 'Super Admin', role: 'super_admin' };
           return jsonResponse({ ok: true, user: userObj }, 200, {
-            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
           });
         }
 
@@ -1940,7 +1940,7 @@ export default {
           if (pw === coordPass) {
             const userObj = { id: matchedCoord.id, email: matchedCoord.email, name: matchedCoord.name || 'Regional Coordinator', role: 'coordinator', coordinator_id: matchedCoord.id };
             return jsonResponse({ ok: true, user: userObj }, 200, {
-              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
             });
           }
         }
@@ -1961,7 +1961,7 @@ export default {
             if (c.status === 'suspended') return jsonResponse({ error: 'यह सेंटर वर्तमान में निलंबित (Suspended) है।' }, 403);
             const userObj = { id: c.id, email: c.email || `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id, centre_code: c.centre_code, centre_slug: c.slug };
             return jsonResponse({ ok: true, user: userObj }, 200, {
-              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
             });
           }
         }
@@ -1979,7 +1979,7 @@ export default {
           if (pw === stuPass) {
             const userObj = { id: s.id, email: s.email || `${s.roll_no || s.student_code}@student.pescouncil.in`, name: s.name, role: 'student', student_id: s.id, roll_no: s.roll_no || s.student_code };
             return jsonResponse({ ok: true, user: userObj }, 200, {
-              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
             });
           }
         }
@@ -1991,7 +1991,7 @@ export default {
           if (pw === uPass) {
             const userObj = { id: u.id, email: u.email, name: u.name || 'User', role: u.role, centre_id: u.centre_id };
             return jsonResponse({ ok: true, user: userObj }, 200, {
-              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax`
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
             });
           }
         }
@@ -3433,8 +3433,8 @@ export default {
 
       if (path.match(/\/api\/admin\/students\/\d+$/)) {
         const sId = +path.split('/')[4];
-        const student = store.students.find(s => s.id === sId);
-        if (!student) return jsonResponse({ error: 'Student not found' }, 404);
+        const student = store.students.find(s => Number(s.id) === Number(sId));
+        if (!student && request.method !== 'DELETE') return jsonResponse({ error: 'Student not found' }, 404);
 
         if (request.method === 'GET') {
           const ce = store.centres.find(c => c.id === student.centre_id) || store.centres[0] || { name: 'Council Centre', centre_code: 'PESC0001' };
@@ -4282,7 +4282,7 @@ export default {
         try {
           const u = JSON.parse(decodeURIComponent(cookies.pesc_auth));
           if (u.role === 'centre_owner' || u.centre_id || u.centre_code) {
-            if (u.centre_id) authCentre = store.centres.find(x => x.id === u.centre_id);
+            if (u.centre_id) authCentre = store.centres.find(x => Number(x.id) === Number(u.centre_id));
             if (!authCentre && u.centre_slug) authCentre = resolveSlug(u.centre_slug);
             if (!authCentre && u.centre_code) authCentre = store.centres.find(x => x.centre_code && x.centre_code.toUpperCase() === u.centre_code.toUpperCase());
           }
@@ -4302,8 +4302,8 @@ export default {
           c = authCentre;
         }
       } else {
-        const targetSlug = queryParamSlug || headerSlug;
-        c = (targetSlug ? resolveSlug(targetSlug) : null) || store.centres[0];
+        const targetSlug = (queryParamSlug && queryParamSlug !== 'aryavart-institute-of-technology-management') ? queryParamSlug : (headerSlug && headerSlug !== 'aryavart-institute-of-technology-management' ? headerSlug : null);
+        c = (targetSlug ? resolveSlug(targetSlug) : null) || store.centres.find(x => x.status === 'active') || store.centres[0];
       }
 
       if (!c) {
@@ -4479,13 +4479,16 @@ export default {
         const stus = store.students.filter(s => Number(s.centre_id) === centreIdNum).map(s => {
           const sIdNum = Number(s.id);
           const sCodeStr = String(s.student_code || '').trim();
+          const sRollStr = String(s.roll_no || '').trim();
           const cert = store.certificates.find(x => 
-            (Number(x.student_id) === sIdNum || (sCodeStr && (String(x.student_code || '').trim() === sCodeStr || String(x.roll_no || '').trim() === sCodeStr))) &&
-            (Number(x.centre_id) === centreIdNum || !x.centre_id)
+            Number(x.student_id) === sIdNum || 
+            (sCodeStr && (String(x.student_code || '').trim() === sCodeStr || String(x.roll_no || '').trim() === sCodeStr)) ||
+            (sRollStr && (String(x.roll_no || '').trim() === sRollStr || String(x.student_code || '').trim() === sRollStr))
           );
           const mrk = store.marksheets.find(x => 
-            (Number(x.student_id) === sIdNum || (sCodeStr && (String(x.student_code || '').trim() === sCodeStr || String(x.roll_no || '').trim() === sCodeStr))) &&
-            (Number(x.centre_id) === centreIdNum || !x.centre_id)
+            Number(x.student_id) === sIdNum || 
+            (sCodeStr && (String(x.student_code || '').trim() === sCodeStr || String(x.roll_no || '').trim() === sCodeStr)) ||
+            (sRollStr && (String(x.roll_no || '').trim() === sRollStr || String(x.student_code || '').trim() === sRollStr))
           );
           const isPassout = s.status === 'passout' || s.status === 'completed' || !!cert || !!mrk || !!s.certificate_id || !!s.marksheet_id;
           return {
@@ -4707,15 +4710,31 @@ export default {
 
       if (path === '/api/centre/certificates') {
         const cIdNum = Number(c.id);
-        const centreStudentIds = new Set(store.students.filter(s => Number(s.centre_id) === cIdNum).map(s => Number(s.id)));
-        const certs = store.certificates.filter(x => Number(x.centre_id) === cIdNum || centreStudentIds.has(Number(x.student_id)));
+        const centreStudents = store.students.filter(s => Number(s.centre_id) === cIdNum);
+        const centreStudentIds = new Set(centreStudents.map(s => Number(s.id)));
+        const centreStudentCodes = new Set(centreStudents.map(s => String(s.student_code || '').trim()).filter(Boolean));
+        const centreRolls = new Set(centreStudents.map(s => String(s.roll_no || '').trim()).filter(Boolean));
+        const certs = store.certificates.filter(x => 
+          Number(x.centre_id) === cIdNum || 
+          centreStudentIds.has(Number(x.student_id)) || 
+          (x.student_code && centreStudentCodes.has(String(x.student_code).trim())) ||
+          (x.roll_no && centreRolls.has(String(x.roll_no).trim()))
+        );
         return jsonResponse({ ok: true, certificates: certs });
       }
 
       if (path === '/api/centre/marksheets') {
         const cIdNum = Number(c.id);
-        const centreStudentIds = new Set(store.students.filter(s => Number(s.centre_id) === cIdNum).map(s => Number(s.id)));
-        const mrks = store.marksheets.filter(x => Number(x.centre_id) === cIdNum || centreStudentIds.has(Number(x.student_id)));
+        const centreStudents = store.students.filter(s => Number(s.centre_id) === cIdNum);
+        const centreStudentIds = new Set(centreStudents.map(s => Number(s.id)));
+        const centreStudentCodes = new Set(centreStudents.map(s => String(s.student_code || '').trim()).filter(Boolean));
+        const centreRolls = new Set(centreStudents.map(s => String(s.roll_no || '').trim()).filter(Boolean));
+        const mrks = store.marksheets.filter(x => 
+          Number(x.centre_id) === cIdNum || 
+          centreStudentIds.has(Number(x.student_id)) || 
+          (x.student_code && centreStudentCodes.has(String(x.student_code).trim())) ||
+          (x.roll_no && centreRolls.has(String(x.roll_no).trim()))
+        );
         return jsonResponse({ ok: true, marksheets: mrks });
       }
 
@@ -4870,7 +4889,11 @@ export default {
         cert.student_id = student ? Number(student.id) : studentId;
         cert.centre_id = (c && c.id) ? Number(c.id) : (student ? Number(student.centre_id) : 1);
         if (student && student.student_code) cert.student_code = student.student_code;
-        if (body.header_type) cert.header_type = body.header_type;
+        cert.header_type = body.header_type || 'council';
+        if (cert.header_type === 'council') {
+          cert.header_title = 'PURVANCHAL EDUCATION & SKILL COUNCIL';
+          cert.header_hindi = 'पूर्वांचल शिक्षा एवं कौशल परिषद';
+        }
         cert.centre_signed = true;
         cert.centre_signed_at = Date.now();
         cert.centre_signed_by = (c && c.director_name) || 'Centre Director';
@@ -4889,6 +4912,7 @@ export default {
           student.certificate_id = cert.id;
           student.cert_no = cert.cert_no;
           student.cert_status = 'Valid';
+          student.has_certificate = true;
           student.is_passout = true;
           await persistToKV(env, 'students', store.students);
         }
@@ -4931,7 +4955,11 @@ export default {
         mrk.student_id = student ? Number(student.id) : studentId;
         mrk.centre_id = (c && c.id) ? Number(c.id) : (student ? Number(student.centre_id) : 1);
         if (student && student.student_code) mrk.student_code = student.student_code;
-        if (body.header_type) mrk.header_type = body.header_type;
+        mrk.header_type = body.header_type || 'council';
+        if (mrk.header_type === 'council') {
+          mrk.header_title = 'PURVANCHAL EDUCATION & SKILL COUNCIL';
+          mrk.header_hindi = 'पूर्वांचल शिक्षा एवं कौशल परिषद';
+        }
         mrk.centre_signed = true;
         mrk.centre_signed_at = Date.now();
         mrk.centre_signed_by = (c && c.director_name) || 'Centre Director';
@@ -4950,6 +4978,7 @@ export default {
           student.marksheet_id = mrk.id;
           student.marksheet_no = mrk.marksheet_no;
           student.marksheet_status = 'Approved';
+          student.has_marksheet = true;
           student.is_passout = true;
           await persistToKV(env, 'students', store.students);
         }
@@ -5000,14 +5029,14 @@ export default {
             }
           }
 
-          let u = {};
+          let u = Object.assign({}, currentU);
           u.centre_id = targetC.id;
           u.centre_code = targetC.centre_code;
           u.centre_slug = targetC.slug;
-          u.role = 'centre_owner';
-          u.name = targetC.name + ' Director';
+          u.role = isAdmin ? currentU.role : 'centre_owner';
+          u.name = currentU.name || (targetC.name + ' Director');
           return jsonResponse({ ok: true, centre: targetC }, 200, {
-            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(u))}; Path=/; HttpOnly; SameSite=Lax`
+            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(u))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
           });
         } catch (err) {
           return jsonResponse({ error: err.message }, 400);

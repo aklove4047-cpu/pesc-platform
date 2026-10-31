@@ -132,7 +132,15 @@
         } else if (d.user.role === 'student') {
           window.location.replace('/student');
         } else {
-          window.location.replace('/portal');
+          if (d.user?.centre_slug) {
+            try {
+              localStorage.setItem('pesc_active_centre_slug', d.user.centre_slug);
+              if (d.user.centre_id) localStorage.setItem('pesc_active_centre_id', d.user.centre_id);
+            } catch (_) {}
+            window.location.replace(`/portal?slug=${encodeURIComponent(d.user.centre_slug)}`);
+          } else {
+            window.location.replace('/portal');
+          }
         }
       } catch (err) {
         errBox.textContent = err.message || 'Invalid credentials or login failed';

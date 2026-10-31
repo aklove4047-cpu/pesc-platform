@@ -66,7 +66,7 @@
     else coordSign = cleanUrl(coordAuth.signature_url) || cleanUrl(c && c.coordinator_signature_url) || cleanUrl(data && data.coordSign) || SEALS.coordinatorSign;
 
     // Council / Head Office Assets (Strictly isolated from centre's uploaded logo)
-    const councilLogo = cleanUrl(
+    let councilLogo = cleanUrl(
       (data && (data.council_logo_url || data.councilLogo)) ||
       (hoAuth && hoAuth.logo_url) ||
       (data && data.head_office && data.head_office.logo_url) ||
@@ -75,6 +75,10 @@
       (typeof window !== 'undefined' && window._councilAuthorities && window._councilAuthorities.head_office && window._councilAuthorities.head_office.logo_url) ||
       SEALS.councilLogo
     ) || '/assets/img/logo_council.svg';
+
+    if (centreLogo && councilLogo === centreLogo) {
+      councilLogo = '/assets/img/logo_council.svg';
+    }
     const councilSeal = cleanUrl((data && (data.council_seal_url || data.councilSeal)) || (c && (c.council_seal_url || c.councilSeal)) || hoAuth.seal_url || (data && data.head_office && data.head_office.seal_url) || (c && c.head_office && c.head_office.seal_url) || SEALS.councilSeal) || '/assets/img/seal_council_head.svg';
     const councilSign = cleanUrl((data && (data.council_signature_url || data.councilSign)) || (c && (c.council_signature_url || c.councilSign)) || hoAuth.signature_url || (data && data.head_office && data.head_office.signature_url) || (c && c.head_office && c.head_office.signature_url) || SEALS.councilSign) || '/assets/img/sign_council_head.svg';
     const chairmanSign = cleanUrl(hoAuth.chairman_signature_url || councilSign);
@@ -450,8 +454,15 @@
     const fromDate = data.fromDate || '01-09-2025';
     const toDate = data.toDate || '12-09-2026';
 
-    const headerType = String(data.header_type || (data.headerMode || (data.format === 'council' ? 'council' : 'centre'))).toLowerCase();
-    const isCouncilHeader = (headerType === 'council' || data.format === 'council' || data.design_format === 'council');
+    const rawHeaderType = String(data.header_type || data.headerMode || (data.format === 'council' ? 'council' : '')).toLowerCase();
+    const isExplicitCouncil = rawHeaderType === 'council' || data.format === 'council' || data.design_format === 'council';
+    const isExplicitCentre = rawHeaderType === 'centre' || data.format === 'institute';
+    const hasCouncilTitle = String(data.header_title || '').toUpperCase().includes('COUNCIL') || 
+                            String(data.header_title || '').toUpperCase().includes('PURVANCHAL') ||
+                            String(data.header_hindi || '').includes('परिषद') ||
+                            String(data.header_hindi || '').includes('पूर्वांचल');
+
+    const isCouncilHeader = isExplicitCouncil || (!isExplicitCentre && hasCouncilTitle) || (!rawHeaderType && !data.format);
 
     const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
     const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);
@@ -659,8 +670,15 @@
     const courseName = s.course_name || s.course || 'Nursery Teacher Training';
     const duration = data.duration || (s.duration_months ? `${Math.round(s.duration_months/12) || 1} Year` : '1 Year');
 
-    const headerType = String(data.header_type || (data.headerMode || (data.format === 'council' ? 'council' : 'centre'))).toLowerCase();
-    const isCouncilHeader = (headerType === 'council' || data.format === 'council' || data.design_format === 'council');
+    const rawHeaderType = String(data.header_type || data.headerMode || (data.format === 'council' ? 'council' : '')).toLowerCase();
+    const isExplicitCouncil = rawHeaderType === 'council' || data.format === 'council' || data.design_format === 'council';
+    const isExplicitCentre = rawHeaderType === 'centre' || data.format === 'institute';
+    const hasCouncilTitle = String(data.header_title || '').toUpperCase().includes('COUNCIL') || 
+                            String(data.header_title || '').toUpperCase().includes('PURVANCHAL') ||
+                            String(data.header_hindi || '').includes('परिषद') ||
+                            String(data.header_hindi || '').includes('पूर्वांचल');
+
+    const isCouncilHeader = isExplicitCouncil || (!isExplicitCentre && hasCouncilTitle) || (!rawHeaderType && !data.format);
 
     const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
     const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);

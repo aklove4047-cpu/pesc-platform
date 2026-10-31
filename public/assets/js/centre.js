@@ -5,12 +5,12 @@ const V = $('#view');
 const pathMatch = location.pathname.match(/\/c\/([a-z0-9-]+)/i);
 const urlParams = new URLSearchParams(location.search);
 let rawSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || (typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_slug') : '') || '';
-if (!rawSlug || rawSlug.includes('navya')) {
-  rawSlug = 'aryavart-institute-of-technology-management';
+if (!rawSlug || rawSlug.includes('navya') || rawSlug.includes('aryavart')) {
+  rawSlug = '';
 }
 let currentSlug = rawSlug;
 try {
-  if (typeof localStorage !== 'undefined') localStorage.setItem('pesc_active_centre_slug', currentSlug);
+  if (typeof localStorage !== 'undefined' && currentSlug) localStorage.setItem('pesc_active_centre_slug', currentSlug);
 } catch (_) {}
 // Intercept /api/centre requests to pass active slug & header when established
 const origFetch = window.fetch;
@@ -1532,10 +1532,12 @@ const views = {
     const isStudentCertIssued = (s) => Boolean(
       s.certificate_id ||
       s.cert_no ||
+      s.has_certificate ||
       (s.cert_status && s.cert_status !== 'Pending' && s.cert_status !== 'Rejected') ||
       issuedCertMap.has(Number(s.id)) ||
       (s.student_code && issuedCertMap.has(String(s.student_code).trim())) ||
-      (window._issuedCerts && (window._issuedCerts[s.id] || window._issuedCerts[s.student_code]))
+      (s.roll_no && issuedCertMap.has(String(s.roll_no).trim())) ||
+      (window._issuedCerts && (window._issuedCerts[s.id] || (s.student_code && window._issuedCerts[s.student_code])))
     );
 
     const unissuedStudents = students.filter(s => !isStudentCertIssued(s));
@@ -1689,10 +1691,12 @@ const views = {
     const isStudentMrkIssued = (s) => Boolean(
       s.marksheet_id ||
       s.marksheet_no ||
+      s.has_marksheet ||
       (s.marksheet_status && s.marksheet_status !== 'Pending' && s.marksheet_status !== 'Rejected') ||
       issuedMrkMap.has(Number(s.id)) ||
       (s.student_code && issuedMrkMap.has(String(s.student_code).trim())) ||
-      (window._issuedMrks && (window._issuedMrks[s.id] || window._issuedMrks[s.student_code]))
+      (s.roll_no && issuedMrkMap.has(String(s.roll_no).trim())) ||
+      (window._issuedMrks && (window._issuedMrks[s.id] || (s.student_code && window._issuedMrks[s.student_code])))
     );
 
     const unissuedStudents = students.filter(s => !isStudentMrkIssued(s));
@@ -1738,8 +1742,8 @@ const views = {
           <div>
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Design Format:</label>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="btn gold sm active" id="btnMrkFmtInstitute" onclick="setMrkFormat('institute')">🏫 Centre Name on Top</button>
-              <button type="button" class="btn alt sm" id="btnMrkFmtCouncil" onclick="setMrkFormat('council')">Council Header</button>
+              <button type="button" class="btn gold sm active" id="btnMrkFmtCouncil" onclick="setMrkFormat('council')">Council Header</button>
+              <button type="button" class="btn alt sm" id="btnMrkFmtInstitute" onclick="setMrkFormat('institute')">🏫 Centre Name on Top</button>
               <button type="button" class="btn alt sm" id="btnMrkFmtDual" onclick="setMrkFormat('dual')">Both Dual</button>
             </div>
           </div>
@@ -3122,6 +3126,11 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
     window._issuedCerts[studentId] = true;
     if (regNo) window._issuedCerts[regNo] = true;
     window._issuedCerts[targetId] = true;
+    if (stu) {
+      stu.certificate_id = targetId;
+      stu.has_certificate = true;
+      stu.cert_status = 'Valid';
+    }
 
     toast(`🎉 ₹${fee} वॉलेट से कट गया! हेड ऑफिस एवं समन्वयक मुहर सहित प्रमाणपत्र जारी हो गया।`);
     if (typeof views !== 'undefined' && typeof views.CertificatePrinting === 'function') {
@@ -3876,7 +3885,7 @@ function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
 }
 
 // Marksheet Format & Issuance Logic
-let mrkFormat = 'institute';
+let mrkFormat = 'council';
 function setMrkFormat(fmt) {
   mrkFormat = fmt;
   const bCouncil = $('#btnMrkFmtCouncil');
@@ -3917,6 +3926,11 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
     window._issuedMrks[studentId] = true;
     if (regNo) window._issuedMrks[regNo] = true;
     window._issuedMrks[targetId] = true;
+    if (stu) {
+      stu.marksheet_id = targetId;
+      stu.has_marksheet = true;
+      stu.marksheet_status = 'Approved';
+    }
 
     toast(`🎉 ₹${fee} वॉलेट से कट गया! हेड ऑफिस एवं समन्वयक मुहर सहित अंकतालिका जारी हो गई।`);
     if (typeof views !== 'undefined' && typeof views.MarksheetPrinting === 'function') {
@@ -4145,7 +4159,7 @@ async function updateMrkPreview(targetStudentId) {
       issueDate: (mrkItem && (mrkItem.issue_date || mrkItem.issued_at)) || issueDate,
       subjects: (mrkItem && mrkItem.subjects) ? (typeof mrkItem.subjects === 'string' ? JSON.parse(mrkItem.subjects) : mrkItem.subjects) : customSubjects,
       duration: (mrkItem && mrkItem.duration) || (isSemester ? '6 Months' : '1 Year'),
-      header_type: mrkFormat === 'council' ? 'council' : (mrkFormat === 'dual' ? 'dual' : (mrkFormat === 'institute' ? 'centre' : (mrkItem?.header_type || 'centre'))),
+      header_type: mrkFormat === 'council' ? 'council' : (mrkFormat === 'dual' ? 'dual' : (mrkFormat === 'institute' ? 'centre' : (mrkItem?.header_type || 'council'))),
       format: mrkFormat,
       header_title: mrkItem?.header_title,
       header_hindi: mrkItem?.header_hindi,
@@ -4809,34 +4823,53 @@ async function initCentreHeader() {
 
     // Prioritize active centre:
     // 1. Authenticated user (centre_id, centre_slug, centre_code)
-    // 2. Server resolved active_centre or active_id
-    // 3. currentSlug matching centre.slug
-    // 4. First centre in list
+    // 2. URL slug/centre parameter
+    // 3. Saved active centre from localStorage (pesc_active_centre_id, pesc_active_centre_slug)
+    // 4. Server active_centre or active_id
+    // 5. currentSlug matching centre.slug
+    // 6. First active centre or first centre in list
     const user = meData?.user;
     let activeCentre = null;
     if (user && (user.role === 'centre_owner' || user.centre_id || user.centre_slug || user.centre_code)) {
-      if (user.centre_id) activeCentre = allCentresList.find(c => c.id === user.centre_id);
+      if (user.centre_id) activeCentre = allCentresList.find(c => Number(c.id) === Number(user.centre_id));
       if (!activeCentre && user.centre_slug) activeCentre = allCentresList.find(c => c.slug === user.centre_slug);
       if (!activeCentre && user.centre_code) activeCentre = allCentresList.find(c => c.centre_code && c.centre_code.toUpperCase() === user.centre_code.toUpperCase());
+    }
+
+    const urlTargetSlug = urlParams.get('slug') || urlParams.get('centre');
+    const savedCentreId = typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_id') : null;
+    const savedCentreSlug = typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_slug') : null;
+
+    if (!activeCentre && urlTargetSlug) {
+      activeCentre = allCentresList.find(c => c.slug === urlTargetSlug);
+    }
+    if (!activeCentre && savedCentreId) {
+      activeCentre = allCentresList.find(c => Number(c.id) === Number(savedCentreId));
+    }
+    if (!activeCentre && savedCentreSlug && savedCentreSlug !== 'aryavart-institute-of-technology-management') {
+      activeCentre = allCentresList.find(c => c.slug === savedCentreSlug);
     }
     if (!activeCentre && cData.active_centre) {
       activeCentre = cData.active_centre;
     }
     if (!activeCentre && cData.active_id) {
-      activeCentre = allCentresList.find(c => c.id === cData.active_id);
+      activeCentre = allCentresList.find(c => Number(c.id) === Number(cData.active_id));
     }
-    if (!activeCentre && currentSlug) {
+    if (!activeCentre && currentSlug && currentSlug !== 'aryavart-institute-of-technology-management') {
       activeCentre = allCentresList.find(c => c.slug === currentSlug);
     }
     if (!activeCentre && allCentresList.length > 0) {
-      activeCentre = allCentresList[0];
+      activeCentre = allCentresList.find(c => c.status === 'active') || allCentresList[0];
     }
 
     currentCentre = activeCentre;
 
     if (activeCentre) {
       currentSlug = activeCentre.slug;
-      try { localStorage.setItem('pesc_active_centre_slug', activeCentre.slug); } catch (_) {}
+      try {
+        localStorage.setItem('pesc_active_centre_slug', activeCentre.slug);
+        localStorage.setItem('pesc_active_centre_id', activeCentre.id);
+      } catch (_) {}
       document.title = `${activeCentre.name} – Centre ERP Portal`;
       if ($('#headerCentreName')) $('#headerCentreName').textContent = activeCentre.name;
       if ($('#headerCentreCode')) $('#headerCentreCode').textContent = activeCentre.centre_code;
@@ -4850,16 +4883,35 @@ async function initCentreHeader() {
     const sel = $('#centreSelectDropdown');
     if (sel && allCentresList.length) {
       sel.innerHTML = allCentresList.map(c => `
-        <option value="${c.id}" ${c.id === (activeCentre?.id) ? 'selected' : ''}>
+        <option value="${c.id}" ${Number(c.id) === Number(activeCentre?.id) ? 'selected' : ''}>
           ${esc(c.name)} (${esc(c.centre_code)})
         </option>
       `).join('');
 
-      sel.onchange = (e) => {
+      sel.onchange = async (e) => {
         const cid = +e.target.value;
-        if (cid === (activeCentre?.id)) return;
-        const targetCentre = allCentresList.find(c => c.id === cid);
+        if (cid === Number(activeCentre?.id)) return;
+        const targetCentre = allCentresList.find(c => Number(c.id) === cid);
         if (!targetCentre) return;
+
+        const isAdmin = user && ['super_admin', 'admin'].includes(user.role);
+        if (isAdmin) {
+          try {
+            await api('/api/centre/switch-centre', {
+              method: 'POST',
+              body: { centre_id: targetCentre.id }
+            });
+            try {
+              localStorage.setItem('pesc_active_centre_slug', targetCentre.slug);
+              localStorage.setItem('pesc_active_centre_id', targetCentre.id);
+            } catch (_) {}
+            toast('Switched to ' + targetCentre.name);
+            window.location.reload();
+          } catch (err) {
+            alert('Error switching centre: ' + err.message);
+          }
+          return;
+        }
 
         showSwitchCentrePasswordModal(targetCentre, () => {
           sel.value = activeCentre?.id;
@@ -4941,7 +4993,10 @@ function showSwitchCentrePasswordModal(targetCentre, onCancel) {
         body: { centre_id: targetCentre.id, password: pw }
       });
       if (res?.centre?.slug) {
-        try { localStorage.setItem('pesc_active_centre_slug', res.centre.slug); } catch (_) {}
+        try {
+          localStorage.setItem('pesc_active_centre_slug', res.centre.slug);
+          if (res.centre.id) localStorage.setItem('pesc_active_centre_id', res.centre.id);
+        } catch (_) {}
       }
       toast('✅ Password verified! Switched to ' + targetCentre.name);
       modal.remove();
@@ -4984,7 +5039,10 @@ function initSignOutButton() {
       try {
         await api('/api/auth/logout', { method: 'POST' });
       } catch (_) {}
-      try { localStorage.removeItem('pesc_active_centre_slug'); } catch (_) {}
+      try {
+        localStorage.removeItem('pesc_active_centre_slug');
+        localStorage.removeItem('pesc_active_centre_id');
+      } catch (_) {}
       toast('Signed out successfully');
       setTimeout(() => { window.location.href = '/portal'; }, 400);
     };
@@ -5075,7 +5133,10 @@ function initAuthForms() {
 
         if (loginRes?.user?.centre_slug) {
           currentSlug = loginRes.user.centre_slug;
-          try { localStorage.setItem('pesc_active_centre_slug', currentSlug); } catch (_) {}
+          try {
+            localStorage.setItem('pesc_active_centre_slug', currentSlug);
+            if (loginRes.user.centre_id) localStorage.setItem('pesc_active_centre_id', loginRes.user.centre_id);
+          } catch (_) {}
         }
 
         notice.innerHTML = `<div style="background:#dcfce7; color:#15803d; padding:10px; border-radius:8px; font-weight:700; text-align:center;">✓ Centre Login successful! Opening ERP Portal…</div>`;
@@ -5235,15 +5296,19 @@ guard(async () => {
     const searchParams = new URLSearchParams(window.location.search);
     const forceLogin = searchParams.get('login') === '1' || searchParams.get('auth') === '1';
 
-    // If explicit login requested, or if not logged in as centre_owner / centre_staff, show login screen!
-    if (forceLogin || !meRes || !meRes.user || !['centre_owner', 'centre_staff'].includes(meRes.user.role)) {
+    // If explicit login requested, or if not logged in as authorized user, show login screen!
+    const isAuthed = meRes && meRes.user && ['centre_owner', 'centre_staff', 'super_admin', 'admin', 'coordinator'].includes(meRes.user.role);
+    if (forceLogin || !isAuthed) {
       showCentreAuthScreen();
       return;
     }
 
     if (meRes.user.centre_slug) {
       currentSlug = meRes.user.centre_slug;
-      try { localStorage.setItem('pesc_active_centre_slug', currentSlug); } catch (_) {}
+      try {
+        localStorage.setItem('pesc_active_centre_slug', currentSlug);
+        if (meRes.user.centre_id) localStorage.setItem('pesc_active_centre_id', meRes.user.centre_id);
+      } catch (_) {}
     }
 
     // Authenticated user exists -> open ERP layout

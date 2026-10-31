@@ -85,6 +85,28 @@ guard(async () => {
 
   // ─── APPOINTMENT CERTIFICATE BUILDER ─────────────────────────────────────
   function buildCoordinatorCertificateHTML(cert) {
+    if (window.OfficialTemplates && typeof window.OfficialTemplates.renderCoordinatorAppointmentCertificateHtml === 'function') {
+      return `
+        <div class="coord-cert-container" style="max-width:960px; margin:0 auto; font-family:'Inter',sans-serif;">
+          <!-- Action Bar (hidden during print) -->
+          <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:#fff; padding:12px 20px; border-radius:10px; border:1px solid #e2e8f0; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <div>
+              <b style="font-size:1.05rem; color:#0f172a;">📜 Regional / State Coordinator Appointment Certificate</b>
+              <p class="muted" style="margin:2px 0 0; font-size:0.85rem;">Official credential recognized under Central Council Administration</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button class="btn gold" onclick="window.print()" style="display:flex; align-items:center; gap:6px; font-weight:700;">
+                🖨️ Print / Save PDF
+              </button>
+            </div>
+          </div>
+          <div id="printCertArea">
+            ${window.OfficialTemplates.renderCoordinatorAppointmentCertificateHtml({ certificate: cert })}
+          </div>
+        </div>
+      `;
+    }
+
     const issueDateStr = cert.issued_at ? new Date(cert.issued_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '01 April 2026';
     const validUntilStr = cert.valid_until ? new Date(cert.valid_until).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '31 March 2029';
     const verifyUrl = cert.verification_url || `https://pescouncil.in/verify/coordinator/${cert.token || 'valid'}`;
