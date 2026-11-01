@@ -892,8 +892,9 @@ window.getStudentMarksheetInfo = function(s, mrkList) {
   const hasYear2 = studentMrks.some(m => isIssued(m) && (String(m.term || '').toLowerCase().includes('2nd year') || String(m.term || '').toLowerCase().includes('year 2')));
   const hasAnyApproved = studentMrks.some(isIssued) || Boolean(s.marksheet_no && s.marksheet_status === 'Approved');
 
-  const evalType = String(s.evaluation_type || 'annual').toLowerCase();
-  const isSemester = evalType.includes('semester');
+  const hasSemTerm = studentMrks.some(m => String(m.term || '').toLowerCase().includes('sem'));
+  const evalType = String(s.evaluation_type || s.course_type || (hasSemTerm ? 'semester' : 'annual')).toLowerCase();
+  const isSemester = evalType.includes('semester') || hasSemTerm;
 
   let isFullyIssued = false;
   if (isSemester) {
@@ -1207,19 +1208,20 @@ const views = {
               Course Details
             </div>
 
-            <!-- Row 1: Course Type * (Single / Semester/Year) | Course To Be Join * -->
+            <!-- Row 1: Course Type / Evaluation * | Course To Be Join * -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
               <div>
                 <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:8px;">
-                  Course Type * <span style="font-size:0.75rem; color:#dc2626; font-weight:normal;">(fill carefully not editable)</span>
+                  Course Type / Examination Pattern * <span style="font-size:0.75rem; color:#0284c7; font-weight:normal;">(सेमेस्टर अथवा वार्षिक प्रणाली)</span>
                 </label>
                 <div style="display:flex; gap:20px; align-items:center; padding-top:4px;">
                   <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.92rem; font-weight:600;">
-                    <input type="radio" name="course_type" value="Single" checked> Single
+                    <input type="radio" name="evaluation_type" value="semester" checked onchange="const ct=document.querySelector('input[name=course_type]'); if(ct) ct.value='Semester/Year';"> 📚 Semester-Wise (सेमेस्टर प्रणाली)
                   </label>
                   <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.92rem; font-weight:600;">
-                    <input type="radio" name="course_type" value="Semester/Year"> Semester/Year
+                    <input type="radio" name="evaluation_type" value="annual" onchange="const ct=document.querySelector('input[name=course_type]'); if(ct) ct.value='Single';"> 📅 Yearly / Annual (वार्षिक प्रणाली)
                   </label>
+                  <input type="hidden" name="course_type" value="Semester/Year">
                 </div>
               </div>
               <div>
@@ -1751,14 +1753,16 @@ const views = {
 
       <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
         <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:20px;">
-          <!-- Select Candidate (Unissued Only) -->
+          <!-- Select Candidate -->
           <div style="flex:1; min-width:260px;">
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate (अजारी छात्र चुनें):</label>
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate (छात्र चुनें):</label>
             <select id="mrkStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${unissuedStudents.length > 0 ? unissuedStudents.map(s => {
+              ${students.length > 0 ? students.map(s => {
                 const info = window.getStudentMarksheetInfo(s, mData.marksheets);
                 let badge = '';
-                if (info.isSemester) {
+                if (info.isFullyIssued) {
+                  badge = '✅ [अंकतालिका जारी - View & Print]';
+                } else if (info.isSemester) {
                   if (info.hasSem1) {
                     badge = '⭐ [सेमेस्टर 1 जारी ✓ ➔ सेमेस्टर 2 तैयार]';
                   } else {
@@ -1767,8 +1771,8 @@ const views = {
                 } else {
                   badge = '[वार्षिक अंकतालिका लंबित]';
                 }
-                return `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-eval_type="${esc(s.evaluation_type || 'annual')}" data-term="${esc(s.term || 'Annual')}" data-has_sem1="${info.hasSem1 ? '1' : '0'}" data-has_sem2="${info.hasSem2 ? '1' : '0'}" data-marksheet_no="${esc(s.marksheet_no || '')}" data-is_passout="${s.is_passout ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)} ${badge}</option>`;
-              }).join('') : '<option value="">-- सभी पंजीकृत छात्रों की सभी अंकतालिकाएं जारी हो चुकी हैं --</option>'}
+                return `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-eval_type="${esc(s.evaluation_type || s.course_type || (info.isSemester ? 'semester' : 'annual'))}" data-term="${esc(s.term || 'Annual')}" data-has_sem1="${info.hasSem1 ? '1' : '0'}" data-has_sem2="${info.hasSem2 ? '1' : '0'}" data-marksheet_no="${esc(s.marksheet_no || '')}" data-is_passout="${s.is_passout ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)} ${badge}</option>`;
+              }).join('') : '<option value="">-- कोई पंजीकृत छात्र उपलब्ध नहीं है --</option>'}
             </select>
           </div>
 
@@ -3081,9 +3085,13 @@ window.viewIssuedStudentCert = async function(studentId) {
 window.viewIssuedStudentMrk = async function(studentId) {
   if (typeof activeTab !== 'undefined' && activeTab !== 'MarksheetPrinting') {
     switchModule('MarksheetPrinting');
-    await new Promise(r => setTimeout(r, 120));
+    await new Promise(r => setTimeout(r, 150));
   }
-  updateMrkPreview(studentId);
+  const sel = $('#mrkStudentSelect');
+  if (sel) {
+    sel.value = String(studentId);
+  }
+  await updateMrkPreview(studentId);
   setTimeout(() => {
     const cont = document.getElementById('mrkPreviewContainer');
     if (cont) cont.scrollIntoView({ behavior: 'smooth' });
@@ -3250,14 +3258,6 @@ function setCertFormat(fmt) {
 }
 
 function setCertEvalPattern(pat) {
-  const sel = $('#certStudentSelect');
-  const opt = sel ? sel.selectedOptions[0] : null;
-  const stu = (window._currentStudents || []).find(s => s.id == (opt ? +opt.value : 0));
-  const evalType = (stu && stu.evaluation_type) || (opt ? opt.dataset.eval_type : 'annual') || 'annual';
-  if (pat === 'semester' && !evalType.toLowerCase().includes('semester')) {
-    alert('⚠️ यह छात्र वार्षिक (Annual) प्रवेश प्रणाली में नामांकित है।\n\nकेवल वही छात्र सेमेस्टर प्रमाणपत्र प्राप्त कर सकते हैं जिनका प्रवेश सेमेस्टर प्रणाली में हुआ हो।');
-    return;
-  }
   certEvalPattern = pat;
   const bYearly = $('#btnCertEvalYearly');
   const bSem = $('#btnCertEvalSemester');
@@ -3323,28 +3323,11 @@ async function updateCertPreview(targetStudentId) {
   const evalType = (stu.evaluation_type || (opt ? opt.dataset.eval_type : 'annual') || 'annual').toLowerCase();
   const isSemesterAdmitted = evalType.includes('semester');
 
-  // Enforce evaluation mode rule:
+  // Evaluation mode buttons
   const bYearly = $('#btnCertEvalYearly');
   const bSem = $('#btnCertEvalSemester');
-  if (bSem) {
-    if (!isSemesterAdmitted) {
-      bSem.disabled = true;
-      bSem.style.opacity = '0.45';
-      bSem.style.cursor = 'not-allowed';
-      bSem.title = 'यह छात्र वार्षिक (Annual) प्रवेश में है - केवल वार्षिक प्रमाणपत्र ही जारी हो सकता है';
-      certEvalPattern = 'yearly';
-      if (bYearly) bYearly.className = 'btn gold sm active';
-      bSem.className = 'btn alt sm';
-    } else {
-      bSem.disabled = false;
-      bSem.style.opacity = '1';
-      bSem.style.cursor = 'pointer';
-      bSem.title = '';
-      certEvalPattern = 'semester';
-      if (bSem) bSem.className = 'btn gold sm active';
-      if (bYearly) bYearly.className = 'btn alt sm';
-    }
-  }
+  if (bSem) bSem.disabled = false;
+  if (bYearly) bYearly.disabled = false;
 
   const certTerm = ($('#certTermSelect') && $('#certTermSelect').value) || (certEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
   const isSemester = certEvalPattern === 'semester';
@@ -3539,14 +3522,6 @@ async function updateCertPreview(targetStudentId) {
 let mrkEvalPattern = 'yearly';
 
 function setMrkEvalPattern(pat) {
-  const sel = $('#mrkStudentSelect');
-  const opt = sel ? sel.selectedOptions[0] : null;
-  const stu = (window._currentStudents || []).find(s => s.id == (opt ? +opt.value : 0));
-  const evalType = (stu && stu.evaluation_type) || (opt ? opt.dataset.eval_type : 'annual') || 'annual';
-  if (pat === 'semester' && !evalType.toLowerCase().includes('semester')) {
-    alert('⚠️ यह छात्र वार्षिक (Annual) प्रवेश प्रणाली में नामांकित है।\n\nकेवल वही छात्र सेमेस्टर अंकतालिका प्राप्त कर सकते हैं जिनका प्रवेश सेमेस्टर प्रणाली में हुआ हो।');
-    return;
-  }
   mrkEvalPattern = pat;
   const bYearly = $('#btnMrkEvalYearly');
   const bSem = $('#btnMrkEvalSemester');
@@ -4095,20 +4070,26 @@ window.reissueMrk = async function(mrkDbId, studentId, feeAmount) {
 async function updateMrkPreview(targetStudentId) {
   await window.ensureAuthoritiesLoaded();
   let studentId = targetStudentId;
-  let opt = null;
   const sel = $('#mrkStudentSelect');
+  if (targetStudentId && sel) {
+    sel.value = String(targetStudentId);
+  }
+  let opt = null;
   if (!studentId && sel) {
     opt = sel.selectedOptions[0];
     if (opt && opt.value) studentId = +opt.value;
+  } else if (sel) {
+    opt = sel.querySelector(`option[value="${studentId}"]`) || sel.selectedOptions[0];
   }
+
   if (!studentId) {
     const cCont = $('#mrkPreviewContainer');
     if (cCont) {
       cCont.innerHTML = `
         <div style="text-align:center; padding:30px 15px; color:#475569;">
-          <div style="font-size:2.5rem; margin-bottom:8px;">✅</div>
-          <h3 style="margin:0 0 6px; color:#064e3b;">सभी नामांकित छात्रों की अंकतालिका जारी हो चुकी है</h3>
-          <p style="margin:0; font-size:0.9rem;">नीचे "पूर्व में जारी अंकतालिका की सूची (Already Issued Marksheets)" से किसी भी छात्र की अंकतालिका देखें व प्रिंट करें।</p>
+          <div style="font-size:2.5rem; margin-bottom:8px;">ℹ️</div>
+          <h3 style="margin:0 0 6px; color:#064e3b;">कृपया ऊपर से छात्र चुनें</h3>
+          <p style="margin:0; font-size:0.9rem;">अंकतालिका देखने, जारी करने अथवा प्रिंट करने के लिए छात्र का चयन करें।</p>
         </div>
       `;
     }
@@ -4126,41 +4107,35 @@ async function updateMrkPreview(targetStudentId) {
   const code = stu.student_code || (opt ? opt.dataset.code : '') || '';
   const course = stu.course || (opt ? opt.dataset.course : '') || '';
   const photo = stu.photo_url || stu.photo || (opt ? opt.dataset.photo : '') || '';
-  const evalType = (stu.evaluation_type || (opt ? opt.dataset.eval_type : 'annual') || 'annual').toLowerCase();
-  const isSemesterAdmitted = evalType.includes('semester');
 
-  // Enforce evaluation mode rule:
+  const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
+
+  // Both Evaluation Buttons are always enabled and clickable
   const bYearly = $('#btnMrkEvalYearly');
   const bSem = $('#btnMrkEvalSemester');
-  if (bSem) {
-    if (!isSemesterAdmitted) {
-      bSem.disabled = true;
-      bSem.style.opacity = '0.45';
-      bSem.style.cursor = 'not-allowed';
-      bSem.title = 'यह छात्र वार्षिक (Annual) प्रवेश में है - केवल वार्षिक अंकतालिका ही जारी हो सकती है';
-      mrkEvalPattern = 'yearly';
-      if (bYearly) bYearly.className = 'btn gold sm active';
-      bSem.className = 'btn alt sm';
-    } else {
-      bSem.disabled = false;
-      bSem.style.opacity = '1';
-      bSem.style.cursor = 'pointer';
-      bSem.title = '';
+  if (bYearly) bYearly.disabled = false;
+  if (bSem) bSem.disabled = false;
+
+  const termSel = $('#mrkTermSelect');
+
+  // If student is semester-wise, automatically sync pattern button and term dropdown if not manually toggled
+  if (mrkInfo.isSemester) {
+    if (mrkEvalPattern !== 'semester' && !termSel?.dataset.userToggled) {
       mrkEvalPattern = 'semester';
       if (bSem) bSem.className = 'btn gold sm active';
       if (bYearly) bYearly.className = 'btn alt sm';
-    }
-  }
-
-  const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
-  const termSel = $('#mrkTermSelect');
-
-  // Auto-switch to Semester 2 if Sem 1 is already issued and Sem 2 is ready
-  if (mrkInfo.isSemester) {
-    if (mrkInfo.hasSem1 && !mrkInfo.hasSem2) {
-      if (termSel && !termSel.dataset.manualSelect) {
-        termSel.value = 'Semester 2';
+      if (termSel) {
+        termSel.innerHTML = `
+          <option value="Semester 1">Semester 1 (प्रथम सेमेस्टर)</option>
+          <option value="Semester 2">Semester 2 (द्वितीय सेमेस्टर)</option>
+          <option value="Semester 3">Semester 3 (तृतीय सेमेस्टर)</option>
+          <option value="Semester 4">Semester 4 (चतुर्थ सेमेस्टर)</option>
+        `;
       }
+    }
+    // Auto-select Semester 2 if Sem 1 is already issued and Sem 2 is not yet issued
+    if (mrkInfo.hasSem1 && !mrkInfo.hasSem2 && termSel && !termSel.dataset.manualSelect) {
+      termSel.value = 'Semester 2';
     }
   }
 
@@ -4219,8 +4194,8 @@ async function updateMrkPreview(targetStudentId) {
     return;
   }
 
-  // Check if THIS term's marksheet is already issued
-  const isThisTermIssued = mrkInfo.studentMrks.some(m => {
+  // Find the exact marksheet for this student and this term
+  const mrkItem = mrkInfo.studentMrks.find(m => {
     const isApproved = m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved || m.marksheet_no;
     if (!isApproved) return false;
     const mTerm = String(m.term || '').toLowerCase();
@@ -4230,10 +4205,15 @@ async function updateMrkPreview(targetStudentId) {
     if (selTerm.includes('1st year') || selTerm.includes('year 1')) return mTerm.includes('1st year') || mTerm.includes('year 1') || mTerm.includes('annual');
     if (selTerm.includes('2nd year') || selTerm.includes('year 2')) return mTerm.includes('2nd year') || mTerm.includes('year 2');
     return mTerm.includes(selTerm);
-  });
+  }) || (mrkInfo.studentMrks.length ? mrkInfo.studentMrks.find(m => m.status === 'Approved' || m.status === 'Valid' || m.marksheet_no) : null);
 
-  const isIssued = isThisTermIssued;
-  const mrkDbId = studentId;
+  const isIssued = Boolean(mrkItem);
+  const mrkDbId = (mrkItem && mrkItem.id) || studentId;
+
+  // If this marksheet is already issued, ensure the term select matches its issued term
+  if (mrkItem && mrkItem.term && termSel && termSel.value !== mrkItem.term) {
+    termSel.value = mrkItem.term;
+  }
 
   if (feeNoticeEl) {
     if (!isIssued) {
@@ -5523,12 +5503,14 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
 
   let sId = studentId || mrkId;
   let stu = (window._currentStudents || []).find(s => s.id == sId);
-  let mrk = null;
+  let mrk = (window._centreMarksheets || []).find(m => m.id === mrkId || m.student_id === sId);
 
-  try {
-    const stRes = await api(`/api/centre/approvals-status?student_id=${sId}`).catch(() => null);
-    if (stRes && stRes.marksheet) mrk = stRes.marksheet;
-  } catch (_) {}
+  if (!mrk) {
+    try {
+      const stRes = await api(`/api/centre/approvals-status?student_id=${sId}`).catch(() => null);
+      if (stRes && stRes.marksheet) mrk = stRes.marksheet;
+    } catch (_) {}
+  }
 
   if (!stu && sId) {
     try {

@@ -4419,6 +4419,7 @@ export default {
             const autoUsername = body.username ? String(body.username).trim() : `IN/UP/${String(Math.floor(100000000 + Math.random() * 900000000))}`;
             const autoPassword = body.password ? String(body.password).trim() : String(Math.floor(100000000 + Math.random() * 900000000));
 
+            const evalType = String(body.evaluation_type || (body.course_type && String(body.course_type).toLowerCase().includes('sem') ? 'semester' : 'annual')).toLowerCase();
             const newStu = {
               id: nextId,
               student_code: studentCode,
@@ -4451,7 +4452,8 @@ export default {
               course: matchedCourse.name,
               course_code: matchedCourse.code,
               course_name: matchedCourse.name,
-              course_type: body.course_type || 'Single',
+              course_type: body.course_type || (evalType === 'semester' ? 'Semester/Year' : 'Single'),
+              evaluation_type: evalType,
               joining_date: body.joining_date || new Date().toISOString().slice(0, 10),
               duration_months: +body.duration_months || matchedCourse.duration_months || 12,
               study_mode: body.study_mode || 'Regular',
@@ -4518,8 +4520,11 @@ export default {
             (sRollStr && (String(x.roll_no || '').trim() === sRollStr || String(x.student_code || '').trim() === sRollStr))
           );
           const isPassout = s.status === 'passout' || s.status === 'completed' || !!cert || !!mrk || !!s.certificate_id || !!s.marksheet_id;
+          const stuEval = String(s.evaluation_type || (s.course_type && String(s.course_type).toLowerCase().includes('sem') ? 'semester' : 'annual')).toLowerCase();
           return {
             ...s,
+            evaluation_type: stuEval,
+            course_type: s.course_type || (stuEval === 'semester' ? 'Semester/Year' : 'Single'),
             is_passout: isPassout,
             has_certificate: !!cert || !!s.certificate_id,
             has_marksheet: !!mrk || !!s.marksheet_id,
