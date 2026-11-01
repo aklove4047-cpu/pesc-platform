@@ -752,6 +752,7 @@ const views = {
               : `<button class="btn sm" data-a="activate_franchise" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.centre_code)}" style="background:#16a34a; color:#fff; font-weight:700;" title="Reactivate Centre Franchise">✅ Reactivate</button>`}
             <button class="btn sm alt" data-a="courses" data-id="${r.id}">Courses</button>
             ${coordinators.length ? `<button class="btn sm alt" data-a="coord" data-id="${r.id}">Coordinator</button>` : ''}
+            <button class="btn sm danger" data-a="delete_centre" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.centre_code)}" style="background:#dc2626; color:#fff; font-weight:700;" title="Permanently Delete Centre">🗑️ Delete Centre</button>
           </div>
         `],
       ], centres)}
@@ -2198,9 +2199,12 @@ async function showEditAffiliationCertModal(cId) {
         <textarea name="authorized_courses" rows="2" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">${esc(cert.authorized_courses || 'DCA, PGDCA, ADCA, CCC, TallyPrime ERP, Web & Software Development, Python, Graphic Design, Hardware & Networking')}</textarea>
       </div>
 
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
-        <button type="button" class="btn alt" onclick="document.getElementById('adminModalOverlay').style.display='none'">Cancel</button>
-        <button type="submit" class="btn" style="background:#0284c7; font-weight:800; padding:10px 20px;">💾 Save Certificate &amp; Centre Changes</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px;">
+        <button type="button" class="btn sm danger" style="background:#dc2626; color:#fff; font-weight:800;" onclick="document.getElementById('adminModalOverlay').style.display='none'; window.confirmDeleteCentre(${cId}, '${esc(cert.name || '')}', '${esc(cert.centre_code || '')}')">🗑️ Delete Franchise Centre</button>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn alt" onclick="document.getElementById('adminModalOverlay').style.display='none'">Cancel</button>
+          <button type="submit" class="btn" style="background:#0284c7; font-weight:800; padding:10px 20px;">💾 Save Certificate &amp; Centre Changes</button>
+        </div>
       </div>
     </form>
   `, async (formData) => {
@@ -2282,6 +2286,31 @@ window.confirmDeleteStudent = async function(id, name, code) {
     }
   } catch (err) {
     alert('Error deleting student: ' + (err.message || err));
+  }
+};
+
+window.confirmDeleteCentre = async function(id, name, code) {
+  const conf = confirm(`⚠️ स्थायी विलोपन (Permanent Delete Franchise Centre):\n\nक्या आप सच में फ्रैंचाइज़ी सेंटर "${name}" (${code || id}) को पोर्टल से हमेशा के लिए हटाना चाहते हैं?\n\n- यह सेंटर और इसके लॉगिन क्रेडेंशियल नष्ट हो जाएंगे।\n- इसके अंतर्गत नामांकित समस्त छात्र, अंकतालिकाएं एवं प्रमाणपत्र भी हटा दिए जाएंगे।\n\nडिलीट करने के लिए 'OK' पर क्लिक करें।`);
+  if (!conf) return;
+  const promptCode = prompt(`विलोपन की पुष्टि के लिए कृपया सेंटर कोड दर्ज करें: "${code}"`);
+  if (promptCode !== code) {
+    alert('दर्ज किया गया सेंटर कोड मेल नहीं खाया। विलोपन रद्द कर दिया गया।');
+    return;
+  }
+  try {
+    const res = await api(`/api/admin/centres/${id}`, { method: 'DELETE' });
+    if (res && res.ok) {
+      toast(`फ्रैंचाइज़ी सेंटर "${name}" (${code}) को सफलतापूर्वक हमेशा के लिए डिलीट कर दिया गया!`);
+    } else {
+      toast(res.message || 'Centre deleted successfully');
+    }
+    const overlay = document.getElementById('adminModalOverlay');
+    if (overlay) overlay.style.display = 'none';
+    if (typeof views !== 'undefined' && typeof views.Centres === 'function') {
+      await views.Centres();
+    }
+  } catch (err) {
+    alert('Error deleting centre: ' + (err.message || err));
   }
 };
 
@@ -2752,6 +2781,9 @@ V.addEventListener('click', (e) => {
       if (!confirm(`क्या आप सेंटर '${cName}' (${cCode}) की फ्रैंचाइज़ी पुनः चालू (Reactivate) करना चाहते हैं?`)) return;
       await post(`/api/admin/centres/${id}/activate`, { reason: 'Reactivated by Admin' });
       toast(`✓ Franchise for '${cName}' (${cCode}) reactivated successfully.`);
+    } else if (a === 'delete_centre') {
+      await window.confirmDeleteCentre(id, b.dataset.name, b.dataset.code || id);
+      return;
     } else if (a === 'view_affiliation_cert') {
       showAffiliationCertModal(id);
     } else if (a === 'edit_affiliation_cert' || a === 'edit_centre') {

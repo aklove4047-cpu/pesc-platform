@@ -336,6 +336,24 @@ router.put('/students/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+router.delete('/students/:id', (req, res) => {
+  const sId = +req.params.id;
+  const centreId = cid(req);
+  const s = db.prepare('SELECT * FROM students WHERE id=? AND centre_id=?').get(sId, centreId);
+  if (!s) throw new HttpError(404, 'Student not found in this centre');
+  
+  db.prepare('DELETE FROM certificates WHERE student_id=?').run(sId);
+  db.prepare('DELETE FROM marksheets WHERE student_id=?').run(sId);
+  if (s.user_id) {
+    db.prepare('DELETE FROM users WHERE id=?').run(s.user_id);
+  }
+  if (s.student_code) {
+    db.prepare('DELETE FROM users WHERE username=?').run(s.student_code);
+  }
+  db.prepare('DELETE FROM students WHERE id=? AND centre_id=?').run(sId, centreId);
+  res.json({ ok: true, message: 'Student deleted successfully' });
+});
+
 router.post('/students/:id/account', h(async (req, res) => {
   const s = db.prepare('SELECT * FROM students WHERE id=? AND centre_id=?').get(+req.params.id, cid(req));
   if (!s) throw new HttpError(404, 'Student not found in this centre');

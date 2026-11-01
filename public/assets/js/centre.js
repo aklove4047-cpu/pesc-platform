@@ -2994,6 +2994,7 @@ function renderStudentTable(students, isPassout = false) {
           <button class="btn sm" style="background:#b45309; color:#fff; font-weight:700;" onclick="openCentreEditMrkModal(${r.marksheet_id || r.id}, ${r.id})" title="Edit Marksheet & Marks (Seals Locked)">✏️ Edit Mrk</button>
           <button class="btn sm alt" onclick="showAdmissionFormModal(${r.id})" title="Admission Form">📄 Form</button>
           <button class="btn sm" style="background:#64748b; color:#fff; font-weight:700;" onclick="toggleCentreStudentStatus(${r.id}, false)" title="Move student back to Active list">📋 Revert Active</button>
+          <button class="btn sm danger" style="background:#dc2626; color:#fff; font-weight:700;" onclick="deleteCentreStudent(${r.id}, '${esc(r.name)}', '${esc(r.student_code)}')" title="Permanently Delete Student">🗑️ Delete</button>
         </div>
       `]
     ], students);
@@ -3024,6 +3025,7 @@ function renderStudentTable(students, isPassout = false) {
         <button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Certificate Module">🎓 Cert</button>
         <button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Marksheet Module">📊 Mrk</button>
         <button class="btn sm" style="background:#059669; color:#fff; font-weight:700;" onclick="toggleCentreStudentStatus(${r.id}, true)" title="Mark student as passout/graduated">🎓 Mark Passout</button>
+        <button class="btn sm danger" style="background:#dc2626; color:#fff; font-weight:700;" onclick="deleteCentreStudent(${r.id}, '${esc(r.name)}', '${esc(r.student_code)}')" title="Permanently Delete Student">🗑️ Delete</button>
       </div>
     `]
   ], students);
@@ -3040,6 +3042,27 @@ window.toggleCentreStudentStatus = async function(studentId, isPassout) {
     if (typeof views.MyStudents === 'function') views.MyStudents();
   } catch (err) {
     alert('Failed to update student status: ' + (err.message || err));
+  }
+};
+
+// Permanent Student Delete by Centre
+window.deleteCentreStudent = async function(id, name, code) {
+  const confirmed = confirm(`⚠️ छात्र विलोपन (Delete Student):\n\nक्या आप वाकई छात्र "${name || 'छात्र'}" (${code || id}) को पोर्टल से हटाना चाहते हैं?\n\n- इस छात्र का विवरण हमेशा के लिए हटा दिया जाएगा।\n- इस छात्र के प्रमाणपत्र एवं अंकतालिकाएं भी हटा दी जाएंगी।\n\nडिलीट करने के लिए 'OK' पर क्लिक करें।`);
+  if (!confirmed) return;
+  try {
+    const res = await api(`/api/centre/students/${id}`, { method: 'DELETE' });
+    if (res && res.ok) {
+      toast(`छात्र "${name}" सफलतापूर्वक हटा दिया गया!`);
+      const modal = document.getElementById('admissionFormViewModal');
+      if (modal) modal.style.display = 'none';
+      if (typeof views !== 'undefined' && typeof views.MyStudents === 'function') {
+        views.MyStudents();
+      }
+    } else {
+      alert('छात्र हटाने में विफल: ' + (res.error || 'अज्ञात त्रुटि'));
+    }
+  } catch (err) {
+    alert('Error deleting student: ' + (err.message || err));
   }
 };
 
@@ -3119,6 +3142,7 @@ window.showAdmissionFormModal = async function(studentOrId) {
         <span style="font-weight:700; font-size:1rem;">📄 Official Student Admission Form</span>
         <div style="display:flex; gap:10px;">
           <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:6px 18px;" onclick="window.print()">🖨️ Print Form (A4)</button>
+          <button type="button" class="btn sm danger" style="background:#dc2626; color:#fff; font-weight:700; padding:6px 14px;" onclick="document.getElementById('admissionFormViewModal').style.display='none'; deleteCentreStudent(${stu.id}, '${esc(stu.name)}', '${esc(stu.student_code)}')">🗑️ Delete Student</button>
           <button type="button" class="btn sm alt" style="padding:6px 14px;" onclick="document.getElementById('admissionFormViewModal').style.display='none'">✕ Close</button>
         </div>
       </div>

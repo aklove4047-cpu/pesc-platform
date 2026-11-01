@@ -141,6 +141,26 @@ router.put('/centres/:id', (req, res) => {
   res.json({ ok: true, message: 'Centre updated successfully' });
 });
 
+// Delete franchise centre permanently
+router.delete('/centres/:id', (req, res) => {
+  const cid = +req.params.id;
+  const c = db.prepare('SELECT * FROM centres WHERE id=?').get(cid);
+  if (!c) throw new HttpError(404, 'Centre not found');
+
+  db.transaction(() => {
+    db.prepare('DELETE FROM certificates WHERE centre_id=?').run(cid);
+    db.prepare('DELETE FROM marksheets WHERE centre_id=?').run(cid);
+    db.prepare('DELETE FROM students WHERE centre_id=?').run(cid);
+    db.prepare('DELETE FROM centre_courses WHERE centre_id=?').run(cid);
+    db.prepare('DELETE FROM users WHERE centre_id=?').run(cid);
+    db.prepare('DELETE FROM users WHERE username=?').run(c.centre_code);
+    db.prepare('DELETE FROM centres WHERE id=?').run(cid);
+  })();
+
+  audit(req, 'centre.delete', 'centre', cid, 'ok', `Deleted centre ${c.name} (${c.centre_code})`);
+  res.json({ ok: true, message: `Franchise centre ${c.name} deleted permanently` });
+});
+
 router.get('/courses', (req, res) => res.json({ courses: db.prepare('SELECT * FROM courses ORDER BY name').all() }));
 router.post('/courses', (req, res) => {
   const b = req.body, code = str(b.code, 20).toUpperCase(), name = str(b.name, 120);

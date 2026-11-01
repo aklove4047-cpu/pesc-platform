@@ -2332,6 +2332,33 @@ export default {
             return jsonResponse({ error: err.message }, 400);
           }
         }
+        if (request.method === 'DELETE') {
+          const cIdNum = Number(cId);
+          const targetCode = targetC.centre_code;
+          // 1. Remove all students belonging to this centre
+          const centreStudentIds = store.students.filter(s => Number(s.centre_id) === cIdNum).map(s => Number(s.id));
+          store.students = store.students.filter(s => Number(s.centre_id) !== cIdNum);
+          // 2. Remove all certificates and marksheets for these students or this centre
+          store.certificates = store.certificates.filter(c => Number(c.centre_id) !== cIdNum && !centreStudentIds.includes(Number(c.student_id)));
+          store.marksheets = store.marksheets.filter(m => Number(m.centre_id) !== cIdNum && !centreStudentIds.includes(Number(m.student_id)));
+          // 3. Remove centre users (owner and associated students)
+          store.users = store.users.filter(u => Number(u.centre_id) !== cIdNum && u.username !== targetCode);
+          // 4. Remove centre courses mapping
+          if (store.centre_courses) {
+            store.centre_courses = store.centre_courses.filter(cc => Number(cc.centre_id) !== cIdNum);
+          }
+          // 5. Remove centre from store.centres
+          store.centres = store.centres.filter(c => Number(c.id) !== cIdNum);
+
+          await Promise.all([
+            persistToKV(env, 'centres', store.centres),
+            persistToKV(env, 'students', store.students),
+            persistToKV(env, 'certificates', store.certificates),
+            persistToKV(env, 'marksheets', store.marksheets),
+            persistToKV(env, 'users', store.users)
+          ]);
+          return jsonResponse({ ok: true, message: `Franchise centre ${targetC.name} (${targetC.centre_code}) deleted permanently!` });
+        }
         return jsonResponse({ ok: true, centre: targetC });
       }
 
@@ -4549,6 +4576,29 @@ export default {
           }
           await persistToKV(env, 'students', store.students);
           return jsonResponse({ ok: true, message: 'Student details & photo saved successfully!', student: stu });
+        }
+        if (request.method === 'DELETE') {
+          const sidNum = Number(sId);
+          const targetCode = stu ? stu.student_code : null;
+          store.students = store.students.filter(s => Number(s.id) !== sidNum);
+          store.certificates = store.certificates.filter(c => Number(c.student_id) !== sidNum && (!targetCode || c.student_code !== targetCode));
+          store.marksheets = store.marksheets.filter(m => Number(m.student_id) !== sidNum && (!targetCode || m.student_code !== targetCode));
+          if (stu && stu.user_id) {
+            store.users = store.users.filter(u => Number(u.id) !== Number(stu.user_id));
+          }
+          if (targetCode) {
+            store.users = store.users.filter(u => u.username !== targetCode && (!u.student_code || u.student_code !== targetCode));
+          }
+          if (store.student_attendance) {
+            store.student_attendance = store.student_attendance.filter(a => Number(a.student_id) !== sidNum);
+          }
+          await Promise.all([
+            persistToKV(env, 'students', store.students),
+            persistToKV(env, 'certificates', store.certificates),
+            persistToKV(env, 'marksheets', store.marksheets),
+            persistToKV(env, 'users', store.users)
+          ]);
+          return jsonResponse({ ok: true, message: 'Student deleted successfully!' });
         }
       }
 
