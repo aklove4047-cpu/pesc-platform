@@ -69,16 +69,12 @@
     let councilLogo = cleanUrl(
       (data && (data.council_logo_url || data.councilLogo)) ||
       (hoAuth && hoAuth.logo_url) ||
+      (typeof window !== 'undefined' && window._councilAuthorities && window._councilAuthorities.head_office && window._councilAuthorities.head_office.logo_url) ||
       (data && data.head_office && data.head_office.logo_url) ||
       (c && c.head_office && c.head_office.logo_url) ||
       (c && (c.council_logo_url || c.council_logo)) ||
-      (typeof window !== 'undefined' && window._councilAuthorities && window._councilAuthorities.head_office && window._councilAuthorities.head_office.logo_url) ||
       SEALS.councilLogo
     ) || '/assets/img/logo_council.svg';
-
-    if (centreLogo && councilLogo === centreLogo) {
-      councilLogo = '/assets/img/logo_council.svg';
-    }
     const councilSeal = cleanUrl((data && (data.council_seal_url || data.councilSeal)) || (c && (c.council_seal_url || c.councilSeal)) || hoAuth.seal_url || (data && data.head_office && data.head_office.seal_url) || (c && c.head_office && c.head_office.seal_url) || SEALS.councilSeal) || '/assets/img/seal_council_head.svg';
     const councilSign = cleanUrl((data && (data.council_signature_url || data.councilSign)) || (c && (c.council_signature_url || c.councilSign)) || hoAuth.signature_url || (data && data.head_office && data.head_office.signature_url) || (c && c.head_office && c.head_office.signature_url) || SEALS.councilSign) || '/assets/img/sign_council_head.svg';
     const chairmanSign = cleanUrl(hoAuth.chairman_signature_url || councilSign);
@@ -814,25 +810,26 @@
     // Determine prominent statement title based on term or evaluation mode
     const rawTerm = String(data.term || s.term || data.examination || '').trim().toLowerCase();
     const evalType = String(data.evaluation_type || s.evaluation_type || '').trim().toLowerCase();
-    let prominentStatementTitle = '1ST YEAR STATEMENT OF MARKS';
-    if (rawTerm.includes('2nd sem') || rawTerm === 'semester 2' || rawTerm.includes('sem 2') || rawTerm.includes('second sem')) {
-      prominentStatementTitle = '2ND SEMESTER STATEMENT OF MARKS';
-    } else if (rawTerm.includes('1st sem') || rawTerm === 'semester 1' || rawTerm.includes('sem 1') || rawTerm.includes('first sem')) {
-      prominentStatementTitle = '1ST SEMESTER STATEMENT OF MARKS';
-    } else if (rawTerm.includes('3rd sem') || rawTerm === 'semester 3' || rawTerm.includes('sem 3')) {
-      prominentStatementTitle = '3RD SEMESTER STATEMENT OF MARKS';
-    } else if (rawTerm.includes('4th sem') || rawTerm === 'semester 4' || rawTerm.includes('sem 4')) {
-      prominentStatementTitle = '4TH SEMESTER STATEMENT OF MARKS';
-    } else if (rawTerm.includes('2nd year') || rawTerm === 'year 2' || rawTerm.includes('second year')) {
-      prominentStatementTitle = '2ND YEAR STATEMENT OF MARKS';
-    } else if (rawTerm.includes('1st year') || rawTerm === 'year 1' || rawTerm.includes('first year')) {
-      prominentStatementTitle = '1ST YEAR STATEMENT OF MARKS';
-    } else if (rawTerm.includes('final')) {
-      prominentStatementTitle = 'FINAL YEAR STATEMENT OF MARKS';
-    } else if (evalType.includes('semester') || scheme.includes('semester')) {
-      prominentStatementTitle = '1ST SEMESTER STATEMENT OF MARKS';
+    const isSemesterEval = evalType.includes('semester') || scheme.includes('semester') || rawTerm.includes('sem');
+
+    let prominentStatementTitle = 'YEARLY STATEMENT OF MARKS';
+    if (isSemesterEval || rawTerm.includes('sem')) {
+      if (rawTerm.includes('2nd sem') || rawTerm === 'semester 2' || rawTerm.includes('sem 2') || rawTerm.includes('second sem') || rawTerm.includes('semester ii')) {
+        prominentStatementTitle = '2ND SEMESTER STATEMENT OF MARKS';
+      } else if (rawTerm.includes('3rd sem') || rawTerm === 'semester 3' || rawTerm.includes('sem 3') || rawTerm.includes('third sem') || rawTerm.includes('semester iii')) {
+        prominentStatementTitle = '3RD SEMESTER STATEMENT OF MARKS';
+      } else if (rawTerm.includes('4th sem') || rawTerm === 'semester 4' || rawTerm.includes('sem 4') || rawTerm.includes('fourth sem') || rawTerm.includes('semester iv')) {
+        prominentStatementTitle = '4TH SEMESTER STATEMENT OF MARKS';
+      } else if (rawTerm.includes('5th sem') || rawTerm === 'semester 5' || rawTerm.includes('sem 5') || rawTerm.includes('fifth sem') || rawTerm.includes('semester v')) {
+        prominentStatementTitle = '5TH SEMESTER STATEMENT OF MARKS';
+      } else if (rawTerm.includes('6th sem') || rawTerm === 'semester 6' || rawTerm.includes('sem 6') || rawTerm.includes('sixth sem') || rawTerm.includes('semester vi')) {
+        prominentStatementTitle = '6TH SEMESTER STATEMENT OF MARKS';
+      } else {
+        prominentStatementTitle = '1ST SEMESTER STATEMENT OF MARKS';
+      }
     } else {
-      prominentStatementTitle = '1ST YEAR STATEMENT OF MARKS';
+      // For all yearly courses/evaluations, strictly display YEARLY STATEMENT OF MARKS
+      prominentStatementTitle = 'YEARLY STATEMENT OF MARKS';
     }
 
     // Determine session (advancing by academic term as circled in reference)
@@ -846,7 +843,7 @@
         const d = new Date(s.created_at);
         if (!isNaN(d.getFullYear())) baseYear = d.getFullYear();
       }
-      if (prominentStatementTitle.includes('2ND') || prominentStatementTitle.includes('2nd')) {
+      if (prominentStatementTitle.includes('2ND') || prominentStatementTitle.includes('2nd') || rawTerm.includes('2nd') || rawTerm.includes('sem 2') || rawTerm === 'semester 2') {
         sessionText = `${baseYear + 1}-${baseYear + 2}`;
       } else {
         sessionText = `${baseYear}-${baseYear + 1}`;

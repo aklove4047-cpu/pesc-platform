@@ -1088,10 +1088,10 @@ function getAuthorities(centre) {
   const isCustomCoord = (u) => u && !u.includes('seal_coordinator.svg') && !u.includes('sign_coordinator.svg');
 
   const s = store.site_settings || {};
-  const hoLogo = cleanImageUrl(adminUser.logo_url) || cleanImageUrl(s.logo_url) || '/assets/img/logo_council.svg';
-  const hoSeal = cleanImageUrl(adminUser.seal_url) || cleanImageUrl(s.seal_url || s.council_seal_url) || '/assets/img/seal_council_head.svg';
-  const hoSign = cleanImageUrl(adminUser.signature_url) || cleanImageUrl(s.signature_url || s.council_signature_url) || '/assets/img/sign_council_head.svg';
-  const chairmanSign = cleanImageUrl(adminUser.chairman_signature_url) || cleanImageUrl(s.chairman_signature_url) || hoSign;
+  const hoLogo = cleanImageUrl(s.logo_url) || cleanImageUrl(adminUser.logo_url) || '/assets/img/logo_council.svg';
+  const hoSeal = cleanImageUrl(s.seal_url || s.council_seal_url) || cleanImageUrl(adminUser.seal_url) || '/assets/img/seal_council_head.svg';
+  const hoSign = cleanImageUrl(s.signature_url || s.council_signature_url) || cleanImageUrl(adminUser.signature_url) || '/assets/img/sign_council_head.svg';
+  const chairmanSign = cleanImageUrl(s.chairman_signature_url) || cleanImageUrl(adminUser.chairman_signature_url) || hoSign;
 
   const coordSeal = (isCustomCoord(coordUser.seal_url) ? cleanImageUrl(coordUser.seal_url) : null)
     || (isCustomCoord(c.coordinator_seal_url) ? cleanImageUrl(c.coordinator_seal_url) : null)
@@ -2075,7 +2075,12 @@ export default {
         if (request.method === 'POST' || request.method === 'PUT') {
           try {
             const body = await request.json().catch(() => ({}));
-            if (body.logo_url !== undefined) store.site_settings.logo_url = String(body.logo_url || '').trim();
+            if (body.logo_url !== undefined) {
+              const cleaned = cleanImageUrl(body.logo_url);
+              store.site_settings.logo_url = cleaned;
+              const adm = store.users.find(u => u.role === 'super_admin' || u.role === 'admin');
+              if (adm) adm.logo_url = cleaned;
+            }
             if (body.council_title !== undefined) store.site_settings.council_title = String(body.council_title || '').trim();
             if (body.hindi_title !== undefined) store.site_settings.hindi_title = String(body.hindi_title || '').trim();
             if (body.notice_text !== undefined) store.site_settings.notice_text = String(body.notice_text || '').trim();
@@ -4846,9 +4851,32 @@ export default {
       // Centre Edit Marksheet Details & Marks (Signatures & Seals Locked)
       if (path.match(/\/api\/centre\/marksheets\/\d+\/edit$/) && request.method === 'POST') {
         const mId = +path.split('/')[4];
-        let mrk = store.marksheets.find(x => (x.id === mId || x.student_id === mId) && x.centre_id === c.id);
-        if (!mrk) return jsonResponse({ error: 'Marksheet not found' }, 404);
         const body = await request.json().catch(() => ({}));
+        const reqTerm = body.term ? String(body.term).trim().toLowerCase() : '';
+
+        // Find existing marksheet by ID or by student_id + term
+        let mrk = store.marksheets.find(x => 
+          (Number(x.id) === mId) || 
+          (Number(x.student_id) === mId && (!reqTerm || String(x.term || '').toLowerCase() === reqTerm))
+        );
+
+        // If not found, allow creating/editing draft marksheet for student before issuance
+        if (!mrk) {
+          const stu = store.students.find(s => Number(s.id) === mId || (body.student_id && Number(s.id) === Number(body.student_id)));
+          if (stu) {
+            const nextId = store.marksheets.length ? Math.max(...store.marksheets.map(m => Number(m.id) || 0)) + 1 : 1;
+            mrk = {
+              id: nextId,
+              student_id: Number(stu.id),
+              centre_id: Number((c && c.id) || stu.centre_id || 1),
+              status: 'Draft',
+              term: body.term || 'Semester 1'
+            };
+            store.marksheets.push(mrk);
+          } else {
+            return jsonResponse({ error: 'Marksheet or student not found' }, 404);
+          }
+        }
 
         delete body.seal_url;
         delete body.signature_url;
@@ -5026,7 +5054,7 @@ export default {
         if (evalType.includes('semester') && isSem2 && student) {
           const hasSem1 = store.marksheets.some(m => 
             (Number(m.student_id) === Number(student.id) || (student.student_code && m.student_code === student.student_code)) &&
-            (String(m.term || '').toLowerCase().includes('sem 1') || String(m.term || '').toLowerCase().includes('semester 1') || String(m.term || '').toLowerCase().includes('1st sem')) &&
+            (String(m.term || '').toLowerCase().includes('sem 1') || String(m.term || '').toLowerCase().includes('semester 1') || String(m.term || '').toLowerCase().includes('1st sem') || String(m.term || '').toLowerCase().includes('sem-1') || String(m.term || '').toLowerCase().includes('semester i') || String(m.term || '').toLowerCase().includes('sem i') || String(m.term || '').toLowerCase() === 'semester 1' || String(m.term || '').toLowerCase() === '1st semester') &&
             (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved)
           );
           if (!hasSem1) {
@@ -5063,12 +5091,11 @@ export default {
         await persistToKV(env, 'centres', store.centres);
 
         let mrk = store.marksheets.find(x => 
-          (x.id === mrkId && x.term && String(x.term).toLowerCase() === term.toLowerCase()) || 
-          (Number(x.student_id) === studentId && String(x.term || '').toLowerCase() === term.toLowerCase())
+          Number(x.student_id) === studentId && String(x.term || '').toLowerCase() === term.toLowerCase()
         );
         if (!mrk) {
           const nextId = store.marksheets.length ? Math.max(...store.marksheets.map(m => Number(m.id) || 0)) + 1 : 1;
-          mrk = { id: nextId, student_id: studentId, centre_id: (c && c.id) ? c.id : 1, status: 'Valid', term: term };
+          mrk = { id: nextId, student_id: studentId, centre_id: Number((c && c.id) || 1), status: 'Valid', term: term };
           store.marksheets.push(mrk);
         }
 

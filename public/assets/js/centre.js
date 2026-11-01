@@ -886,8 +886,26 @@ window.getStudentMarksheetInfo = function(s, mrkList) {
 
   const isIssued = (m) => m && (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved || m.marksheet_no);
 
-  const hasSem1 = studentMrks.some(m => isIssued(m) && (String(m.term || '').toLowerCase().includes('sem 1') || String(m.term || '').toLowerCase().includes('semester 1') || String(m.term || '').toLowerCase().includes('1st sem')));
-  const hasSem2 = studentMrks.some(m => isIssued(m) && (String(m.term || '').toLowerCase().includes('sem 2') || String(m.term || '').toLowerCase().includes('semester 2') || String(m.term || '').toLowerCase().includes('2nd sem')));
+  const hasSem1 = studentMrks.some(m => isIssued(m) && (
+    String(m.term || '').toLowerCase().includes('sem 1') || 
+    String(m.term || '').toLowerCase().includes('semester 1') || 
+    String(m.term || '').toLowerCase().includes('1st sem') ||
+    String(m.term || '').toLowerCase().includes('sem-1') ||
+    String(m.term || '').toLowerCase().includes('semester i') ||
+    String(m.term || '').toLowerCase().includes('sem i') ||
+    String(m.term || '').toLowerCase() === 'semester 1' ||
+    String(m.term || '').toLowerCase() === '1st semester'
+  ));
+  const hasSem2 = studentMrks.some(m => isIssued(m) && (
+    String(m.term || '').toLowerCase().includes('sem 2') || 
+    String(m.term || '').toLowerCase().includes('semester 2') || 
+    String(m.term || '').toLowerCase().includes('2nd sem') ||
+    String(m.term || '').toLowerCase().includes('sem-2') ||
+    String(m.term || '').toLowerCase().includes('semester ii') ||
+    String(m.term || '').toLowerCase().includes('sem ii') ||
+    String(m.term || '').toLowerCase() === 'semester 2' ||
+    String(m.term || '').toLowerCase() === '2nd semester'
+  ));
   const hasYear1 = studentMrks.some(m => isIssued(m) && (String(m.term || '').toLowerCase().includes('1st year') || String(m.term || '').toLowerCase().includes('year 1') || String(m.term || '').toLowerCase().includes('annual')));
   const hasYear2 = studentMrks.some(m => isIssued(m) && (String(m.term || '').toLowerCase().includes('2nd year') || String(m.term || '').toLowerCase().includes('year 2')));
   const hasAnyApproved = studentMrks.some(isIssued) || Boolean(s.marksheet_no && s.marksheet_status === 'Approved');
@@ -4194,26 +4212,23 @@ async function updateMrkPreview(targetStudentId) {
     return;
   }
 
-  // Find the exact marksheet for this student and this term
+  // Find the exact marksheet strictly matching this student and this selected term
   const mrkItem = mrkInfo.studentMrks.find(m => {
     const isApproved = m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved || m.marksheet_no;
     if (!isApproved) return false;
     const mTerm = String(m.term || '').toLowerCase();
     const selTerm = mrkTerm.toLowerCase();
-    if (selTerm.includes('sem 1') || selTerm.includes('semester 1')) return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm.includes('1st sem');
-    if (selTerm.includes('sem 2') || selTerm.includes('semester 2')) return mTerm.includes('sem 2') || mTerm.includes('semester 2') || mTerm.includes('2nd sem');
+    if (selTerm.includes('sem 1') || selTerm.includes('semester 1')) return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm.includes('1st sem') || mTerm.includes('sem-1') || mTerm.includes('semester i') || mTerm === 'sem 1';
+    if (selTerm.includes('sem 2') || selTerm.includes('semester 2')) return mTerm.includes('sem 2') || mTerm.includes('semester 2') || mTerm.includes('2nd sem') || mTerm.includes('sem-2') || mTerm.includes('semester ii') || mTerm === 'sem 2';
+    if (selTerm.includes('sem 3') || selTerm.includes('semester 3')) return mTerm.includes('sem 3') || mTerm.includes('semester 3') || mTerm.includes('3rd sem');
+    if (selTerm.includes('sem 4') || selTerm.includes('semester 4')) return mTerm.includes('sem 4') || mTerm.includes('semester 4') || mTerm.includes('4th sem');
     if (selTerm.includes('1st year') || selTerm.includes('year 1')) return mTerm.includes('1st year') || mTerm.includes('year 1') || mTerm.includes('annual');
     if (selTerm.includes('2nd year') || selTerm.includes('year 2')) return mTerm.includes('2nd year') || mTerm.includes('year 2');
     return mTerm.includes(selTerm);
-  }) || (mrkInfo.studentMrks.length ? mrkInfo.studentMrks.find(m => m.status === 'Approved' || m.status === 'Valid' || m.marksheet_no) : null);
+  }) || null;
 
   const isIssued = Boolean(mrkItem);
   const mrkDbId = (mrkItem && mrkItem.id) || studentId;
-
-  // If this marksheet is already issued, ensure the term select matches its issued term
-  if (mrkItem && mrkItem.term && termSel && termSel.value !== mrkItem.term) {
-    termSel.value = mrkItem.term;
-  }
 
   if (feeNoticeEl) {
     if (!isIssued) {
@@ -5043,7 +5058,15 @@ async function initCentreHeader() {
       document.title = `${activeCentre.name} – Centre ERP Portal`;
       if ($('#headerCentreName')) $('#headerCentreName').textContent = activeCentre.name;
       if ($('#headerCentreCode')) $('#headerCentreCode').textContent = activeCentre.centre_code;
-      if ($('#headerLogo')) $('#headerLogo').textContent = activeCentre.logo_url || '🎓';
+      if ($('#headerLogo')) {
+        const hoLogo = window._councilAuthorities?.head_office?.logo_url;
+        const dispLogo = activeCentre.logo_url || hoLogo || '/assets/img/logo_council.svg';
+        if (dispLogo.startsWith('http') || dispLogo.startsWith('data:') || dispLogo.startsWith('/')) {
+          $('#headerLogo').innerHTML = `<img src="${dispLogo}" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px;">`;
+        } else {
+          $('#headerLogo').textContent = dispLogo || '🎓';
+        }
+      }
       const bal = (activeCentre.wallet_balance !== undefined) ? activeCentre.wallet_balance : ((activeCentre.wallet_paise || 0) / 100);
       window.refreshCentreWalletBadge(bal);
     } else {
@@ -5503,7 +5526,23 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
 
   let sId = studentId || mrkId;
   let stu = (window._currentStudents || []).find(s => s.id == sId);
-  let mrk = (window._centreMarksheets || []).find(m => m.id === mrkId || m.student_id === sId);
+
+  // Read currently selected term from the UI
+  const termSel = $('#mrkTermSelect');
+  const activeTerm = termSel ? termSel.value : '';
+
+  let mrk = (window._centreMarksheets || []).find(m => {
+    if (mrkId && mrkId !== sId && m.id === mrkId) return true;
+    if (Number(m.student_id) === Number(sId)) {
+      if (!activeTerm) return true;
+      const mTerm = String(m.term || '').toLowerCase();
+      const selTerm = activeTerm.toLowerCase();
+      if (selTerm.includes('sem 1') || selTerm.includes('semester 1')) return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm.includes('1st sem');
+      if (selTerm.includes('sem 2') || selTerm.includes('semester 2')) return mTerm.includes('sem 2') || mTerm.includes('semester 2') || mTerm.includes('2nd sem');
+      return mTerm.includes(selTerm);
+    }
+    return false;
+  });
 
   if (!mrk) {
     try {
@@ -5536,6 +5575,16 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
       const saved = localStorage.getItem('pesc_custom_marks_' + sId);
       if (saved) subs = JSON.parse(saved);
     } catch (_) {}
+  }
+  if (!subs.length && stu) {
+    const courses = window._currentCourses || [];
+    const course = courses.find(co => co.name === stu.course || co.code === stu.course || Number(co.id) === Number(stu.course_id));
+    if (course && course.subjects) {
+      try {
+        const coSubs = typeof course.subjects === 'string' ? JSON.parse(course.subjects) : course.subjects;
+        if (Array.isArray(coSubs) && coSubs.length) subs = coSubs;
+      } catch (_) {}
+    }
   }
   if (!subs.length) {
     subs = [
@@ -5814,11 +5863,20 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
     };
 
     const targetId = (mrk && mrk.id) || sId;
+    payload.student_id = sId;
+    payload.term = fd.get('term') || activeTerm || 'Annual Examination';
     try {
-      await api(`/api/centre/marksheets/${targetId}/edit`, {
+      const res = await api(`/api/centre/marksheets/${targetId}/edit`, {
         method: 'POST',
         body: payload
       });
+      if (res && res.marksheet) {
+        window._centreMarksheets = window._centreMarksheets || [];
+        const idx = window._centreMarksheets.findIndex(item => item.id === res.marksheet.id);
+        if (idx >= 0) window._centreMarksheets[idx] = res.marksheet;
+        else window._centreMarksheets.push(res.marksheet);
+      }
+      window._customMarksheetData = window._customMarksheetData || {};
       window._customMarksheetData[sId] = subsPayload;
       try {
         localStorage.setItem('pesc_custom_marks_' + sId, JSON.stringify(subsPayload));
@@ -5826,7 +5884,7 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
 
       toast('Marksheet particulars and marks updated successfully!');
       modal.remove();
-      if (typeof updateMrkPreview === 'function') updateMrkPreview();
+      if (typeof updateMrkPreview === 'function') updateMrkPreview(sId);
       if (typeof views.MyStudents === 'function' && activeTab === 'MyStudents') views.MyStudents();
     } catch (err) {
       alert('Error updating marksheet: ' + (err.message || err));
