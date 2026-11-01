@@ -869,6 +869,51 @@ function renderSidebar() {
   };
 }
 
+// Helper to determine student marksheet issuance status
+window.getStudentMarksheetInfo = function(s, mrkList) {
+  if (!s) return { hasSem1: false, hasSem2: false, hasYear1: false, hasYear2: false, isFullyIssued: false, isSemester: false, studentMrks: [] };
+  const allMrks = mrkList || window._centreMarksheets || [];
+  const sid = Number(s.id);
+  const scode = String(s.student_code || '').trim();
+  const sroll = String(s.roll_no || '').trim();
+
+  const studentMrks = allMrks.filter(m => {
+    if (m.student_id && Number(m.student_id) === sid) return true;
+    if (scode && m.student_code && String(m.student_code).trim() === scode) return true;
+    if (sroll && m.roll_no && String(m.roll_no).trim() === sroll) return true;
+    return false;
+  });
+
+  const isIssued = (m) => m && (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved || m.marksheet_no);
+
+  const hasSem1 = studentMrks.some(m => isIssued(m) && (String(m.term || '').toLowerCase().includes('sem 1') || String(m.term || '').toLowerCase().includes('semester 1') || String(m.term || '').toLowerCase().includes('1st sem')));
+  const hasSem2 = studentMrks.some(m => isIssued(m) && (String(m.term || '').toLowerCase().includes('sem 2') || String(m.term || '').toLowerCase().includes('semester 2') || String(m.term || '').toLowerCase().includes('2nd sem')));
+  const hasYear1 = studentMrks.some(m => isIssued(m) && (String(m.term || '').toLowerCase().includes('1st year') || String(m.term || '').toLowerCase().includes('year 1') || String(m.term || '').toLowerCase().includes('annual')));
+  const hasYear2 = studentMrks.some(m => isIssued(m) && (String(m.term || '').toLowerCase().includes('2nd year') || String(m.term || '').toLowerCase().includes('year 2')));
+  const hasAnyApproved = studentMrks.some(isIssued) || Boolean(s.marksheet_no && s.marksheet_status === 'Approved');
+
+  const evalType = String(s.evaluation_type || 'annual').toLowerCase();
+  const isSemester = evalType.includes('semester');
+
+  let isFullyIssued = false;
+  if (isSemester) {
+    isFullyIssued = hasSem1 && hasSem2;
+  } else {
+    isFullyIssued = hasYear1 || hasAnyApproved;
+  }
+
+  return {
+    studentMrks,
+    hasSem1,
+    hasSem2,
+    hasYear1,
+    hasYear2,
+    hasAnyApproved,
+    isSemester,
+    isFullyIssued
+  };
+};
+
 // Module Views Implementation
 const views = {
   // 1. My Students / Dashboard
@@ -1513,13 +1558,15 @@ const views = {
 
   // 5. Certificate Printing (3 Options: Council Only / Institute Only / Both Dual)
   async CertificatePrinting() {
-    const [sData, cData, crtData] = await Promise.all([
+    const [sData, cData, crtData, mData] = await Promise.all([
       api('/api/centre/students'),
       api('/api/centre/courses').catch(() => ({ courses: [] })),
-      api('/api/centre/certificates').catch(() => ({ certificates: [] }))
+      api('/api/centre/certificates').catch(() => ({ certificates: [] })),
+      api('/api/centre/marksheets').catch(() => ({ marksheets: [] }))
     ]);
     const students = sData.students || [];
     window._currentStudents = students;
+    window._centreMarksheets = mData.marksheets || [];
     if (cData && cData.courses) window._currentCourses = cData.courses;
 
     const issuedCertMap = new Set();
@@ -1555,7 +1602,18 @@ const views = {
           <div style="flex:1; min-width:260px;">
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Enrolled Candidate (अजारी छात्र चुनें):</label>
             <select id="certStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${unissuedStudents.length > 0 ? unissuedStudents.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-eval_type="${esc(s.evaluation_type || 'annual')}" data-term="${esc(s.term || 'Annual')}" data-cert_no="${esc(s.cert_no || '')}" data-is_passout="${s.is_passout ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)} [${(s.evaluation_type || 'annual') === 'semester' ? 'सेमेस्टर' : 'वार्षिक'}]</option>`).join('') : '<option value="">-- सभी पंजीकृत छात्रों के प्रमाणपत्र जारी हो चुके हैं --</option>'}
+              ${unissuedStudents.length > 0 ? unissuedStudents.map(s => {
+                const mrkInfo = window.getStudentMarksheetInfo(s, mData.marksheets);
+                let badge = '';
+                if (!mrkInfo.isFullyIssued) {
+                  badge = mrkInfo.isSemester 
+                    ? (!mrkInfo.hasSem1 && !mrkInfo.hasSem2 ? '⚠️ [अंकतालिका Sem 1 & 2 लंबित]' : (!mrkInfo.hasSem1 ? '⚠️ [अंकतालिका Sem 1 लंबित]' : '⚠️ [अंकतालिका Sem 2 लंबित]'))
+                    : '⚠️ [वार्षिक अंकतालिका लंबित]';
+                } else {
+                  badge = '⭐ [अंकतालिका पूर्ण ✓]';
+                }
+                return `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-eval_type="${esc(s.evaluation_type || 'annual')}" data-term="${esc(s.term || 'Annual')}" data-cert_no="${esc(s.cert_no || '')}" data-is_passout="${s.is_passout ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)} ${badge}</option>`;
+              }).join('') : '<option value="">-- सभी पंजीकृत छात्रों के प्रमाणपत्र जारी हो चुके हैं --</option>'}
             </select>
           </div>
 
@@ -1679,28 +1737,11 @@ const views = {
     ]);
     const students = sData.students || [];
     window._currentStudents = students;
+    window._centreMarksheets = mData.marksheets || [];
     if (cData && cData.courses) window._currentCourses = cData.courses;
 
-    const issuedMrkMap = new Set();
-    (mData.marksheets || []).forEach(m => {
-      if (m.student_id) issuedMrkMap.add(Number(m.student_id));
-      if (m.student_code) issuedMrkMap.add(String(m.student_code).trim());
-      if (m.roll_no) issuedMrkMap.add(String(m.roll_no).trim());
-    });
-
-    const isStudentMrkIssued = (s) => Boolean(
-      s.marksheet_id ||
-      s.marksheet_no ||
-      s.has_marksheet ||
-      (s.marksheet_status && s.marksheet_status !== 'Pending' && s.marksheet_status !== 'Rejected') ||
-      issuedMrkMap.has(Number(s.id)) ||
-      (s.student_code && issuedMrkMap.has(String(s.student_code).trim())) ||
-      (s.roll_no && issuedMrkMap.has(String(s.roll_no).trim())) ||
-      (window._issuedMrks && (window._issuedMrks[s.id] || (s.student_code && window._issuedMrks[s.student_code])))
-    );
-
-    const unissuedStudents = students.filter(s => !isStudentMrkIssued(s));
-    const issuedStudents = students.filter(s => isStudentMrkIssued(s));
+    const unissuedStudents = students.filter(s => !window.getStudentMarksheetInfo(s, mData.marksheets).isFullyIssued);
+    const issuedStudents = students.filter(s => window.getStudentMarksheetInfo(s, mData.marksheets).isFullyIssued);
 
     V.innerHTML = `
       <div style="margin-bottom:20px;">
@@ -1714,7 +1755,20 @@ const views = {
           <div style="flex:1; min-width:260px;">
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Candidate (अजारी छात्र चुनें):</label>
             <select id="mrkStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:600;">
-              ${unissuedStudents.length > 0 ? unissuedStudents.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-eval_type="${esc(s.evaluation_type || 'annual')}" data-term="${esc(s.term || 'Annual')}" data-marksheet_no="${esc(s.marksheet_no || '')}" data-is_passout="${s.is_passout ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)} [${(s.evaluation_type || 'annual') === 'semester' ? 'सेमेस्टर' : 'वार्षिक'}]</option>`).join('') : '<option value="">-- सभी पंजीकृत छात्रों की अंकतालिका जारी हो चुकी है --</option>'}
+              ${unissuedStudents.length > 0 ? unissuedStudents.map(s => {
+                const info = window.getStudentMarksheetInfo(s, mData.marksheets);
+                let badge = '';
+                if (info.isSemester) {
+                  if (info.hasSem1) {
+                    badge = '⭐ [सेमेस्टर 1 जारी ✓ ➔ सेमेस्टर 2 तैयार]';
+                  } else {
+                    badge = '[सेमेस्टर 1 लंबित]';
+                  }
+                } else {
+                  badge = '[वार्षिक अंकतालिका लंबित]';
+                }
+                return `<option value="${s.id}" data-name="${esc(s.name)}" data-father="${esc(s.father_name || 'Shri Parent')}" data-mother="${esc(s.mother_name || 'Smt Parent')}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-photo="${esc(s.photo || s.photo_url || '')}" data-eval_type="${esc(s.evaluation_type || 'annual')}" data-term="${esc(s.term || 'Annual')}" data-has_sem1="${info.hasSem1 ? '1' : '0'}" data-has_sem2="${info.hasSem2 ? '1' : '0'}" data-marksheet_no="${esc(s.marksheet_no || '')}" data-is_passout="${s.is_passout ? '1' : ''}">${esc(s.name)} (${esc(s.student_code)}) – ${esc(s.course)} ${badge}</option>`;
+              }).join('') : '<option value="">-- सभी पंजीकृत छात्रों की सभी अंकतालिकाएं जारी हो चुकी हैं --</option>'}
             </select>
           </div>
 
@@ -3105,6 +3159,12 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
   const regNo = stu.student_code || (opt ? opt.dataset.code : '');
   const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 200;
 
+  const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
+  if (!mrkInfo.isFullyIssued) {
+    alert(`❌ प्रमाणपत्र जारी नहीं हो सकता!\n\nकाउंसिल नियमानुसार जब तक छात्र की सभी अंकतालिकाएं जारी नहीं होंगी, तब तक प्रमाणपत्र जारी नहीं हो सकता।\n\nकृपया पहले छात्र की सभी अंकतालिकाएं (${mrkInfo.isSemester ? 'Semester 1 एवं Semester 2 दोनों' : 'वार्षिक अंकतालिका'}) जारी करें।`);
+    return;
+  }
+
   const confirmed = confirm(`⚠️ प्रमाणपत्र जारीकरण एवं सत्यापन (Official Certificate Issuance):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) का अधिकृत प्रमाणपत्र जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित प्रमाणपत्र जनरेट हो जाएगा और प्रिंट/PDF विकल्प खुल जाएगा।`);
   if (!confirmed) return;
 
@@ -3296,6 +3356,49 @@ async function updateCertPreview(targetStudentId) {
 
   const printWrap = $('#certPrintActionWrap');
   const feeNoticeEl = $('#certFeeNotice');
+
+  // Check Marksheet Prerequisite Rule
+  const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
+  if (!isIssued && !mrkInfo.isFullyIssued) {
+    if (feeNoticeEl) {
+      feeNoticeEl.innerHTML = `
+        <div style="background:#fef2f2; border:2.5px solid #ef4444; border-radius:12px; padding:16px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(239,68,68,0.15);">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:2.4rem;">🔒</span>
+            <div>
+              <b style="color:#991b1b; font-size:1.1rem; display:block;">प्रमाणपत्र लॉक है: छात्र की सभी अंकतालिकाएं जारी होना अनिवार्य है!</b>
+              <span style="font-size:0.88rem; color:#7f1d1d;">
+                ${mrkInfo.isSemester ? (!mrkInfo.hasSem1 && !mrkInfo.hasSem2 ? 'छात्र के सेमेस्टर 1 एवं सेमेस्टर 2 दोनों की अंकतालिकाएं अभी जारी नहीं हुई हैं।' : (!mrkInfo.hasSem1 ? 'छात्र की सेमेस्टर 1 अंकतालिका अभी जारी नहीं हुई है।' : 'छात्र की सेमेस्टर 2 अंकतालिका अभी जारी नहीं हुई है।')) : 'छात्र की वार्षिक अंकतालिका (Marksheet) अभी जारी नहीं हुई है।'}
+                काउंसिल नियमानुसार जब तक सभी अंकतालिकाएं जारी नहीं होंगी, तब तक प्रमाणपत्र जारी नहीं हो सकता।
+              </span>
+            </div>
+          </div>
+          <button type="button" class="btn" style="background:#08244c; color:#fff; font-weight:800; padding:10px 20px; border-radius:8px;" onclick="location.hash='#marksheet'; if(typeof views !== 'undefined' && views.MarksheetPrinting) views.MarksheetPrinting();">
+            ➔ पहले Marksheet जारी करें
+          </button>
+        </div>
+      `;
+    }
+    $('#certPreviewContainer').innerHTML = `
+      <div style="background:#ffffff; padding:45px 20px; text-align:center; border-radius:12px; border:2px dashed #ef4444;">
+        <div style="width:72px; height:72px; border-radius:50%; background:#fee2e2; border:2.5px solid #ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:2.4rem;">🔒</div>
+        <h3 style="margin:0 0 8px; color:#991b1b; font-size:1.45rem; font-weight:800;">Official Certificate Locked (Marksheets Required First)</h3>
+        <p style="margin:0 0 16px; color:#64748b; font-size:1rem;">
+          Candidate: <b style="color:#0f172a;">${esc(name)}</b> (${esc(code)}) • Course: <b style="color:#0f172a;">${esc(course)}</b>
+        </p>
+        <div style="max-width:560px; margin:0 auto 24px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:16px; font-size:0.92rem; color:#7f1d1d; line-height:1.6; text-align:left;">
+          ⚠️ <b>काउंसिल अनिवार्य नियम (Prerequisite Rule):</b><br>
+          प्रमाणपत्र जारी करने से पहले छात्र की सभी अंकतालिकाएं (Marksheet) जारी होना अनिवार्य है।<br>
+          • स्थिति: <b style="color:#b91c1c;">${mrkInfo.isSemester ? (!mrkInfo.hasSem1 && !mrkInfo.hasSem2 ? 'Semester 1 एवं 2 दोनों लंबित' : (!mrkInfo.hasSem1 ? 'Semester 1 लंबित' : 'Semester 2 लंबित')) : 'वार्षिक अंकतालिका लंबित'}</b>
+        </div>
+        <button type="button" class="btn" onclick="location.hash='#marksheet'; if(typeof views !== 'undefined' && views.MarksheetPrinting) views.MarksheetPrinting();" style="background:linear-gradient(135deg, #08244c, #1e3a8a); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 28px; border-radius:8px; border:none; cursor:pointer;">
+          ➔ पहले अंकतालिका (Marksheet) सेक्शन में जाकर जारी करें
+        </button>
+      </div>
+    `;
+    if (printWrap) printWrap.style.display = 'none';
+    return;
+  }
 
   if (feeNoticeEl) {
     if (!isIssued) {
@@ -3905,7 +4008,19 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
   const regNo = stu.student_code || (opt ? opt.dataset.code : '');
   const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 100;
 
-  const confirmed = confirm(`⚠️ अंकतालिका जारीकरण एवं सत्यापन (Official Marksheet Issuance):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) की अधिकृत अंकतालिका जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जनरेट हो जाएगी और प्रिंट/PDF विकल्प खुल जाएगा।`);
+  const termSel = $('#mrkTermSelect');
+  const chosenTerm = (termSel && termSel.value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
+  const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
+
+  if (mrkInfo.isSemester) {
+    const isSem2 = chosenTerm.toLowerCase().includes('sem 2') || chosenTerm.toLowerCase().includes('semester 2') || chosenTerm.toLowerCase().includes('2nd');
+    if (isSem2 && !mrkInfo.hasSem1) {
+      alert(`❌ सेमेस्टर 2 की अंकतालिका जारी नहीं हो सकती!\n\nकाउंसिल नियमानुसार जब तक 1st सेमेस्टर की अंकतालिका जारी नहीं होगी, तब तक 2nd सेमेस्टर की जारी नहीं हो सकती।\n\nकृपया पहले 'Semester 1' चुनें और उसे जारी करें।`);
+      return;
+    }
+  }
+
+  const confirmed = confirm(`⚠️ अंकतालिका जारीकरण एवं सत्यापन (${chosenTerm}):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) की अधिकृत अंकतालिका जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जनरेट हो जाएगी और प्रिंट/PDF विकल्प खुल जाएगा।`);
   if (!confirmed) return;
 
   try {
@@ -3913,7 +4028,13 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
     const chosenMrkHeader = mrkFormat === 'institute' ? 'centre' : (mrkFormat === 'dual' ? 'dual' : 'council');
     const res = await api(`/api/centre/marksheets/${targetId}/sign-issue`, {
       method: 'POST',
-      body: { fee: fee, student_id: studentId, header_type: chosenMrkHeader }
+      body: { 
+        fee: fee, 
+        student_id: studentId, 
+        header_type: chosenMrkHeader,
+        term: chosenTerm,
+        evaluation_type: mrkInfo.isSemester ? 'semester' : 'annual'
+      }
     });
 
     if (res.wallet_balance !== undefined) {
@@ -3922,17 +4043,14 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
       if (wEl) wEl.textContent = `₹${res.wallet_balance}`;
     }
 
-    window._issuedMrks = window._issuedMrks || {};
-    window._issuedMrks[studentId] = true;
-    if (regNo) window._issuedMrks[regNo] = true;
-    window._issuedMrks[targetId] = true;
-    if (stu) {
-      stu.marksheet_id = targetId;
-      stu.has_marksheet = true;
-      stu.marksheet_status = 'Approved';
+    if (res.marksheet) {
+      window._centreMarksheets = window._centreMarksheets || [];
+      const idx = window._centreMarksheets.findIndex(m => m.id === res.marksheet.id);
+      if (idx >= 0) window._centreMarksheets[idx] = res.marksheet;
+      else window._centreMarksheets.push(res.marksheet);
     }
 
-    toast(`🎉 ₹${fee} वॉलेट से कट गया! हेड ऑफिस एवं समन्वयक मुहर सहित अंकतालिका जारी हो गई।`);
+    toast(`🎉 ₹${fee} वॉलेट से कट गया! ${chosenTerm} अंकतालिका जारी हो गई।`);
     if (typeof views !== 'undefined' && typeof views.MarksheetPrinting === 'function') {
       await views.MarksheetPrinting();
       updateMrkPreview(studentId);
@@ -4010,8 +4128,21 @@ async function updateMrkPreview(targetStudentId) {
     }
   }
 
-  const mrkTerm = ($('#mrkTermSelect') && $('#mrkTermSelect').value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
+  const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
+  const termSel = $('#mrkTermSelect');
+
+  // Auto-switch to Semester 2 if Sem 1 is already issued and Sem 2 is ready
+  if (mrkInfo.isSemester) {
+    if (mrkInfo.hasSem1 && !mrkInfo.hasSem2) {
+      if (termSel && !termSel.dataset.manualSelect) {
+        termSel.value = 'Semester 2';
+      }
+    }
+  }
+
+  const mrkTerm = (termSel && termSel.value) || (mrkEvalPattern === 'semester' ? (mrkInfo.hasSem1 ? 'Semester 2' : 'Semester 1') : 'Annual Examination');
   const isSemester = mrkEvalPattern === 'semester';
+  const isSelectedSem2 = mrkTerm.toLowerCase().includes('sem 2') || mrkTerm.toLowerCase().includes('semester 2') || mrkTerm.toLowerCase().includes('2nd');
 
   const courses = window._currentCourses || [];
   const foundCourse = courses.find(c => {
@@ -4024,26 +4155,61 @@ async function updateMrkPreview(targetStudentId) {
   const semFee = foundCourse ? (foundCourse.semester_fee_rupees !== undefined ? foundCourse.semester_fee_rupees : Math.round((foundCourse.semester_fee_paise || 20000)/100)) : 200;
   const currentFee = isSemester ? semFee : singleFee;
 
-  // Check Dual-Approval Status from backend
-  let mrkItem = null;
-  try {
-    const stRes = await api(`/api/centre/approvals-status?student_id=${studentId}`);
-    if (stRes && stRes.marksheet) mrkItem = stRes.marksheet;
-  } catch (_) {}
-
-  const mrkDbId = mrkItem ? mrkItem.id : studentId;
-  const isIssued = Boolean(
-    (targetStudentId && (stu.marksheet_no || stu.marksheet_id)) ||
-    stu.marksheet_id ||
-    stu.marksheet_no ||
-    (window._issuedMrks && (window._issuedMrks[studentId] || window._issuedMrks[code] || window._issuedMrks[mrkDbId])) ||
-    (mrkItem && (mrkItem.centre_signed === true || mrkItem.is_issued === true || mrkItem.head_approved === true || mrkItem.status === 'Approved_By_Council' || mrkItem.status === 'Approved' || mrkItem.status === 'Issued' || Boolean(mrkItem.marksheet_no))) ||
-    Boolean(opt && opt.dataset && opt.dataset.marksheet_no) ||
-    Boolean(stu.is_passout)
-  );
-
   const printWrap = $('#mrkPrintActionWrap');
   const feeNoticeEl = $('#mrkFeeNotice');
+
+  // SEQUENTIAL RULE ENFORCEMENT: Cannot issue Semester 2 if Semester 1 is NOT issued
+  if (mrkInfo.isSemester && isSelectedSem2 && !mrkInfo.hasSem1) {
+    if (feeNoticeEl) {
+      feeNoticeEl.innerHTML = `
+        <div style="background:#fef2f2; border:2.5px solid #ef4444; border-radius:12px; padding:16px 20px; margin-bottom:18px; display:flex; align-items:center; gap:16px; box-shadow:0 4px 16px rgba(239,68,68,0.15);">
+          <div style="font-size:2.4rem;">⚠️</div>
+          <div>
+            <b style="color:#991b1b; font-size:1.1rem; display:block;">सेमेस्टर 1 की अंकतालिका जारी नहीं हुई है! (Semester 1 Required First)</b>
+            <span style="font-size:0.9rem; color:#7f1d1d;">
+              काउंसिल नियमानुसार जब तक <b>1st सेमेस्टर (Semester 1)</b> की अंकतालिका जारी नहीं होगी, तब तक <b>2nd सेमेस्टर (Semester 2)</b> की अंकतालिका जारी नहीं की जा सकती।
+            </span>
+          </div>
+        </div>
+      `;
+    }
+    const cCont = $('#mrkPreviewContainer');
+    if (cCont) {
+      cCont.innerHTML = `
+        <div style="background:#ffffff; padding:45px 20px; text-align:center; border-radius:12px; border:2px dashed #ef4444;">
+          <div style="width:72px; height:72px; border-radius:50%; background:#fee2e2; border:2.5px solid #ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:2.4rem;">🔒</div>
+          <h3 style="margin:0 0 8px; color:#991b1b; font-size:1.45rem; font-weight:800;">Semester 2 Locked (Semester 1 Prerequisite)</h3>
+          <p style="margin:0 0 16px; color:#64748b; font-size:1rem;">
+            Candidate: <b style="color:#0f172a;">${esc(name)}</b> (${esc(code)}) • Course: <b style="color:#0f172a;">${esc(course)}</b>
+          </p>
+          <div style="max-width:540px; margin:0 auto 24px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:14px; font-size:0.92rem; color:#7f1d1d; line-height:1.6;">
+            🔒 <b>क्रमबद्ध अंकतालिका नियम (Sequential Rule):</b> पहले छात्र का Semester 1 चुनें और उसकी अंकतालिका जारी करें। उसके उपरांत ही Semester 2 जारी करने का विकल्प अनलॉक होगा।
+          </div>
+          <button type="button" class="btn" onclick="if($('#mrkTermSelect')){$('#mrkTermSelect').value='Semester 1';} updateMrkPreview();" style="background:linear-gradient(135deg, #08244c, #1e3a8a); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 28px; border-radius:8px; border:none; cursor:pointer;">
+            ➔ पहले Semester 1 चुनें व जारी करें
+          </button>
+        </div>
+      `;
+    }
+    if (printWrap) printWrap.style.display = 'none';
+    return;
+  }
+
+  // Check if THIS term's marksheet is already issued
+  const isThisTermIssued = mrkInfo.studentMrks.some(m => {
+    const isApproved = m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved || m.marksheet_no;
+    if (!isApproved) return false;
+    const mTerm = String(m.term || '').toLowerCase();
+    const selTerm = mrkTerm.toLowerCase();
+    if (selTerm.includes('sem 1') || selTerm.includes('semester 1')) return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm.includes('1st sem');
+    if (selTerm.includes('sem 2') || selTerm.includes('semester 2')) return mTerm.includes('sem 2') || mTerm.includes('semester 2') || mTerm.includes('2nd sem');
+    if (selTerm.includes('1st year') || selTerm.includes('year 1')) return mTerm.includes('1st year') || mTerm.includes('year 1') || mTerm.includes('annual');
+    if (selTerm.includes('2nd year') || selTerm.includes('year 2')) return mTerm.includes('2nd year') || mTerm.includes('year 2');
+    return mTerm.includes(selTerm);
+  });
+
+  const isIssued = isThisTermIssued;
+  const mrkDbId = studentId;
 
   if (feeNoticeEl) {
     if (!isIssued) {

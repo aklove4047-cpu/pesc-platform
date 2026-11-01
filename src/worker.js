@@ -4874,6 +4874,33 @@ export default {
         }
         const studentId = Number(body.student_id || cert.student_id);
         const student = store.students.find(s => Number(s.id) === studentId || (body.student_code && s.student_code === body.student_code));
+
+        // PREREQUISITE RULE: All marksheets must be issued before certificate can be issued
+        if (student) {
+          const studentMrks = store.marksheets.filter(m => 
+            (Number(m.student_id) === Number(student.id) || (student.student_code && m.student_code === student.student_code)) &&
+            (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved)
+          );
+          const evalType = String(student.evaluation_type || 'annual').toLowerCase();
+          if (evalType.includes('semester')) {
+            const hasSem1 = studentMrks.some(m => String(m.term || '').toLowerCase().includes('sem 1') || String(m.term || '').toLowerCase().includes('semester 1') || String(m.term || '').toLowerCase().includes('1st sem'));
+            const hasSem2 = studentMrks.some(m => String(m.term || '').toLowerCase().includes('sem 2') || String(m.term || '').toLowerCase().includes('semester 2') || String(m.term || '').toLowerCase().includes('2nd sem'));
+            if (!hasSem1 || !hasSem2) {
+              const missing = !hasSem1 && !hasSem2 ? 'Semester 1 एवं Semester 2 दोनों' : (!hasSem1 ? 'Semester 1' : 'Semester 2');
+              return jsonResponse({
+                error: `प्रमाणपत्र जारी करने से पहले छात्र की सभी अंकतालिकाएं (${missing}) जारी होना अनिवार्य है!`
+              }, 400);
+            }
+          } else {
+            const hasAnyMrk = studentMrks.length > 0 || Boolean(student.marksheet_no && student.marksheet_status === 'Approved');
+            if (!hasAnyMrk) {
+              return jsonResponse({
+                error: 'प्रमाणपत्र जारी करने से पहले छात्र की वार्षिक अंकतालिका (Marksheet) जारी होना अनिवार्य है!'
+              }, 400);
+            }
+          }
+        }
+
         const course = student ? store.courses.find(co => co.id === student.course_id) : null;
         const fee = (body.fee !== undefined && !isNaN(+body.fee)) ? +body.fee : (course ? (course.single_fee_rupees || 100) : 100);
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
@@ -4929,18 +4956,46 @@ export default {
         const parts = path.split('/');
         const signIssueIdx = parts.indexOf('sign-issue');
         const mrkId = signIssueIdx > 0 ? +parts[signIssueIdx - 1] || 1 : 1;
-        let mrk = store.marksheets.find(x => x.id === mrkId || x.student_id === mrkId);
-        if (!mrk) {
-          mrk = { id: mrkId, student_id: mrkId, centre_id: (c && c.id) ? c.id : 1, status: 'Valid' };
-          store.marksheets.push(mrk);
-        }
         let body = {};
         if (request.method === 'POST' || request.method === 'PUT') {
           try { body = await request.json(); } catch (_) {}
         }
-        const studentId = Number(body.student_id || mrk.student_id);
+        const studentId = Number(body.student_id || mrkId);
         const student = store.students.find(s => Number(s.id) === studentId || (body.student_code && s.student_code === body.student_code));
         const course = student ? store.courses.find(co => co.id === student.course_id) : null;
+        const evalType = String(body.evaluation_type || (student && student.evaluation_type) || 'annual').toLowerCase();
+        const term = String(body.term || (evalType.includes('semester') ? 'Semester 1' : 'Annual Examination')).trim();
+
+        // SEQUENTIAL RULE ENFORCEMENT: Semester 2 cannot be issued until Semester 1 is issued
+        const isSem2 = term.toLowerCase().includes('sem 2') || term.toLowerCase().includes('semester 2') || term.toLowerCase().includes('2nd sem');
+        if (evalType.includes('semester') && isSem2 && student) {
+          const hasSem1 = store.marksheets.some(m => 
+            (Number(m.student_id) === Number(student.id) || (student.student_code && m.student_code === student.student_code)) &&
+            (String(m.term || '').toLowerCase().includes('sem 1') || String(m.term || '').toLowerCase().includes('semester 1') || String(m.term || '').toLowerCase().includes('1st sem')) &&
+            (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved)
+          );
+          if (!hasSem1) {
+            return jsonResponse({
+              error: 'जब तक 1st सेमेस्टर (Semester 1) की अंकतालिका जारी नहीं होगी, तब तक 2nd सेमेस्टर (Semester 2) की अंकतालिका जारी नहीं की जा सकती!'
+            }, 400);
+          }
+        }
+
+        // SEQUENTIAL RULE ENFORCEMENT: 2nd Year cannot be issued until 1st Year is issued
+        const isYear2 = term.toLowerCase().includes('2nd year') || term.toLowerCase().includes('year 2');
+        if (isYear2 && student) {
+          const hasYear1 = store.marksheets.some(m => 
+            (Number(m.student_id) === Number(student.id) || (student.student_code && m.student_code === student.student_code)) &&
+            (String(m.term || '').toLowerCase().includes('1st year') || String(m.term || '').toLowerCase().includes('year 1') || String(m.term || '').toLowerCase().includes('annual')) &&
+            (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved)
+          );
+          if (!hasYear1) {
+            return jsonResponse({
+              error: 'जब तक 1st Year की अंकतालिका जारी नहीं होगी, तब तक 2nd Year की अंकतालिका जारी नहीं की जा सकती!'
+            }, 400);
+          }
+        }
+
         const fee = (body.fee !== undefined && !isNaN(+body.fee)) ? +body.fee : (course ? (course.single_fee_rupees || 100) : 100);
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
         if (bal < fee) {
@@ -4952,8 +5007,20 @@ export default {
         if (c) c.wallet_balance = bal;
         await persistToKV(env, 'centres', store.centres);
 
+        let mrk = store.marksheets.find(x => 
+          (x.id === mrkId && x.term && String(x.term).toLowerCase() === term.toLowerCase()) || 
+          (Number(x.student_id) === studentId && String(x.term || '').toLowerCase() === term.toLowerCase())
+        );
+        if (!mrk) {
+          const nextId = store.marksheets.length ? Math.max(...store.marksheets.map(m => Number(m.id) || 0)) + 1 : 1;
+          mrk = { id: nextId, student_id: studentId, centre_id: (c && c.id) ? c.id : 1, status: 'Valid', term: term };
+          store.marksheets.push(mrk);
+        }
+
         mrk.student_id = student ? Number(student.id) : studentId;
         mrk.centre_id = (c && c.id) ? Number(c.id) : (student ? Number(student.centre_id) : 1);
+        mrk.term = term;
+        mrk.evaluation_type = evalType;
         if (student && student.student_code) mrk.student_code = student.student_code;
         mrk.header_type = body.header_type || 'council';
         if (mrk.header_type === 'council') {
@@ -4978,14 +5045,16 @@ export default {
           student.marksheet_id = mrk.id;
           student.marksheet_no = mrk.marksheet_no;
           student.marksheet_status = 'Approved';
-          student.has_marksheet = true;
-          student.is_passout = true;
+          if (!evalType.includes('semester') || isSem2) {
+            student.has_marksheet = true;
+            student.is_passout = true;
+          }
           await persistToKV(env, 'students', store.students);
         }
         await persistToKV(env, 'marksheets', store.marksheets);
         return jsonResponse({
           ok: true,
-          message: `अंकतालिका सफलतापूर्वक जारी की गई! ₹${fee} सेंटर वॉलेट से कटे।`,
+          message: `अंकतालिका (${term}) सफलतापूर्वक जारी की गई! ₹${fee} सेंटर वॉलेट से कटे।`,
           marksheet: mrk,
           wallet_balance: bal
         });

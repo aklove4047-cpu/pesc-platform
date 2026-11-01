@@ -437,12 +437,21 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM marksheets WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
   
+  const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
+  const termVal = req.body.term || (isSem ? 'Semester 1' : 'Annual');
+  const isSem2 = termVal.toLowerCase().includes('sem 2') || termVal.toLowerCase().includes('semester 2') || termVal.toLowerCase().includes('2nd sem');
+  if (isSem && isSem2) {
+    const hasSem1 = db.prepare("SELECT id FROM marksheets WHERE student_id=? AND (term LIKE '%sem 1%' OR term LIKE '%semester 1%' OR term LIKE '%1st sem%') AND status='Approved'").get(s.id);
+    if (!hasSem1) {
+      throw new HttpError(400, 'जब तक 1st सेमेस्टर की अंकतालिका जारी नहीं होगी तब तक 2nd सेमेस्टर की जारी नहीं हो सकती।');
+    }
+  }
+
   // Look up course fee dynamically from courses table
   let courseFeePaise = 10000; // default ₹100
   if (s && s.course_id) {
     const co = db.prepare('SELECT single_fee_paise, semester_fee_paise FROM courses WHERE id=?').get(s.course_id);
     if (co) {
-      const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
       courseFeePaise = isSem ? (co.semester_fee_paise || 20000) : (co.single_fee_paise || 10000);
     }
   }
@@ -453,7 +462,7 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
   const token = crypto.randomBytes(16).toString('hex');
   const mrkNo = `PESC-MRK-2026-${String(s.id).padStart(5, '0')}`;
   
-  let mid = db.prepare('SELECT id FROM marksheets WHERE student_id=?').get(s.id)?.id;
+  let mid = db.prepare('SELECT id FROM marksheets WHERE student_id=? AND term=?').get(s.id, termVal)?.id;
   if (!mid) {
     let subjects = null;
     let totalMax = 0;
@@ -524,11 +533,25 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM certificates WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
   
+  const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
+  if (isSem) {
+    const hasSem1 = db.prepare("SELECT id FROM marksheets WHERE student_id=? AND (term LIKE '%sem 1%' OR term LIKE '%semester 1%' OR term LIKE '%1st sem%') AND status='Approved'").get(s.id);
+    const hasSem2 = db.prepare("SELECT id FROM marksheets WHERE student_id=? AND (term LIKE '%sem 2%' OR term LIKE '%semester 2%' OR term LIKE '%2nd sem%') AND status='Approved'").get(s.id);
+    if (!hasSem1 || !hasSem2) {
+      const missing = !hasSem1 && !hasSem2 ? 'Semester 1 एवं Semester 2 दोनों' : (!hasSem1 ? 'Semester 1' : 'Semester 2');
+      throw new HttpError(400, `प्रमाणपत्र जारी करने से पहले छात्र की सभी अंकतालिकाएं (${missing}) जारी होना अनिवार्य है!`);
+    }
+  } else {
+    const hasMrk = db.prepare("SELECT id FROM marksheets WHERE student_id=? AND status='Approved'").get(s.id);
+    if (!hasMrk) {
+      throw new HttpError(400, 'प्रमाणपत्र जारी करने से पहले छात्र की वार्षिक अंकतालिका (Marksheet) जारी होना अनिवार्य है!');
+    }
+  }
+
   let courseFeePaise = 20000;
   if (s && s.course_id) {
     const co = db.prepare('SELECT single_fee_paise, semester_fee_paise FROM courses WHERE id=?').get(s.course_id);
     if (co) {
-      const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
       courseFeePaise = isSem ? (co.semester_fee_paise || 60000) : (co.single_fee_paise || 20000);
     }
   }

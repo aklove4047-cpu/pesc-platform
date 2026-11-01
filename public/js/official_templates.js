@@ -811,6 +811,65 @@
     const finalGrade = percentage >= 85 ? 'A+' : percentage >= 70 ? 'A' : percentage >= 60 ? 'B+' : 'B';
     const resultText = percentage >= 60 ? 'PASSED IN FIRST DIVISION' : 'PASSED IN SECOND DIVISION';
 
+    // Determine prominent statement title based on term or evaluation mode
+    const rawTerm = String(data.term || s.term || data.examination || '').trim().toLowerCase();
+    const evalType = String(data.evaluation_type || s.evaluation_type || '').trim().toLowerCase();
+    let prominentStatementTitle = '1ST YEAR STATEMENT OF MARKS';
+    if (rawTerm.includes('2nd sem') || rawTerm === 'semester 2' || rawTerm.includes('sem 2') || rawTerm.includes('second sem')) {
+      prominentStatementTitle = '2ND SEMESTER STATEMENT OF MARKS';
+    } else if (rawTerm.includes('1st sem') || rawTerm === 'semester 1' || rawTerm.includes('sem 1') || rawTerm.includes('first sem')) {
+      prominentStatementTitle = '1ST SEMESTER STATEMENT OF MARKS';
+    } else if (rawTerm.includes('3rd sem') || rawTerm === 'semester 3' || rawTerm.includes('sem 3')) {
+      prominentStatementTitle = '3RD SEMESTER STATEMENT OF MARKS';
+    } else if (rawTerm.includes('4th sem') || rawTerm === 'semester 4' || rawTerm.includes('sem 4')) {
+      prominentStatementTitle = '4TH SEMESTER STATEMENT OF MARKS';
+    } else if (rawTerm.includes('2nd year') || rawTerm === 'year 2' || rawTerm.includes('second year')) {
+      prominentStatementTitle = '2ND YEAR STATEMENT OF MARKS';
+    } else if (rawTerm.includes('1st year') || rawTerm === 'year 1' || rawTerm.includes('first year')) {
+      prominentStatementTitle = '1ST YEAR STATEMENT OF MARKS';
+    } else if (rawTerm.includes('final')) {
+      prominentStatementTitle = 'FINAL YEAR STATEMENT OF MARKS';
+    } else if (evalType.includes('semester') || scheme.includes('semester')) {
+      prominentStatementTitle = '1ST SEMESTER STATEMENT OF MARKS';
+    } else {
+      prominentStatementTitle = '1ST YEAR STATEMENT OF MARKS';
+    }
+
+    // Determine session (advancing by academic term as circled in reference)
+    let sessionText = (s.session || data.session || '').trim();
+    if (!sessionText) {
+      let baseYear = 2025;
+      if (s.admission_date) {
+        const d = new Date(s.admission_date);
+        if (!isNaN(d.getFullYear())) baseYear = d.getFullYear();
+      } else if (s.created_at) {
+        const d = new Date(s.created_at);
+        if (!isNaN(d.getFullYear())) baseYear = d.getFullYear();
+      }
+      if (prominentStatementTitle.includes('2ND') || prominentStatementTitle.includes('2nd')) {
+        sessionText = `${baseYear + 1}-${baseYear + 2}`;
+      } else {
+        sessionText = `${baseYear}-${baseYear + 1}`;
+      }
+    }
+
+    // Number to words helper for Grand Total in Words
+    function numberToWords(num) {
+      num = Math.round(Number(num) || 0);
+      if (num === 0) return 'Zero';
+      const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+      const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+      function inWords(n) {
+        if (n < 20) return a[n];
+        if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+        if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + inWords(n % 100) : '');
+        if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + inWords(n % 1000) : '');
+        if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + inWords(n % 100000) : '');
+        return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + inWords(n % 10000000) : '');
+      }
+      return inWords(num);
+    }
+
     const { centreSeal, centreSign, centreLogo, coordSeal, coordSign, councilLogo, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
 
     return `
@@ -858,85 +917,121 @@
             </div>
           </div>
 
-          <!-- Reference & Date Line -->
-          <div style="display:flex; justify-content:space-between; font-size:0.82rem; font-weight:800; color:#0f172a; margin:6px 0 10px; line-height:1.7;">
-            <div>
-              <div>Student Reg. No.: <span style="font-family:monospace; color:#0284c7;">${esc(studentRegNo)}</span></div>
-              <div>Roll Number : <span style="font-family:monospace;">${esc(rollNo)}</span></div>
-              <div>MR. /MRS. : <b style="font-size:0.95rem; color:#08244c;">${esc(s.name || 'Preeti')}</b></div>
+          <!-- Marksheet No and Serial Top Bar -->
+          <div style="display:flex; justify-content:space-between; font-size:0.80rem; font-weight:800; color:#08244c; border-top:1px solid #e2e8f0; padding-top:4px; margin-bottom:8px;">
+            <div>Marksheet No.: <span style="font-family:monospace; color:#0369a1;">${esc(mrkNo)}</span></div>
+            <div>S.No.: <span style="font-family:monospace; color:#0369a1;">${String(s.id || '4931').padStart(4, '0')}</span></div>
+          </div>
+
+          <!-- PROMINENT STATEMENT OF MARKS OVAL CAPSULE (Exact visual match to circled user reference) -->
+          <div style="text-align:center; margin:6px 0 12px;">
+            <div style="display:inline-block; border:2.5px solid #08244c; outline:2px solid #d4af37; outline-offset:2px; background:linear-gradient(135deg, #08244c, #1e3a8a); color:#ffffff; font-size:1.15rem; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; padding:6px 36px; border-radius:30px; box-shadow:0 4px 12px rgba(8,36,76,0.25);">
+              ${prominentStatementTitle}
             </div>
-            <div style="display:flex; gap:16px; align-items:flex-start;">
-              <div style="text-align:right;">
-                <div>Ref No.: <span style="font-family:monospace;">${esc(mrkNo)}</span></div>
-                <div>Date of Issue : <span style="border-bottom:1px solid #0f172a; padding:0 6px;">${esc(issueDate)}</span></div>
-              </div>
-              <div style="width:82px; height:98px; border:2px solid #08244c; border-radius:4px; overflow:hidden; background:#f8fafc; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.12);">
-                ${photoHtml}
-              </div>
+            <div style="font-size:0.78rem; color:#854d0e; font-weight:800; margin-top:3px;">
+              ${mrkHindiBadge}
             </div>
           </div>
 
-          <!-- 3D Golden Ribbon: MARKSHEET -->
-          ${render3DGoldRibbon(mrkMainTitle, mrkSubTitle)}
-          <div style="text-align:center; font-size:0.85rem; color:#854d0e; font-weight:800; margin:-4px 0 10px;">
-            ${mrkHindiBadge}
-          </div>
-
-          <!-- Candidate Details & Course Line -->
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.86rem; font-weight:800; color:#0f172a; margin-bottom:8px; line-height:1.6;">
-            <div>
-              <div>S/O / D/O / W/O : <span>${esc(s.father_name || 'Ram')}</span></div>
-              <div>MOTHER'S NAME : <span>${esc(s.mother_name || 'Geeta')}</span></div>
+          <!-- CANDIDATE DETAILS GRID (Exact 2-Column Format matching user reference) -->
+          <div style="display:grid; grid-template-columns:1.1fr 1fr; border:2px solid #08244c; margin-bottom:10px; font-size:0.83rem; color:#0f172a;">
+            <!-- Left Column: Photo, Student Name, Father Name, Session, Enrollment -->
+            <div style="border-right:1.5px solid #08244c; padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
+                <div style="width:70px; height:84px; border:1.5px solid #08244c; border-radius:4px; overflow:hidden; background:#f8fafc; text-align:center; flex-shrink:0;">
+                  ${photoHtml}
+                </div>
+                <div style="line-height:1.45;">
+                  <div style="font-size:0.95rem; font-weight:900; color:#08244c; text-transform:uppercase;">${esc(s.name || 'Candidate Name')}</div>
+                  <div style="font-weight:700; color:#475569; font-size:0.80rem;">S/o / D/o: <b style="color:#0f172a;">${esc(s.father_name || 'Father Name')}</b></div>
+                  <div style="font-weight:700; color:#475569; font-size:0.80rem;">Mother: <b style="color:#0f172a;">${esc(s.mother_name || 'Mother Name')}</b></div>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; border-top:1px dashed #cbd5e1; padding-top:6px; font-weight:800;">
+                <div>
+                  <span style="color:#64748b; font-size:0.75rem; display:block;">Session:</span>
+                  <span style="color:#08244c; font-size:0.92rem; font-weight:900; background:#fef9c3; padding:1px 8px; border-radius:4px; border:1px solid #fde047;">${esc(sessionText)}</span>
+                </div>
+                <div style="text-align:right;">
+                  <span style="color:#64748b; font-size:0.75rem; display:block;">Enrollment No.:</span>
+                  <span style="font-family:monospace; color:#0284c7; font-size:0.90rem;">${esc(studentRegNo)}</span>
+                </div>
+              </div>
             </div>
-            <div style="text-align:center;">
-              <div style="font-size:1.15rem; font-weight:900; color:#08244c;">${esc(courseName)}</div>
-              <div style="font-size:0.82rem; color:#475569;">Duration : ${esc(duration)}</div>
+
+            <!-- Right Column: Course Name, Duration, ATC Name With Code, Roll No -->
+            <div style="padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="color:#64748b; font-size:0.75rem; font-weight:700;">Course Name With Duration:</div>
+                <div style="font-size:0.98rem; font-weight:900; color:#08244c; text-transform:uppercase; margin-top:1px;">${esc(courseName)}</div>
+                <div style="font-size:0.80rem; font-weight:800; color:#047857;">${esc(duration)}</div>
+              </div>
+              <div style="border-top:1px dashed #cbd5e1; padding-top:6px;">
+                <div style="color:#64748b; font-size:0.75rem; font-weight:700;">ATC Name With Code:</div>
+                <div style="font-size:0.82rem; font-weight:800; color:#0f172a; line-height:1.3;">${esc(centreEnglish)}</div>
+                <div style="font-size:0.78rem; font-weight:800; color:#b45309; font-family:monospace;">(${esc(centreCode)})</div>
+                <div style="margin-top:3px; font-size:0.76rem; font-weight:700; color:#475569;">Roll Number: <b style="font-family:monospace; color:#08244c;">${esc(rollNo)}</b></div>
+              </div>
             </div>
           </div>
 
           <!-- Marks Table -->
-          <table style="width:100%; border-collapse:collapse; font-size:0.84rem; text-align:center; border:2px solid #08244c; margin-bottom:6px;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.83rem; text-align:center; border:2px solid #08244c; margin-bottom:4px;">
             <thead>
               <tr style="background:#08244c; color:#ffffff; font-weight:900;">
-                <th style="padding:7px 6px; border:1px solid #cbd5e1; width:22%;">Paper Code /<br>Subject Code</th>
-                <th style="padding:7px 8px; border:1px solid #cbd5e1; width:38%; text-align:left;">Subject Name</th>
-                <th style="padding:7px 6px; border:1px solid #cbd5e1; width:10%;">Max<br>Marks</th>
-                <th style="padding:7px 6px; border:1px solid #cbd5e1; width:10%;">Min<br>Marks</th>
-                <th style="padding:7px 6px; border:1px solid #cbd5e1; width:10%;">Marks<br>Obtained</th>
-                <th style="padding:7px 6px; border:1px solid #cbd5e1; width:10%;">Grade</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; width:8%;">S. No.</th>
+                <th style="padding:6px 8px; border:1px solid #cbd5e1; width:52%; text-align:left;">Subjects Name</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; width:13%;">Maximum Marks</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; width:13%;">Marks Obtained</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; width:14%;">Grade</th>
               </tr>
             </thead>
             <tbody>
               ${subjects.map((sub, idx) => `
                 <tr style="background:${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
-                  <td style="padding:6px 6px; border:1px solid #cbd5e1; font-weight:800; font-family:monospace;">${esc(sub.code)}</td>
-                  <td style="padding:6px 8px; border:1px solid #cbd5e1; text-align:left; font-weight:700;">${esc(sub.name)}</td>
-                  <td style="padding:6px 6px; border:1px solid #cbd5e1;">${esc(sub.max)}</td>
-                  <td style="padding:6px 6px; border:1px solid #cbd5e1;">${esc(sub.min)}</td>
-                  <td style="padding:6px 6px; border:1px solid #cbd5e1; font-weight:900; color:#08244c;">${esc(sub.obt)}</td>
-                  <td style="padding:6px 6px; border:1px solid #cbd5e1; font-weight:900; color:#15803d;">${esc(sub.grade)}</td>
+                  <td style="padding:5px 6px; border:1px solid #cbd5e1; font-weight:800; font-family:monospace;">${idx + 1}.</td>
+                  <td style="padding:5px 8px; border:1px solid #cbd5e1; text-align:left; font-weight:700;">${esc(sub.name)}</td>
+                  <td style="padding:5px 6px; border:1px solid #cbd5e1;">${esc(sub.max)}</td>
+                  <td style="padding:5px 6px; border:1px solid #cbd5e1; font-weight:900; color:#08244c;">${esc(sub.obt)}</td>
+                  <td style="padding:5px 6px; border:1px solid #cbd5e1; font-weight:900; color:#15803d;">${esc(sub.grade)}</td>
                 </tr>
               `).join('')}
-              <tr style="background:#08244c; color:#ffffff; font-weight:900; font-size:0.92rem;">
-                <td colspan="2" style="padding:7px 12px; border:1px solid #08244c; text-align:right; letter-spacing:1px;">GRAND TOTAL:</td>
-                <td style="padding:7px 6px; border:1px solid #08244c;">${maxTotal}</td>
-                <td style="padding:7px 6px; border:1px solid #08244c;">-</td>
-                <td style="padding:7px 6px; border:1px solid #08244c; color:#fde047;">${obtTotal}</td>
-                <td style="padding:7px 6px; border:1px solid #08244c; color:#86efac;">${finalGrade}</td>
+              <tr style="background:#08244c; color:#ffffff; font-weight:900; font-size:0.90rem;">
+                <td colspan="2" style="padding:6px 12px; border:1px solid #08244c; text-align:right; letter-spacing:1px;">GRAND TOTAL:</td>
+                <td style="padding:6px 6px; border:1px solid #08244c;">${maxTotal}</td>
+                <td style="padding:6px 6px; border:1px solid #08244c; color:#fde047;">${obtTotal}</td>
+                <td style="padding:6px 6px; border:1px solid #08244c; color:#86efac;">${finalGrade}</td>
               </tr>
             </tbody>
           </table>
 
-          <!-- Percentage & Grade Summary Bar -->
-          <div style="display:flex; justify-content:space-around; align-items:center; font-size:0.92rem; font-weight:900; color:#08244c; border:1.5px solid #08244c; padding:5px 12px; background:#f0f9ff; margin:6px 0;">
-            <div>PERCENTAGE : <span style="color:#0369a1;">${percentage}%</span></div>
-            <div>GRADE: <span style="color:#15803d;">${finalGrade}</span></div>
+          <!-- Grand Total In Words (Exact match to reference image) -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin:6px 2px 4px; font-weight:800; font-size:0.86rem; color:#08244c;">
+            <div>Grand Total : <span style="font-size:0.98rem; font-weight:900; color:#08244c;">${obtTotal} / ${maxTotal}</span></div>
+            <div style="font-size:0.84rem; color:#1e293b;">In Words : <b style="color:#08244c; text-transform:capitalize;">${numberToWords(obtTotal)}</b></div>
           </div>
 
-          <!-- Result Line -->
-          <div style="text-align:center; font-size:1.05rem; font-weight:900; color:#047857; letter-spacing:1px; margin:4px 0 10px;">
-            RESULT : ${resultText}
-          </div>
+          <!-- 5-Column Summary Table: Date Of Issue | Mode | Result | Percentage | Grade (Circled in Reference Image) -->
+          <table style="width:100%; border-collapse:collapse; text-align:center; font-size:0.83rem; border:2px solid #08244c; margin:4px 0 10px;">
+            <thead>
+              <tr style="background:#08244c; color:#ffffff; font-weight:900;">
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; width:22%;">Date Of Issue</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; width:18%;">Mode</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; width:20%;">Result</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; width:20%;">Percentage</th>
+                <th style="padding:6px 6px; border:1px solid #cbd5e1; width:20%;">Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="font-weight:800; color:#0f172a; background:#f8fafc;">
+                <td style="padding:6px 6px; border:1px solid #cbd5e1; font-family:monospace; color:#08244c; font-weight:900;">${esc(issueDate)}</td>
+                <td style="padding:6px 6px; border:1px solid #cbd5e1;">Regular</td>
+                <td style="padding:6px 6px; border:1px solid #cbd5e1; color:#15803d; font-weight:900;">${percentage >= 40 ? 'Pass' : 'Fail'}</td>
+                <td style="padding:6px 6px; border:1px solid #cbd5e1; color:#0369a1; font-weight:900;">${percentage}%</td>
+                <td style="padding:6px 6px; border:1px solid #cbd5e1; color:#15803d; font-weight:900; font-size:0.95rem;">${finalGrade}</td>
+              </tr>
+            </tbody>
+          </table>
 
           <!-- Bottom Row: 3 Stamps + QR Code -->
           <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px; padding:0 6px;">
