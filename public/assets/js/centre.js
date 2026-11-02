@@ -1763,6 +1763,12 @@ const views = {
     const unissuedStudents = students.filter(s => !window.getStudentMarksheetInfo(s, mData.marksheets).isFullyIssued);
     const issuedStudents = students.filter(s => window.getStudentMarksheetInfo(s, mData.marksheets).isFullyIssued);
 
+    const firstStu = students[0];
+    const firstInfo = firstStu ? window.getStudentMarksheetInfo(firstStu, mData.marksheets) : null;
+    const initialIsSemester = (firstInfo && firstInfo.isSemester) || mrkEvalPattern === 'semester';
+    if (initialIsSemester) mrkEvalPattern = 'semester';
+    else mrkEvalPattern = 'yearly';
+
     V.innerHTML = `
       <div style="margin-bottom:20px;">
         <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">6. Marksheet Printing (वार्षिक एवं सेमेस्टर अंकतालिका प्रिंट)</h2>
@@ -1798,8 +1804,8 @@ const views = {
           <div>
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Evaluation Type (परीक्षा प्रकार):</label>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="btn gold sm active" id="btnMrkEvalYearly" onclick="setMrkEvalPattern('yearly')">📅 Yearly / Annual (वार्षिक आधारित)</button>
-              <button type="button" class="btn alt sm" id="btnMrkEvalSemester" onclick="setMrkEvalPattern('semester')">📚 Semester-Wise (सेमेस्टर आधारित)</button>
+              <button type="button" class="btn ${initialIsSemester ? 'alt' : 'gold active'} sm" id="btnMrkEvalYearly" onclick="setMrkEvalPattern('yearly')">📅 Yearly / Annual (वार्षिक आधारित)</button>
+              <button type="button" class="btn ${initialIsSemester ? 'gold active' : 'alt'} sm" id="btnMrkEvalSemester" onclick="setMrkEvalPattern('semester')">📚 Semester-Wise (सेमेस्टर आधारित)</button>
             </div>
           </div>
 
@@ -1807,10 +1813,17 @@ const views = {
           <div id="mrkTermWrap" style="min-width:200px;">
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Term / Examination (परीक्षा सत्र):</label>
             <select id="mrkTermSelect" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:700; color:#064e3b;" onchange="updateMrkPreview()">
-              <option value="Annual Examination">Annual Examination (वार्षिक परीक्षा)</option>
-              <option value="1st Year">1st Year (प्रथम वर्ष)</option>
-              <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
-              <option value="Final Year">Final Year (अंतिम वर्ष)</option>
+              ${initialIsSemester ? `
+                <option value="Semester 1">Semester 1 (प्रथम सेमेस्टर)</option>
+                <option value="Semester 2" ${firstInfo && firstInfo.hasSem1 && !firstInfo.hasSem2 ? 'selected' : ''}>Semester 2 (द्वितीय सेमेस्टर)</option>
+                <option value="Semester 3">Semester 3 (तृतीय सेमेस्टर)</option>
+                <option value="Semester 4">Semester 4 (चतुर्थ सेमेस्टर)</option>
+              ` : `
+                <option value="Annual Examination">Annual Examination (वार्षिक परीक्षा)</option>
+                <option value="1st Year">1st Year (प्रथम वर्ष)</option>
+                <option value="2nd Year">2nd Year (द्वितीय वर्ष)</option>
+                <option value="Final Year">Final Year (अंतिम वर्ष)</option>
+              `}
             </select>
           </div>
 
@@ -1900,7 +1913,19 @@ const views = {
       </div>
     `;
 
-    $('#mrkStudentSelect').onchange = () => updateMrkPreview();
+    $('#mrkStudentSelect').onchange = (e) => {
+      const sId = e.target.value;
+      const curStu = (window._currentStudents || []).find(s => String(s.id) === String(sId));
+      if (curStu) {
+        const info = window.getStudentMarksheetInfo(curStu, window._centreMarksheets);
+        if (info.isSemester) {
+          setMrkEvalPattern('semester', false);
+        } else {
+          setMrkEvalPattern('yearly', false);
+        }
+      }
+      updateMrkPreview(sId);
+    };
     updateMrkPreview();
   },
 
@@ -3540,7 +3565,7 @@ async function updateCertPreview(targetStudentId) {
 // Marksheet Preview
 let mrkEvalPattern = 'yearly';
 
-function setMrkEvalPattern(pat) {
+function setMrkEvalPattern(pat, triggerUpdate = true) {
   mrkEvalPattern = pat;
   const bYearly = $('#btnMrkEvalYearly');
   const bSem = $('#btnMrkEvalSemester');
@@ -3563,9 +3588,18 @@ function setMrkEvalPattern(pat) {
         <option value="Semester 3">Semester 3 (तृतीय सेमेस्टर)</option>
         <option value="Semester 4">Semester 4 (चतुर्थ सेमेस्टर)</option>
       `;
+      const sSel = $('#mrkStudentSelect');
+      const curSid = sSel ? sSel.value : null;
+      const curStu = (window._currentStudents || []).find(s => String(s.id) === String(curSid));
+      if (curStu) {
+        const info = window.getStudentMarksheetInfo(curStu, window._centreMarksheets);
+        if (info.hasSem1 && !info.hasSem2) {
+          termSel.value = 'Semester 2';
+        }
+      }
     }
   }
-  updateMrkPreview();
+  if (triggerUpdate !== false) updateMrkPreview();
 }
 
 // Comprehensive Accredited Course Curriculum: Yearly-Wise & Semester-Wise Distinct Subjects
@@ -3933,15 +3967,52 @@ function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
     }
   }
 
-  // 1b. Check if course has subjects defined by Head Office
+  // 2. Resolve COURSE_CURRICULUM_DATA key (prioritized for semester mode)
+  const sortedKeys = Object.keys(COURSE_CURRICULUM_DATA).sort((a, b) => b.length - a.length);
+  let key = sortedKeys.find(k => norm === k);
+  if (!key) {
+    key = sortedKeys.find(k => (COURSE_CURRICULUM_DATA[k].name && norm.includes(COURSE_CURRICULUM_DATA[k].name.toUpperCase())) || new RegExp('\\b' + k + '\\b').test(norm) || norm.includes(k));
+  }
+  if (!key) {
+    if (norm.includes('NURSERY') || norm.includes('NTT') || norm.includes('TEACHER')) key = 'NTT';
+    else if (norm.includes('ADVANCED') || norm.includes('ADCA')) key = 'ADCA';
+    else if (norm.includes('PGDCA')) key = 'PGDCA';
+    else if (norm.includes('DCA')) key = 'DCA';
+    else if (norm.includes('TALLY')) key = 'TALLY';
+    else if (norm.includes('CCC')) key = 'CCC';
+    else if (norm.includes('DTP') || norm.includes('PUBLISHING')) key = 'DTP';
+    else if (norm.includes('HARDWARE') || norm.includes('NETWORKING')) key = 'HARDWARE';
+    else if (norm.includes('YOGA')) key = 'YOGA';
+    else if (norm.includes('FASHION')) key = 'FASHION';
+  }
+
+  // 3. For semester pattern: COURSE_CURRICULUM_DATA takes precedence so Sem 1 & Sem 2 have distinct subjects
+  if (pattern === 'semester' && key && COURSE_CURRICULUM_DATA[key]) {
+    const courseObj = COURSE_CURRICULUM_DATA[key];
+    const patObj = courseObj.semester || {};
+    if (patObj[term]) return patObj[term];
+    if (term.includes('2') || term.toLowerCase().includes('second')) return patObj['Semester 2'] || Object.values(patObj)[1] || patObj['Semester 1'];
+    if (term.includes('3') || term.toLowerCase().includes('third')) return patObj['Semester 3'] || Object.values(patObj)[2] || patObj['Semester 1'];
+    if (term.includes('4') || term.toLowerCase().includes('fourth')) return patObj['Semester 4'] || Object.values(patObj)[3] || patObj['Semester 1'];
+    return patObj['Semester 1'] || Object.values(patObj)[0];
+  }
+
+  // 4. Check if course has subjects defined by Head Office
   if (foundCourse && foundCourse.subjects) {
     let subList = foundCourse.subjects;
     if (typeof subList === 'string') {
       try { subList = JSON.parse(subList); } catch(e) { subList = []; }
     }
     if (Array.isArray(subList) && subList.length > 0) {
-      return subList.map((s, idx) => ({
-        code: (typeof s === 'object' && s.code) ? s.code : `${foundCourse.code || 'SUB'}-${idx + 1}`,
+      let selectedSubs = subList;
+      if (pattern === 'semester') {
+        const mid = Math.ceil(subList.length / 2);
+        const isSecond = term.includes('2') || term.toLowerCase().includes('second');
+        selectedSubs = isSecond ? subList.slice(mid) : subList.slice(0, mid);
+        if (!selectedSubs.length) selectedSubs = subList;
+      }
+      return selectedSubs.map((s, idx) => ({
+        code: (typeof s === 'object' && s.code) ? s.code : `${foundCourse.code || 'SUB'}-${pattern === 'semester' ? (term.includes('2') ? 'S20' : 'S10') : 'Y10'}${idx + 1}`,
         name: (typeof s === 'object' && s.name) ? s.name : String(s),
         theory: (typeof s === 'object' && (s.max_theory || s.theory)) ? (+s.max_theory || +s.theory) : 50,
         practical: (typeof s === 'object' && (s.max_practical || s.practical)) ? (+s.max_practical || +s.practical) : 50,
@@ -3950,21 +4021,7 @@ function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
     }
   }
 
-  // 2. Check static COURSE_CURRICULUM_DATA fallback
-  let key = Object.keys(COURSE_CURRICULUM_DATA).find(k => norm === k || norm.includes(k) || (COURSE_CURRICULUM_DATA[k].name && norm.includes(COURSE_CURRICULUM_DATA[k].name.toUpperCase())));
-  if (!key) {
-    if (norm.includes('NURSERY') || norm.includes('NTT') || norm.includes('TEACHER')) key = 'NTT';
-    else if (norm.includes('ADVANCED') || norm.includes('ADCA')) key = 'ADCA';
-    else if (norm.includes('DCA')) key = 'DCA';
-    else if (norm.includes('TALLY')) key = 'TALLY';
-    else if (norm.includes('CCC')) key = 'CCC';
-    else if (norm.includes('PGDCA')) key = 'PGDCA';
-    else if (norm.includes('DTP') || norm.includes('PUBLISHING')) key = 'DTP';
-    else if (norm.includes('HARDWARE') || norm.includes('NETWORKING')) key = 'HARDWARE';
-    else if (norm.includes('YOGA')) key = 'YOGA';
-    else if (norm.includes('FASHION')) key = 'FASHION';
-  }
-
+  // 5. Yearly fallback from COURSE_CURRICULUM_DATA
   if (key && COURSE_CURRICULUM_DATA[key]) {
     const courseObj = COURSE_CURRICULUM_DATA[key];
     const patObj = courseObj[pattern] || {};
@@ -4029,8 +4086,9 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
   const termSel = $('#mrkTermSelect');
   const chosenTerm = (termSel && termSel.value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
   const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
+  const isSemesterMode = mrkEvalPattern === 'semester' || mrkInfo.isSemester || (stu.evaluation_type && stu.evaluation_type.toLowerCase().includes('semester')) || chosenTerm.toLowerCase().includes('sem');
 
-  if (mrkInfo.isSemester) {
+  if (isSemesterMode) {
     const isSem2 = chosenTerm.toLowerCase().includes('sem 2') || chosenTerm.toLowerCase().includes('semester 2') || chosenTerm.toLowerCase().includes('2nd');
     if (isSem2 && !mrkInfo.hasSem1) {
       alert(`❌ सेमेस्टर 2 की अंकतालिका जारी नहीं हो सकती!\n\nकाउंसिल नियमानुसार जब तक 1st सेमेस्टर की अंकतालिका जारी नहीं होगी, तब तक 2nd सेमेस्टर की जारी नहीं हो सकती।\n\nकृपया पहले 'Semester 1' चुनें और उसे जारी करें।`);
@@ -4044,6 +4102,18 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
   try {
     const targetId = mrkDbId || studentId || 1;
     const chosenMrkHeader = mrkFormat === 'institute' ? 'centre' : (mrkFormat === 'dual' ? 'dual' : 'council');
+    const termKey = `${studentId}_${chosenTerm.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    let subjectsToPass = (window._customMarksheetData && window._customMarksheetData[termKey]) || null;
+    if (!subjectsToPass) {
+      try {
+        const saved = localStorage.getItem('pesc_custom_marks_' + termKey);
+        if (saved) subjectsToPass = JSON.parse(saved);
+      } catch (_) {}
+    }
+    if (!subjectsToPass || !subjectsToPass.length) {
+      subjectsToPass = getCourseCurriculumSubjects(stu.course, isSemesterMode ? 'semester' : 'yearly', chosenTerm);
+    }
+
     const res = await api(`/api/centre/marksheets/${targetId}/sign-issue`, {
       method: 'POST',
       body: { 
@@ -4051,7 +4121,8 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
         student_id: studentId, 
         header_type: chosenMrkHeader,
         term: chosenTerm,
-        evaluation_type: mrkInfo.isSemester ? 'semester' : 'annual'
+        evaluation_type: isSemesterMode ? 'semester' : 'annual',
+        subjects: subjectsToPass
       }
     });
 
@@ -4071,6 +4142,8 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
     toast(`🎉 ₹${fee} वॉलेट से कट गया! ${chosenTerm} अंकतालिका जारी हो गई।`);
     if (typeof views !== 'undefined' && typeof views.MarksheetPrinting === 'function') {
       await views.MarksheetPrinting();
+      const sSel = $('#mrkStudentSelect');
+      if (sSel) sSel.value = String(studentId);
       updateMrkPreview(studentId);
     } else {
       await updateMrkPreview(studentId);
@@ -4128,6 +4201,7 @@ async function updateMrkPreview(targetStudentId) {
   const photo = stu.photo_url || stu.photo || (opt ? opt.dataset.photo : '') || '';
 
   const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
+  const isStudentSemester = mrkInfo.isSemester || (stu.evaluation_type && stu.evaluation_type.toLowerCase().includes('semester'));
 
   // Both Evaluation Buttons are always enabled and clickable
   const bYearly = $('#btnMrkEvalYearly');
@@ -4137,29 +4211,31 @@ async function updateMrkPreview(targetStudentId) {
 
   const termSel = $('#mrkTermSelect');
 
-  // If student is semester-wise, automatically sync pattern button and term dropdown if not manually toggled
-  if (mrkInfo.isSemester) {
-    if (mrkEvalPattern !== 'semester' && !termSel?.dataset.userToggled) {
-      mrkEvalPattern = 'semester';
-      if (bSem) bSem.className = 'btn gold sm active';
-      if (bYearly) bYearly.className = 'btn alt sm';
-      if (termSel) {
-        termSel.innerHTML = `
-          <option value="Semester 1">Semester 1 (प्रथम सेमेस्टर)</option>
-          <option value="Semester 2">Semester 2 (द्वितीय सेमेस्टर)</option>
-          <option value="Semester 3">Semester 3 (तृतीय सेमेस्टर)</option>
-          <option value="Semester 4">Semester 4 (चतुर्थ सेमेस्टर)</option>
-        `;
+  // If student is semester-wise, automatically sync pattern button and term dropdown
+  if (isStudentSemester || mrkEvalPattern === 'semester') {
+    mrkEvalPattern = 'semester';
+    if (bSem) bSem.className = 'btn gold sm active';
+    if (bYearly) bYearly.className = 'btn alt sm';
+    if (termSel && (!termSel.innerHTML.includes('Semester 1') || termSel.innerHTML.includes('Annual Examination'))) {
+      const prevVal = termSel.value;
+      termSel.innerHTML = `
+        <option value="Semester 1">Semester 1 (प्रथम सेमेस्टर)</option>
+        <option value="Semester 2">Semester 2 (द्वितीय सेमेस्टर)</option>
+        <option value="Semester 3">Semester 3 (तृतीय सेमेस्टर)</option>
+        <option value="Semester 4">Semester 4 (चतुर्थ सेमेस्टर)</option>
+      `;
+      if (prevVal && prevVal.includes('Semester')) {
+        termSel.value = prevVal;
       }
     }
     // Auto-select Semester 2 if Sem 1 is already issued and Sem 2 is not yet issued
-    if (mrkInfo.hasSem1 && !mrkInfo.hasSem2 && termSel && !termSel.dataset.manualSelect) {
+    if (mrkInfo.hasSem1 && !mrkInfo.hasSem2 && termSel && (!termSel.dataset.manualSelect || termSel.value === 'Annual Examination' || !termSel.value)) {
       termSel.value = 'Semester 2';
     }
   }
 
   const mrkTerm = (termSel && termSel.value) || (mrkEvalPattern === 'semester' ? (mrkInfo.hasSem1 ? 'Semester 2' : 'Semester 1') : 'Annual Examination');
-  const isSemester = mrkEvalPattern === 'semester';
+  const isSemester = mrkEvalPattern === 'semester' || isStudentSemester || mrkTerm.toLowerCase().includes('sem');
   const isSelectedSem2 = mrkTerm.toLowerCase().includes('sem 2') || mrkTerm.toLowerCase().includes('semester 2') || mrkTerm.toLowerCase().includes('2nd');
 
   const courses = window._currentCourses || [];
@@ -4303,26 +4379,24 @@ async function updateMrkPreview(targetStudentId) {
   const candidateCode = (mrkItem && mrkItem.roll_no) || code;
   const candidateCourse = (mrkItem && mrkItem.course_name) || course;
 
+  const termKey = `${studentId}_${String(mrkTerm || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`;
   let customSubjects = null;
   if (mrkItem && mrkItem.subjects) {
     try {
       customSubjects = typeof mrkItem.subjects === 'string' ? JSON.parse(mrkItem.subjects) : mrkItem.subjects;
     } catch (_) {}
   }
-  if (!customSubjects && window._customMarksheetData && window._customMarksheetData[studentId]) {
-    customSubjects = window._customMarksheetData[studentId];
+  if (!customSubjects && window._customMarksheetData && window._customMarksheetData[termKey]) {
+    customSubjects = window._customMarksheetData[termKey];
   }
   if (!customSubjects) {
     try {
-      const saved = localStorage.getItem('pesc_custom_marks_' + studentId);
+      const saved = localStorage.getItem('pesc_custom_marks_' + termKey);
       if (saved) customSubjects = JSON.parse(saved);
     } catch (_) {}
   }
-  if (!customSubjects && foundCourse && foundCourse.subjects) {
-    try {
-      const coSubs = typeof foundCourse.subjects === 'string' ? JSON.parse(foundCourse.subjects) : foundCourse.subjects;
-      if (Array.isArray(coSubs) && coSubs.length > 0) customSubjects = coSubs;
-    } catch (_) {}
+  if (!customSubjects || !customSubjects.length) {
+    customSubjects = getCourseCurriculumSubjects(candidateCourse, isSemester ? 'semester' : 'yearly', mrkTerm);
   }
 
   const marksheetHtml = window.OfficialTemplates ? window.OfficialTemplates.renderMarksheetHtml({
@@ -5586,42 +5660,6 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
   const s = stu || {};
   const m = mrk || {};
 
-  let subs = [];
-  if (m.subjects) {
-    try {
-      subs = typeof m.subjects === 'string' ? JSON.parse(m.subjects) : m.subjects;
-    } catch (_) { subs = []; }
-  }
-  if (!subs.length && window._customMarksheetData && window._customMarksheetData[sId]) {
-    subs = window._customMarksheetData[sId];
-  }
-  if (!subs.length) {
-    try {
-      const saved = localStorage.getItem('pesc_custom_marks_' + sId);
-      if (saved) subs = JSON.parse(saved);
-    } catch (_) {}
-  }
-  if (!subs.length && stu) {
-    const courses = window._currentCourses || [];
-    const course = courses.find(co => co.name === stu.course || co.code === stu.course || Number(co.id) === Number(stu.course_id));
-    if (course && course.subjects) {
-      try {
-        const coSubs = typeof course.subjects === 'string' ? JSON.parse(course.subjects) : course.subjects;
-        if (Array.isArray(coSubs) && coSubs.length) subs = coSubs;
-      } catch (_) {}
-    }
-  }
-  if (!subs.length) {
-    subs = [
-      { code: 'DCA-Y101', name: 'Information Technology, OS & Windows', max_theory: 45, obt_theory: 37, max_practical: 45, obt_practical: 39 },
-      { code: 'DCA-Y102', name: 'Office Automation Tools (Word, Excel, PPT)', max_theory: 44, obt_theory: 36, max_practical: 46, obt_practical: 40 },
-      { code: 'DCA-Y103', name: 'Database Management Systems & MS Access', max_theory: 43, obt_theory: 35, max_practical: 47, obt_practical: 40 },
-      { code: 'DCA-Y104', name: 'Financial Accounting & Tally Prime with GST', max_theory: 44, obt_theory: 36, max_practical: 46, obt_practical: 40 },
-      { code: 'DCA-Y105', name: 'Internet, Cyber Security & Web Applications', max_theory: 45, obt_theory: 37, max_practical: 45, obt_practical: 39 },
-      { code: 'DCA-Y106', name: 'Annual Project Lab Assessment & Viva-Voce', max_theory: 46, obt_theory: 38, max_practical: 46, obt_practical: 40 }
-    ];
-  }
-
   const studentName = m.student_name || s.name || '';
   const fatherName = m.father_name || s.father_name || '';
   const motherName = m.mother_name || s.mother_name || '';
@@ -5630,10 +5668,31 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
   const courseName = m.course_name || s.course || s.course_name || 'Diploma Course';
   const examSession = m.exam_session || '2026-27';
   const term = m.term || activeTerm || 'Annual Examination';
-  const evaluationType = m.evaluation_type || (window.mrkEvalPattern === 'semester' ? 'semester' : 'annual');
+  const isSemester = window.mrkEvalPattern === 'semester' || String(term).toLowerCase().includes('sem') || String(s.evaluation_type || '').toLowerCase().includes('semester');
+  const evaluationType = m.evaluation_type || (isSemester ? 'semester' : 'annual');
   const marksheetNo = m.marksheet_no || `PESC/MRK/2026/${String(sId || 1).padStart(5, '0')}`;
   const issueDate = m.issue_date || (m.issued_at ? m.issued_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
   const resultText = m.result || 'PASS';
+  const termKey = `${sId}_${String(term || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+  let subs = [];
+  if (m.subjects) {
+    try {
+      subs = typeof m.subjects === 'string' ? JSON.parse(m.subjects) : m.subjects;
+    } catch (_) { subs = []; }
+  }
+  if (!subs.length && window._customMarksheetData && window._customMarksheetData[termKey]) {
+    subs = window._customMarksheetData[termKey];
+  }
+  if (!subs.length) {
+    try {
+      const saved = localStorage.getItem('pesc_custom_marks_' + termKey);
+      if (saved) subs = JSON.parse(saved);
+    } catch (_) {}
+  }
+  if (!subs.length) {
+    subs = getCourseCurriculumSubjects(courseName, isSemester ? 'semester' : 'yearly', term);
+  }
 
   const modal = document.createElement('div');
   modal.id = 'centreEditMarksheetModal';
@@ -5954,8 +6013,10 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
         if (payload.course_name) stu.course = payload.course_name;
       }
       window._customMarksheetData = window._customMarksheetData || {};
+      window._customMarksheetData[termKey] = subsPayload;
       window._customMarksheetData[sId] = subsPayload;
       try {
+        localStorage.setItem('pesc_custom_marks_' + termKey, JSON.stringify(subsPayload));
         localStorage.setItem('pesc_custom_marks_' + sId, JSON.stringify(subsPayload));
       } catch (_) {}
 

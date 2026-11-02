@@ -446,16 +446,53 @@ function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
     }
   }
 
-  // 2. Check if course in store.courses has subjects configured by Head Office
+  // 2. Resolve COURSE_CURRICULUM_DATA key (prioritized for semester mode)
+  const sortedKeys = Object.keys(COURSE_CURRICULUM_DATA).sort((a, b) => b.length - a.length);
+  let key = sortedKeys.find(k => norm === k);
+  if (!key) {
+    key = sortedKeys.find(k => (COURSE_CURRICULUM_DATA[k].name && norm.includes(COURSE_CURRICULUM_DATA[k].name.toUpperCase())) || new RegExp('\\b' + k + '\\b').test(norm) || norm.includes(k));
+  }
+  if (!key) {
+    if (norm.includes('NURSERY') || norm.includes('NTT') || norm.includes('TEACHER')) key = 'NTT';
+    else if (norm.includes('ADVANCED') || norm.includes('ADCA')) key = 'ADCA';
+    else if (norm.includes('PGDCA')) key = 'PGDCA';
+    else if (norm.includes('DCA')) key = 'DCA';
+    else if (norm.includes('TALLY')) key = 'TALLY';
+    else if (norm.includes('CCC')) key = 'CCC';
+    else if (norm.includes('DTP') || norm.includes('PUBLISHING')) key = 'DTP';
+    else if (norm.includes('HARDWARE') || norm.includes('NETWORKING')) key = 'HARDWARE';
+    else if (norm.includes('YOGA')) key = 'YOGA';
+    else if (norm.includes('FASHION')) key = 'FASHION';
+  }
+
+  // 3. For semester pattern: COURSE_CURRICULUM_DATA takes precedence so Sem 1 & Sem 2 have distinct subjects
+  if (pattern === 'semester' && key && COURSE_CURRICULUM_DATA[key]) {
+    const courseObj = COURSE_CURRICULUM_DATA[key];
+    const patObj = courseObj.semester || {};
+    if (patObj[term]) return patObj[term];
+    if (term.includes('2') || term.toLowerCase().includes('second')) return patObj['Semester 2'] || Object.values(patObj)[1] || patObj['Semester 1'];
+    if (term.includes('3') || term.toLowerCase().includes('third')) return patObj['Semester 3'] || Object.values(patObj)[2] || patObj['Semester 1'];
+    if (term.includes('4') || term.toLowerCase().includes('fourth')) return patObj['Semester 4'] || Object.values(patObj)[3] || patObj['Semester 1'];
+    return patObj['Semester 1'] || Object.values(patObj)[0];
+  }
+
+  // 4. Check if course in store.courses has subjects configured by Head Office
   if (co && co.subjects) {
     let rawSubs = null;
     try { rawSubs = typeof co.subjects === 'string' ? JSON.parse(co.subjects) : co.subjects; } catch (_) {}
     if (Array.isArray(rawSubs) && rawSubs.length > 0) {
-      return rawSubs.map((s, idx) => {
+      let selectedSubs = rawSubs;
+      if (pattern === 'semester') {
+        const mid = Math.ceil(rawSubs.length / 2);
+        const isSecond = term.includes('2') || term.toLowerCase().includes('second');
+        selectedSubs = isSecond ? rawSubs.slice(mid) : rawSubs.slice(0, mid);
+        if (!selectedSubs.length) selectedSubs = rawSubs;
+      }
+      return selectedSubs.map((s, idx) => {
         const th = (s.theory !== undefined ? +s.theory : (s.max_theory !== undefined ? +s.max_theory : 50)) || 50;
         const pr = (s.practical !== undefined ? +s.practical : (s.max_practical !== undefined ? +s.max_practical : 50)) || 50;
         return {
-          code: s.code || `${co.code || 'SUB'}${idx + 1}`,
+          code: s.code || `${co.code || 'SUB'}-${pattern === 'semester' ? (term.includes('2') ? 'S20' : 'S10') : 'Y10'}${idx + 1}`,
           name: s.name || (typeof s === 'string' ? s : `Subject ${idx + 1}`),
           theory: th,
           max_theory: th,
@@ -468,20 +505,7 @@ function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
     }
   }
 
-  let key = Object.keys(COURSE_CURRICULUM_DATA).find(k => norm === k || norm.includes(k) || (COURSE_CURRICULUM_DATA[k].name && norm.includes(COURSE_CURRICULUM_DATA[k].name.toUpperCase())));
-  if (!key) {
-    if (norm.includes('NURSERY') || norm.includes('NTT') || norm.includes('TEACHER')) key = 'NTT';
-    else if (norm.includes('ADVANCED') || norm.includes('ADCA')) key = 'ADCA';
-    else if (norm.includes('DCA')) key = 'DCA';
-    else if (norm.includes('TALLY')) key = 'TALLY';
-    else if (norm.includes('CCC')) key = 'CCC';
-    else if (norm.includes('PGDCA')) key = 'PGDCA';
-    else if (norm.includes('DTP') || norm.includes('PUBLISHING')) key = 'DTP';
-    else if (norm.includes('HARDWARE') || norm.includes('NETWORKING')) key = 'HARDWARE';
-    else if (norm.includes('YOGA')) key = 'YOGA';
-    else if (norm.includes('FASHION')) key = 'FASHION';
-  }
-
+  // 5. Yearly fallback from COURSE_CURRICULUM_DATA
   if (key && COURSE_CURRICULUM_DATA[key]) {
     const courseObj = COURSE_CURRICULUM_DATA[key];
     const patObj = courseObj[pattern] || {};
@@ -5050,16 +5074,18 @@ export default {
         const studentId = Number(body.student_id || mrkId);
         const student = store.students.find(s => Number(s.id) === studentId || (body.student_code && s.student_code === body.student_code));
         const course = student ? store.courses.find(co => co.id === student.course_id) : null;
-        const evalType = String(body.evaluation_type || (student && student.evaluation_type) || 'annual').toLowerCase();
+        const isSemesterReq = String(body.evaluation_type || '').toLowerCase().includes('semester') || 
+                              String(body.term || '').toLowerCase().includes('sem');
+        const evalType = isSemesterReq ? 'semester' : String((student && student.evaluation_type) || 'annual').toLowerCase();
         const term = String(body.term || (evalType.includes('semester') ? 'Semester 1' : 'Annual Examination')).trim();
 
         // SEQUENTIAL RULE ENFORCEMENT: Semester 2 cannot be issued until Semester 1 is issued
         const isSem2 = term.toLowerCase().includes('sem 2') || term.toLowerCase().includes('semester 2') || term.toLowerCase().includes('2nd sem');
         if (evalType.includes('semester') && isSem2 && student) {
           const hasSem1 = store.marksheets.some(m => 
-            (Number(m.student_id) === Number(student.id) || (student.student_code && m.student_code === student.student_code)) &&
+            (Number(m.student_id) === Number(student.id) || (student.student_code && String(m.student_code).trim() === String(student.student_code).trim()) || (student.roll_no && String(m.roll_no).trim() === String(student.roll_no).trim())) &&
             (String(m.term || '').toLowerCase().includes('sem 1') || String(m.term || '').toLowerCase().includes('semester 1') || String(m.term || '').toLowerCase().includes('1st sem') || String(m.term || '').toLowerCase().includes('sem-1') || String(m.term || '').toLowerCase().includes('semester i') || String(m.term || '').toLowerCase().includes('sem i') || String(m.term || '').toLowerCase() === 'semester 1' || String(m.term || '').toLowerCase() === '1st semester') &&
-            (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved)
+            (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved || m.marksheet_no)
           );
           if (!hasSem1) {
             return jsonResponse({
@@ -5072,9 +5098,9 @@ export default {
         const isYear2 = term.toLowerCase().includes('2nd year') || term.toLowerCase().includes('year 2');
         if (isYear2 && student) {
           const hasYear1 = store.marksheets.some(m => 
-            (Number(m.student_id) === Number(student.id) || (student.student_code && m.student_code === student.student_code)) &&
+            (Number(m.student_id) === Number(student.id) || (student.student_code && String(m.student_code).trim() === String(student.student_code).trim()) || (student.roll_no && String(m.roll_no).trim() === String(student.roll_no).trim())) &&
             (String(m.term || '').toLowerCase().includes('1st year') || String(m.term || '').toLowerCase().includes('year 1') || String(m.term || '').toLowerCase().includes('annual')) &&
-            (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved)
+            (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved || m.marksheet_no)
           );
           if (!hasYear1) {
             return jsonResponse({
@@ -5095,7 +5121,8 @@ export default {
         await persistToKV(env, 'centres', store.centres);
 
         let mrk = store.marksheets.find(x => 
-          Number(x.student_id) === studentId && String(x.term || '').toLowerCase() === term.toLowerCase()
+          (Number(x.student_id) === studentId || (student && student.student_code && x.student_code === student.student_code)) &&
+          String(x.term || '').toLowerCase() === term.toLowerCase()
         );
         if (!mrk) {
           const nextId = store.marksheets.length ? Math.max(...store.marksheets.map(m => Number(m.id) || 0)) + 1 : 1;
@@ -5107,7 +5134,14 @@ export default {
         mrk.centre_id = (c && c.id) ? Number(c.id) : (student ? Number(student.centre_id) : 1);
         mrk.term = term;
         mrk.evaluation_type = evalType;
-        if (student && student.student_code) mrk.student_code = student.student_code;
+        if (student) {
+          mrk.student_code = student.student_code || mrk.student_code;
+          mrk.roll_no = student.roll_no || student.student_code || mrk.roll_no;
+          mrk.student_name = student.name || mrk.student_name;
+          mrk.father_name = student.father_name || mrk.father_name;
+          mrk.mother_name = student.mother_name || mrk.mother_name;
+          mrk.course_name = student.course_name || student.course || (course ? course.name : mrk.course_name);
+        }
         mrk.header_type = body.header_type || 'council';
         if (mrk.header_type === 'council') {
           mrk.header_title = 'PURVANCHAL EDUCATION & SKILL COUNCIL';
@@ -5127,11 +5161,44 @@ export default {
         if (!mrk.token) {
           mrk.token = 'mrk-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
         }
+
+        // Subjects assignment: Use passed subjects or term-specific curriculum subjects
+        if (Array.isArray(body.subjects) && body.subjects.length > 0) {
+          mrk.subjects = body.subjects;
+        } else if (!mrk.subjects || !Array.isArray(mrk.subjects) || mrk.subjects.length === 0) {
+          mrk.subjects = getCourseCurriculumSubjects(mrk.course_name || (course && course.name), evalType, term);
+        }
+
+        // Compute total_max, total_obtained, percentage, grade
+        let totMax = 0, totObt = 0;
+        if (Array.isArray(mrk.subjects)) {
+          mrk.subjects.forEach(sub => {
+            const thM = +(sub.max_theory !== undefined ? sub.max_theory : (sub.theory || sub.max || 50));
+            const thO = +(sub.obt_theory !== undefined ? sub.obt_theory : (sub.obt !== undefined ? Math.round(sub.obt * 0.5) : Math.round(thM * 0.8)));
+            const prM = +(sub.max_practical !== undefined ? sub.max_practical : (sub.practical || 50));
+            const prO = +(sub.obt_practical !== undefined ? sub.obt_practical : (sub.obt !== undefined ? Math.round(sub.obt * 0.5) : Math.round(prM * 0.85)));
+            totMax += (thM + prM);
+            totObt += (thO + prO);
+          });
+        }
+        mrk.total_max = totMax || 600;
+        mrk.total_obtained = totObt || 480;
+        mrk.percentage = mrk.total_max > 0 ? Math.round((mrk.total_obtained / mrk.total_max) * 1000) / 10 : 80;
+        mrk.grade = mrk.percentage >= 80 ? 'A+' : mrk.percentage >= 70 ? 'A' : 'B';
+        mrk.result = 'PASS';
+
         if (student) {
           student.marksheet_id = mrk.id;
           student.marksheet_no = mrk.marksheet_no;
           student.marksheet_status = 'Approved';
-          if (!evalType.includes('semester') || isSem2) {
+          if (evalType.includes('semester')) {
+            student.evaluation_type = 'semester';
+            if (isSem2) {
+              student.has_marksheet = true;
+              student.is_passout = true;
+            }
+          } else {
+            student.evaluation_type = 'annual';
             student.has_marksheet = true;
             student.is_passout = true;
           }
