@@ -827,20 +827,21 @@ const MODULES = [
   { id: 'AddStudent', num: '2', title: 'Add Student', desc: 'Naya student add, Course dropdown, Fees, Photo upload', icon: '➕' },
   { id: 'MyCourses', num: '3', title: 'My Courses', desc: 'Apna Selling Price khud set karega, System Fees change nahi', icon: '📚' },
   { id: 'FeesCollection', num: '4', title: 'Fees Collection', desc: 'Kitna jama, kitna pending, Receipt, Payment link', icon: '💰' },
-  { id: 'CertificatePrinting', num: '5', title: 'Certificate Printing', desc: '3 Option: Council Only / Institute Only / Both Dual', icon: '📜' },
-  { id: 'MarksheetPrinting', num: '6', title: 'Marksheet Printing', desc: 'Single + Semester wise dono alag nikal sakta hai', icon: '📊' },
-  { id: 'CertificateSemester', num: '7', title: 'Certificate Semester', desc: 'Ek hi Certificate pe saare Semester ka Grade', icon: '📋' },
-  { id: 'MoharSignature', num: '8', title: 'Mohar + Signature Upload', desc: 'Apna Mohar/Seal aur Sign khud lagayega', icon: '🖋️' },
-  { id: 'IDCardGenerate', num: '9', title: 'ID Card Generate', desc: 'Institute ya Council naam se ID Card nikalna', icon: '🪪' },
-  { id: 'Attendance', num: '10', title: 'Attendance', desc: 'Student attendance, monthly report', icon: '📅' },
-  { id: 'Assignments', num: '11', title: 'Assignments / Assessment', desc: 'Homework, Online Test, Marks dalna', icon: '📝' },
-  { id: 'Reports', num: '12', title: 'Reports / Analytics', desc: 'Business, Course Sale, Profit Report', icon: '📈' },
-  { id: 'Events', num: '13', title: 'Events / Announcement', desc: 'Notice, Chhutti ka message sabko', icon: '📢' },
-  { id: 'Library', num: '14', title: 'Library / Study Material', desc: 'PDF Notes, Video upload', icon: '📖' },
-  { id: 'Helpdesk', num: '15', title: 'Helpdesk / Messages', desc: 'Student doubt, complaint ka jawab', icon: '💬' },
-  { id: 'Payments', num: '16', title: 'Payments / Wallet', desc: 'Council ko System Fees jama, Wallet balance', icon: '💳' },
-  { id: 'Profile', num: '17', title: 'Profile / Settings', desc: 'Logo, Name, Address, portal website settings', icon: '⚙️' },
-  { id: 'AffiliationCert', num: '18', title: 'Affiliation Certificate', desc: 'Council dwara jaree Kendra Manyata Praman Patra', icon: '🏆' },
+  { id: 'DownloadCertificate', num: '5', title: 'Download Certificate & Marksheet', desc: 'Direct 1-Click Print & PDF (PMKVYEDU Strategy)', icon: '📥' },
+  { id: 'CertificatePrinting', num: '6', title: 'Certificate Printing & Issue', desc: '3 Option: Council Only / Institute Only / Both Dual', icon: '📜' },
+  { id: 'MarksheetPrinting', num: '7', title: 'Marksheet Printing & Issue', desc: 'Single + Semester wise dono alag nikal sakta hai', icon: '📊' },
+  { id: 'CertificateSemester', num: '8', title: 'Certificate Semester', desc: 'Ek hi Certificate pe saare Semester ka Grade', icon: '📋' },
+  { id: 'MoharSignature', num: '9', title: 'Mohar + Signature Upload', desc: 'Apna Mohar/Seal aur Sign khud lagayega', icon: '🖋️' },
+  { id: 'IDCardGenerate', num: '10', title: 'ID Card Generate', desc: 'Institute ya Council naam se ID Card nikalna', icon: '🪪' },
+  { id: 'Attendance', num: '11', title: 'Attendance', desc: 'Student attendance, monthly report', icon: '📅' },
+  { id: 'Assignments', num: '12', title: 'Assignments / Assessment', desc: 'Homework, Online Test, Marks dalna', icon: '📝' },
+  { id: 'Reports', num: '13', title: 'Reports / Analytics', desc: 'Business, Course Sale, Profit Report', icon: '📈' },
+  { id: 'Events', num: '14', title: 'Events / Announcement', desc: 'Notice, Chhutti ka message sabko', icon: '📢' },
+  { id: 'Library', num: '15', title: 'Library / Study Material', desc: 'PDF Notes, Video upload', icon: '📖' },
+  { id: 'Helpdesk', num: '16', title: 'Helpdesk / Messages', desc: 'Student doubt, complaint ka jawab', icon: '💬' },
+  { id: 'Payments', num: '17', title: 'Payments / Wallet', desc: 'Council ko System Fees jama, Wallet balance', icon: '💳' },
+  { id: 'Profile', num: '18', title: 'Profile / Settings', desc: 'Logo, Name, Address, portal website settings', icon: '⚙️' },
+  { id: 'AffiliationCert', num: '19', title: 'Affiliation Certificate', desc: 'Council dwara jaree Kendra Manyata Praman Patra', icon: '🏆' },
 ];
 
 // Render Left Sidebar Navigation (17 Items)
@@ -1576,7 +1577,194 @@ const views = {
     `;
   },
 
-  // 5. Certificate Printing (3 Options: Council Only / Institute Only / Both Dual)
+  // 5. Download Certificate & Marksheet (PMKVYEDU Strategy - Navyacomputer exact workflow)
+  async DownloadCertificate() {
+    const [sData, crtData, mData, dash] = await Promise.all([
+      api('/api/centre/students'),
+      api('/api/centre/certificates').catch(() => ({ certificates: [] })),
+      api('/api/centre/marksheets').catch(() => ({ marksheets: [] })),
+      api('/api/centre/dashboard').catch(() => ({}))
+    ]);
+    const students = sData.students || [];
+    const certs = crtData.certificates || [];
+    const mrks = mData.marksheets || [];
+    const centre = dash.centre || currentCentre || {};
+    window._currentStudents = students;
+    window._centreMarksheets = mrks;
+
+    // Fast lookup for issued status
+    const issuedMap = new Set();
+    certs.forEach(c => {
+      if (c.student_id) issuedMap.add(Number(c.student_id));
+      if (c.student_code) issuedMap.add(String(c.student_code).trim());
+      if (c.roll_no) issuedMap.add(String(c.roll_no).trim());
+    });
+    mrks.forEach(m => {
+      if (m.student_id) issuedMap.add(Number(m.student_id));
+      if (m.student_code) issuedMap.add(String(m.student_code).trim());
+      if (m.roll_no) issuedMap.add(String(m.roll_no).trim());
+    });
+
+    // Students with at least one certificate or marksheet issued
+    const issuedList = students.filter(s => {
+      const mrkInfo = window.getStudentMarksheetInfo(s, mrks);
+      const hasCert = s.certificate_id || s.cert_no || issuedMap.has(Number(s.id)) || (s.student_code && issuedMap.has(String(s.student_code).trim())) || (s.roll_no && issuedMap.has(String(s.roll_no).trim()));
+      return hasCert || mrkInfo.hasAnyApproved || mrkInfo.studentMrks.length > 0 || s.is_passout;
+    });
+
+    const centreCity = centre.district || centre.city || 'Shahgarh';
+
+    V.innerHTML = `
+      <div style="max-width:1180px; margin:0 auto; font-family:'Inter', Arial, sans-serif;">
+        
+        <!-- Header Banner: Dark Blue (Exact PMKVYEDU Navyacomputer layout) -->
+        <div style="background:#001f5c; color:#ffffff; padding:12px 20px; text-align:center; border-radius:8px 8px 0 0;">
+          <h2 style="margin:0; font-size:1.35rem; font-weight:800; letter-spacing:0.3px;">Issued Certificate (जारी प्रमाणपत्र एवं अंकतालिका डाउनलोड)</h2>
+        </div>
+
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-top:none; border-radius:0 0 8px 8px; padding:20px; box-shadow:0 4px 15px rgba(0,0,0,0.05); margin-bottom:24px;">
+          
+          <!-- Filter Bar (Exact PMKVYEDU layout) -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:280px; max-width:440px;">
+              <label style="font-size:0.88rem; font-weight:700; color:#334155; white-space:nowrap;">Roll No / Name:</label>
+              <input type="text" id="certSearchInput" placeholder="Enter Roll No or Candidate Name" style="width:100%; padding:8px 12px; border:1.5px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" id="btnApplyCertFilter" class="btn sm" style="background:#4338ca; color:#ffffff; font-weight:700; padding:8px 20px; border-radius:6px;">Filter</button>
+              <button type="button" id="btnRemoveCertFilter" class="btn sm" style="background:#dc2626; color:#ffffff; font-weight:700; padding:8px 20px; border-radius:6px;">Remove Filter</button>
+            </div>
+            <div style="margin-left:auto; font-size:0.85rem; color:#64748b;">
+              Showing <b id="certCountBadge" style="color:#0f172a;">${issuedList.length}</b> issued candidate records
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div id="issuedCertTableWrap" style="overflow-x:auto;">
+            ${renderDownloadCertTable(issuedList, certs, mrks, centreCity)}
+          </div>
+        </div>
+      </div>
+    `;
+
+    function renderDownloadCertTable(list, allCerts, allMrks, city) {
+      if (!list.length) {
+        return `
+          <div style="text-align:center; padding:40px 20px; color:#64748b; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:8px;">
+            <span style="font-size:2rem; display:block; margin-bottom:8px;">📜</span>
+            <b style="font-size:1.05rem; color:#0f172a; display:block; margin-bottom:4px;">No Issued Certificates Found</b>
+            <p style="margin:0; font-size:0.88rem;">जैसे ही आप किसी छात्र का प्रमाणपत्र या अंकतालिका जारी करेंगे, उसका डायरेक्ट प्रिंट व पीडीएफ लिंक यहाँ प्रदर्शित होगा।</p>
+          </div>
+        `;
+      }
+
+      return `
+        <table style="width:100%; border-collapse:collapse; font-size:0.88rem; border:1px solid #e2e8f0;">
+          <thead>
+            <tr style="background:#f1f5f9; color:#334155; text-align:left; border-bottom:2px solid #cbd5e1;">
+              <th style="padding:10px 12px; width:40px; text-align:center;">#</th>
+              <th style="padding:10px 14px;">Student</th>
+              <th style="padding:10px 14px;">Course</th>
+              <th style="padding:10px 14px;">grade</th>
+              <th style="padding:10px 14px;">Issue</th>
+              <th style="padding:10px 14px;">Edit/update</th>
+              <th style="padding:10px 14px; text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map((s, idx) => {
+              const mrkInfo = window.getStudentMarksheetInfo(s, allMrks);
+              const cert = allCerts.find(c => c.student_id == s.id || c.student_code === s.student_code || c.roll_no === s.roll_no);
+              const mrk = (mrkInfo.studentMrks && mrkInfo.studentMrks[0]) || allMrks.find(m => m.student_id == s.id || m.student_code === s.student_code || m.roll_no === s.roll_no);
+              
+              const gradeStr = (cert && cert.grade) || (mrk && mrk.grade) || s.grade || 'A';
+              const pctStr = (mrk && (mrk.percentage || mrk.marks_percentage)) || s.percentage || '78.5';
+              const issueDate = (cert && (cert.issued_at || cert.issue_date)) || (mrk && (mrk.issued_at || mrk.issue_date)) || new Date().toISOString().slice(0, 10);
+              const courseTitle = esc(s.course || s.course_name || 'Diploma');
+
+              const isSemesterCourse = mrkInfo.isSemester;
+
+              return `
+                <tr style="border-bottom:1px solid #e2e8f0; background:${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
+                  <td style="padding:10px 12px; text-align:center; color:#64748b; font-weight:700;">${idx + 1}</td>
+                  
+                  <td style="padding:10px 14px;">
+                    <div style="font-weight:700; color:#0f172a; font-size:0.92rem;">${esc(s.name)}</div>
+                    <div style="font-family:monospace; font-size:0.8rem; color:#64748b; margin-top:2px;">(${esc(s.roll_no || s.student_code)})</div>
+                  </td>
+
+                  <td style="padding:10px 14px;">
+                    <div style="font-weight:600; color:#1e293b;">${courseTitle}</div>
+                    <div style="font-size:0.75rem; color:#64748b; font-style:italic; margin-top:2px;">design-4 / official_format</div>
+                  </td>
+
+                  <td style="padding:10px 14px;">
+                    <div style="color:#0284c7; font-weight:800; font-size:0.92rem;">${esc(gradeStr)} / ${esc(pctStr)}%</div>
+                    <div style="margin-top:4px; font-size:0.84rem;">
+                      <span style="color:#475569;">Print</span>
+                      <a href="/print?type=certificate&student_id=${s.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="color:#0284c7; font-weight:700; text-decoration:none; margin-left:3px;">Certificate</a>
+                      ${isSemesterCourse ? `
+                        <span style="color:#cbd5e1; margin:0 4px;">|</span>
+                        <a href="/print?type=marksheet&student_id=${s.id}&term=Semester%201&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="color:#0284c7; font-weight:700; text-decoration:none;">Sem 1 Marksheet</a>
+                        <span style="color:#cbd5e1; margin:0 4px;">|</span>
+                        <a href="/print?type=marksheet&student_id=${s.id}&term=Semester%202&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="color:#0284c7; font-weight:700; text-decoration:none;">Sem 2 Marksheet</a>
+                      ` : `
+                        <span style="color:#cbd5e1; margin:0 4px;">|</span>
+                        <a href="/print?type=marksheet&student_id=${s.id}&term=Annual%20Examination&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="color:#0284c7; font-weight:700; text-decoration:none;">Marksheet</a>
+                      `}
+                    </div>
+                  </td>
+
+                  <td style="padding:10px 14px; font-size:0.84rem;">
+                    <div style="font-family:monospace; color:#334155; font-weight:600;">${esc(issueDate)}</div>
+                    <div style="color:#64748b; font-size:0.8rem; margin-top:2px;">${esc(city)}</div>
+                  </td>
+
+                  <td style="padding:10px 14px; font-size:0.84rem;">
+                    <a href="javascript:void(0)" onclick="openCentreEditCertModal(${s.certificate_id || s.id}, ${s.id})" style="color:#d97706; font-weight:700; text-decoration:none;">Edit Certificate</a>
+                    <span style="color:#cbd5e1; margin:0 4px;">|</span>
+                    <a href="javascript:void(0)" onclick="openCentreEditMrkModal(${s.marksheet_id || s.id}, ${s.id})" style="color:#d97706; font-weight:700; text-decoration:none;">Update Marks</a>
+                  </td>
+
+                  <td style="padding:10px 14px; text-align:right;">
+                    <a href="javascript:void(0)" onclick="deleteCentreStudent(${s.id}, '${esc(s.name)}', '${esc(s.student_code)}')" style="color:#dc2626; font-weight:700; font-size:0.84rem; text-decoration:none;">Delete Certi. and Marksheet</a>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    const searchInput = $('#certSearchInput');
+    const applyBtn = $('#btnApplyCertFilter');
+    const removeBtn = $('#btnRemoveCertFilter');
+
+    function filterTable() {
+      const q = (searchInput ? searchInput.value : '').toLowerCase().trim();
+      const filtered = q ? issuedList.filter(s =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.student_code || '').toLowerCase().includes(q) ||
+        (s.roll_no || '').toLowerCase().includes(q) ||
+        (s.course || '').toLowerCase().includes(q)
+      ) : issuedList;
+      $('#issuedCertTableWrap').innerHTML = renderDownloadCertTable(filtered, certs, mrks, centreCity);
+      const countEl = $('#certCountBadge');
+      if (countEl) countEl.textContent = filtered.length;
+    }
+
+    if (applyBtn) applyBtn.onclick = filterTable;
+    if (searchInput) searchInput.oninput = filterTable;
+    if (removeBtn) {
+      removeBtn.onclick = () => {
+        if (searchInput) searchInput.value = '';
+        filterTable();
+      };
+    }
+  },
+
+  // 6. Certificate Printing (3 Options: Council Only / Institute Only / Both Dual)
   async CertificatePrinting() {
     const [sData, cData, crtData, mData] = await Promise.all([
       api('/api/centre/students'),
@@ -1730,7 +1918,8 @@ const views = {
                       </td>
                       <td style="padding:10px 14px; text-align:right;">
                         <div style="display:inline-flex; gap:6px;">
-                          <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentCert(${s.id})">🖨️ View &amp; Print</button>
+                          <a href="/print?type=certificate&student_id=${s.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Print Certificate (New Tab)">🖨️ Print (New Tab)</a>
+                          <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentCert(${s.id})">👁️ Preview</button>
                           <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:700;" onclick="openCentreEditCertModal(${s.certificate_id || s.id}, ${s.id})">✏️ Edit</button>
                         </div>
                       </td>
@@ -1899,7 +2088,8 @@ const views = {
                       </td>
                       <td style="padding:10px 14px; text-align:right;">
                         <div style="display:inline-flex; gap:6px;">
-                          <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${s.id})">🖨️ View &amp; Print</button>
+                          <a href="/print?type=marksheet&student_id=${s.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Print Marksheet (New Tab)">🖨️ Print (New Tab)</a>
+                          <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${s.id})">👁️ Preview</button>
                           <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:700;" onclick="openCentreEditMrkModal(${s.marksheet_id || s.id}, ${s.id})">✏️ Edit Marks</button>
                         </div>
                       </td>
@@ -2059,44 +2249,128 @@ const views = {
     setupImageUpload('signFileInput', 'signUrlInput', 'signPreviewBox', '✍️');
   },
 
-  // 9. ID Card Generate (Institute ya Council naam se ID Card nikalna)
+  // 10. ID Card Generate (Institute ya Council naam se ID Card nikalna - PMKVYEDU Strategy)
   async IDCardGenerate() {
     const sData = await api('/api/centre/students');
     const students = sData.students || [];
 
     V.innerHTML = `
-      <div style="margin-bottom:20px;">
-        <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem;">9. ID Card Generator</h2>
-        <p class="muted" style="margin:0;">Institute ya Council ke naam se digital student PVC ID card generate aur print karein</p>
-      </div>
+      <div style="max-width:1180px; margin:0 auto; font-family:'Inter', Arial, sans-serif;">
+        
+        <!-- Header Banner: Dark Blue (Exact PMKVYEDU Navyacomputer layout) -->
+        <div style="background:#001f5c; color:#ffffff; padding:12px 20px; text-align:center; border-radius:8px 8px 0 0;">
+          <h2 style="margin:0; font-size:1.35rem; font-weight:800; letter-spacing:0.3px;">Student Id Cards (छात्र पहचान पत्र प्रिंट)</h2>
+        </div>
 
-      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:24px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
-          <div style="flex:1; max-width:320px;">
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Select Student:</label>
-            <select id="idCardStudentSelect" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
-              ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-father="${esc(s.father_name || 'Father')}" data-mobile="${esc(s.mobile || '')}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)})</option>`).join('')}
-            </select>
-          </div>
-
-          <div>
-            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Header Style:</label>
-            <div style="display:flex; gap:8px;">
-              <button class="btn gold sm active" id="btnIdCouncil" onclick="setIdCardStyle('council')">Council Accredited</button>
-              <button class="btn alt sm" id="btnIdInst" onclick="setIdCardStyle('institute')">Institute Official</button>
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-top:none; border-radius:0 0 8px 8px; padding:20px; box-shadow:0 4px 15px rgba(0,0,0,0.05); margin-bottom:24px;">
+          
+          <!-- Bulk Print Controls (Exact PMKVYEDU Navyacomputer layout) -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 18px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <label style="display:flex; align-items:center; gap:6px; font-weight:700; font-size:0.9rem; color:#1e293b; cursor:pointer;">
+                <input type="checkbox" id="selectAllIdCards" style="width:16px; height:16px; cursor:pointer;"> Select All Candidates
+              </label>
+              <span style="color:#64748b; font-size:0.85rem;">(Total: ${students.length} students)</span>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button type="button" id="btnPrintSelectedIdCards" class="btn sm" style="background:#4338ca; color:#ffffff; font-weight:700; padding:8px 22px; border-radius:6px; box-shadow:0 2px 8px rgba(67,56,202,0.3);">
+                🖨️ Print Selected (A4 Sheet)
+              </button>
+              <button type="button" id="btnPrintSelectedIdCardsFmt2" class="btn sm" style="background:#312e81; color:#ffffff; font-weight:700; padding:8px 22px; border-radius:6px;">
+                🖨️ Print Selected (Format 2)
+              </button>
             </div>
           </div>
 
-          <div style="align-self:end;">
-            <button class="btn sm" style="background:#0284c7; color:#fff; padding:10px 20px; font-weight:700;" onclick="window.print()">🖨️ Print PVC ID Card</button>
+          <!-- Students Checkbox Table -->
+          <div style="overflow-x:auto; margin-bottom:28px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.88rem; border:1px solid #e2e8f0;">
+              <thead>
+                <tr style="background:#f1f5f9; color:#334155; text-align:left; border-bottom:2px solid #cbd5e1;">
+                  <th style="padding:10px 12px; width:40px; text-align:center;"></th>
+                  <th style="padding:10px 12px; width:40px; text-align:center;">#</th>
+                  <th style="padding:10px 14px;">Enrollment No</th>
+                  <th style="padding:10px 14px;">Name</th>
+                  <th style="padding:10px 14px;">Father Name</th>
+                  <th style="padding:10px 14px;">Course</th>
+                  <th style="padding:10px 14px; text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${students.map((s, idx) => `
+                  <tr style="border-bottom:1px solid #e2e8f0; background:${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
+                    <td style="padding:10px 12px; text-align:center;">
+                      <input type="checkbox" class="stu-id-check" value="${s.id}" style="width:16px; height:16px; cursor:pointer;">
+                    </td>
+                    <td style="padding:10px 12px; text-align:center; color:#64748b; font-weight:700;">${idx + 1}</td>
+                    <td style="padding:10px 14px; font-family:monospace; font-weight:700; color:#0284c7;">${esc(s.student_code || s.roll_no)}</td>
+                    <td style="padding:10px 14px; font-weight:700; color:#0f172a;">${esc(s.name)}</td>
+                    <td style="padding:10px 14px; color:#475569;">${esc(s.father_name || '—')}</td>
+                    <td style="padding:10px 14px; font-weight:600; color:#1e293b;">${esc(s.course || s.course_name || 'Diploma')}</td>
+                    <td style="padding:10px 14px; text-align:right;">
+                      <a href="/print?type=id-card&student_id=${s.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="color:#0284c7; font-weight:700; text-decoration:none; padding:4px 10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:4px;">🖨️ Print ID Card</a>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
-        </div>
 
-        <div id="idCardPreview" class="printable-area" style="max-width:440px; margin:20px auto; box-shadow:0 10px 25px rgba(0,0,0,0.15); border-radius:12px; overflow:hidden;">
-          <!-- Dynamically filled -->
+          <!-- Single Interactive Preview Section -->
+          <div style="border-top:2px solid #e2e8f0; padding-top:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+              <div>
+                <h3 style="margin:0 0 4px; font-size:1.15rem; color:#064e3b;">Live Single Card Preview (एकल कार्ड प्रीव्यू)</h3>
+                <span class="muted" style="font-size:0.85rem;">Select individual student to preview high-res vertical PVC ID card</span>
+              </div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <select id="idCardStudentSelect" style="padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1; font-weight:600;">
+                  ${students.map(s => `<option value="${s.id}" data-name="${esc(s.name)}" data-code="${esc(s.student_code)}" data-course="${esc(s.course)}" data-father="${esc(s.father_name || 'Father')}" data-mobile="${esc(s.mobile || '')}" data-photo="${esc(s.photo || s.photo_url || '')}">${esc(s.name)} (${esc(s.student_code)})</option>`).join('')}
+                </select>
+                <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:8px 16px;" onclick="const sid=$('#idCardStudentSelect').value; if(sid) window.open('/print?type=id-card&student_id=' + sid + '&slug=' + encodeURIComponent(currentSlug), '_blank');">🖨️ Print Card (New Tab)</button>
+              </div>
+            </div>
+
+            <div id="idCardPreview" style="max-width:380px; margin:20px auto; box-shadow:0 10px 25px rgba(0,0,0,0.15); border-radius:12px; overflow:hidden;">
+              <!-- Dynamically filled -->
+            </div>
+          </div>
         </div>
       </div>
     `;
+
+    // Batch checkbox handlers
+    const selectAllBox = $('#selectAllIdCards');
+    if (selectAllBox) {
+      selectAllBox.onchange = (e) => {
+        const checked = e.target.checked;
+        $$('.stu-id-check').forEach(cb => cb.checked = checked);
+      };
+    }
+
+    const printSelectedBtn = $('#btnPrintSelectedIdCards');
+    if (printSelectedBtn) {
+      printSelectedBtn.onclick = () => {
+        const selected = Array.from($$('.stu-id-check:checked')).map(cb => cb.value);
+        if (selected.length === 0) {
+          alert('कृपया प्रिंट करने के लिए कम से कम एक छात्र को चुनें।');
+          return;
+        }
+        window.open(`/print?type=id-cards-batch&ids=${selected.join(',')}&slug=${encodeURIComponent(currentSlug)}`, '_blank');
+      };
+    }
+
+    const printSelectedFmt2Btn = $('#btnPrintSelectedIdCardsFmt2');
+    if (printSelectedFmt2Btn) {
+      printSelectedFmt2Btn.onclick = () => {
+        const selected = Array.from($$('.stu-id-check:checked')).map(cb => cb.value);
+        if (selected.length === 0) {
+          alert('कृपया प्रिंट करने के लिए कम से कम एक छात्र को चुनें।');
+          return;
+        }
+        window.open(`/print?type=id-cards-batch&ids=${selected.join(',')}&format=2&slug=${encodeURIComponent(currentSlug)}`, '_blank');
+      };
+    }
 
     $('#idCardStudentSelect').onchange = updateIdCardPreview;
     updateIdCardPreview();
@@ -3011,7 +3285,26 @@ function switchModule(modId) {
   }
 }
 
-// Student Table Renderer (Active vs Passout Support)
+// Toggle Student Action Menu dropdown (PMKVYEDU Strategy)
+window.toggleStudentActionMenu = function(e, studentId) {
+  e.stopPropagation();
+  const dropdown = document.getElementById(`stuActionDropdown_${studentId}`);
+  const allDropdowns = document.querySelectorAll('.stu-action-menu');
+  allDropdowns.forEach(d => {
+    if (d !== dropdown) d.style.display = 'none';
+  });
+  if (dropdown) {
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  }
+};
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', () => {
+    const allDropdowns = document.querySelectorAll('.stu-action-menu');
+    allDropdowns.forEach(d => d.style.display = 'none');
+  });
+}
+
+// Student Table Renderer (Active vs Passout Support - PMKVYEDU Strategy)
 function renderStudentTable(students, isPassout = false) {
   if (!students.length) return `<p class="muted" style="text-align:center; padding:20px;">${isPassout ? 'No passout students found.' : 'No active enrolled students yet.'}</p>`;
   window._currentStudents = students;
@@ -3034,14 +3327,29 @@ function renderStudentTable(students, isPassout = false) {
         </div>
       `],
       ['Actions', (r) => `
-        <div style="display:flex; gap:4px; flex-wrap:wrap;">
-          <button class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="viewIssuedStudentCert(${r.id})" title="View & Print Certificate">📜 Cert</button>
-          <button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="View & Print Marksheet">📊 Mrk</button>
-          <button class="btn sm" style="background:#d97706; color:#fff; font-weight:700;" onclick="openCentreEditCertModal(${r.certificate_id || r.id}, ${r.id})" title="Edit Certificate Details (Seals Locked)">✏️ Edit Cert</button>
-          <button class="btn sm" style="background:#b45309; color:#fff; font-weight:700;" onclick="openCentreEditMrkModal(${r.marksheet_id || r.id}, ${r.id})" title="Edit Marksheet & Marks (Seals Locked)">✏️ Edit Mrk</button>
-          <button class="btn sm alt" onclick="showAdmissionFormModal(${r.id})" title="Admission Form">📄 Form</button>
-          <button class="btn sm" style="background:#64748b; color:#fff; font-weight:700;" onclick="toggleCentreStudentStatus(${r.id}, false)" title="Move student back to Active list">📋 Revert Active</button>
-          <button class="btn sm danger" style="background:#dc2626; color:#fff; font-weight:700;" onclick="deleteCentreStudent(${r.id}, '${esc(r.name)}', '${esc(r.student_code)}')" title="Permanently Delete Student">🗑️ Delete</button>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <!-- 1-Click Direct Standalone Print Links (PMKVYEDU Strategy) -->
+          <a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Print Certificate (1-Click PDF)">📜 Cert</a>
+          <a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; text-decoration:none;" title="Print Marksheet (1-Click PDF)">📊 Mrk</a>
+          <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm alt" style="text-decoration:none; font-weight:700;" title="Download Admission Form (A4)">📄 Form</a>
+          <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0f766e; color:#fff; font-weight:700; text-decoration:none;" title="Download ID Card">🪪 ID</a>
+
+          <!-- Sleek Action Dropdown Button (Exact PMKVYEDU Navyacomputer layout) -->
+          <div style="position:relative; display:inline-block;">
+            <button type="button" class="btn sm" style="background:#475569; color:#fff; font-weight:700; padding:6px 12px; border-radius:6px;" onclick="toggleStudentActionMenu(event, ${r.id})">Action ▾</button>
+            <div id="stuActionDropdown_${r.id}" class="stu-action-menu" style="display:none; position:absolute; right:0; top:100%; margin-top:4px; z-index:99999; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.18); min-width:220px; text-align:left; overflow:hidden;">
+              <a href="javascript:void(0)" onclick="quickViewStudent(${r.id})" style="display:block; padding:9px 14px; color:#1e293b; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">👁️ View Student Details</a>
+              <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0284c7; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📄 Download Admission Form (A4)</a>
+              <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0f766e; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">🪪 Download / Print ID Card</a>
+              <a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#047857; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📜 Print Certificate (1-Click PDF)</a>
+              <a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0284c7; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📊 Print Marksheet (1-Click PDF)</a>
+              <a href="javascript:void(0)" onclick="openCentreEditCertModal(${r.certificate_id || r.id}, ${r.id})" style="display:block; padding:9px 14px; color:#d97706; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">✏️ Edit Certificate Details</a>
+              <a href="javascript:void(0)" onclick="openCentreEditMrkModal(${r.marksheet_id || r.id}, ${r.id})" style="display:block; padding:9px 14px; color:#b45309; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">✏️ Edit Marksheet &amp; Marks</a>
+              <a href="javascript:void(0)" onclick="showStudentCredentialsModal(${JSON.stringify(r).replace(/"/g, '&quot;')})" style="display:block; padding:9px 14px; color:#16a34a; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📱 Send Welcome WhatsApp</a>
+              <a href="javascript:void(0)" onclick="toggleCentreStudentStatus(${r.id}, false)" style="display:block; padding:9px 14px; color:#475569; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📋 Revert to Active</a>
+              <a href="javascript:void(0)" onclick="deleteCentreStudent(${r.id}, '${esc(r.name)}', '${esc(r.student_code)}')" style="display:block; padding:9px 14px; color:#dc2626; font-weight:700; font-size:0.86rem; text-decoration:none;">🗑️ Delete Student</a>
+            </div>
+          </div>
         </div>
       `]
     ], students);
@@ -3064,16 +3372,29 @@ function renderStudentTable(students, isPassout = false) {
       return `<span style="color:${pend > 0 ? '#ea580c' : '#16a34a'}; font-weight:700;">₹${pend.toLocaleString('en-IN')}</span>`;
     }],
     ['Actions', (r) => `
-      <div style="display:flex; gap:4px; flex-wrap:wrap;">
-        <button class="btn sm" style="background:#7c3aed; color:#fff; font-weight:700;" onclick="showUploadStudentPhotoModal(${r.id})">📷 Photo</button>
-        <button class="btn sm" style="background:#0284c7; color:#fff;" onclick="quickViewStudent(${r.id})">👁️ View</button>
-        <button class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="showAdmissionFormModal(${r.id})">📄 Form</button>
-        <button class="btn sm alt" onclick="printReceipt(${r.id})">🧾 Receipt</button>
-        <button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Certificate Module">🎓 Cert</button>
-        <button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Marksheet Module">📊 Mrk</button>
-        <button class="btn sm" style="background:#b45309; color:#fff; font-weight:700;" onclick="openCentreEditMrkModal(${r.marksheet_id || r.id}, ${r.id})" title="Edit Marksheet & Marks">✏️ Edit Mrk</button>
-        <button class="btn sm" style="background:#059669; color:#fff; font-weight:700;" onclick="toggleCentreStudentStatus(${r.id}, true)" title="Mark student as passout/graduated">🎓 Mark Passout</button>
-        <button class="btn sm danger" style="background:#dc2626; color:#fff; font-weight:700;" onclick="deleteCentreStudent(${r.id}, '${esc(r.name)}', '${esc(r.student_code)}')" title="Permanently Delete Student">🗑️ Delete</button>
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <!-- 1-Click Direct Standalone Print Links (PMKVYEDU Strategy) -->
+        <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Download Admission Form (A4)">📄 Form</a>
+        <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0f766e; color:#fff; font-weight:700; text-decoration:none;" title="Download ID Card">🪪 ID</a>
+        ${r.certificate_id ? `<a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm gold" style="font-weight:700; text-decoration:none;" title="Print Certificate">🎓 Cert</a>` : `<button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Issue / Print Certificate">🎓 Cert</button>`}
+        ${r.marksheet_id ? `<a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; text-decoration:none;" title="Print Marksheet">📊 Mrk</a>` : `<button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Issue / Print Marksheet">📊 Mrk</button>`}
+
+        <!-- Sleek Action Dropdown Button (Exact PMKVYEDU Navyacomputer layout) -->
+        <div style="position:relative; display:inline-block;">
+          <button type="button" class="btn sm" style="background:#475569; color:#fff; font-weight:700; padding:6px 12px; border-radius:6px;" onclick="toggleStudentActionMenu(event, ${r.id})">Action ▾</button>
+          <div id="stuActionDropdown_${r.id}" class="stu-action-menu" style="display:none; position:absolute; right:0; top:100%; margin-top:4px; z-index:99999; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.18); min-width:220px; text-align:left; overflow:hidden;">
+            <a href="javascript:void(0)" onclick="quickViewStudent(${r.id})" style="display:block; padding:9px 14px; color:#1e293b; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">👁️ View Student Details</a>
+            <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0284c7; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📄 Download Admission Form (A4)</a>
+            <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0f766e; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">🪪 Download / Print ID Card</a>
+            <a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#047857; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📜 Print Certificate (1-Click PDF)</a>
+            <a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0284c7; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📊 Print Marksheet (1-Click PDF)</a>
+            <a href="javascript:void(0)" onclick="showUploadStudentPhotoModal(${r.id})" style="display:block; padding:9px 14px; color:#7c3aed; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📷 Upload Student Photo</a>
+            <a href="javascript:void(0)" onclick="openCentreEditMrkModal(${r.marksheet_id || r.id}, ${r.id})" style="display:block; padding:9px 14px; color:#b45309; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">✏️ Edit Marksheet &amp; Marks</a>
+            <a href="javascript:void(0)" onclick="showStudentCredentialsModal(${JSON.stringify(r).replace(/"/g, '&quot;')})" style="display:block; padding:9px 14px; color:#16a34a; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📱 Send Welcome WhatsApp</a>
+            <a href="javascript:void(0)" onclick="toggleCentreStudentStatus(${r.id}, true)" style="display:block; padding:9px 14px; color:#059669; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">🎓 Mark as Passout</a>
+            <a href="javascript:void(0)" onclick="deleteCentreStudent(${r.id}, '${esc(r.name)}', '${esc(r.student_code)}')" style="display:block; padding:9px 14px; color:#dc2626; font-weight:700; font-size:0.86rem; text-decoration:none;">🗑️ Delete Student</a>
+          </div>
+        </div>
       </div>
     `]
   ], students);

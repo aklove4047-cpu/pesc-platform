@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Official Document Print – Purvanchal Education & Skill Council</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&family=Rozha+One&family=Tiro+Devanagari+Hindi:ital@0;1&family=Yatra+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f1f5f9;
+      font-family: 'Inter', Arial, sans-serif;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Floating Top Toolbar (Screen Only) */
+    .print-topbar {
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 99999;
+      background: #072a60;
+      color: #ffffff;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+    }
+    .print-topbar-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .print-topbar-info .brand-badge {
+      background: #d4af37;
+      color: #072a60;
+      font-weight: 900;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+    .print-topbar-info .title {
+      font-weight: 800;
+      font-size: 0.98rem;
+    }
+    .print-topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-action {
+      border: none;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 0.9rem;
+      padding: 8px 18px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .btn-action.primary {
+      background: linear-gradient(135deg, #10b981, #047857);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+    }
+    .btn-action.primary:hover {
+      background: #059669;
+      transform: translateY(-1px);
+    }
+    .btn-action.secondary {
+      background: #334155;
+      color: #ffffff;
+    }
+    .btn-action.secondary:hover {
+      background: #475569;
+    }
+
+    /* Print Document Container */
+    #printContainer {
+      max-width: 900px;
+      margin: 24px auto 40px;
+      padding: 0 12px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .doc-page-wrapper {
+      background: #ffffff;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
+      border-radius: 8px;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    /* Loading Spinner */
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      width: 100%;
+      max-width: 500px;
+      margin: 40px auto;
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 4px solid #cbd5e1;
+      border-top-color: #047857;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* STRICT PRINT STYLES - ZERO MARGIN, FULL A4, EXACT COLORS */
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    @media print {
+      html, body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      #printContainer {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: none !important;
+        width: 100% !important;
+        display: block !important;
+      }
+      .doc-page-wrapper {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Only Floating Topbar -->
+  <div class="print-topbar no-print">
+    <div class="print-topbar-info">
+      <span class="brand-badge">PESC COUNCIL</span>
+      <div class="title" id="topbarDocTitle">Official Document Print Service</div>
+    </div>
+    <div class="print-topbar-actions">
+      <button class="btn-action primary" onclick="window.print()">🖨️ Print / Save as PDF</button>
+      <button class="btn-action secondary" onclick="window.close()">✕ Close Tab</button>
+    </div>
+  </div>
+
+  <!-- Document Viewport -->
+  <div id="printContainer">
+    <div class="loading-state" id="loadingState">
+      <div class="spinner"></div>
+      <b style="font-size:1.1rem; color:#064e3b; display:block; margin-bottom:4px;">Preparing Official Document…</b>
+      <span style="font-size:0.86rem; color:#64748b;">Rendering high-resolution certificate / marksheet with digital signatures &amp; QR verification</span>
+    </div>
+    <div id="docTarget" class="doc-page-wrapper" style="display:none;"></div>
+  </div>
+
+  <script src="/js/official_templates.js"></script>
+  <script>
+    (async function() {
+      const params = new URLSearchParams(window.location.search);
+      const docType = (params.get('type') || params.get('doc') || 'certificate').toLowerCase();
+      const studentId = params.get('student_id') || params.get('id') || params.get('roll_no') || params.get('code') || '';
+      const chosenTerm = params.get('term') || 'Annual';
+      const format = (params.get('format') || 'council').toLowerCase();
+      const slug = params.get('slug') || params.get('centre') || (typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_slug') : '') || '';
+
+      const topbarTitleEl = document.getElementById('topbarDocTitle');
+      const loadingEl = document.getElementById('loadingState');
+      const docTarget = document.getElementById('docTarget');
+
+      try {
+        // Fetch Required Data
+        const headers = {};
+        if (slug) headers['x-centre-slug'] = slug;
+
+        const [authRes, stuDataRes, certsRes, mrksRes] = await Promise.all([
+          fetch('/api/public/authorities').then(r => r.json()).catch(() => ({})),
+          fetch(`/api/centre/students${slug ? '?slug=' + encodeURIComponent(slug) : ''}`, { headers }).then(r => r.json()).catch(() => ({ students: [] })),
+          fetch(`/api/centre/certificates${slug ? '?slug=' + encodeURIComponent(slug) : ''}`, { headers }).then(r => r.json()).catch(() => ({ certificates: [] })),
+          fetch(`/api/centre/marksheets${slug ? '?slug=' + encodeURIComponent(slug) : ''}`, { headers }).then(r => r.json()).catch(() => ({ marksheets: [] }))
+        ]);
+
+        const authorities = authRes.authorities || {};
+        const students = stuDataRes.students || [];
+        const certificates = certsRes.certificates || [];
+        const marksheets = mrksRes.marksheets || [];
+
+        // Find Target Student
+        let targetStudent = null;
+        if (studentId) {
+          targetStudent = students.find(s => 
+            String(s.id) === String(studentId) || 
+            String(s.student_code || '').trim() === String(studentId).trim() ||
+            String(s.roll_no || '').trim() === String(studentId).trim()
+          );
+        }
+        if (!targetStudent && students.length > 0) {
+          targetStudent = students[0];
+        }
+
+        // Fallback for public direct verification lookup if not found in centre roster
+        if (!targetStudent && studentId) {
+          try {
+            const pubVerify = await fetch(`/api/public/verify?token=${encodeURIComponent(studentId)}`).then(r => r.json()).catch(() => null);
+            if (pubVerify && pubVerify.student) {
+              targetStudent = pubVerify.student;
+              if (pubVerify.certificate) certificates.push(pubVerify.certificate);
+              if (pubVerify.marksheet) marksheets.push(pubVerify.marksheet);
+            }
+          } catch (_) {}
+        }
+
+        if (!targetStudent) {
+          loadingEl.innerHTML = `
+            <div style="font-size:2.4rem; margin-bottom:10px;">⚠️</div>
+            <b style="font-size:1.15rem; color:#dc2626; display:block; margin-bottom:6px;">Student Record Not Found</b>
+            <p style="font-size:0.88rem; color:#64748b; margin:0 0 16px;">The requested candidate record could not be loaded. Please ensure the student ID or roll number is valid.</p>
+            <button class="btn-action secondary" onclick="window.close()">✕ Close Tab</button>
+          `;
+          return;
+        }
+
+        // Resolve Centre details
+        const centre = authorities.centre || {
+          name: targetStudent.centre_name || 'Purvanchal Education Centre',
+          centre_code: targetStudent.centre_code || 'PESC00001',
+          director_name: targetStudent.director_name || 'Centre Director'
+        };
+
+        let renderedHtml = '';
+        let pageTitle = 'Document Print';
+
+        if (docType === 'certificate' || docType === 'cert') {
+          pageTitle = `Certificate – ${targetStudent.name} (${targetStudent.student_code || targetStudent.roll_no})`;
+          topbarTitleEl.textContent = `📜 Official Certificate: ${targetStudent.name}`;
+          
+          let cert = certificates.find(c => 
+            String(c.student_id) === String(targetStudent.id) || 
+            (c.student_code && c.student_code === targetStudent.student_code) ||
+            (c.roll_no && c.roll_no === targetStudent.roll_no)
+          );
+
+          renderedHtml = window.OfficialTemplates ? window.OfficialTemplates.renderCertificateHtml({
+            student: targetStudent,
+            centre: centre,
+            authorities: authorities,
+            certificate: cert,
+            format: format || (cert && cert.header_type) || 'council',
+            term: chosenTerm || (cert && cert.term) || 'Annual Examination'
+          }) : '<p>Loading template...</p>';
+
+        } else if (docType === 'marksheet' || docType === 'mrk') {
+          pageTitle = `Statement of Marks – ${targetStudent.name} (${chosenTerm})`;
+          topbarTitleEl.textContent = `📊 Marksheet (${chosenTerm}): ${targetStudent.name}`;
+
+          const termLower = chosenTerm.toLowerCase();
+          let mrk = marksheets.find(m => {
+            const matchesStu = String(m.student_id) === String(targetStudent.id) || 
+              (m.student_code && m.student_code === targetStudent.student_code) ||
+              (m.roll_no && m.roll_no === targetStudent.roll_no);
+            if (!matchesStu) return false;
+            const mTerm = (m.term || '').toLowerCase();
+            if (termLower.includes('sem 1') || termLower.includes('semester 1') || termLower === 'sem-1') {
+              return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm === '1st sem';
+            }
+            if (termLower.includes('sem 2') || termLower.includes('semester 2') || termLower === 'sem-2') {
+              return mTerm.includes('sem 2') || mTerm.includes('semester 2') || mTerm === '2nd sem';
+            }
+            return true;
+          });
+
+          renderedHtml = window.OfficialTemplates ? window.OfficialTemplates.renderMarksheetHtml({
+            student: targetStudent,
+            centre: centre,
+            authorities: authorities,
+            marksheet: mrk,
+            term: chosenTerm,
+            format: format || (mrk && mrk.header_type) || 'council'
+          }) : '<p>Loading template...</p>';
+
+        } else if (docType === 'admission-form' || docType === 'admission' || docType === 'form') {
+          pageTitle = `Admission Cum Registration Certificate – ${targetStudent.name}`;
+          topbarTitleEl.textContent = `📄 Admission Form: ${targetStudent.name}`;
+
+          renderedHtml = window.OfficialTemplates ? window.OfficialTemplates.renderAdmissionFormHtml({
+            student: targetStudent,
+            centre: centre,
+            authorities: authorities
+          }) : '<p>Loading template...</p>';
+
+        } else if (docType === 'id-card' || docType === 'idcard') {
+          pageTitle = `Student ID Card – ${targetStudent.name}`;
+          topbarTitleEl.textContent = `🪪 Student ID Card: ${targetStudent.name}`;
+
+          renderedHtml = `
+            <div style="padding:40px 20px; display:flex; justify-content:center; background:#ffffff;">
+              <div style="max-width:380px; width:100%; box-shadow:0 8px 30px rgba(0,0,0,0.12); border-radius:12px; overflow:hidden;">
+                ${window.OfficialTemplates ? window.OfficialTemplates.renderStudentIdCardHtml({
+                  student: targetStudent,
+                  centre: centre,
+                  authorities: authorities
+                }) : '<p>Loading ID card...</p>'}
+              </div>
+            </div>
+          `;
+
+        } else if (docType === 'id-cards-batch') {
+          pageTitle = `Student ID Cards Batch Print`;
+          topbarTitleEl.textContent = `🪪 Batch ID Cards Print`;
+
+          const rawIds = (params.get('student_ids') || params.get('ids') || '').split(',').map(s => s.trim()).filter(Boolean);
+          const batchStudents = rawIds.length > 0 
+            ? students.filter(s => rawIds.includes(String(s.id)))
+            : students;
+
+          renderedHtml = `
+            <div style="padding:20px; background:#ffffff;">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px; justify-items:center;">
+                ${batchStudents.map(s => `
+                  <div style="max-width:350px; width:100%; box-shadow:0 4px 15px rgba(0,0,0,0.1); border-radius:10px; overflow:hidden; page-break-inside:avoid; break-inside:avoid;">
+                    ${window.OfficialTemplates ? window.OfficialTemplates.renderStudentIdCardHtml({
+                      student: s,
+                      centre: centre,
+                      authorities: authorities
+                    }) : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        document.title = pageTitle;
+        loadingEl.style.display = 'none';
+        docTarget.innerHTML = renderedHtml;
+        docTarget.style.display = 'block';
+
+        // Auto Trigger Print Dialog
+        setTimeout(() => {
+          window.print();
+        }, 500);
+
+      } catch (err) {
+        console.error('Print Error:', err);
+        loadingEl.innerHTML = `
+          <div style="font-size:2.4rem; margin-bottom:10px;">❌</div>
+          <b style="font-size:1.15rem; color:#dc2626; display:block; margin-bottom:6px;">Print Error</b>
+          <p style="font-size:0.88rem; color:#64748b; margin:0 0 16px;">Failed to generate document: ${err.message || err}</p>
+          <button class="btn-action secondary" onclick="window.close()">✕ Close Tab</button>
+        `;
+      }
+    })();
+  </script>
+</body>
+</html>

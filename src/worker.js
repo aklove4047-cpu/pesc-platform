@@ -1272,6 +1272,24 @@ export default {
       return res;
     }
 
+    // 2c. Dedicated High-Resolution Standalone Print Service Routing (/print, /print/*, /center/print-*, /center/download-certificate)
+    if ((path === '/print' || path.startsWith('/print/') || path === '/print.html' || path.startsWith('/center/print-') || path.startsWith('/centre/print-') || path === '/center/download-certificate' || path === '/centre/download-certificate' || path === '/center/view-students' || path === '/centre/view-students' || path === '/center/id-card' || path === '/centre/id-card') && !path.startsWith('/api/')) {
+      const newUrl = new URL(request.url);
+      if (path.includes('print')) {
+        newUrl.pathname = '/print.html';
+      } else {
+        newUrl.pathname = '/portal';
+      }
+      let res = await env.ASSETS.fetch(new Request(newUrl.toString(), request));
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get('location');
+        if (loc) {
+          res = await env.ASSETS.fetch(new Request(new URL(loc, request.url).toString(), request));
+        }
+      }
+      return res;
+    }
+
     // 3. Subdomain Routing: If request is to a franchise subdomain (e.g. aryavart-institute-of-technology-management.pescouncil.in, shriramcomputer.pescouncil.in)
     const tenantInfo = slugOf(host);
     const centreFromSlug = tenantInfo.kind === 'tenant' ? resolveSlug(tenantInfo.slug) : null;
@@ -1312,7 +1330,7 @@ export default {
     // Direct slug redirect: e.g. /aryavart-institute-of-technology-management -> https://aryavart-institute-of-technology-management.pescouncil.in/
     if (path.length > 1 && !path.includes('.') && !path.startsWith('/api') && !path.startsWith('/assets')) {
       const cleanSlug = path.replace(/^\//, '').split('/')[0].toLowerCase();
-      const reservedList = ['portal', 'centre', 'center', 'centre-portal', 'center-portal', 'admin', 'coordinator', 'student', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz'];
+      const reservedList = ['portal', 'centre', 'center', 'centre-portal', 'center-portal', 'print', 'admin', 'coordinator', 'student', 'login', 'setup', 'verify', 'verify-marksheet', 'sitemap', 'robots', 'healthz'];
       if (!reservedList.includes(cleanSlug)) {
         const directCentre = resolveSlug(cleanSlug);
         if (directCentre) {
