@@ -4853,16 +4853,19 @@ export default {
         const mId = +path.split('/')[4];
         const body = await request.json().catch(() => ({}));
         const reqTerm = body.term ? String(body.term).trim().toLowerCase() : '';
+        const bodyStuId = body.student_id ? Number(body.student_id) : 0;
 
         // Find existing marksheet by ID or by student_id + term
         let mrk = store.marksheets.find(x => 
-          (Number(x.id) === mId) || 
-          (Number(x.student_id) === mId && (!reqTerm || String(x.term || '').toLowerCase() === reqTerm))
+          (Number(x.id) === mId && mId > 0 && (!bodyStuId || Number(x.student_id) === bodyStuId)) || 
+          (Number(x.student_id) === mId && (!reqTerm || String(x.term || '').toLowerCase() === reqTerm)) ||
+          (bodyStuId > 0 && Number(x.student_id) === bodyStuId && (!reqTerm || String(x.term || '').toLowerCase() === reqTerm))
         );
 
         // If not found, allow creating/editing draft marksheet for student before issuance
         if (!mrk) {
-          const stu = store.students.find(s => Number(s.id) === mId || (body.student_id && Number(s.id) === Number(body.student_id)));
+          const targetStuId = bodyStuId || mId;
+          const stu = store.students.find(s => Number(s.id) === targetStuId);
           if (stu) {
             const nextId = store.marksheets.length ? Math.max(...store.marksheets.map(m => Number(m.id) || 0)) + 1 : 1;
             mrk = {
@@ -4922,12 +4925,13 @@ export default {
         }
         if (body.result !== undefined) mrk.result = String(body.result).trim();
 
-        const stu = store.students.find(s => s.id === mrk.student_id);
+        const stu = store.students.find(s => Number(s.id) === Number(mrk.student_id));
         if (stu) {
           if (mrk.student_name) stu.name = mrk.student_name;
           if (mrk.father_name) stu.father_name = mrk.father_name;
           if (mrk.mother_name) stu.mother_name = mrk.mother_name;
           if (mrk.roll_no) stu.roll_no = mrk.roll_no;
+          if (mrk.course_name) stu.course = mrk.course_name;
           await persistToKV(env, 'students', store.students);
         }
 
@@ -4937,8 +4941,8 @@ export default {
 
       if (path === '/api/centre/approvals-status') {
         const stuId = +(url.searchParams.get('student_id') || 1);
-        const cert = store.certificates.find(x => x.student_id === stuId) || { id: 1, status: 'Approved_By_Council', head_approved: true, coordinator_approved: true, centre_signed: false };
-        const mrk = store.marksheets.find(x => x.student_id === stuId) || { id: 1, status: 'Approved_By_Council', head_approved: true, coordinator_approved: true, centre_signed: false };
+        const cert = store.certificates.find(x => Number(x.student_id) === stuId) || null;
+        const mrk = store.marksheets.find(x => Number(x.student_id) === stuId && (x.status === 'Approved' || x.status === 'Valid' || x.marksheet_no)) || null;
         return jsonResponse({ ok: true, certificate: cert, marksheet: mrk });
       }
 

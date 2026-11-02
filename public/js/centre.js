@@ -3046,6 +3046,7 @@ function renderStudentTable(students, isPassout = false) {
         <button class="btn sm alt" onclick="printReceipt(${r.id})">🧾 Receipt</button>
         <button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Certificate Module">🎓 Cert</button>
         <button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Marksheet Module">📊 Mrk</button>
+        <button class="btn sm" style="background:#b45309; color:#fff; font-weight:700;" onclick="openCentreEditMrkModal(${r.marksheet_id || r.id}, ${r.id})" title="Edit Marksheet & Marks">✏️ Edit Mrk</button>
         <button class="btn sm" style="background:#059669; color:#fff; font-weight:700;" onclick="toggleCentreStudentStatus(${r.id}, true)" title="Mark student as passout/graduated">🎓 Mark Passout</button>
         <button class="btn sm danger" style="background:#dc2626; color:#fff; font-weight:700;" onclick="deleteCentreStudent(${r.id}, '${esc(r.name)}', '${esc(r.student_code)}')" title="Permanently Delete Student">🗑️ Delete</button>
       </div>
@@ -4212,10 +4213,8 @@ async function updateMrkPreview(targetStudentId) {
     return;
   }
 
-  // Find the exact marksheet strictly matching this student and this selected term
-  const mrkItem = mrkInfo.studentMrks.find(m => {
-    const isApproved = m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved || m.marksheet_no;
-    if (!isApproved) return false;
+  // Match term helper
+  const matchesTerm = (m) => {
     const mTerm = String(m.term || '').toLowerCase();
     const selTerm = mrkTerm.toLowerCase();
     if (selTerm.includes('sem 1') || selTerm.includes('semester 1')) return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm.includes('1st sem') || mTerm.includes('sem-1') || mTerm.includes('semester i') || mTerm === 'sem 1';
@@ -4225,9 +4224,16 @@ async function updateMrkPreview(targetStudentId) {
     if (selTerm.includes('1st year') || selTerm.includes('year 1')) return mTerm.includes('1st year') || mTerm.includes('year 1') || mTerm.includes('annual');
     if (selTerm.includes('2nd year') || selTerm.includes('year 2')) return mTerm.includes('2nd year') || mTerm.includes('year 2');
     return mTerm.includes(selTerm);
+  };
+
+  const approvedMrk = (mrkInfo.studentMrks || []).find(m => {
+    const isApproved = m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.centre_signed || m.head_approved || m.marksheet_no;
+    return isApproved && matchesTerm(m);
   }) || null;
 
-  const isIssued = Boolean(mrkItem);
+  const anyMrk = (mrkInfo.studentMrks || []).find(m => matchesTerm(m)) || null;
+  const mrkItem = approvedMrk || anyMrk;
+  const isIssued = Boolean(approvedMrk);
   const mrkDbId = (mrkItem && mrkItem.id) || studentId;
 
   if (feeNoticeEl) {
@@ -4291,33 +4297,16 @@ async function updateMrkPreview(targetStudentId) {
   const refNo = `PESC-MRK-2026-${cleanNum}`;
   const issueDate = '04-10-2026';
 
-  if (!isIssued) {
-    $('#mrkPreviewContainer').innerHTML = `
-      <div style="background:#ffffff; padding:45px 20px; text-align:center; border-radius:12px;">
-        <div style="width:72px; height:72px; border-radius:50%; background:#fef3c7; border:2.5px solid #f59e0b; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:2.4rem;">🔒</div>
-        <h3 style="margin:0 0 8px; color:#064e3b; font-size:1.45rem; font-weight:800;">Official Marksheet Locked (Payment Required)</h3>
-        <p style="margin:0 0 16px; color:#64748b; font-size:1rem;">
-          Candidate: <b style="color:#0f172a;">${esc(name)}</b> (${esc(code)}) • Course: <b style="color:#0f172a;">${esc(course)}</b>
-        </p>
-        <div style="max-width:540px; margin:0 auto 24px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; font-size:0.9rem; color:#475569; line-height:1.6;">
-          🔒 <b>सुरक्षा एवं अधिकृत सत्यापन:</b> हेड ऑफिस एवं समन्वयक की अधिकृत मुहर व डिजिटल हस्ताक्षर सहित ओरिजिनल अंकतालिका देखने, प्रिंट करने, मार्क्स एडिट करने एवं PDF डाउनलोड करने के लिए सेंटर वॉलेट से <b>₹${currentFee}</b> का भुगतान करके जारी करें।
-        </div>
-        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:12px 24px; border-radius:10px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
-          <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.1rem; padding:14px 34px; border-radius:10px; box-shadow:0 6px 20px rgba(22,163,74,0.35); border:none; cursor:pointer;">
-            ⚡ Pay ₹${currentFee} from Wallet &amp; Issue Marksheet
-          </button>
-        </div>
-      </div>
-    `;
-    return;
-  }
+  const candidateName = (mrkItem && mrkItem.student_name) || name;
+  const candidateFather = (mrkItem && mrkItem.father_name) || father;
+  const candidateMother = (mrkItem && mrkItem.mother_name) || mother;
+  const candidateCode = (mrkItem && mrkItem.roll_no) || code;
+  const candidateCourse = (mrkItem && mrkItem.course_name) || course;
 
-  let customSubjects = (mrkItem && mrkItem.subjects) ? (typeof mrkItem.subjects === 'string' ? JSON.parse(mrkItem.subjects) : mrkItem.subjects) : null;
-  if (!customSubjects && foundCourse && foundCourse.subjects) {
+  let customSubjects = null;
+  if (mrkItem && mrkItem.subjects) {
     try {
-      const coSubs = typeof foundCourse.subjects === 'string' ? JSON.parse(foundCourse.subjects) : foundCourse.subjects;
-      if (Array.isArray(coSubs) && coSubs.length > 0) customSubjects = coSubs;
+      customSubjects = typeof mrkItem.subjects === 'string' ? JSON.parse(mrkItem.subjects) : mrkItem.subjects;
     } catch (_) {}
   }
   if (!customSubjects && window._customMarksheetData && window._customMarksheetData[studentId]) {
@@ -4329,34 +4318,66 @@ async function updateMrkPreview(targetStudentId) {
       if (saved) customSubjects = JSON.parse(saved);
     } catch (_) {}
   }
+  if (!customSubjects && foundCourse && foundCourse.subjects) {
+    try {
+      const coSubs = typeof foundCourse.subjects === 'string' ? JSON.parse(foundCourse.subjects) : foundCourse.subjects;
+      if (Array.isArray(coSubs) && coSubs.length > 0) customSubjects = coSubs;
+    } catch (_) {}
+  }
 
-  $('#mrkPreviewContainer').innerHTML = `
-    <div class="no-print" style="margin-bottom:12px; display:flex; justify-content:flex-end; gap:10px;">
-      <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
-      <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="window.print()">🖨️ Print Marksheet (A4)</button>
-      <button type="button" class="btn sm" style="background:#047857; color:#fff; font-weight:700;" onclick="window.print()">💾 Save as PDF</button>
-    </div>
-    ${window.OfficialTemplates ? window.OfficialTemplates.renderMarksheetHtml({
-      student: { id: studentId, name, father_name: father, mother_name: mother, student_code: code, roll_no: code, course_name: course, photo_url: photo },
-      centre: currentCentre,
-      authorities: window._councilAuthorities,
-      mrkNo: (mrkItem && mrkItem.marksheet_no) || refNo,
-      issueDate: (mrkItem && (mrkItem.issue_date || mrkItem.issued_at)) || issueDate,
-      subjects: (mrkItem && mrkItem.subjects) ? (typeof mrkItem.subjects === 'string' ? JSON.parse(mrkItem.subjects) : mrkItem.subjects) : customSubjects,
-      duration: (mrkItem && mrkItem.duration) || (isSemester ? '6 Months' : '1 Year'),
-      header_type: mrkFormat === 'council' ? 'council' : (mrkFormat === 'dual' ? 'dual' : (mrkFormat === 'institute' ? 'centre' : (mrkItem?.header_type || 'council'))),
-      format: mrkFormat,
-      header_title: mrkItem?.header_title,
-      header_hindi: mrkItem?.header_hindi,
-      header_subtitle: mrkItem?.header_subtitle,
-      scheme: mrkItem?.scheme || (isSemester ? 'single_semester' : 'annual'),
-      centre_name: mrkItem?.centre_name || (currentCentre ? currentCentre.name : ''),
-      centre_name_hi: mrkItem?.centre_name_hi || (currentCentre ? currentCentre.name_hi : ''),
-      council_address: mrkItem?.council_address,
-      centre_address: mrkItem?.centre_address || (currentCentre ? currentCentre.address : ''),
-      term: mrkItem?.term || mrkTerm
-    }) : '<p>Loading Marksheet Template...</p>'}
-  `;
+  const marksheetHtml = window.OfficialTemplates ? window.OfficialTemplates.renderMarksheetHtml({
+    student: { id: studentId, name: candidateName, father_name: candidateFather, mother_name: candidateMother, student_code: candidateCode, roll_no: candidateCode, course_name: candidateCourse, photo_url: photo },
+    centre: currentCentre,
+    authorities: window._councilAuthorities,
+    mrkNo: (mrkItem && mrkItem.marksheet_no) || refNo,
+    issueDate: (mrkItem && (mrkItem.issue_date || mrkItem.issued_at)) || issueDate,
+    subjects: customSubjects,
+    duration: (mrkItem && mrkItem.duration) || (isSemester ? '6 Months' : '1 Year'),
+    header_type: mrkFormat === 'council' ? 'council' : (mrkFormat === 'dual' ? 'dual' : (mrkFormat === 'institute' ? 'centre' : (mrkItem?.header_type || 'council'))),
+    format: mrkFormat,
+    header_title: mrkItem?.header_title,
+    header_hindi: mrkItem?.header_hindi,
+    header_subtitle: mrkItem?.header_subtitle,
+    scheme: mrkItem?.scheme || (isSemester ? 'single_semester' : 'annual'),
+    centre_name: mrkItem?.centre_name || (currentCentre ? currentCentre.name : ''),
+    centre_name_hi: mrkItem?.centre_name_hi || (currentCentre ? currentCentre.name_hi : ''),
+    council_address: mrkItem?.council_address,
+    centre_address: mrkItem?.centre_address || (currentCentre ? currentCentre.address : ''),
+    term: mrkItem?.term || mrkTerm
+  }) : '<p>Loading Marksheet Template...</p>';
+
+  if (!isIssued) {
+    $('#mrkPreviewContainer').innerHTML = `
+      <div class="no-print" style="background:#fffbeb; border:2px solid #f59e0b; border-radius:12px; padding:16px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 14px rgba(245,158,11,0.15);">
+        <div>
+          <h4 style="margin:0 0 4px; color:#b45309; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
+            <span>📝</span> Draft / Verification Preview (अंकतालिका ड्राफ्ट पूर्वावलोकन)
+          </h4>
+          <div style="font-size:0.88rem; color:#78350f; line-height:1.5;">
+            परीक्षार्थी: <b>${esc(candidateName)}</b> (${esc(candidateCode)}) &bull; <b>${esc(mrkTerm)}</b> &bull; नीचे अंकतालिका और विषय-अंक लाइव देखें। बदलाव करने हेतु <b>'Edit Marksheet & Marks'</b> पर क्लिक करें। आधिकारिक मुहर व डिजिटल हस्ताक्षर सहित जारी करने हेतु <b>Pay & Issue</b> करें।
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:10px 18px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
+          <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.05rem; padding:11px 22px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.35); border:none; cursor:pointer;">
+            ⚡ Pay ₹${currentFee} &amp; Issue Marksheet
+          </button>
+        </div>
+      </div>
+      <div style="position:relative;">
+        ${marksheetHtml}
+      </div>
+    `;
+  } else {
+    $('#mrkPreviewContainer').innerHTML = `
+      <div class="no-print" style="margin-bottom:12px; display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:10px 18px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
+        <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Marksheet (A4)</button>
+        <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
+      </div>
+      ${marksheetHtml}
+    `;
+  }
 }
 async function updateSemCertPreview() {
   await window.ensureAuthoritiesLoaded();
@@ -5524,16 +5545,27 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
   const existing = document.getElementById('centreEditMarksheetModal');
   if (existing) existing.remove();
 
-  let sId = studentId || mrkId;
-  let stu = (window._currentStudents || []).find(s => s.id == sId);
+  let sId = Number(studentId || mrkId || 0);
+  if ((!sId || mrkId) && window._centreMarksheets) {
+    const foundM = window._centreMarksheets.find(m => Number(m.id) === Number(mrkId));
+    if (foundM && foundM.student_id) sId = Number(foundM.student_id);
+  }
 
   // Read currently selected term from the UI
   const termSel = $('#mrkTermSelect');
   const activeTerm = termSel ? termSel.value : '';
 
+  let stu = (window._currentStudents || []).find(s => Number(s.id) === sId);
+  if (!stu && sId) {
+    try {
+      const res = await api(`/api/centre/students/${sId}`).catch(() => null);
+      if (res) stu = res.student || res;
+    } catch (_) {}
+  }
+
   let mrk = (window._centreMarksheets || []).find(m => {
-    if (mrkId && mrkId !== sId && m.id === mrkId) return true;
-    if (Number(m.student_id) === Number(sId)) {
+    if (mrkId && mrkId !== sId && Number(m.id) === Number(mrkId)) return true;
+    if (Number(m.student_id) === sId) {
       if (!activeTerm) return true;
       const mTerm = String(m.term || '').toLowerCase();
       const selTerm = activeTerm.toLowerCase();
@@ -5544,17 +5576,10 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
     return false;
   });
 
-  if (!mrk) {
+  if (!mrk && sId) {
     try {
       const stRes = await api(`/api/centre/approvals-status?student_id=${sId}`).catch(() => null);
       if (stRes && stRes.marksheet) mrk = stRes.marksheet;
-    } catch (_) {}
-  }
-
-  if (!stu && sId) {
-    try {
-      const res = await api(`/api/centre/students/${sId}`).catch(() => null);
-      if (res) stu = res.student || res;
     } catch (_) {}
   }
 
@@ -5604,7 +5629,7 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
   const studentCode = m.student_code || s.student_code || rollNo;
   const courseName = m.course_name || s.course || s.course_name || 'Diploma Course';
   const examSession = m.exam_session || '2026-27';
-  const term = m.term || 'Annual Examination';
+  const term = m.term || activeTerm || 'Annual Examination';
   const evaluationType = m.evaluation_type || (window.mrkEvalPattern === 'semester' ? 'semester' : 'annual');
   const marksheetNo = m.marksheet_no || `PESC/MRK/2026/${String(sId || 1).padStart(5, '0')}`;
   const issueDate = m.issue_date || (m.issued_at ? m.issued_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
@@ -5615,11 +5640,11 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
   modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:center; justify-content:center; z-index:10000; padding:16px; overflow-y:auto;';
 
   modal.innerHTML = `
-    <div style="background:#ffffff; border-radius:14px; max-width:890px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.45);">
+    <div style="background:#ffffff; border-radius:14px; max-width:920px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.45);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
         <div>
           <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">✏️ Edit Marksheet Particulars &amp; Examination Marks</h3>
-          <span class="muted" style="font-size:0.85rem;">Document: <b>${esc(marksheetNo)}</b> &bull; Candidate: <b>${esc(studentName || 'Candidate')}</b></span>
+          <span class="muted" style="font-size:0.85rem;">Document: <b>${esc(marksheetNo)}</b> &bull; Candidate: <b>${esc(studentName || 'Candidate')}</b> (${esc(term)})</span>
         </div>
         <button type="button" class="btn danger sm" onclick="document.getElementById('centreEditMarksheetModal').remove()">✕ Close</button>
       </div>
@@ -5739,17 +5764,23 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
           </div>
         </div>
 
-        <h4 style="margin:16px 0 8px; color:#064e3b;">📚 Subject Marks &amp; Papers:</h4>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 8px;">
+          <h4 style="margin:0; color:#064e3b; font-size:1rem;">📚 Subject Marks &amp; Papers:</h4>
+          <button type="button" id="btnAddSubRow" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:6px 14px; border-radius:6px; border:none; cursor:pointer;">
+            ➕ Add Subject Row
+          </button>
+        </div>
         <div style="overflow-x:auto; margin-bottom:16px;">
           <table style="width:100%; border-collapse:collapse; font-size:0.82rem; text-align:center; border:1px solid #cbd5e1;">
             <thead>
               <tr style="background:#f1f5f9; font-weight:800;">
-                <th style="padding:6px; border:1px solid #cbd5e1; width:15%;">Code</th>
-                <th style="padding:6px; border:1px solid #cbd5e1; width:40%; text-align:left;">Subject Title</th>
+                <th style="padding:6px; border:1px solid #cbd5e1; width:14%;">Code</th>
+                <th style="padding:6px; border:1px solid #cbd5e1; width:36%; text-align:left;">Subject Title</th>
                 <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Th Max</th>
                 <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Th Obt</th>
                 <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Pr Max</th>
                 <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Pr Obt</th>
+                <th style="padding:6px; border:1px solid #cbd5e1; width:6%;">Action</th>
               </tr>
             </thead>
             <tbody id="centreMrkEditSubsBody">
@@ -5761,6 +5792,9 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
                   <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-obt" value="${sub.obt_theory !== undefined ? sub.obt_theory : (sub.obt ? Math.round(sub.obt*0.5) : 38)}" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
                   <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-max" value="${sub.max_practical !== undefined ? sub.max_practical : (sub.max ? Math.round(sub.max*0.5) : 50)}" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
                   <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-obt" value="${sub.obt_practical !== undefined ? sub.obt_practical : (sub.obt ? Math.round(sub.obt*0.5) : 40)}" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                  <td style="padding:4px; border:1px solid #cbd5e1; text-align:center;">
+                    <button type="button" class="btn danger sm btn-del-sub" style="padding:3px 8px; font-size:0.75rem; border:none; cursor:pointer;" title="Delete Subject">🗑️</button>
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
@@ -5803,7 +5837,43 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
     return { totMax, totObt, pct, grade };
   };
 
-  modal.querySelectorAll('#centreMrkEditSubsBody input').forEach(inp => inp.oninput = calcScore);
+  const subsBody = modal.querySelector('#centreMrkEditSubsBody');
+  subsBody.addEventListener('input', calcScore);
+  subsBody.addEventListener('click', (e) => {
+    const delBtn = e.target.closest('.btn-del-sub');
+    if (delBtn) {
+      const rows = subsBody.querySelectorAll('tr');
+      if (rows.length <= 1) {
+        alert('कम से कम 1 विषय होना अनिवार्य है!');
+        return;
+      }
+      delBtn.closest('tr').remove();
+      calcScore();
+    }
+  });
+
+  const addBtn = modal.querySelector('#btnAddSubRow');
+  if (addBtn) {
+    addBtn.onclick = () => {
+      const currentCount = subsBody.querySelectorAll('tr').length + 1;
+      const tr = document.createElement('tr');
+      tr.style.cssText = 'border-bottom:1px solid #e2e8f0;';
+      tr.innerHTML = `
+        <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-code" value="SUB${String(currentCount).padStart(2, '0')}" style="width:100%; padding:4px; font-family:monospace; border:1px solid #cbd5e1; border-radius:4px; text-align:center;"></td>
+        <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-name" value="New Subject Title" style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:4px;"></td>
+        <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-max" value="50" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
+        <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-obt" value="40" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
+        <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-max" value="50" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
+        <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-obt" value="40" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
+        <td style="padding:4px; border:1px solid #cbd5e1; text-align:center;">
+          <button type="button" class="btn danger sm btn-del-sub" style="padding:3px 8px; font-size:0.75rem; border:none; cursor:pointer;" title="Delete Subject">🗑️</button>
+        </td>
+      `;
+      subsBody.appendChild(tr);
+      calcScore();
+    };
+  }
+
   calcScore();
 
   modal.querySelector('#centreEditMrkForm').onsubmit = async (e) => {
@@ -5862,7 +5932,7 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
       subjects: subsPayload
     };
 
-    const targetId = (mrk && mrk.id) || sId;
+    const targetId = (mrk && mrk.id) ? mrk.id : sId;
     payload.student_id = sId;
     payload.term = fd.get('term') || activeTerm || 'Annual Examination';
     try {
@@ -5872,9 +5942,16 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
       });
       if (res && res.marksheet) {
         window._centreMarksheets = window._centreMarksheets || [];
-        const idx = window._centreMarksheets.findIndex(item => item.id === res.marksheet.id);
+        const idx = window._centreMarksheets.findIndex(item => Number(item.id) === Number(res.marksheet.id));
         if (idx >= 0) window._centreMarksheets[idx] = res.marksheet;
         else window._centreMarksheets.push(res.marksheet);
+      }
+      if (stu) {
+        if (payload.student_name) stu.name = payload.student_name;
+        if (payload.father_name) stu.father_name = payload.father_name;
+        if (payload.mother_name) stu.mother_name = payload.mother_name;
+        if (payload.roll_no) stu.roll_no = payload.roll_no;
+        if (payload.course_name) stu.course = payload.course_name;
       }
       window._customMarksheetData = window._customMarksheetData || {};
       window._customMarksheetData[sId] = subsPayload;
