@@ -3371,22 +3371,21 @@ function renderStudentTable(students, isPassout = false) {
       const pend = Math.max(0, (r.fee_total || 12000) - (r.fee_paid || 0));
       return `<span style="color:${pend > 0 ? '#ea580c' : '#16a34a'}; font-weight:700;">₹${pend.toLocaleString('en-IN')}</span>`;
     }],
-    ['Actions', (r) => `
+    ['Actions', (r) => {
+      const fPend = Math.max(0, (r.fee_total || 12000) - (r.fee_paid || 0));
+      const feeLocked = fPend > 0;
+      const certBtn = feeLocked
+        ? `<button class="btn sm" style="background:#94a3b8;color:#fff;font-weight:700;cursor:not-allowed;opacity:0.65;" title="Fee baki hai - Rs.${fPend} pending" onclick="alert('Marksheet/Certificate issue nahi ho sakta!\\nFee baki hai: Rs.${fPend}\\nPehle Fees Collection se poori fee jama karen.')">🔒 Cert</button>`
+        : (r.certificate_id ? `<a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm gold" style="font-weight:700;text-decoration:none;" title="Print Certificate">🎓 Cert</a>` : `<button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Issue/Print Certificate">🎓 Cert</button>`);
+      const mrkBtn = feeLocked
+        ? `<button class="btn sm" style="background:#94a3b8;color:#fff;font-weight:700;cursor:not-allowed;opacity:0.65;" title="Fee baki hai - Rs.${fPend} pending" onclick="alert('Marksheet/Certificate issue nahi ho sakta!\\nFee baki hai: Rs.${fPend}\\nPehle Fees Collection se poori fee jama karen.')">🔒 Mrk</button>`
+        : (r.marksheet_id ? `<a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0284c7;color:#fff;font-weight:700;text-decoration:none;" title="Print Marksheet">📊 Mrk</a>` : `<button class="btn sm" style="background:#0284c7;color:#fff;font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Issue/Print Marksheet">📊 Mrk</button>`);
+      return `
       <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-        <!-- 1-Click Direct Standalone Print Links (PMKVYEDU Strategy) -->
         <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Download Admission Form (A4)">📄 Form</a>
         <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0f766e; color:#fff; font-weight:700; text-decoration:none;" title="Download ID Card">🪪 ID</a>
-        ${(() => {
-          const fPend = Math.max(0, (r.fee_total || 12000) - (r.fee_paid || 0));
-          if (fPend > 0) {
-            return `<button class="btn sm" style="background:#94a3b8; color:#fff; font-weight:700; cursor:not-allowed; opacity:0.65;" title="🔒 फीस बकाया है (₹${fPend.toLocaleString('en-IN')}) – पहले फीस जमा करें" onclick="alert('🔒 अंकतालिका/प्रमाणपत्र जारी नहीं हो सकता!\\n\\nछात्र की फीस बकाया है: ₹${fPend.toLocaleString(\'en-IN\')}\\n\\nपहले Fees Collection मॉड्यूल से पूरी फीस जमा करें।')">🔒 Cert</button>
-                    <button class="btn sm" style="background:#94a3b8; color:#fff; font-weight:700; cursor:not-allowed; opacity:0.65;" title="🔒 फीस बकाया है (₹${fPend.toLocaleString('en-IN')}) – पहले फीस जमा करें" onclick="alert('🔒 अंकतालिका/प्रमाणपत्र जारी नहीं हो सकता!\\n\\nछात्र की फीस बकाया है: ₹${fPend.toLocaleString(\'en-IN\')}\\n\\nपहले Fees Collection मॉड्यूल से पूरी फीस जमा करें।')">🔒 Mrk</button>`;
-          }
-          return `${r.certificate_id ? `<a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm gold" style="font-weight:700; text-decoration:none;" title="Print Certificate">🎓 Cert</a>` : `<button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Issue / Print Certificate">🎓 Cert</button>`}
-                  ${r.marksheet_id ? `<a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; text-decoration:none;" title="Print Marksheet">📊 Mrk</a>` : `<button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Issue / Print Marksheet">📊 Mrk</button>`}`;
-        })()}
-
-        <!-- Sleek Action Dropdown Button (Exact PMKVYEDU Navyacomputer layout) -->
+        ${certBtn}
+        ${mrkBtn}
         <div style="position:relative; display:inline-block;">
           <button type="button" class="btn sm" style="background:#475569; color:#fff; font-weight:700; padding:6px 12px; border-radius:6px;" onclick="toggleStudentActionMenu(event, ${r.id})">Action ▾</button>
           <div id="stuActionDropdown_${r.id}" class="stu-action-menu" style="display:none; position:absolute; right:0; top:100%; margin-top:4px; z-index:99999; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.18); min-width:220px; text-align:left; overflow:hidden;">
@@ -3401,7 +3400,7 @@ function renderStudentTable(students, isPassout = false) {
           </div>
         </div>
       </div>
-    `]
+    `; }]
   ], students);
 }
 
