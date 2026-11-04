@@ -3376,8 +3376,15 @@ function renderStudentTable(students, isPassout = false) {
         <!-- 1-Click Direct Standalone Print Links (PMKVYEDU Strategy) -->
         <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Download Admission Form (A4)">📄 Form</a>
         <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0f766e; color:#fff; font-weight:700; text-decoration:none;" title="Download ID Card">🪪 ID</a>
-        ${r.certificate_id ? `<a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm gold" style="font-weight:700; text-decoration:none;" title="Print Certificate">🎓 Cert</a>` : `<button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Issue / Print Certificate">🎓 Cert</button>`}
-        ${r.marksheet_id ? `<a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; text-decoration:none;" title="Print Marksheet">📊 Mrk</a>` : `<button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Issue / Print Marksheet">📊 Mrk</button>`}
+        ${(() => {
+          const fPend = Math.max(0, (r.fee_total || 12000) - (r.fee_paid || 0));
+          if (fPend > 0) {
+            return `<button class="btn sm" style="background:#94a3b8; color:#fff; font-weight:700; cursor:not-allowed; opacity:0.65;" title="🔒 फीस बकाया है (₹${fPend.toLocaleString('en-IN')}) – पहले फीस जमा करें" onclick="alert('🔒 अंकतालिका/प्रमाणपत्र जारी नहीं हो सकता!\\n\\nछात्र की फीस बकाया है: ₹${fPend.toLocaleString(\'en-IN\')}\\n\\nपहले Fees Collection मॉड्यूल से पूरी फीस जमा करें।')">🔒 Cert</button>
+                    <button class="btn sm" style="background:#94a3b8; color:#fff; font-weight:700; cursor:not-allowed; opacity:0.65;" title="🔒 फीस बकाया है (₹${fPend.toLocaleString('en-IN')}) – पहले फीस जमा करें" onclick="alert('🔒 अंकतालिका/प्रमाणपत्र जारी नहीं हो सकता!\\n\\nछात्र की फीस बकाया है: ₹${fPend.toLocaleString(\'en-IN\')}\\n\\nपहले Fees Collection मॉड्यूल से पूरी फीस जमा करें।')">🔒 Mrk</button>`;
+          }
+          return `${r.certificate_id ? `<a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm gold" style="font-weight:700; text-decoration:none;" title="Print Certificate">🎓 Cert</a>` : `<button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Issue / Print Certificate">🎓 Cert</button>`}
+                  ${r.marksheet_id ? `<a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; text-decoration:none;" title="Print Marksheet">📊 Mrk</a>` : `<button class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Issue / Print Marksheet">📊 Mrk</button>`}`;
+        })()}
 
         <!-- Sleek Action Dropdown Button (Exact PMKVYEDU Navyacomputer layout) -->
         <div style="position:relative; display:inline-block;">
@@ -3386,8 +3393,6 @@ function renderStudentTable(students, isPassout = false) {
             <a href="javascript:void(0)" onclick="quickViewStudent(${r.id})" style="display:block; padding:9px 14px; color:#1e293b; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">👁️ View Student Details</a>
             <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0284c7; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📄 Download Admission Form (A4)</a>
             <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0f766e; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">🪪 Download / Print ID Card</a>
-            <a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#047857; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📜 Print Certificate (1-Click PDF)</a>
-            <a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0284c7; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📊 Print Marksheet (1-Click PDF)</a>
             <a href="javascript:void(0)" onclick="showUploadStudentPhotoModal(${r.id})" style="display:block; padding:9px 14px; color:#7c3aed; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📷 Upload Student Photo</a>
             <a href="javascript:void(0)" onclick="openCentreEditMrkModal(${r.marksheet_id || r.id}, ${r.id})" style="display:block; padding:9px 14px; color:#b45309; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">✏️ Edit Marksheet &amp; Marks</a>
             <a href="javascript:void(0)" onclick="showStudentCredentialsModal(${JSON.stringify(r).replace(/"/g, '&quot;')})" style="display:block; padding:9px 14px; color:#16a34a; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📱 Send Welcome WhatsApp</a>
@@ -3555,6 +3560,13 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
   const stuName = stu.name || (opt ? opt.dataset.name : 'छात्र');
   const regNo = stu.student_code || (opt ? opt.dataset.code : '');
   const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 200;
+
+  // 🔒 FEE LOCK: Certificate issue se pehle poori fee check karo
+  const stuFeePending = Math.max(0, (stu.fee_total || 12000) - (stu.fee_paid || 0));
+  if (stuFeePending > 0) {
+    alert(`🔒 प्रमाणपत्र जारी नहीं हो सकता!\n\n❌ छात्र की फीस अभी बकाया है:\n👤 छात्र: ${stuName} (${regNo})\n💰 बकाया फीस: ₹${stuFeePending.toLocaleString('en-IN')}\n\nपहले "Fees Collection" मॉड्यूल से पूरी फीस जमा करें, उसके बाद ही प्रमाणपत्र जारी हो सकेगा।`);
+    return;
+  }
 
   const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
   if (!mrkInfo.isFullyIssued) {
@@ -4403,6 +4415,13 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
   const stuName = stu.name || (opt ? opt.dataset.name : 'छात्र');
   const regNo = stu.student_code || (opt ? opt.dataset.code : '');
   const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 100;
+
+  // 🔒 FEE LOCK: Marksheet issue se pehle poori fee check karo
+  const mrkFeePending = Math.max(0, (stu.fee_total || 12000) - (stu.fee_paid || 0));
+  if (mrkFeePending > 0) {
+    alert(`🔒 अंकतालिका जारी नहीं हो सकती!\n\n❌ छात्र की फीस अभी बकाया है:\n👤 छात्र: ${stuName} (${regNo})\n💰 बकाया फीस: ₹${mrkFeePending.toLocaleString('en-IN')}\n\nपहले "Fees Collection" मॉड्यूल से पूरी फीस जमा करें, उसके बाद ही अंकतालिका जारी हो सकेगी।`);
+    return;
+  }
 
   const termSel = $('#mrkTermSelect');
   const chosenTerm = (termSel && termSel.value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');

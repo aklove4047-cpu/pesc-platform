@@ -454,7 +454,13 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
   const sid = +req.params.id;
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM marksheets WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
-  
+
+  // 🔒 FEE LOCK: Marksheet tab tak issue nahi hogi jab tak poori fee jama na ho
+  const feePending = Math.max(0, (s.fee_total || 12000) - (s.fee_paid || 0));
+  if (feePending > 0) {
+    throw new HttpError(402, `❌ अंकतालिका जारी नहीं हो सकती!\n\nछात्र की फीस अभी बकाया है (₹${feePending.toLocaleString('en-IN')} शेष)।\nपहले पूरी फीस जमा करें, उसके बाद ही अंकतालिका जारी होगी।`);
+  }
+
   const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
   const termVal = req.body.term || (isSem ? 'Semester 1' : 'Annual');
   const isSem2 = termVal.toLowerCase().includes('sem 2') || termVal.toLowerCase().includes('semester 2') || termVal.toLowerCase().includes('2nd sem');
@@ -550,7 +556,13 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
   const sid = +req.params.id;
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM certificates WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
-  
+
+  // 🔒 FEE LOCK: Certificate tab tak issue nahi hoga jab tak poori fee jama na ho
+  const certFeePending = Math.max(0, (s.fee_total || 12000) - (s.fee_paid || 0));
+  if (certFeePending > 0) {
+    throw new HttpError(402, `❌ प्रमाणपत्र जारी नहीं हो सकता!\n\nछात्र की फीस अभी बकाया है (₹${certFeePending.toLocaleString('en-IN')} शेष)।\nपहले पूरी फीस जमा करें, उसके बाद ही प्रमाणपत्र जारी होगा।`);
+  }
+
   const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
   if (isSem) {
     const hasSem1 = db.prepare("SELECT id FROM marksheets WHERE student_id=? AND (term LIKE '%sem 1%' OR term LIKE '%semester 1%' OR term LIKE '%1st sem%') AND status='Approved'").get(s.id);
