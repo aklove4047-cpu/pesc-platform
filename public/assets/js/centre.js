@@ -3831,12 +3831,8 @@ async function updateCertPreview(targetStudentId) {
         </div>
       `;
     } else {
-      printWrap.style.display = 'block';
-      printWrap.innerHTML = `
-        <div style="display:flex; gap:8px;">
-          <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditCertModal(${certDbId}, ${studentId})">✏️ Edit Certificate</button>
-        </div>
-      `;
+      printWrap.style.display = 'none';
+      printWrap.innerHTML = '';
     }
   }
 
@@ -3853,10 +3849,9 @@ async function updateCertPreview(targetStudentId) {
           Candidate: <b style="color:#0f172a;">${esc(name)}</b> (${esc(code)}) • Course: <b style="color:#0f172a;">${esc(course)}</b>
         </p>
         <div style="max-width:540px; margin:0 auto 24px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; font-size:0.9rem; color:#475569; line-height:1.6;">
-          🔒 <b>सुरक्षा एवं अधिकृत सत्यापन:</b> हेड ऑफिस एवं समन्वयक की अधिकृत मुहर व डिजिटल हस्ताक्षर सहित ओरिजिनल प्रमाणपत्र देखने, प्रिंट करने एवं PDF डाउनलोड करने के लिए सेंटर वॉलेट से <b>₹${currentFee}</b> का भुगतान करके जारी करें।
+          🔒 <b>सुरक्षा एवं अधिकृत सत्यापन:</b> हेड ऑफिस एवं समन्वयक की अधिकृत मुहर व डिजिटल हस्ताक्षर सहित ओरिजिनल प्रमाणपत्र देखने, एडिट करने, प्रिंट करने एवं PDF डाउनलोड करने के लिए सेंटर वॉलेट से <b>₹${currentFee}</b> का भुगतान करके जारी करें।
         </div>
-        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:12px 24px; border-radius:10px; border:none; cursor:pointer;" onclick="openCentreEditCertModal(${certDbId}, ${studentId})">✏️ Edit Certificate Details</button>
+        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
           <button type="button" class="btn" onclick="signAndIssueCert(${certDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.1rem; padding:14px 34px; border-radius:10px; box-shadow:0 6px 20px rgba(22,163,74,0.35); border:none; cursor:pointer;">
             ⚡ Pay ₹${currentFee} from Wallet &amp; Issue Certificate
           </button>
@@ -4699,12 +4694,8 @@ async function updateMrkPreview(targetStudentId) {
         </div>
       `;
     } else {
-      printWrap.style.display = 'block';
-      printWrap.innerHTML = `
-        <div style="display:flex; gap:8px;">
-          <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
-        </div>
-      `;
+      printWrap.style.display = 'none';
+      printWrap.innerHTML = '';
     }
   }
 
@@ -4760,28 +4751,27 @@ async function updateMrkPreview(targetStudentId) {
   }) : '<p>Loading Marksheet Template...</p>';
 
   if (!isIssued) {
+    if (printWrap) printWrap.style.display = 'none';
     $('#mrkPreviewContainer').innerHTML = `
-      <div class="no-print" style="background:#fffbeb; border:2px solid #f59e0b; border-radius:12px; padding:16px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 14px rgba(245,158,11,0.15);">
-        <div>
-          <h4 style="margin:0 0 4px; color:#b45309; font-size:1.15rem; display:flex; align-items:center; gap:8px;">
-            <span>📝</span> Draft / Verification Preview (अंकतालिका ड्राफ्ट पूर्वावलोकन)
-          </h4>
-          <div style="font-size:0.88rem; color:#78350f; line-height:1.5;">
-            परीक्षार्थी: <b>${esc(candidateName)}</b> (${esc(candidateCode)}) &bull; <b>${esc(mrkTerm)}</b> &bull; नीचे अंकतालिका और विषय-अंक लाइव देखें। बदलाव करने हेतु <b>'Edit Marksheet & Marks'</b> पर क्लिक करें। आधिकारिक मुहर व डिजिटल हस्ताक्षर सहित जारी करने हेतु <b>Pay & Issue</b> करें।
-          </div>
+      <div style="background:#ffffff; padding:45px 20px; text-align:center; border-radius:12px;">
+        <div style="width:72px; height:72px; border-radius:50%; background:#fef3c7; border:2.5px solid #f59e0b; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:2.4rem;">🔒</div>
+        <h3 style="margin:0 0 8px; color:#064e3b; font-size:1.45rem; font-weight:800;">Official Marksheet Locked (Payment Required)</h3>
+        <p style="margin:0 0 16px; color:#64748b; font-size:1rem;">
+          Candidate: <b style="color:#0f172a;">${esc(candidateName)}</b> (${esc(candidateCode)}) • Term: <b style="color:#064e3b;">${esc(mrkTerm)}</b> • Course: <b style="color:#0f172a;">${esc(candidateCourse)}</b>
+        </p>
+        <div style="max-width:540px; margin:0 auto 24px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; font-size:0.9rem; color:#475569; line-height:1.6;">
+          🔒 <b>सुरक्षा एवं अधिकृत सत्यापन:</b> हेड ऑफिस एवं समन्वयक की अधिकृत मुहर व डिजिटल हस्ताक्षर सहित ओरिजिनल अंकतालिका देखने, एडिट करने, प्रिंट करने एवं PDF डाउनलोड करने के लिए सेंटर वॉलेट से <b>₹${currentFee}</b> का भुगतान करके जारी करें।
         </div>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:10px 18px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
-          <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.05rem; padding:11px 22px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.35); border:none; cursor:pointer;">
-            ⚡ Pay ₹${currentFee} &amp; Issue Marksheet
+        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+          <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.1rem; padding:14px 34px; border-radius:10px; box-shadow:0 6px 20px rgba(22,163,74,0.35); border:none; cursor:pointer;">
+            ⚡ Pay ₹${currentFee} from Wallet &amp; Issue Marksheet
           </button>
         </div>
       </div>
-      <div style="position:relative;">
-        ${marksheetHtml}
-      </div>
     `;
+    return;
   } else {
+    if (printWrap) printWrap.style.display = 'block';
     $('#mrkPreviewContainer').innerHTML = `
       <div class="no-print" style="margin-bottom:12px; display:flex; justify-content:flex-end; gap:10px;">
         <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:10px 18px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
@@ -5976,6 +5966,21 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
     } catch (_) {}
   }
 
+  // 🔒 Check if marksheet has been officially paid & issued
+  const isApproved = (m) => m && (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.marksheet_no);
+  const termLower = (activeTerm || '').toLowerCase();
+  const hasPaidMrk = (window._centreMarksheets || []).some(m => {
+    if (Number(m.student_id) !== sId || !isApproved(m)) return false;
+    if (!termLower) return true;
+    const mTerm = String(m.term || '').toLowerCase();
+    return mTerm.includes(termLower) || termLower.includes(mTerm);
+  }) || (window._issuedMrks && (window._issuedMrks[sId] || (stu && window._issuedMrks[stu.student_code])));
+
+  if (!hasPaidMrk) {
+    alert('🔒 यह अंकतालिका अभी लॉक है!\n\nपहले "Pay from Wallet & Issue" बटन पर क्लिक करके अंकतालिका जारी करें। भुगतान होने के बाद ही अंकतालिका देखने, एडिट करने और प्रिंट करने का विकल्प खुलेगा।');
+    return;
+  }
+
   let mrk = (window._centreMarksheets || []).find(m => {
     if (mrkId && mrkId !== sId && Number(m.id) === Number(mrkId)) return true;
     if (Number(m.student_id) === sId) {
@@ -6391,6 +6396,21 @@ window.openCentreEditCertModal = async function(certId, studentId) {
   }
 
   const s = stu || {};
+
+  // 🔒 Check if certificate has been officially paid & issued
+  const isCertPaid = Boolean(
+    s.certificate_id ||
+    s.cert_no ||
+    s.has_certificate ||
+    (s.cert_status && s.cert_status === 'Valid') ||
+    (cert && (cert.status === 'Valid' || cert.status === 'Approved' || cert.cert_no)) ||
+    (window._issuedCerts && (window._issuedCerts[sId] || (s.student_code && window._issuedCerts[s.student_code])))
+  );
+
+  if (!isCertPaid) {
+    alert('🔒 यह प्रमाणपत्र अभी लॉक है!\n\nपहले "Pay from Wallet & Issue" बटन पर क्लिक करके प्रमाणपत्र जारी करें। भुगतान होने के बाद ही प्रमाणपत्र देखने, एडिट करने और प्रिंट करने का विकल्प खुलेगा।');
+    return;
+  }
   const c = cert || {};
 
   const studentName = c.student_name || s.name || '';
