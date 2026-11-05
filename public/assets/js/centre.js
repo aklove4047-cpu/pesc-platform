@@ -952,8 +952,15 @@ const views = {
     const bal = (dash.wallet_balance_inr !== undefined) ? dash.wallet_balance_inr : ((dash.wallet_paise || 0) / 100);
     window.refreshCentreWalletBadge(bal);
 
-    const activeList = students.filter(s => !s.is_passout && s.status !== 'passout' && s.status !== 'completed');
-    const passoutList = students.filter(s => s.is_passout || s.status === 'passout' || s.status === 'completed');
+    // Rule: Student only goes to Passout if ALL semester marksheets AND certificate are issued, or explicit passout status!
+    const activeList = students.filter(s => {
+      if (s.status === 'passout' || s.status === 'completed') return false;
+      const mrkInfo = window.getStudentMarksheetInfo(s, window._centreMarksheets);
+      const hasCert = Boolean(s.certificate_id || s.cert_no);
+      if (!hasCert || !mrkInfo.isFullyIssued) return true; // keep in active list!
+      return !s.is_passout;
+    });
+    const passoutList = students.filter(s => !activeList.includes(s));
     const isPassoutTab = window._centreStudentsTab === 'passout';
     const currentList = isPassoutTab ? passoutList : activeList;
 
@@ -1731,7 +1738,10 @@ const views = {
                   </td>
 
                   <td style="padding:10px 14px; text-align:right;">
-                    <a href="javascript:void(0)" onclick="deleteCentreStudent(${s.id}, '${esc(s.name)}', '${esc(s.student_code)}')" style="color:#dc2626; font-weight:700; font-size:0.84rem; text-decoration:none;">Delete Certi. and Marksheet</a>
+                    <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                      <button type="button" class="btn sm alt" style="color:#dc2626; border-color:#fecaca; font-weight:700; padding:4px 8px; font-size:0.78rem;" onclick="deleteCentreMarksheet(${s.marksheet_id || s.id}, ${s.id}, '${esc(s.name)}')" title="Delete Marksheet only (Student safe)">🗑️ Del Mrk</button>
+                      <button type="button" class="btn sm alt" style="color:#b91c1c; border-color:#fecaca; font-weight:700; padding:4px 8px; font-size:0.78rem;" onclick="deleteCentreCertificate(${s.certificate_id || s.id}, ${s.id}, '${esc(s.name)}')" title="Delete Certificate only (Student safe)">🗑️ Del Cert</button>
+                    </div>
                   </td>
                 </tr>
               `;
@@ -1925,6 +1935,7 @@ const views = {
                           <a href="/print?type=certificate&student_id=${s.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Print Certificate (New Tab)">🖨️ Print (New Tab)</a>
                           <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentCert(${s.id})">👁️ Preview</button>
                           <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:700;" onclick="openCentreEditCertModal(${s.certificate_id || s.id}, ${s.id})">✏️ Edit</button>
+                          <button type="button" class="btn sm alt" style="color:#dc2626; border-color:#fecaca; font-weight:700;" onclick="deleteCentreCertificate(${s.certificate_id || s.id}, ${s.id}, '${esc(s.name)}')" title="Delete Certificate only (Student safe)">🗑️ Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -2095,6 +2106,7 @@ const views = {
                           <a href="/print?type=marksheet&student_id=${s.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Print Marksheet (New Tab)">🖨️ Print (New Tab)</a>
                           <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700;" onclick="viewIssuedStudentMrk(${s.id})">👁️ Preview</button>
                           <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:700;" onclick="openCentreEditMrkModal(${s.marksheet_id || s.id}, ${s.id})">✏️ Edit Marks</button>
+                          <button type="button" class="btn sm alt" style="color:#dc2626; border-color:#fecaca; font-weight:700;" onclick="deleteCentreMarksheet(${s.marksheet_id || s.id}, ${s.id}, '${esc(s.name)}', '${esc(s.term || '')}')" title="Delete Marksheet only (Student safe)">🗑️ Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -3419,6 +3431,54 @@ window.toggleCentreStudentStatus = async function(studentId, isPassout) {
     if (typeof views.MyStudents === 'function') views.MyStudents();
   } catch (err) {
     alert('Failed to update student status: ' + (err.message || err));
+  }
+};
+
+// Delete ONLY Marksheet (preserves student registration and profile)
+window.deleteCentreMarksheet = async function(marksheetId, studentId, studentName, term) {
+  const termLabel = term ? ` (${term})` : '';
+  const confirmed = confirm(`⚠️ अंकतालिका विलोपन (Delete Marksheet):\n\nक्या आप वाकई छात्र "${studentName || 'छात्र'}" की अंकतालिका${termLabel} को हटाना चाहते हैं?\n\n✅ सुरक्षित: छात्र का प्रवेश व खाता (Student Record) पूरी तरह सुरक्षित रहेगा, केवल अंकतालिका हटेगी ताकि आप आवश्यकता पड़ने पर पुनः नई अंकतालिका जारी कर सकें।`);
+  if (!confirmed) return;
+
+  try {
+    const targetId = marksheetId || studentId;
+    const res = await api(`/api/centre/marksheets/${targetId}`, { method: 'DELETE' });
+    toast('✅ अंकतालिका सफलतापूर्वक हटा दी गई! छात्र सुरक्षित है।');
+
+    // Update global state and refresh views
+    if (window._centreMarksheets) {
+      window._centreMarksheets = window._centreMarksheets.filter(m => Number(m.id) !== Number(marksheetId) && Number(m.student_id) !== Number(studentId));
+    }
+    if (typeof views !== 'undefined') {
+      if (typeof views.MarksheetPrinting === 'function') views.MarksheetPrinting();
+      if (typeof views.DownloadCertificate === 'function') views.DownloadCertificate();
+      if (typeof views.MyStudents === 'function') views.MyStudents();
+    }
+  } catch (err) {
+    alert('अंकतालिका डिलीट करने में विफल: ' + (err.message || err));
+  }
+};
+
+// Delete ONLY Certificate (preserves student registration and profile)
+window.deleteCentreCertificate = async function(certId, studentId, studentName) {
+  const confirmed = confirm(`⚠️ प्रमाणपत्र विलोपन (Delete Certificate):\n\nक्या आप वाकई छात्र "${studentName || 'छात्र'}" का प्रमाणपत्र (Certificate) हटाना चाहते हैं?\n\n✅ सुरक्षित: छात्र का प्रवेश व खाता सुरक्षित रहेगा, केवल प्रमाणपत्र हटेगा।`);
+  if (!confirmed) return;
+
+  try {
+    const targetId = certId || studentId;
+    const res = await api(`/api/centre/certificates/${targetId}`, { method: 'DELETE' });
+    toast('✅ प्रमाणपत्र सफलतापूर्वक हटा दिया गया! छात्र सुरक्षित है।');
+
+    if (window._centreCertificates) {
+      window._centreCertificates = window._centreCertificates.filter(c => Number(c.id) !== Number(certId) && Number(c.student_id) !== Number(studentId));
+    }
+    if (typeof views !== 'undefined') {
+      if (typeof views.CertificatePrinting === 'function') views.CertificatePrinting();
+      if (typeof views.DownloadCertificate === 'function') views.DownloadCertificate();
+      if (typeof views.MyStudents === 'function') views.MyStudents();
+    }
+  } catch (err) {
+    alert('प्रमाणपत्र डिलीट करने में विफल: ' + (err.message || err));
   }
 };
 

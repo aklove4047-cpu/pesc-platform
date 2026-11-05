@@ -4563,13 +4563,29 @@ export default {
             (sCodeStr && (String(x.student_code || '').trim() === sCodeStr || String(x.roll_no || '').trim() === sCodeStr)) ||
             (sRollStr && (String(x.roll_no || '').trim() === sRollStr || String(x.student_code || '').trim() === sRollStr))
           );
-          const mrk = store.marksheets.find(x => 
+          const studentMrks = store.marksheets.filter(x => 
             Number(x.student_id) === sIdNum || 
             (sCodeStr && (String(x.student_code || '').trim() === sCodeStr || String(x.roll_no || '').trim() === sCodeStr)) ||
             (sRollStr && (String(x.roll_no || '').trim() === sRollStr || String(x.student_code || '').trim() === sRollStr))
           );
-          const isPassout = s.status === 'passout' || s.status === 'completed' || !!cert || !!mrk || !!s.certificate_id || !!s.marksheet_id;
+          const mrk = studentMrks[0] || null;
+
+          const hasCert = Boolean(cert && (cert.status === 'Valid' || cert.status === 'Approved' || cert.cert_no || s.certificate_id));
           const stuEval = String(s.evaluation_type || (s.course_type && String(s.course_type).toLowerCase().includes('sem') ? 'semester' : 'annual')).toLowerCase();
+          const isSemester = stuEval.includes('semester') || studentMrks.some(m => String(m.term || '').toLowerCase().includes('sem'));
+
+          const isIssuedMrk = (m) => m && (m.status === 'Approved' || m.status === 'Valid' || m.marksheet_no);
+          let isFullyMarked = false;
+          if (isSemester) {
+            const hasSem1 = studentMrks.some(m => isIssuedMrk(m) && String(m.term || '').toLowerCase().includes('1'));
+            const hasSem2 = studentMrks.some(m => isIssuedMrk(m) && String(m.term || '').toLowerCase().includes('2'));
+            isFullyMarked = hasSem1 && hasSem2;
+          } else {
+            isFullyMarked = studentMrks.some(isIssuedMrk) || Boolean(s.marksheet_no);
+          }
+
+          // Rule: ONLY move to passout if ALL semester marksheets AND certificate are issued, or explicit passout status!
+          const isPassout = (s.status === 'passout' || s.status === 'completed') || (hasCert && isFullyMarked && s.status !== 'active');
           const totalF = Number(s.fee_total !== undefined ? s.fee_total : 12000);
           const paidF = Number(s.fee_paid !== undefined ? s.fee_paid : 0);
           const pendingF = Math.max(0, totalF - paidF);
@@ -4667,6 +4683,51 @@ export default {
           ]);
           return jsonResponse({ ok: true, message: 'Student deleted successfully!' });
         }
+      }
+
+      if (path.match(/\/api\/centre\/marksheets\/\d+$/) && request.method === 'DELETE') {
+        const mId = +path.split('/')[4];
+        const m = store.marksheets.find(x => Number(x.id) === mId || Number(x.student_id) === mId);
+        if (!m) return jsonResponse({ error: 'Marksheet not found' }, 404);
+
+        const sid = Number(m.student_id);
+        store.marksheets = store.marksheets.filter(x => Number(x.id) !== Number(m.id));
+
+        const stu = store.students.find(s => Number(s.id) === sid);
+        if (stu) {
+          const rem = store.marksheets.find(x => Number(x.student_id) === sid);
+          stu.marksheet_id = rem ? rem.id : null;
+          stu.marksheet_no = rem ? rem.marksheet_no : null;
+          if (stu.status === 'passout') stu.status = 'active';
+        }
+
+        await Promise.all([
+          persistToKV(env, 'marksheets', store.marksheets),
+          persistToKV(env, 'students', store.students)
+        ]);
+        return jsonResponse({ ok: true, message: 'Marksheet deleted successfully. Student record is intact.', student_id: sid });
+      }
+
+      if (path.match(/\/api\/centre\/certificates\/\d+$/) && request.method === 'DELETE') {
+        const certId = +path.split('/')[4];
+        const cert = store.certificates.find(x => Number(x.id) === certId || Number(x.student_id) === certId);
+        if (!cert) return jsonResponse({ error: 'Certificate not found' }, 404);
+
+        const sid = Number(cert.student_id);
+        store.certificates = store.certificates.filter(x => Number(x.id) !== Number(cert.id));
+
+        const stu = store.students.find(s => Number(s.id) === sid);
+        if (stu) {
+          stu.certificate_id = null;
+          stu.cert_no = null;
+          if (stu.status === 'passout') stu.status = 'active';
+        }
+
+        await Promise.all([
+          persistToKV(env, 'certificates', store.certificates),
+          persistToKV(env, 'students', store.students)
+        ]);
+        return jsonResponse({ ok: true, message: 'Certificate deleted successfully. Student record is intact.', student_id: sid });
       }
 
       if (path === '/api/centre/fees/record' && request.method === 'POST') {

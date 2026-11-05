@@ -151,8 +151,7 @@ router.get('/students', (req, res) => {
     ce.seal_url AS centre_seal_url, ce.signature_url AS centre_signature_url, ce.logo_url AS centre_logo_url,
     co.name AS course, co.code AS course_code, co.duration_months, co.subjects AS course_subjects,
     cert.id AS certificate_id, cert.cert_no, cert.status AS cert_status,
-    mrk.id AS marksheet_id, mrk.marksheet_no, mrk.status AS marksheet_status,
-    CASE WHEN s.status='passout' OR s.status='completed' OR cert.id IS NOT NULL OR mrk.id IS NOT NULL THEN 1 ELSE 0 END AS is_passout
+    mrk.id AS marksheet_id, mrk.marksheet_no, mrk.status AS marksheet_status
     FROM students s
     JOIN centres ce ON ce.id=s.centre_id
     JOIN courses co ON co.id=s.course_id
@@ -160,7 +159,30 @@ router.get('/students', (req, res) => {
     LEFT JOIN marksheets mrk ON mrk.student_id=s.id
     WHERE s.centre_id=? AND (s.name LIKE ? OR s.student_code LIKE ? OR s.mobile LIKE ?)
     ORDER BY s.id DESC LIMIT ? OFFSET ?`).all(cid(req), q, q, q, size, offset);
-  res.json({ students: rows });
+
+  const students = rows.map(s => {
+    const studentMrks = db.prepare("SELECT id, term, status FROM marksheets WHERE student_id=?").all(s.id);
+    const hasCert = Boolean(s.certificate_id || (s.cert_status && s.cert_status === 'Valid'));
+    const isSem = String(s.evaluation_type || '').toLowerCase().includes('sem') || studentMrks.some(m => String(m.term || '').toLowerCase().includes('sem'));
+
+    let isFullyMarked = false;
+    if (isSem) {
+      const hasSem1 = studentMrks.some(m => String(m.term || '').toLowerCase().includes('1') && m.status === 'Approved');
+      const hasSem2 = studentMrks.some(m => String(m.term || '').toLowerCase().includes('2') && m.status === 'Approved');
+      isFullyMarked = hasSem1 && hasSem2;
+    } else {
+      isFullyMarked = studentMrks.some(m => m.status === 'Approved');
+    }
+
+    // Only passout if ALL required semester marksheets AND certificate are issued, or explicit passout status!
+    const isPassout = (s.status === 'passout' || s.status === 'completed') || (hasCert && isFullyMarked && s.status !== 'active');
+    return {
+      ...s,
+      is_passout: isPassout ? 1 : 0
+    };
+  });
+
+  res.json({ students });
 });
 
 // Student Passout Status Toggle
@@ -355,6 +377,33 @@ router.delete('/students/:id', (req, res) => {
   }
   db.prepare('DELETE FROM students WHERE id=? AND centre_id=?').run(sId, centreId);
   res.json({ ok: true, message: 'Student deleted successfully' });
+});
+
+// Delete ONLY marksheet (preserves student record)
+router.delete('/marksheets/:id', (req, res) => {
+  const mid = +req.params.id;
+  const m = db.prepare('SELECT * FROM marksheets WHERE (id=? OR student_id=?) AND centre_id=?').get(mid, mid, cid(req));
+  if (!m) throw new HttpError(404, 'Marksheet not found');
+
+  db.prepare('DELETE FROM marksheets WHERE id=?').run(m.id);
+
+  // Check if student has any other marksheets remaining
+  const rem = db.prepare('SELECT id, marksheet_no FROM marksheets WHERE student_id=? ORDER BY id DESC LIMIT 1').get(m.student_id);
+  db.prepare('UPDATE students SET marksheet_id=?, marksheet_no=?, status=CASE WHEN status="passout" THEN "active" ELSE status END WHERE id=?').run(rem ? rem.id : null, rem ? rem.marksheet_no : null, m.student_id);
+
+  res.json({ ok: true, message: 'Marksheet deleted successfully. Student record is intact.', student_id: m.student_id });
+});
+
+// Delete ONLY certificate (preserves student record)
+router.delete('/certificates/:id', (req, res) => {
+  const cidVal = +req.params.id;
+  const cert = db.prepare('SELECT * FROM certificates WHERE (id=? OR student_id=?) AND centre_id=?').get(cidVal, cidVal, cid(req));
+  if (!cert) throw new HttpError(404, 'Certificate not found');
+
+  db.prepare('DELETE FROM certificates WHERE id=?').run(cert.id);
+  db.prepare('UPDATE students SET certificate_id=NULL, cert_no=NULL, status=CASE WHEN status="passout" THEN "active" ELSE status END WHERE id=?').run(cert.student_id);
+
+  res.json({ ok: true, message: 'Certificate deleted successfully. Student record is intact.', student_id: cert.student_id });
 });
 
 router.post('/students/:id/account', h(async (req, res) => {
