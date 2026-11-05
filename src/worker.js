@@ -1363,9 +1363,11 @@ export default {
     }
 
     if (path === '/api/public/authorities') {
+      const qSlug = url.searchParams.get('slug') || url.searchParams.get('centre') || request.headers.get('x-centre-slug');
+      const targetC = qSlug ? resolveSlug(qSlug) : null;
       return jsonResponse({
         ok: true,
-        authorities: getAuthorities(null)
+        authorities: getAuthorities(targetC)
       });
     }
 
@@ -4568,8 +4570,21 @@ export default {
           );
           const isPassout = s.status === 'passout' || s.status === 'completed' || !!cert || !!mrk || !!s.certificate_id || !!s.marksheet_id;
           const stuEval = String(s.evaluation_type || (s.course_type && String(s.course_type).toLowerCase().includes('sem') ? 'semester' : 'annual')).toLowerCase();
+          const totalF = Number(s.fee_total !== undefined ? s.fee_total : 12000);
+          const paidF = Number(s.fee_paid !== undefined ? s.fee_paid : 0);
+          const pendingF = Math.max(0, totalF - paidF);
           return {
             ...s,
+            centre_id: s.centre_id || c.id,
+            centre_name: c.name || s.centre_name || 'Authorized Training Centre',
+            centre_code: c.centre_code || s.centre_code || 'PESC',
+            director_name: c.director_name || s.director_name || 'Centre Director',
+            district: c.district || s.district || 'Azamgarh',
+            state: c.state || s.state || 'Uttar Pradesh',
+            address: c.address || s.address || '',
+            fee_total: totalF,
+            fee_paid: paidF,
+            fee_pending: pendingF,
             evaluation_type: stuEval,
             course_type: s.course_type || (stuEval === 'semester' ? 'Semester/Year' : 'Single'),
             is_passout: isPassout,
@@ -4652,6 +4667,51 @@ export default {
           ]);
           return jsonResponse({ ok: true, message: 'Student deleted successfully!' });
         }
+      }
+
+      if (path === '/api/centre/fees/record' && request.method === 'POST') {
+        const body = await request.json().catch(() => ({}));
+        const studentId = +body.student_id;
+        const amount = Math.round(+body.amount || 0);
+        const mode = String(body.mode || 'Cash').trim();
+        const note = String(body.note || 'Fee installment').trim();
+        if (!studentId || amount <= 0) return jsonResponse({ error: 'Valid student and amount are required' }, 400);
+
+        const stu = store.students.find(s => Number(s.id) === studentId && (Number(s.centre_id) === Number(c.id) || !s.centre_id));
+        if (!stu) return jsonResponse({ error: 'Student not found' }, 404);
+
+        const newPaid = (stu.fee_paid || 0) + amount;
+        stu.fee_paid = newPaid;
+        stu.fee_pending = Math.max(0, (stu.fee_total || 12000) - newPaid);
+
+        if (!Array.isArray(stu.fee_transactions)) stu.fee_transactions = [];
+        const receiptNo = `REC-${new Date().getFullYear()}-${String(stu.id).padStart(4, '0')}-${Date.now().toString().slice(-4)}`;
+        const txn = {
+          receipt_no: receiptNo,
+          amount,
+          mode,
+          note,
+          date: new Date().toLocaleDateString('en-IN'),
+          timestamp: Date.now()
+        };
+        stu.fee_transactions.unshift(txn);
+
+        await persistToKV(env, 'students', store.students);
+
+        return jsonResponse({
+          ok: true,
+          message: 'Fee payment recorded successfully!',
+          receipt_no: receiptNo,
+          student_id: stu.id,
+          student_name: stu.name,
+          student_code: stu.student_code,
+          amount_paid: amount,
+          new_total_paid: newPaid,
+          balance_pending: stu.fee_pending,
+          mode,
+          date: txn.date,
+          receipt: txn
+        });
       }
 
       if (path === '/api/centre/courses') {

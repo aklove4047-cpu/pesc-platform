@@ -5128,17 +5128,299 @@ async function quickViewStudent(id) {
   });
 }
 
-// Print Fee Receipt
-function printReceipt(studentId) {
+// =========================================================================
+// FEES COLLECTION: DEPOSIT MODAL, RECEIPTS & PAYMENT LINKS
+// =========================================================================
+window.openDepositModal = function(studentId, studentName, pendingAmount) {
+  const existing = document.getElementById('feeDepositModal');
+  if (existing) existing.remove();
+
+  const pend = Number(pendingAmount) || 0;
+  const modal = document.createElement('div');
+  modal.id = 'feeDepositModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.75);display:flex;align-items:center;justify-content:center;z-index:999999;backdrop-filter:blur(6px);padding:16px;';
+
+  const defaultAmt = pend > 0 ? pend : 1000;
+  modal.innerHTML = `
+    <div style="background:#ffffff;border-radius:16px;max-width:480px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,0.3);border:1px solid #cbd5e1;overflow:hidden;">
+      <div style="background:linear-gradient(135deg, #064e3b, #047857);color:#ffffff;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h3 style="margin:0;font-size:1.25rem;display:flex;align-items:center;gap:8px;">💰 Fee Deposit (फीस जमा करें)</h3>
+          <p style="margin:4px 0 0;font-size:0.82rem;color:#a7f3d0;">Student Fee Collection & Official Receipt Generation</p>
+        </div>
+        <button id="btnCloseFeeModal" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:1.2rem;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
+
+      <div style="padding:22px;">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:18px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="color:#64748b;font-size:0.85rem;">Candidate Name:</span>
+            <b style="color:#0f172a;font-size:0.95rem;">${esc(studentName)}</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#64748b;font-size:0.85rem;">Pending Balance (बकाया फीस):</span>
+            <span style="color:#dc2626;font-weight:800;font-size:1.15rem;">₹${pend.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+
+        <form id="feeDepositForm">
+          <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:0.82rem;font-weight:700;color:#334155;margin-bottom:6px;">Deposit Amount (जमा की जाने वाली राशि - ₹) *</label>
+            <input type="number" id="depositAmountInput" min="1" max="${pend > 0 ? pend : 100000}" value="${defaultAmt}" placeholder="Enter amount (e.g. ${pend})" required style="width:100%;padding:10px 14px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:1.1rem;font-weight:700;box-sizing:border-box;">
+            <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+              ${pend > 0 ? `
+                <button type="button" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:0.75rem;padding:4px 8px;border-radius:4px;cursor:pointer;font-weight:600;" onclick="document.getElementById('depositAmountInput').value='${pend}'">Full Pending (₹${pend})</button>
+              ` : ''}
+              ${pend > 2000 ? `
+                <button type="button" style="background:#f8fafc;border:1px solid #cbd5e1;color:#475569;font-size:0.75rem;padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="document.getElementById('depositAmountInput').value='1000'">₹1,000</button>
+                <button type="button" style="background:#f8fafc;border:1px solid #cbd5e1;color:#475569;font-size:0.75rem;padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="document.getElementById('depositAmountInput').value='2000'">₹2,000</button>
+                <button type="button" style="background:#f8fafc;border:1px solid #cbd5e1;color:#475569;font-size:0.75rem;padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="document.getElementById('depositAmountInput').value='5000'">₹5,000</button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:0.82rem;font-weight:700;color:#334155;margin-bottom:6px;">Payment Mode (भुगतान का माध्यम) *</label>
+            <select id="depositModeSelect" style="width:100%;padding:10px 14px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.95rem;background:#fff;box-sizing:border-box;">
+              <option value="Cash">💵 Cash (नकद)</option>
+              <option value="UPI / Online">📱 UPI / QR Code / Online</option>
+              <option value="Bank Transfer">🏦 Bank Transfer / NEFT</option>
+              <option value="Cheque">📜 Cheque</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <label style="display:block;font-size:0.82rem;font-weight:700;color:#334155;margin-bottom:6px;">Payment Note / Remarks (विवरण)</label>
+            <input type="text" id="depositNoteInput" value="Tuition Fee Installment" placeholder="e.g. 1st installment, final exam fee" style="width:100%;padding:10px 14px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:0.9rem;box-sizing:border-box;">
+          </div>
+
+          <div id="depositErrorBox" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:10px 14px;border-radius:8px;font-size:0.85rem;margin-bottom:16px;"></div>
+
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button type="button" id="btnCancelFeeModal" style="padding:10px 18px;border:1px solid #cbd5e1;background:#f8fafc;color:#475569;border-radius:8px;cursor:pointer;font-weight:600;">Cancel</button>
+            <button type="submit" id="btnSubmitFeeModal" style="padding:10px 22px;border:none;background:linear-gradient(135deg, #059669, #047857);color:#ffffff;border-radius:8px;cursor:pointer;font-weight:700;box-shadow:0 4px 12px rgba(5,150,105,0.3);">✅ Confirm &amp; Record Deposit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeModal = () => modal.remove();
+  modal.querySelector('#btnCloseFeeModal').onclick = closeModal;
+  modal.querySelector('#btnCancelFeeModal').onclick = closeModal;
+
+  modal.querySelector('#feeDepositForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = modal.querySelector('#btnSubmitFeeModal');
+    const errBox = modal.querySelector('#depositErrorBox');
+    const amt = Math.round(+modal.querySelector('#depositAmountInput').value || 0);
+    const mode = modal.querySelector('#depositModeSelect').value;
+    const note = modal.querySelector('#depositNoteInput').value.trim();
+
+    if (amt <= 0) {
+      errBox.textContent = 'Please enter a valid deposit amount greater than 0';
+      errBox.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Recording Payment...';
+    errBox.style.display = 'none';
+
+    try {
+      const res = await api('/api/centre/fees/record', {
+        method: 'POST',
+        body: { student_id: studentId, amount: amt, mode, note }
+      });
+
+      modal.remove();
+      toast(`✅ ₹${amt.toLocaleString('en-IN')} deposited successfully! Receipt #${res.receipt_no}`);
+
+      // Refresh Views so pending fees and locked buttons unlock immediately
+      if (typeof views !== 'undefined') {
+        if (typeof views.FeesCollection === 'function') views.FeesCollection();
+        if (typeof views.MyStudents === 'function') views.MyStudents();
+      }
+
+      // Show Receipt Modal
+      window.showReceiptModal(res);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = '✅ Confirm & Record Deposit';
+      errBox.textContent = err.message || 'Failed to record fee payment';
+      errBox.style.display = 'block';
+    }
+  };
+};
+
+window.showReceiptModal = function(receiptData) {
+  const existing = document.getElementById('receiptModal');
+  if (existing) existing.remove();
+
+  const r = receiptData || {};
+  const cName = currentCentre ? currentCentre.name : 'Authorized Training Centre';
+  const cCode = currentCentre ? currentCentre.centre_code : 'PESC';
+
+  const modal = document.createElement('div');
+  modal.id = 'receiptModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.8);display:flex;align-items:center;justify-content:center;z-index:999999;backdrop-filter:blur(6px);padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:#ffffff;border-radius:16px;max-width:460px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.35);border:1px solid #cbd5e1;overflow:hidden;">
+      <div id="receiptPrintArea" style="padding:26px 24px;background:#ffffff;">
+        <div style="text-align:center;border-bottom:2px dashed #cbd5e1;padding-bottom:16px;margin-bottom:16px;">
+          <h2 style="margin:0;color:#08244c;font-size:1.15rem;font-weight:900;">${esc(cName).toUpperCase()}</h2>
+          <div style="font-size:0.75rem;color:#64748b;margin-top:3px;">CENTRE CODE: ${esc(cCode)} | AFFILIATED WITH PES COUNCIL</div>
+          <div style="display:inline-block;background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;padding:3px 12px;border-radius:12px;font-size:0.75rem;font-weight:800;margin-top:8px;">
+            FEE PAYMENT RECEIPT (रसीद)
+          </div>
+        </div>
+
+        <div style="font-size:0.86rem;line-height:1.7;color:#334155;">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;">Receipt No:</span>
+            <b style="font-family:monospace;color:#0f172a;">${esc(r.receipt_no || 'REC-' + Date.now())}</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;">Date:</span>
+            <b>${esc(r.date || new Date().toLocaleDateString('en-IN'))}</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;">Candidate Name:</span>
+            <b style="color:#08244c;">${esc(r.student_name || 'Student')}</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;">Roll / Reg No:</span>
+            <span style="font-family:monospace;">${esc(r.student_code || '-')}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;">Payment Mode:</span>
+            <b>${esc(r.mode || 'Cash')}</b>
+          </div>
+          <div style="margin:12px 0;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;color:#166534;">Amount Deposited:</span>
+            <b style="font-size:1.3rem;color:#15803d;">₹${(Number(r.amount_paid) || 0).toLocaleString('en-IN')}</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;">Total Paid So Far:</span>
+            <b>₹${(Number(r.new_total_paid) || 0).toLocaleString('en-IN')}</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#64748b;">Remaining Pending:</span>
+            <b style="color:${(Number(r.balance_pending) || 0) > 0 ? '#dc2626' : '#16a34a'};">₹${(Number(r.balance_pending) || 0).toLocaleString('en-IN')}</b>
+          </div>
+        </div>
+
+        <div style="margin-top:24px;padding-top:14px;border-top:1px dashed #cbd5e1;display:flex;justify-content:space-between;align-items:flex-end;">
+          <div style="font-size:0.68rem;color:#94a3b8;">Computer generated receipt.<br>Valid without physical signature.</div>
+          <div style="text-align:center;font-size:0.75rem;font-weight:700;color:#08244c;">Authorized Signatory</div>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc;padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+        <button id="btnCloseReceiptModal" style="padding:8px 16px;border:1px solid #cbd5e1;background:#fff;color:#475569;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
+        <button id="btnPrintReceiptBtn" style="padding:8px 18px;border:none;background:#0284c7;color:#fff;border-radius:6px;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:6px;">🖨️ Print Receipt</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.querySelector('#btnCloseReceiptModal').onclick = () => modal.remove();
+  modal.querySelector('#btnPrintReceiptBtn').onclick = () => {
+    const printContent = modal.querySelector('#receiptPrintArea').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`<html><head><title>Fee Receipt - ${esc(r.student_name)}</title><style>body{font-family:sans-serif;padding:30px;}</style></head><body>${printContent}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 350);
+  };
+};
+
+window.showPaymentLink = function(studentName, pendingAmount) {
+  const existing = document.getElementById('paymentLinkModal');
+  if (existing) existing.remove();
+
+  const pend = Number(pendingAmount) || 0;
+  const cName = currentCentre ? currentCentre.name : 'Purvanchal Council Centre';
+  const cSlug = currentCentre ? currentCentre.slug : '';
+  const upiId = (currentCentre && currentCentre.upi_id) || '9129085551@okbizaxis';
+  const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(cName)}&am=${pend}&cu=INR`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`;
+
+  const shareText = `नमस्ते ${studentName},\nआपके कोर्स की शेष फीस ₹${pend.toLocaleString('en-IN')} बकाया है।\nकृपया नीचे दिए गए UPI लिंक या QR कोड से भुगतान करें:\n${upiUrl}\nसंस्थान: ${cName}`;
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+
+  const modal = document.createElement('div');
+  modal.id = 'paymentLinkModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.8);display:flex;align-items:center;justify-content:center;z-index:999999;backdrop-filter:blur(6px);padding:16px;';
+
+  modal.innerHTML = `
+    <div style="background:#ffffff;border-radius:16px;max-width:440px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,0.3);border:1px solid #cbd5e1;overflow:hidden;">
+      <div style="background:linear-gradient(135deg, #0284c7, #0369a1);color:#ffffff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h3 style="margin:0;font-size:1.15rem;">💳 Instant Fee Payment Link</h3>
+          <p style="margin:2px 0 0;font-size:0.8rem;color:#bae6fd;">Direct UPI &amp; WhatsApp Payment Option</p>
+        </div>
+        <button id="btnClosePayLinkModal" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:1.1rem;width:28px;height:28px;border-radius:50%;cursor:pointer;">✕</button>
+      </div>
+
+      <div style="padding:20px;text-align:center;">
+        <div style="font-size:0.9rem;color:#64748b;margin-bottom:4px;">Candidate: <b style="color:#0f172a;">${esc(studentName)}</b></div>
+        <div style="font-size:1.3rem;font-weight:900;color:#dc2626;margin-bottom:14px;">Pending Fee: ₹${pend.toLocaleString('en-IN')}</div>
+
+        <div style="background:#f8fafc;padding:14px;border-radius:12px;border:1px solid #e2e8f0;display:inline-block;margin-bottom:14px;">
+          <img src="${qrUrl}" alt="UPI QR Code" style="width:170px;height:170px;display:block;margin:0 auto;border-radius:8px;">
+          <div style="font-size:0.75rem;font-weight:700;color:#475569;margin-top:6px;">Scan to pay via GPay / PhonePe / Paytm</div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <a href="${waUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#25d366;color:#ffffff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.92rem;box-shadow:0 4px 12px rgba(37,211,102,0.3);">
+            <span>💬</span> Share Payment Link on WhatsApp
+          </a>
+        </div>
+
+        <div style="font-size:0.78rem;color:#64748b;">
+          UPI ID: <b>${esc(upiId)}</b>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc;padding:12px 20px;border-top:1px solid #e2e8f0;text-align:right;">
+        <button id="btnDismissPayLink" style="padding:8px 16px;border:1px solid #cbd5e1;background:#fff;color:#475569;border-radius:6px;cursor:pointer;font-weight:600;">Close</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  const closeModal = () => modal.remove();
+  modal.querySelector('#btnClosePayLinkModal').onclick = closeModal;
+  modal.querySelector('#btnDismissPayLink').onclick = closeModal;
+};
+
+// Print / View Fee Receipt
+window.printReceipt = function(studentId) {
   guard(async () => {
-    const res = await api('/api/centre/fees/record', {
-      method: 'POST',
-      body: { student_id: studentId, amount: 1000, mode: 'Cash', note: 'Installment' }
-    });
-    alert(`OFFICIAL FEE RECEIPT\n--------------------------\nReceipt No: ${res.receipt_no}\nStudent: ${res.student_name} (${res.student_code})\nAmount Deposited: ₹${res.amount_paid}\nTotal Paid: ₹${res.new_total_paid}\nPending Balance: ₹${res.balance_pending}\nDate: ${res.date}\nStatus: PAYMENT CONFIRMED\n--------------------------\nPrinting receipt...`);
-    window.print();
+    const sData = await api('/api/centre/students');
+    const students = sData.students || [];
+    const s = students.find(x => Number(x.id) === Number(studentId));
+    if (!s) {
+      alert('Student record not found');
+      return;
+    }
+    const receiptData = {
+      receipt_no: `REC-${new Date().getFullYear()}-${String(s.id).padStart(4, '0')}-01`,
+      student_name: s.name,
+      student_code: s.student_code,
+      amount_paid: s.fee_paid || 0,
+      new_total_paid: s.fee_paid || 0,
+      balance_pending: Math.max(0, (s.fee_total || 12000) - (s.fee_paid || 0)),
+      mode: 'Cash / Online',
+      date: new Date().toLocaleDateString('en-IN')
+    };
+    window.showReceiptModal(receiptData);
   });
-}
+};
 
 // Course Selling Price update & Management Helpers
 async function saveCoursePrice(courseId) {

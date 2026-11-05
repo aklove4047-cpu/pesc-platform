@@ -205,17 +205,19 @@
         const headers = {};
         if (slug) headers['x-centre-slug'] = slug;
 
-        const [authRes, stuDataRes, certsRes, mrksRes] = await Promise.all([
-          fetch('/api/public/authorities').then(r => r.json()).catch(() => ({})),
+        const [authRes, stuDataRes, certsRes, mrksRes, centresRes] = await Promise.all([
+          fetch(`/api/public/authorities${slug ? '?slug=' + encodeURIComponent(slug) : ''}`, { headers }).then(r => r.json()).catch(() => ({})),
           fetch(`/api/centre/students${slug ? '?slug=' + encodeURIComponent(slug) : ''}`, { headers }).then(r => r.json()).catch(() => ({ students: [] })),
           fetch(`/api/centre/certificates${slug ? '?slug=' + encodeURIComponent(slug) : ''}`, { headers }).then(r => r.json()).catch(() => ({ certificates: [] })),
-          fetch(`/api/centre/marksheets${slug ? '?slug=' + encodeURIComponent(slug) : ''}`, { headers }).then(r => r.json()).catch(() => ({ marksheets: [] }))
+          fetch(`/api/centre/marksheets${slug ? '?slug=' + encodeURIComponent(slug) : ''}`, { headers }).then(r => r.json()).catch(() => ({ marksheets: [] })),
+          fetch('/api/public/centres').then(r => r.json()).catch(() => ({ centres: [] }))
         ]);
 
         const authorities = authRes.authorities || {};
         const students = stuDataRes.students || [];
         const certificates = certsRes.certificates || [];
         const marksheets = mrksRes.marksheets || [];
+        const allCentres = centresRes.centres || [];
 
         // Find Target Student
         let targetStudent = null;
@@ -252,12 +254,34 @@
           return;
         }
 
-        // Resolve Centre details
-        const centre = authorities.centre || {
-          name: targetStudent.centre_name || 'Purvanchal Education Centre',
-          centre_code: targetStudent.centre_code || 'PESC00001',
-          director_name: targetStudent.director_name || 'Centre Director'
+        // Resolve Centre details dynamically for the target student
+        let matchedCentre = null;
+        if (targetStudent && targetStudent.centre_id) {
+          matchedCentre = allCentres.find(c => Number(c.id) === Number(targetStudent.centre_id));
+        }
+        if (!matchedCentre && slug) {
+          const sLower = String(slug).toLowerCase().replace(/[-_]/g, '');
+          matchedCentre = allCentres.find(c => (c.slug && c.slug.toLowerCase().replace(/[-_]/g, '') === sLower) || (c.centre_code && c.centre_code.toLowerCase() === sLower));
+        }
+        if (!matchedCentre && targetStudent && targetStudent.centre_code) {
+          matchedCentre = allCentres.find(c => c.centre_code === targetStudent.centre_code);
+        }
+
+        const centre = {
+          id: (matchedCentre && matchedCentre.id) || (targetStudent && targetStudent.centre_id) || 1,
+          name: (matchedCentre && matchedCentre.name) || (targetStudent && targetStudent.centre_name) || (authorities.centre && authorities.centre.name) || 'Purvanchal Education Centre',
+          hindi_name: (matchedCentre && (matchedCentre.hindi_name || matchedCentre.name)) || (targetStudent && (targetStudent.centre_hindi || targetStudent.centre_name)) || '',
+          centre_code: (matchedCentre && matchedCentre.centre_code) || (targetStudent && targetStudent.centre_code) || 'PESC00001',
+          director_name: (matchedCentre && matchedCentre.director_name) || (targetStudent && targetStudent.director_name) || 'Centre Director',
+          district: (matchedCentre && matchedCentre.district) || (targetStudent && targetStudent.centre_district) || 'Azamgarh',
+          state: (matchedCentre && matchedCentre.state) || (targetStudent && targetStudent.centre_state) || 'Uttar Pradesh',
+          address: (matchedCentre && matchedCentre.address) || (targetStudent && targetStudent.centre_address) || `${(matchedCentre && matchedCentre.district) || 'Azamgarh'}, Uttar Pradesh`,
+          slug: (matchedCentre && matchedCentre.slug) || slug || '',
+          seal_url: (matchedCentre && matchedCentre.seal_url) || (targetStudent && targetStudent.centre_seal_url) || (authorities.centre && authorities.centre.seal_url) || '/assets/img/seal_centre_director.svg',
+          signature_url: (matchedCentre && matchedCentre.signature_url) || (targetStudent && targetStudent.centre_signature_url) || (authorities.centre && authorities.centre.signature_url) || '/assets/img/sign_centre_director.svg',
+          logo_url: (matchedCentre && matchedCentre.logo_url) || (targetStudent && targetStudent.centre_logo_url) || (authorities.centre && authorities.centre.logo_url) || ''
         };
+        authorities.centre = centre;
 
         let renderedHtml = '';
         let pageTitle = 'Document Print';

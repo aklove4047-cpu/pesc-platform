@@ -275,4 +275,54 @@ router.get('/settings', (req, res) => {
   });
 });
 
+router.get('/authorities', (req, res) => {
+  const adminUser = db.prepare("SELECT * FROM users WHERE role='super_admin' OR role='admin' ORDER BY id ASC LIMIT 1").get() || {};
+  const slugOrId = req.query.slug || req.query.centre || req.headers['x-centre-slug'];
+  let centre = null;
+  if (slugOrId) {
+    centre = db.prepare("SELECT * FROM centres WHERE slug=? OR centre_code=? OR id=?").get(slugOrId, slugOrId, +slugOrId || 0);
+  }
+  if (!centre) {
+    centre = db.prepare("SELECT * FROM centres WHERE status='active' ORDER BY id ASC LIMIT 1").get() || {};
+  }
+
+  res.json({
+    ok: true,
+    authorities: {
+      head_office: {
+        name: adminUser.name || 'Executive Director & Controller of Examinations',
+        designation: adminUser.designation || 'Executive Director & Controller of Examinations',
+        seal_url: adminUser.seal_url || '/assets/img/seal_council_head.svg',
+        signature_url: adminUser.signature_url || '/assets/img/sign_council_head.svg',
+        logo_url: adminUser.logo_url || '/assets/img/logo_council.svg',
+        website: adminUser.website || 'https://pescouncil.in',
+        mobile: adminUser.mobile || '+91 91290 85551',
+        email: adminUser.email || 'info@pescouncil.in',
+        address: adminUser.address || 'Head Office: Gorakhpur / Lucknow, UP - 273001'
+      },
+      coordinator: {
+        id: 2,
+        name: 'Er. V. K. Maurya',
+        state: centre.state || 'Uttar Pradesh',
+        seal_url: centre.coordinator_seal_url || '/assets/img/seal_coordinator.svg',
+        signature_url: centre.coordinator_signature_url || '/assets/img/sign_coordinator.svg'
+      },
+      centre: {
+        id: centre.id || 1,
+        name: centre.name || 'Authorized Training Centre',
+        hindi_name: centre.hindi_name || centre.name || '',
+        centre_code: centre.centre_code || 'PESC00001',
+        director_name: centre.director_name || 'Centre Director',
+        district: centre.district || 'Azamgarh',
+        state: centre.state || 'Uttar Pradesh',
+        address: centre.address || '',
+        slug: centre.slug || '',
+        logo_url: centre.logo_url || '',
+        seal_url: centre.seal_url || '/assets/img/seal_centre_director.svg',
+        signature_url: centre.signature_url || '/assets/img/sign_centre_director.svg'
+      }
+    }
+  });
+});
+
 module.exports = router;

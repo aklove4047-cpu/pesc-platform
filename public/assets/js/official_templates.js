@@ -1082,15 +1082,15 @@
   function renderStudentIdCardHtml(data) {
     const s = data.student || {};
     const c = data.centre || {};
-    const name = s.name || 'Preeti';
-    const rollNo = s.roll_no || `Pesc-${String(s.id || '00008').padStart(5, '0')}`;
-    const courseName = s.course_name || s.course || 'Nursery Teacher Training';
-    const regNo = s.student_code || `PIT-26-${String(s.id || '0008').padStart(4, '0')}`;
+    const name = s.name || 'Student Candidate';
+    const rollNo = s.roll_no || s.student_code || `PESC-${String(s.id || '00001').padStart(5, '0')}`;
+    const courseName = s.course_name || s.course || 'Diploma in Computer Applications';
+    const regNo = s.student_code || rollNo;
     const bloodGroup = s.blood_group || 'O+';
     const validUpto = data.validUpto || 'SEP 2026';
 
-    const centreHindi = c.hindi_name || c.name || 'प्रीति इंस्टीट्यूट ऑफ टेक्नोलॉजी';
-    const centreEnglish = (c.name || 'PREETI INSTITUTE OF TECHNOLOGY').toUpperCase();
+    const centreHindi = c.hindi_name || c.name || 'प्रशिक्षण एवं कौशल संस्थान';
+    const centreEnglish = (c.name || 'AUTHORIZED TRAINING CENTRE').toUpperCase();
 
     const photoUrl = s.photo_url || s.photo || '';
     const photoHtml = photoUrl ? 
@@ -1183,13 +1183,13 @@
             <ol style="font-size:0.68rem; color:#334155; line-height:1.5; padding-left:14px; margin:0 0 12px;">
               <li>This card is non-transferable and must be carried at all times.</li>
               <li>Loss of this card must be reported immediately to the centre.</li>
-              <li>Returns to: <b>${esc(centreEnglish)}</b>, ${esc(c.district || 'Azamgarh')}.</li>
+              <li>Returns to: <b>${esc(centreEnglish)}</b>, ${esc(c.district || c.state || 'Uttar Pradesh')}.</li>
             </ol>
 
             <div style="font-size:0.72rem; color:#0f172a; line-height:1.5;">
               <b>Contact:</b><br>
-              Website: ${esc(c.slug ? `https://${c.slug}.pescouncil.in` : 'https://pitcouncil.com')}<br>
-              Email: ${esc(c.email || 'info@pitcouncil.com')}
+              Website: ${esc(c.slug ? `https://${c.slug}.pescouncil.in` : 'https://pescouncil.in')}<br>
+              Email: ${esc(c.email || (c.slug ? `info@${c.slug}.pescouncil.in` : 'info@pescouncil.in'))}
             </div>
           </div>
 

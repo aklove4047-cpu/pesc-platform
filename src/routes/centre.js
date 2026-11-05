@@ -146,12 +146,15 @@ router.get('/students', (req, res) => {
   const { size, offset } = paginate(req);
   const q = `%${str(req.query.q, 50)}%`;
   const rows = db.prepare(`SELECT s.id, s.student_code, s.name, s.father_name, s.mother_name, s.mobile, s.email, s.dob, s.status, s.session,
-    s.fee_total, s.fee_paid, s.photo_url, s.initial_password, s.course_id, s.evaluation_type, s.term,
+    s.fee_total, s.fee_paid, (s.fee_total - s.fee_paid) AS fee_pending, s.photo_url, s.initial_password, s.course_id, s.evaluation_type, s.term,
+    s.centre_id, ce.name AS centre_name, ce.centre_code, ce.director_name, ce.district AS centre_district, ce.state AS centre_state, ce.address AS centre_address,
+    ce.seal_url AS centre_seal_url, ce.signature_url AS centre_signature_url, ce.logo_url AS centre_logo_url,
     co.name AS course, co.code AS course_code, co.duration_months, co.subjects AS course_subjects,
     cert.id AS certificate_id, cert.cert_no, cert.status AS cert_status,
     mrk.id AS marksheet_id, mrk.marksheet_no, mrk.status AS marksheet_status,
     CASE WHEN s.status='passout' OR s.status='completed' OR cert.id IS NOT NULL OR mrk.id IS NOT NULL THEN 1 ELSE 0 END AS is_passout
     FROM students s
+    JOIN centres ce ON ce.id=s.centre_id
     JOIN courses co ON co.id=s.course_id
     LEFT JOIN certificates cert ON cert.student_id=s.id
     LEFT JOIN marksheets mrk ON mrk.student_id=s.id
