@@ -1207,46 +1207,64 @@ export default {
       return res;
     }
 
-    // 0c. Guaranteed Direct HTML Page Routing for Portals & Panels (Fixes Error 1102 on all subdomains)
+    // 0c. Guaranteed Direct HTML Page Routing for Portals & Panels (Fixes Error 1102 & ERR_TOO_MANY_REDIRECTS)
+    const fetchAssetSafe = async (targetPath) => {
+      // Clean path without .html to match Cloudflare Pages canonical routing
+      const cleanPath = targetPath.endsWith('.html') ? targetPath.slice(0, -5) : targetPath;
+      const cleanUrl = new URL(cleanPath, 'https://pescouncil.in');
+      cleanUrl.search = url.search;
+      let res = await env.ASSETS.fetch(new Request(cleanUrl.toString(), request));
+
+      // If Cloudflare Pages issues a redirect (e.g. 308/301 Clean URLs canonicalization), follow it internally so client never loops!
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get('location');
+        if (loc) {
+          const followUrl = new URL(loc, cleanUrl);
+          res = await env.ASSETS.fetch(new Request(followUrl.toString(), request));
+        }
+      }
+
+      // If clean URL was not found (404) or still a redirect, fallback to .html asset
+      if (res.status === 404 || (res.status >= 300 && res.status < 400)) {
+        const htmlUrl = new URL(cleanPath + '.html', 'https://pescouncil.in');
+        htmlUrl.search = url.search;
+        const resHtml = await env.ASSETS.fetch(new Request(htmlUrl.toString(), request));
+        if (resHtml.status === 200) return resHtml;
+        if (resHtml.status >= 300 && resHtml.status < 400) {
+          const locHtml = resHtml.headers.get('location');
+          if (locHtml) {
+            const followHtml = new URL(locHtml, htmlUrl);
+            const resFollow = await env.ASSETS.fetch(new Request(followHtml.toString(), request));
+            if (resFollow.status === 200) return resFollow;
+          }
+        }
+      }
+      return res;
+    };
+
     if (['/portal', '/portal/', '/centre', '/centre/', '/center', '/center/', '/centre-portal', '/center-portal'].includes(path)) {
-      const assetUrl = new URL('/portal.html', 'https://pescouncil.in');
-      assetUrl.search = url.search;
-      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      return fetchAssetSafe('/portal');
     }
     if (['/admin', '/admin/'].includes(path)) {
-      const assetUrl = new URL('/admin.html', 'https://pescouncil.in');
-      assetUrl.search = url.search;
-      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      return fetchAssetSafe('/admin');
     }
     if (['/student', '/student/'].includes(path)) {
-      const assetUrl = new URL('/student.html', 'https://pescouncil.in');
-      assetUrl.search = url.search;
-      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      return fetchAssetSafe('/student');
     }
     if (['/coordinator', '/coordinator/'].includes(path)) {
-      const assetUrl = new URL('/coordinator.html', 'https://pescouncil.in');
-      assetUrl.search = url.search;
-      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      return fetchAssetSafe('/coordinator');
     }
     if (path === '/print' || path === '/print/' || path.startsWith('/print/') || path === '/print.html') {
-      const assetUrl = new URL('/print.html', 'https://pescouncil.in');
-      assetUrl.search = url.search;
-      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      return fetchAssetSafe('/print');
     }
     if (path === '/verify' || path === '/verify/' || path.startsWith('/verify/') || path === '/verify.html') {
-      const assetUrl = new URL('/verify.html', 'https://pescouncil.in');
-      assetUrl.search = url.search;
-      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      return fetchAssetSafe('/verify');
     }
     if (['/login', '/login/'].includes(path)) {
-      const assetUrl = new URL('/login.html', 'https://pescouncil.in');
-      assetUrl.search = url.search;
-      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      return fetchAssetSafe('/login');
     }
     if (['/setup', '/setup/'].includes(path)) {
-      const assetUrl = new URL('/setup.html', 'https://pescouncil.in');
-      assetUrl.search = url.search;
-      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      return fetchAssetSafe('/setup');
     }
 
     // Synchronize dynamic updates from Cloudflare KV for APIs and dynamic tenant site rendering
