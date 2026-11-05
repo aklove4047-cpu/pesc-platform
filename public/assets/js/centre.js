@@ -1,7 +1,11 @@
 // Purvanchal Education & Skill Council (PESC)
 // Authorized Franchise Centre ERP & Management Suite - 17 Modules Complete Implementation
 
-const V = $('#view');
+const V = {
+  get el() { return $('#view'); },
+  get innerHTML() { const el = $('#view'); return el ? el.innerHTML : ''; },
+  set innerHTML(html) { const el = $('#view'); if (el) el.innerHTML = html; }
+};
 const pathMatch = location.pathname.match(/\/c\/([a-z0-9-]+)/i);
 const urlParams = new URLSearchParams(location.search);
 let rawSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || (typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_slug') : '') || '';
@@ -939,10 +943,10 @@ const views = {
   // 1. My Students / Dashboard
   async MyStudents() {
     const [dash, sData] = await Promise.all([
-      api('/api/centre/dashboard'),
-      api('/api/centre/students')
+      api('/api/centre/dashboard').catch(() => ({})),
+      api('/api/centre/students').catch(() => ({ students: [] }))
     ]);
-    const c = dash.centre || {};
+    const c = dash.centre || currentCentre || {};
     const students = sData.students || [];
 
     const bal = (dash.wallet_balance_inr !== undefined) ? dash.wallet_balance_inr : ((dash.wallet_paise || 0) / 100);
