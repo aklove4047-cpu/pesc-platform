@@ -6290,7 +6290,7 @@ guard(async () => {
 window._customMarksheetData = {};
 
 // Centre Marksheet & Marks Editor Modal (Seals & Signatures Permanently Locked)
-window.openCentreEditMrkModal = async function(mrkId, studentId) {
+window.openCentreEditMrkModal = function(mrkId, studentId) {
   const existing = document.getElementById('centreEditMarksheetModal');
   if (existing) existing.remove();
 
@@ -6301,16 +6301,33 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
   }
   if (!sId && mrkId) sId = Number(mrkId);
 
+  // Auto-detect currently selected candidate if not provided
+  if (!sId) {
+    const sel = document.getElementById('mrkStudentSelect') || document.getElementById('semCertStudentSelect');
+    if (sel && sel.value) sId = Number(sel.value);
+  }
+
   // Read currently selected term from the UI
   const termSel = $('#mrkTermSelect');
   const activeTerm = termSel ? termSel.value : '';
 
   let stu = (window._currentStudents || []).find(s => Number(s.id) === sId);
   if (!stu && sId) {
-    try {
-      const res = await api(`/api/centre/students/${sId}`).catch(() => null);
-      if (res) stu = res.student || res;
-    } catch (_) {}
+    const sel = document.getElementById('mrkStudentSelect');
+    if (sel) {
+      const opt = sel.querySelector(`option[value="${sId}"]`) || sel.selectedOptions[0];
+      if (opt && opt.value) {
+        stu = {
+          id: sId,
+          name: opt.dataset.name,
+          father_name: opt.dataset.father,
+          mother_name: opt.dataset.mother,
+          student_code: opt.dataset.code,
+          course: opt.dataset.course,
+          photo_url: opt.dataset.photo
+        };
+      }
+    }
   }
 
   let mrk = (window._centreMarksheets || []).find(m => {
@@ -6325,13 +6342,6 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
     }
     return false;
   });
-
-  if (!mrk && sId) {
-    try {
-      const stRes = await api(`/api/centre/approvals-status?student_id=${sId}`).catch(() => null);
-      if (stRes && stRes.marksheet) mrk = stRes.marksheet;
-    } catch (_) {}
-  }
 
   const s = stu || {};
   const m = mrk || {};
@@ -6676,12 +6686,16 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
         method: 'POST',
         body: payload
       });
-      if (res && res.marksheet) {
-        window._centreMarksheets = window._centreMarksheets || [];
-        const idx = window._centreMarksheets.findIndex(item => Number(item.id) === Number(res.marksheet.id));
-        if (idx >= 0) window._centreMarksheets[idx] = res.marksheet;
-        else window._centreMarksheets.push(res.marksheet);
-      }
+
+      const updatedMrk = (res && res.marksheet) ? { ...res.marksheet, subjects: subsPayload } : { id: targetId, student_id: sId, ...payload };
+      window._centreMarksheets = window._centreMarksheets || [];
+      const mIdx = window._centreMarksheets.findIndex(item => 
+        Number(item.id) === Number(updatedMrk.id) || 
+        (Number(item.student_id) === sId && String(item.term || '').toLowerCase() === String(payload.term || '').toLowerCase())
+      );
+      if (mIdx >= 0) window._centreMarksheets[mIdx] = { ...window._centreMarksheets[mIdx], ...updatedMrk };
+      else window._centreMarksheets.unshift(updatedMrk);
+
       if (stu) {
         if (payload.student_name) stu.name = payload.student_name;
         if (payload.father_name) stu.father_name = payload.father_name;
@@ -6689,6 +6703,28 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
         if (payload.roll_no) stu.roll_no = payload.roll_no;
         if (payload.course_name) stu.course = payload.course_name;
       }
+      if (window._currentStudents) {
+        const foundS = window._currentStudents.find(s => Number(s.id) === sId);
+        if (foundS) {
+          if (payload.student_name) foundS.name = payload.student_name;
+          if (payload.father_name) foundS.father_name = payload.father_name;
+          if (payload.mother_name) foundS.mother_name = payload.mother_name;
+          if (payload.roll_no) foundS.roll_no = payload.roll_no;
+          if (payload.course_name) foundS.course = payload.course_name;
+        }
+      }
+
+      // Update student select option text if name or course changed
+      const selOpt = document.querySelector(`#mrkStudentSelect option[value="${sId}"]`);
+      if (selOpt) {
+        if (payload.student_name) selOpt.dataset.name = payload.student_name;
+        if (payload.father_name) selOpt.dataset.father = payload.father_name;
+        if (payload.mother_name) selOpt.dataset.mother = payload.mother_name;
+        if (payload.roll_no) selOpt.dataset.code = payload.roll_no;
+        if (payload.course_name) selOpt.dataset.course = payload.course_name;
+        selOpt.textContent = `${payload.student_name || stu.name} (${payload.student_code || payload.roll_no || stu.student_code}) – ${payload.course_name || stu.course}`;
+      }
+
       window._customMarksheetData = window._customMarksheetData || {};
       window._customMarksheetData[termKey] = subsPayload;
       window._customMarksheetData[sId] = subsPayload;
@@ -6708,25 +6744,46 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
 };
 
 // Centre Certificate Editor Modal (Seals & Signatures Permanently Locked)
-window.openCentreEditCertModal = async function(certId, studentId) {
+window.openCentreEditCertModal = function(certId, studentId) {
   const existing = document.getElementById('centreEditCertModal');
   if (existing) existing.remove();
 
-  let sId = studentId || certId;
-  let stu = (window._currentStudents || []).find(s => s.id == sId);
-  let cert = null;
-
-  try {
-    const stRes = await api(`/api/centre/approvals-status?student_id=${sId}`).catch(() => null);
-    if (stRes && stRes.certificate) cert = stRes.certificate;
-  } catch (_) {}
-
-  if (!stu && sId) {
-    try {
-      const res = await api(`/api/centre/students/${sId}`).catch(() => null);
-      if (res) stu = res.student || res;
-    } catch (_) {}
+  let sId = Number(studentId || 0);
+  if (!sId && certId && window._centreCertificates) {
+    const foundC = window._centreCertificates.find(c => Number(c.id) === Number(certId));
+    if (foundC && foundC.student_id) sId = Number(foundC.student_id);
   }
+  if (!sId && certId) sId = Number(certId);
+
+  // Auto-detect selected candidate from UI if not provided
+  if (!sId) {
+    const sel = document.getElementById('certStudentSelect') || document.getElementById('semCertStudentSelect') || document.getElementById('mrkStudentSelect');
+    if (sel && sel.value) sId = Number(sel.value);
+  }
+
+  let stu = (window._currentStudents || []).find(s => Number(s.id) === sId);
+  if (!stu && sId) {
+    const sel = document.getElementById('certStudentSelect') || document.getElementById('mrkStudentSelect');
+    if (sel) {
+      const opt = sel.querySelector(`option[value="${sId}"]`) || sel.selectedOptions[0];
+      if (opt && opt.value) {
+        stu = {
+          id: sId,
+          name: opt.dataset.name,
+          father_name: opt.dataset.father,
+          mother_name: opt.dataset.mother,
+          student_code: opt.dataset.code,
+          course: opt.dataset.course,
+          photo_url: opt.dataset.photo
+        };
+      }
+    }
+  }
+
+  let cert = (window._centreCertificates || []).find(c => {
+    if (certId && Number(c.id) === Number(certId) && Number(c.id) !== sId) return true;
+    return Number(c.student_id) === sId;
+  });
 
   const s = stu || {};
   const c = cert || {};
@@ -6907,11 +6964,37 @@ window.openCentreEditCertModal = async function(certId, studentId) {
     };
 
     const targetId = (cert && cert.id) || sId;
+    payload.student_id = sId;
     try {
-      await api(`/api/centre/certificates/${targetId}/edit`, {
+      const res = await api(`/api/centre/certificates/${targetId}/edit`, {
         method: 'POST',
         body: payload
       });
+
+      const updatedCert = (res && res.certificate) ? res.certificate : { id: targetId, student_id: sId, ...payload };
+      window._centreCertificates = window._centreCertificates || [];
+      const cIdx = window._centreCertificates.findIndex(c => Number(c.id) === Number(updatedCert.id) || Number(c.student_id) === sId);
+      if (cIdx >= 0) window._centreCertificates[cIdx] = { ...window._centreCertificates[cIdx], ...updatedCert };
+      else window._centreCertificates.unshift(updatedCert);
+
+      if (stu) {
+        if (payload.student_name) stu.name = payload.student_name;
+        if (payload.father_name) stu.father_name = payload.father_name;
+        if (payload.mother_name) stu.mother_name = payload.mother_name;
+        if (payload.roll_no) stu.roll_no = payload.roll_no;
+        if (payload.course_name) stu.course = payload.course_name;
+      }
+      if (window._currentStudents) {
+        const foundS = window._currentStudents.find(s => Number(s.id) === sId);
+        if (foundS) {
+          if (payload.student_name) foundS.name = payload.student_name;
+          if (payload.father_name) foundS.father_name = payload.father_name;
+          if (payload.mother_name) foundS.mother_name = payload.mother_name;
+          if (payload.roll_no) foundS.roll_no = payload.roll_no;
+          if (payload.course_name) foundS.course = payload.course_name;
+        }
+      }
+
       toast('Certificate particulars updated successfully!');
       modal.remove();
       if (typeof updateCertPreview === 'function') updateCertPreview();

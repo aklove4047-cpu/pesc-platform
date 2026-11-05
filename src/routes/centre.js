@@ -201,28 +201,62 @@ router.post('/certificates/:id/edit', h(async (req, res) => {
   const b = req.body || {};
   delete b.seal_url; delete b.signature_url; delete b.coordinator_seal_url; delete b.coordinator_signature_url; delete b.council_seal_url; delete b.council_signature_url;
 
-  const updates = [];
-  const vals = [];
-  if (b.student_name !== undefined) { updates.push('student_name=?'); vals.push(b.student_name); }
-  if (b.father_name !== undefined) { updates.push('father_name=?'); vals.push(b.father_name); }
-  if (b.mother_name !== undefined) { updates.push('mother_name=?'); vals.push(b.mother_name); }
-  if (b.roll_no !== undefined) { updates.push('roll_no=?'); vals.push(b.roll_no); }
-  if (b.student_code !== undefined) { updates.push('student_code=?'); vals.push(b.student_code); }
-  if (b.course_name !== undefined) { updates.push('course_name=?'); vals.push(b.course_name); }
-  if (b.exam_session !== undefined) { updates.push('exam_session=?'); vals.push(b.exam_session); }
-  if (b.term !== undefined) { updates.push('term=?'); vals.push(b.term); }
-  if (b.grade !== undefined) { updates.push('grade=?'); vals.push(b.grade); }
-  if (b.cert_no !== undefined) { updates.push('cert_no=?'); vals.push(b.cert_no); }
-  if (b.issue_date !== undefined) { updates.push('issued_at=?'); vals.push(b.issue_date); }
+  const targetStuId = Number(b.student_id || 0);
 
-  if (updates.length > 0) {
-    vals.push(cidVal, cidVal, cid(req));
-    try {
-      db.prepare(`UPDATE certificates SET ${updates.join(', ')} WHERE (id=? OR student_id=?) AND centre_id=?`).run(...vals);
-    } catch (_) {}
+  // 1. Locate student
+  const stu = db.prepare('SELECT * FROM students WHERE (id=? OR id=? OR id=(SELECT student_id FROM certificates WHERE id=?)) AND centre_id=?')
+    .get(targetStuId || cidVal, cidVal, cidVal, cid(req));
+
+  // 2. Update student details in students table
+  if (stu) {
+    const sUpdates = [];
+    const sVals = [];
+    if (b.student_name !== undefined) { sUpdates.push('name=?'); sVals.push(String(b.student_name).trim()); }
+    if (b.father_name !== undefined) { sUpdates.push('father_name=?'); sVals.push(String(b.father_name).trim()); }
+    if (b.mother_name !== undefined) { sUpdates.push('mother_name=?'); sVals.push(String(b.mother_name).trim()); }
+    if (b.student_code !== undefined) { sUpdates.push('student_code=?'); sVals.push(String(b.student_code).trim()); }
+    if (sUpdates.length > 0) {
+      sVals.push(stu.id, cid(req));
+      db.prepare(`UPDATE students SET ${sUpdates.join(', ')} WHERE id=? AND centre_id=?`).run(...sVals);
+    }
   }
-  const cert = db.prepare('SELECT * FROM certificates WHERE (id=? OR student_id=?) AND centre_id=?').get(cidVal, cidVal, cid(req)) || { id: cidVal, ...b };
-  res.json({ ok: true, message: 'Certificate details updated successfully!', certificate: cert });
+
+  // 3. Locate certificate
+  let cert = null;
+  if (cidVal > 0) {
+    cert = db.prepare('SELECT * FROM certificates WHERE id=? AND centre_id=?').get(cidVal, cid(req));
+  }
+  if (!cert && (targetStuId || stu)) {
+    const sid = targetStuId || stu.id;
+    cert = db.prepare('SELECT * FROM certificates WHERE student_id=? AND centre_id=? ORDER BY id DESC LIMIT 1').get(sid, cid(req));
+  }
+
+  // 4. Update certificates table (only valid columns)
+  if (cert) {
+    const cUpdates = [];
+    const cVals = [];
+    if (b.cert_no !== undefined) { cUpdates.push('cert_no=?'); cVals.push(String(b.cert_no).trim()); }
+    if (b.issue_date !== undefined) { cUpdates.push('issued_at=?'); cVals.push(String(b.issue_date).trim()); }
+    if (b.term !== undefined) { cUpdates.push('term=?'); cVals.push(String(b.term).trim()); }
+    if (b.evaluation_type !== undefined) { cUpdates.push('evaluation_type=?'); cVals.push(String(b.evaluation_type).trim()); }
+    if (cUpdates.length > 0) {
+      cVals.push(cert.id);
+      db.prepare(`UPDATE certificates SET ${cUpdates.join(', ')} WHERE id=?`).run(...cVals);
+    }
+    cert = db.prepare('SELECT * FROM certificates WHERE id=?').get(cert.id);
+  }
+
+  const enriched = cert ? {
+    ...cert,
+    student: (stu && stu.name) || b.student_name,
+    student_name: (stu && stu.name) || b.student_name,
+    father_name: (stu && stu.father_name) || b.father_name,
+    mother_name: (stu && stu.mother_name) || b.mother_name,
+    student_code: (stu && stu.student_code) || b.student_code,
+    course_name: b.course_name
+  } : { id: cidVal, ...b };
+
+  res.json({ ok: true, message: 'Certificate details updated successfully!', certificate: enriched });
 }));
 
 // Centre Edit Marksheet Details & Marks (Signatures & Seals Permanently Locked)
@@ -231,37 +265,93 @@ router.post('/marksheets/:id/edit', h(async (req, res) => {
   const b = req.body || {};
   delete b.seal_url; delete b.signature_url; delete b.coordinator_seal_url; delete b.coordinator_signature_url; delete b.council_seal_url; delete b.council_signature_url;
 
-  const updates = [];
-  const vals = [];
-  if (b.student_name !== undefined) { updates.push('student_name=?'); vals.push(b.student_name); }
-  if (b.father_name !== undefined) { updates.push('father_name=?'); vals.push(b.father_name); }
-  if (b.mother_name !== undefined) { updates.push('mother_name=?'); vals.push(b.mother_name); }
-  if (b.roll_no !== undefined) { updates.push('roll_no=?'); vals.push(b.roll_no); }
-  if (b.student_code !== undefined) { updates.push('student_code=?'); vals.push(b.student_code); }
-  if (b.course_name !== undefined) { updates.push('course_name=?'); vals.push(b.course_name); }
-  if (b.exam_session !== undefined) { updates.push('exam_session=?'); vals.push(b.exam_session); }
-  if (b.term !== undefined) { updates.push('term=?'); vals.push(b.term); }
-  if (b.evaluation_type !== undefined) { updates.push('evaluation_type=?'); vals.push(b.evaluation_type); }
-  if (b.marksheet_no !== undefined) { updates.push('marksheet_no=?'); vals.push(b.marksheet_no); }
-  if (b.issue_date !== undefined) { updates.push('issued_at=?'); vals.push(b.issue_date); }
-  if (b.total_max !== undefined) { updates.push('total_max=?'); vals.push(+b.total_max); }
-  if (b.total_obtained !== undefined) { updates.push('total_obtained=?'); vals.push(+b.total_obtained); }
-  if (b.percentage !== undefined) { updates.push('percentage=?'); vals.push(+b.percentage); }
-  if (b.grade !== undefined) { updates.push('grade=?'); vals.push(b.grade); }
-  if (b.result !== undefined) { updates.push('result=?'); vals.push(b.result); }
-  if (b.subjects !== undefined) {
-    const subsStr = typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects);
-    updates.push('subjects=?'); vals.push(subsStr);
+  const targetStuId = Number(b.student_id || 0);
+  const targetTerm = b.term ? String(b.term).trim() : '';
+
+  // 1. Locate student
+  const stu = db.prepare('SELECT * FROM students WHERE (id=? OR id=? OR id=(SELECT student_id FROM marksheets WHERE id=?)) AND centre_id=?')
+    .get(targetStuId || mid, mid, mid, cid(req));
+
+  // 2. Update student particulars in students table
+  if (stu) {
+    const sUpdates = [];
+    const sVals = [];
+    if (b.student_name !== undefined) { sUpdates.push('name=?'); sVals.push(String(b.student_name).trim()); }
+    if (b.father_name !== undefined) { sUpdates.push('father_name=?'); sVals.push(String(b.father_name).trim()); }
+    if (b.mother_name !== undefined) { sUpdates.push('mother_name=?'); sVals.push(String(b.mother_name).trim()); }
+    if (b.student_code !== undefined) { sUpdates.push('student_code=?'); sVals.push(String(b.student_code).trim()); }
+    if (b.exam_session !== undefined || b.session !== undefined) {
+      sUpdates.push('session=?'); sVals.push(String(b.exam_session || b.session).trim());
+    }
+    if (sUpdates.length > 0) {
+      sVals.push(stu.id, cid(req));
+      db.prepare(`UPDATE students SET ${sUpdates.join(', ')} WHERE id=? AND centre_id=?`).run(...sVals);
+    }
   }
 
-  if (updates.length > 0) {
-    vals.push(mid, mid, cid(req));
-    try {
-      db.prepare(`UPDATE marksheets SET ${updates.join(', ')} WHERE (id=? OR student_id=?) AND centre_id=?`).run(...vals);
-    } catch (_) {}
+  // 3. Locate marksheet row by id or student_id + term
+  let mrk = null;
+  if (mid > 0) {
+    mrk = db.prepare('SELECT * FROM marksheets WHERE id=? AND centre_id=?').get(mid, cid(req));
   }
-  const mrk = db.prepare('SELECT * FROM marksheets WHERE (id=? OR student_id=?) AND centre_id=?').get(mid, mid, cid(req)) || { id: mid, ...b };
-  res.json({ ok: true, message: 'Marksheet details and marks updated successfully!', marksheet: mrk });
+  if (!mrk && (targetStuId || stu)) {
+    const sid = targetStuId || stu.id;
+    if (targetTerm) {
+      mrk = db.prepare('SELECT * FROM marksheets WHERE student_id=? AND term=? AND centre_id=?').get(sid, targetTerm, cid(req));
+    }
+    if (!mrk) {
+      mrk = db.prepare('SELECT * FROM marksheets WHERE student_id=? AND centre_id=? ORDER BY id DESC LIMIT 1').get(sid, cid(req));
+    }
+  }
+
+  // 4. Update marksheets table (only existing columns in marksheets table)
+  if (mrk) {
+    const mUpdates = [];
+    const mVals = [];
+    if (b.roll_no !== undefined) { mUpdates.push('roll_no=?'); mVals.push(String(b.roll_no).trim()); }
+    if (b.exam_session !== undefined) { mUpdates.push('exam_session=?'); mVals.push(String(b.exam_session).trim()); }
+    if (b.term !== undefined) { mUpdates.push('term=?'); mVals.push(String(b.term).trim()); }
+    if (b.evaluation_type !== undefined) { mUpdates.push('evaluation_type=?'); mVals.push(String(b.evaluation_type).trim()); }
+    if (b.marksheet_no !== undefined) { mUpdates.push('marksheet_no=?'); mVals.push(String(b.marksheet_no).trim()); }
+    if (b.issue_date !== undefined) { mUpdates.push('issue_date=?'); mVals.push(String(b.issue_date).trim()); }
+    if (b.total_max !== undefined) { mUpdates.push('total_max=?'); mVals.push(+b.total_max); }
+    if (b.total_obtained !== undefined) { mUpdates.push('total_obtained=?'); mVals.push(+b.total_obtained); }
+    if (b.percentage !== undefined) { mUpdates.push('percentage=?'); mVals.push(+b.percentage); }
+    if (b.grade !== undefined) { mUpdates.push('grade=?'); mVals.push(String(b.grade).trim()); }
+    if (b.result !== undefined) { mUpdates.push('result=?'); mVals.push(String(b.result).trim()); }
+    if (b.subjects !== undefined) {
+      const subsStr = typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects);
+      mUpdates.push('subjects=?'); mVals.push(subsStr);
+    }
+    if (mUpdates.length > 0) {
+      mVals.push(mrk.id);
+      db.prepare(`UPDATE marksheets SET ${mUpdates.join(', ')} WHERE id=?`).run(...mVals);
+    }
+    mrk = db.prepare('SELECT * FROM marksheets WHERE id=?').get(mrk.id);
+  } else if (stu) {
+    // 5. If marksheet row does not exist yet (draft marksheet before issuance), create it
+    const token = crypto.randomBytes(16).toString('hex');
+    const mrkNo = b.marksheet_no || `PESC-MRK-2026-${String(stu.id).padStart(5, '0')}`;
+    const subsStr = b.subjects ? (typeof b.subjects === 'string' ? b.subjects : JSON.stringify(b.subjects)) : '[]';
+    const evalType = b.evaluation_type || (String(targetTerm).toLowerCase().includes('sem') ? 'semester' : 'yearly');
+    const ins = db.prepare(`INSERT INTO marksheets(marksheet_no, token, student_id, centre_id, course_id, exam_session, roll_no, subjects, total_max, total_obtained, percentage, grade, result, status, issue_date, evaluation_type, term, requested_by, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?, ?)`).run(
+      mrkNo, token, stu.id, cid(req), stu.course_id, b.exam_session || '2025-2026', b.roll_no || stu.student_code, subsStr, +b.total_max || 0, +b.total_obtained || 0, +b.percentage || 0, b.grade || 'A', b.result || 'PASS', b.issue_date || now(), evalType, targetTerm || 'Semester 1', req.user.id, now()
+    );
+    mrk = db.prepare('SELECT * FROM marksheets WHERE id=?').get(ins.lastInsertRowid);
+  }
+
+  const enriched = mrk ? {
+    ...mrk,
+    student: (stu && stu.name) || b.student_name,
+    student_name: (stu && stu.name) || b.student_name,
+    father_name: (stu && stu.father_name) || b.father_name,
+    mother_name: (stu && stu.mother_name) || b.mother_name,
+    student_code: (stu && stu.student_code) || b.student_code,
+    course_name: b.course_name
+  } : { id: mid, ...b };
+
+  res.json({ ok: true, message: 'Marksheet details and marks updated successfully!', marksheet: enriched });
 }));
 
 router.get('/students/:id', (req, res) => {
@@ -468,7 +558,7 @@ router.post('/fees/record', (req, res) => {
 
 // 5 & 6 & 7. Certificates & Marksheets
 router.get('/marksheets', (req, res) => {
-  const rows = db.prepare(`SELECT m.*, s.name AS student, s.student_code, co.name AS course, co.code AS course_code
+  const rows = db.prepare(`SELECT m.*, s.name AS student, s.name AS student_name, s.father_name, s.mother_name, s.student_code, s.photo_url, co.name AS course, co.name AS course_name, co.code AS course_code
     FROM marksheets m
     JOIN students s ON s.id=m.student_id
     JOIN courses co ON co.id=m.course_id
@@ -477,7 +567,7 @@ router.get('/marksheets', (req, res) => {
 });
 
 router.get('/certificates', (req, res) => {
-  const rows = db.prepare(`SELECT c.*, s.name AS student, s.student_code, co.name AS course, co.code AS course_code
+  const rows = db.prepare(`SELECT c.*, s.name AS student, s.name AS student_name, s.father_name, s.mother_name, s.student_code, s.photo_url, co.name AS course, co.name AS course_name, co.code AS course_code
     FROM certificates c
     JOIN students s ON s.id=c.student_id
     JOIN courses co ON co.id=c.course_id
