@@ -6287,7 +6287,11 @@ guard(async () => {
     renderSidebar();
     initStudentLoginModal();
     initSignOutButton();
-    await initCentreHeader();
+    try {
+      await initCentreHeader();
+    } catch (e) {
+      console.warn('initCentreHeader non-fatal error:', e);
+    }
     switchModule('MyStudents');
   } catch (err) {
     showCentreAuthScreen();

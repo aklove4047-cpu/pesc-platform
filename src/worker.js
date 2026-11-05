@@ -2025,6 +2025,7 @@ export default {
         const { email, password } = await request.json();
         const em = String(email || '').toLowerCase().trim();
         const pw = String(password || '').trim();
+        const domainAttr = (host && host.endsWith('pescouncil.in')) ? '; Domain=.pescouncil.in' : '';
 
         // --- 1. Super Admin Login ---
         const adminUser = store.users.find(u => u.role === 'super_admin' || u.role === 'admin');
@@ -2032,7 +2033,7 @@ export default {
         if ((em === 'admin@pescouncil.in' || em === 'admin') && pw === adminPass) {
           const userObj = { id: (adminUser && adminUser.id) || 1, email: (adminUser && adminUser.email) || 'admin@pescouncil.in', name: (adminUser && adminUser.name) || 'Super Admin', role: 'super_admin' };
           return jsonResponse({ ok: true, user: userObj }, 200, {
-            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+            'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${domainAttr}`
           });
         }
 
@@ -2048,7 +2049,7 @@ export default {
           if (pw === coordPass) {
             const userObj = { id: matchedCoord.id, email: matchedCoord.email, name: matchedCoord.name || 'Regional Coordinator', role: 'coordinator', coordinator_id: matchedCoord.id };
             return jsonResponse({ ok: true, user: userObj }, 200, {
-              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${domainAttr}`
             });
           }
         }
@@ -2069,7 +2070,7 @@ export default {
             if (c.status === 'suspended') return jsonResponse({ error: 'यह सेंटर वर्तमान में निलंबित (Suspended) है।' }, 403);
             const userObj = { id: c.id, email: c.email || `desk@${c.slug}.pescouncil.in`, name: c.director_name || c.name, role: 'centre_owner', centre_id: c.id, centre_code: c.centre_code, centre_slug: c.slug };
             return jsonResponse({ ok: true, user: userObj }, 200, {
-              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${domainAttr}`
             });
           }
         }
@@ -2087,7 +2088,7 @@ export default {
           if (pw === stuPass) {
             const userObj = { id: s.id, email: s.email || `${s.roll_no || s.student_code}@student.pescouncil.in`, name: s.name, role: 'student', student_id: s.id, roll_no: s.roll_no || s.student_code };
             return jsonResponse({ ok: true, user: userObj }, 200, {
-              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${domainAttr}`
             });
           }
         }
@@ -2099,7 +2100,7 @@ export default {
           if (pw === uPass) {
             const userObj = { id: u.id, email: u.email, name: u.name || 'User', role: u.role, centre_id: u.centre_id };
             return jsonResponse({ ok: true, user: userObj }, 200, {
-              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+              'set-cookie': `pesc_auth=${encodeURIComponent(JSON.stringify(userObj))}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${domainAttr}`
             });
           }
         }
@@ -2121,8 +2122,9 @@ export default {
     }
 
     if (path === '/api/auth/logout') {
+      const domainAttr = (host && host.endsWith('pescouncil.in')) ? '; Domain=.pescouncil.in' : '';
       return jsonResponse({ ok: true }, 200, {
-        'set-cookie': 'pesc_auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        'set-cookie': `pesc_auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT${domainAttr}`
       });
     }
 
@@ -5417,10 +5419,38 @@ export default {
       }
 
       if (path === '/api/centre/all-centres') {
+        const lightweightCentres = (store.centres || []).map(x => ({
+          id: x.id,
+          name: x.name,
+          hindi_name: x.hindi_name,
+          centre_code: x.centre_code,
+          district: x.district,
+          state: x.state,
+          slug: x.slug,
+          status: x.status,
+          director_name: x.director_name,
+          address: x.address,
+          wallet_balance: (x.wallet_balance !== undefined) ? x.wallet_balance : ((x.wallet_paise || 0) / 100)
+        }));
         return jsonResponse({
-          centres: store.centres,
+          centres: lightweightCentres,
           active_id: c.id,
-          active_centre: c,
+          active_centre: {
+            id: c.id,
+            name: c.name,
+            hindi_name: c.hindi_name,
+            centre_code: c.centre_code,
+            district: c.district,
+            state: c.state,
+            slug: c.slug,
+            status: c.status,
+            director_name: c.director_name,
+            address: c.address,
+            wallet_balance: (c.wallet_balance !== undefined) ? c.wallet_balance : ((c.wallet_paise || 0) / 100),
+            logo_url: c.logo_url,
+            seal_url: c.seal_url,
+            signature_url: c.signature_url
+          },
           authorities: getAuthorities(c)
         });
       }
