@@ -9,6 +9,12 @@ const V = {
 const pathMatch = location.pathname.match(/\/c\/([a-z0-9-]+)/i);
 const urlParams = new URLSearchParams(location.search);
 let rawSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || (typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_slug') : '') || '';
+if (!rawSlug && typeof location !== 'undefined' && location.hostname && location.hostname.endsWith('.pescouncil.in')) {
+  const sub = location.hostname.split('.')[0].toLowerCase();
+  if (!['www', 'portal', 'centre', 'center', 'admin', 'student', 'coordinator', 'mail', 'api', 'app'].includes(sub)) {
+    rawSlug = sub;
+  }
+}
 if (!rawSlug || rawSlug.includes('navya') || rawSlug.includes('aryavart')) {
   rawSlug = '';
 }

@@ -676,7 +676,7 @@ const CLEAN_ADMIN_USER = {
 async function syncFromKV(env, force = false) {
   if (!env || !env.PESC_KV) return;
   const now = Date.now();
-  if (!force && kvLoaded && (now - lastKvSync < 5000)) return;
+  if (!force && kvLoaded && (now - lastKvSync < 30000)) return;
   try {
     const currentVersion = await env.PESC_KV.get('data_version');
     if (currentVersion !== DATA_VERSION) {
@@ -1173,10 +1173,7 @@ export default {
     const path = url.pathname;
     const cookies = parseCookie(request.headers.get('Cookie'));
 
-    // Synchronize dynamic updates from Cloudflare KV
-    await syncFromKV(env);
-
-    // Handle CORS preflight
+    // 0a. Handle CORS preflight immediately (Zero KV overhead)
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: {
@@ -1187,24 +1184,73 @@ export default {
       });
     }
 
-    // 0. Instant CSS Delivery (Guaranteed 0ms response, zero 404s, works across all domains/subdomains)
-    if (path === '/css/style.css' || path === '/assets/css/style.css') {
-      return new Response(MAIN_CSS, {
-        headers: {
-          'content-type': 'text/css; charset=utf-8',
-          'cache-control': 'public, max-age=86400, stale-while-revalidate=604800'
-        }
-      });
-    }
+    // 0b. Guaranteed Instant Static Assets Delivery (Zero recursion, safe from wildcard subdomains)
+    const isStaticAsset = path.startsWith('/assets/') || path.startsWith('/css/') || path.startsWith('/js/') || path.startsWith('/img/') || path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.ico') || path.endsWith('.svg') || path.endsWith('.woff') || path.endsWith('.woff2');
 
-    // Static asset fallback for /assets/js/* to /js/* if ever needed
-    if (path.startsWith('/assets/js/')) {
-      const res = await env.ASSETS.fetch(request);
-      if (res.status === 404) {
-        return env.ASSETS.fetch(new Request(new URL(path.replace('/assets/js/', '/js/'), request.url), request));
+    if (isStaticAsset) {
+      if (path === '/css/style.css' || path === '/assets/css/style.css') {
+        return new Response(MAIN_CSS, {
+          headers: {
+            'content-type': 'text/css; charset=utf-8',
+            'cache-control': 'public, max-age=86400, stale-while-revalidate=604800'
+          }
+        });
+      }
+      const assetUrl = new URL(path, 'https://pescouncil.in');
+      assetUrl.search = url.search;
+      let res = await env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+      if (res.status === 404 && path.startsWith('/assets/js/')) {
+        const fallbackUrl = new URL(path.replace('/assets/js/', '/js/'), 'https://pescouncil.in');
+        fallbackUrl.search = url.search;
+        res = await env.ASSETS.fetch(new Request(fallbackUrl.toString(), request));
       }
       return res;
     }
+
+    // 0c. Guaranteed Direct HTML Page Routing for Portals & Panels (Fixes Error 1102 on all subdomains)
+    if (['/portal', '/portal/', '/centre', '/centre/', '/center', '/center/', '/centre-portal', '/center-portal'].includes(path)) {
+      const assetUrl = new URL('/portal.html', 'https://pescouncil.in');
+      assetUrl.search = url.search;
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+    }
+    if (['/admin', '/admin/'].includes(path)) {
+      const assetUrl = new URL('/admin.html', 'https://pescouncil.in');
+      assetUrl.search = url.search;
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+    }
+    if (['/student', '/student/'].includes(path)) {
+      const assetUrl = new URL('/student.html', 'https://pescouncil.in');
+      assetUrl.search = url.search;
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+    }
+    if (['/coordinator', '/coordinator/'].includes(path)) {
+      const assetUrl = new URL('/coordinator.html', 'https://pescouncil.in');
+      assetUrl.search = url.search;
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+    }
+    if (path === '/print' || path === '/print/' || path.startsWith('/print/') || path === '/print.html') {
+      const assetUrl = new URL('/print.html', 'https://pescouncil.in');
+      assetUrl.search = url.search;
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+    }
+    if (path === '/verify' || path === '/verify/' || path.startsWith('/verify/') || path === '/verify.html') {
+      const assetUrl = new URL('/verify.html', 'https://pescouncil.in');
+      assetUrl.search = url.search;
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+    }
+    if (['/login', '/login/'].includes(path)) {
+      const assetUrl = new URL('/login.html', 'https://pescouncil.in');
+      assetUrl.search = url.search;
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+    }
+    if (['/setup', '/setup/'].includes(path)) {
+      const assetUrl = new URL('/setup.html', 'https://pescouncil.in');
+      assetUrl.search = url.search;
+      return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+    }
+
+    // Synchronize dynamic updates from Cloudflare KV for APIs and dynamic tenant site rendering
+    await syncFromKV(env);
 
     // 1. Google Site Verification Files (Supports ANY Google Search Console verification file code)
     if (/^\/google[a-zA-Z0-9_\-]+\.html$/.test(path)) {
@@ -5966,6 +6012,8 @@ export default {
       return assetRes;
     }
 
-    return env.ASSETS.fetch(request);
+    const finalUrl = new URL(path, 'https://pescouncil.in');
+    finalUrl.search = url.search;
+    return env.ASSETS.fetch(new Request(finalUrl.toString(), request));
   }
 };
