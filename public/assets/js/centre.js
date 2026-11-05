@@ -1,6 +1,9 @@
 // Purvanchal Education & Skill Council (PESC)
 // Authorized Franchise Centre ERP & Management Suite - 17 Modules Complete Implementation
 
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+window.esc = esc;
+
 const V = {
   get el() { return $('#view'); },
   get innerHTML() { const el = $('#view'); return el ? el.innerHTML : ''; },
@@ -6297,718 +6300,755 @@ window._customMarksheetData = {};
 
 // Centre Marksheet & Marks Editor Modal (Seals & Signatures Permanently Locked)
 window.openCentreEditMrkModal = function(mrkId, studentId) {
-  const existing = document.getElementById('centreEditMarksheetModal');
-  if (existing) existing.remove();
+  try {
+    const existing = document.getElementById('centreEditMarksheetModal');
+    if (existing) existing.remove();
 
-  let sId = Number(studentId || 0);
-  if (!sId && mrkId && window._centreMarksheets) {
-    const foundM = window._centreMarksheets.find(m => Number(m.id) === Number(mrkId));
-    if (foundM && foundM.student_id) sId = Number(foundM.student_id);
-  }
-  if (!sId && mrkId) sId = Number(mrkId);
+    const safeEsc = (typeof window.esc === 'function') ? window.esc : ((s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
+    const activeCentre = (typeof currentCentre !== 'undefined' && currentCentre) ? currentCentre : (window._currentCentre || {});
 
-  // Auto-detect currently selected candidate if not provided
-  if (!sId) {
-    const sel = document.getElementById('mrkStudentSelect') || document.getElementById('semCertStudentSelect');
-    if (sel && sel.value) sId = Number(sel.value);
-  }
-
-  // Read currently selected term from the UI
-  const termSel = $('#mrkTermSelect');
-  const activeTerm = termSel ? termSel.value : '';
-
-  let stu = (window._currentStudents || []).find(s => Number(s.id) === sId);
-  if (!stu && sId) {
-    const sel = document.getElementById('mrkStudentSelect');
-    if (sel) {
-      const opt = sel.querySelector(`option[value="${sId}"]`) || sel.selectedOptions[0];
-      if (opt && opt.value) {
-        stu = {
-          id: sId,
-          name: opt.dataset.name,
-          father_name: opt.dataset.father,
-          mother_name: opt.dataset.mother,
-          student_code: opt.dataset.code,
-          course: opt.dataset.course,
-          photo_url: opt.dataset.photo
-        };
-      }
+    let sId = Number(studentId || 0);
+    if (!sId && mrkId && window._centreMarksheets) {
+      const foundM = window._centreMarksheets.find(m => Number(m.id) === Number(mrkId));
+      if (foundM && foundM.student_id) sId = Number(foundM.student_id);
     }
-  }
+    if (!sId && mrkId) sId = Number(mrkId);
 
-  let mrk = (window._centreMarksheets || []).find(m => {
-    if (mrkId && Number(m.id) === Number(mrkId) && Number(m.id) !== sId) return true;
-    if (Number(m.student_id) === sId) {
-      if (!activeTerm) return true;
-      const mTerm = String(m.term || '').toLowerCase();
-      const selTerm = activeTerm.toLowerCase();
-      if (selTerm.includes('sem 1') || selTerm.includes('semester 1')) return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm.includes('1st sem') || mTerm.includes('sem-1');
-      if (selTerm.includes('sem 2') || selTerm.includes('semester 2')) return mTerm.includes('sem 2') || mTerm.includes('semester 2') || mTerm.includes('2nd sem') || mTerm.includes('sem-2');
-      return mTerm.includes(selTerm) || selTerm.includes(mTerm);
+    // Auto-detect currently selected candidate if not provided
+    if (!sId) {
+      const sel = document.getElementById('mrkStudentSelect') || document.getElementById('semCertStudentSelect') || document.getElementById('certStudentSelect');
+      if (sel && sel.value) sId = Number(sel.value);
     }
-    return false;
-  });
 
-  const s = stu || {};
-  const m = mrk || {};
+    // Read currently selected term from the UI
+    const termSel = document.getElementById('mrkTermSelect');
+    const activeTerm = termSel ? termSel.value : '';
 
-  const studentName = m.student_name || s.name || '';
-  const fatherName = m.father_name || s.father_name || '';
-  const motherName = m.mother_name || s.mother_name || '';
-  const rollNo = m.roll_no || s.roll_no || s.student_code || 'PESC-26-00008';
-  const studentCode = m.student_code || s.student_code || rollNo;
-  const courseName = m.course_name || s.course || s.course_name || 'Diploma Course';
-  const examSession = m.exam_session || '2026-27';
-  const term = m.term || activeTerm || 'Annual Examination';
-  const isSemester = window.mrkEvalPattern === 'semester' || String(term).toLowerCase().includes('sem') || String(s.evaluation_type || '').toLowerCase().includes('semester');
-  const evaluationType = m.evaluation_type || (isSemester ? 'semester' : 'annual');
-  const marksheetNo = m.marksheet_no || `PESC/MRK/2026/${String(sId || 1).padStart(5, '0')}`;
-  const issueDate = m.issue_date || (m.issued_at ? m.issued_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
-  const resultText = m.result || 'PASS';
-  const termKey = `${sId}_${String(term || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-
-  let subs = [];
-  if (m.subjects) {
-    try {
-      subs = typeof m.subjects === 'string' ? JSON.parse(m.subjects) : m.subjects;
-    } catch (_) { subs = []; }
-  }
-  if (!subs.length && window._customMarksheetData && window._customMarksheetData[termKey]) {
-    subs = window._customMarksheetData[termKey];
-  }
-  if (!subs.length) {
-    try {
-      const saved = localStorage.getItem('pesc_custom_marks_' + termKey);
-      if (saved) subs = JSON.parse(saved);
-    } catch (_) {}
-  }
-  if (!subs.length) {
-    subs = getCourseCurriculumSubjects(courseName, isSemester ? 'semester' : 'yearly', term);
-  }
-
-  const modal = document.createElement('div');
-  modal.id = 'centreEditMarksheetModal';
-  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:center; justify-content:center; z-index:10000; padding:16px; overflow-y:auto;';
-
-  modal.innerHTML = `
-    <div style="background:#ffffff; border-radius:14px; max-width:920px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.45);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
-        <div>
-          <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">✏️ Edit Marksheet Particulars &amp; Examination Marks</h3>
-          <span class="muted" style="font-size:0.85rem;">Document: <b>${esc(marksheetNo)}</b> &bull; Candidate: <b>${esc(studentName || 'Candidate')}</b> (${esc(term)})</span>
-        </div>
-        <button type="button" class="btn danger sm" onclick="document.getElementById('centreEditMarksheetModal').remove()">✕ Close</button>
-      </div>
-
-      <!-- Security Notice: Signatures & Seals Locked -->
-      <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.86rem; color:#14532d; display:flex; align-items:center; gap:10px;">
-        <span style="font-size:1.4rem;">🔒</span>
-        <div>
-          <b>Official Council Security Guard:</b> Council seals, coordinator stamps, and official signatures are permanently locked to verified credentials and cannot be edited. All candidate particulars and subject marks can be updated below.
-        </div>
-      </div>
-
-      <form id="centreEditMrkForm">
-        <!-- Header & Authority Customization Box -->
-        <div style="background:#f8fafc; border:1.5px solid #059669; border-radius:10px; padding:14px; margin-bottom:16px;">
-          <h4 style="margin:0 0 10px; color:#064e3b; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
-            🏛️ Authority Header &amp; Scheme Settings (शीर्षक व योजना चयन)
-          </h4>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Header Authority (शीर्षक किसके नाम से रहेगा) *</label>
-              <select name="header_type" id="centreMrkHeaderType" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
-                <option value="council" ${m.header_type !== 'centre' ? 'selected' : ''}>Council Header (परिषद के नाम से - Purvanchal Education &amp; Skill Council)</option>
-                <option value="centre" ${m.header_type === 'centre' ? 'selected' : ''}>Centre Header (सेंटर / संस्थान के नाम से)</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Examination Scheme (परीक्षा योजना / प्रकार) *</label>
-              <select name="scheme" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
-                <option value="annual" ${m.scheme === 'annual' || (!m.scheme && evaluationType !== 'semester') ? 'selected' : ''}>Annual Scheme (Singhal / वार्षिक)</option>
-                <option value="single_semester" ${m.scheme === 'single_semester' || (!m.scheme && evaluationType === 'semester') ? 'selected' : ''}>Single Semester (एकल सेमेस्टर)</option>
-                <option value="double_semester" ${m.scheme === 'double_semester' ? 'selected' : ''}>Double Semester (दोहरा सेमेस्टर)</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Main Header Title (मुख्य नाम) *</label>
-              <input name="header_title" id="centreMrkHeaderTitle" value="${esc(m.header_title || 'Purvanchal Education & Skill Council')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Hindi Header Title (हिंदी नाम) *</label>
-              <input name="header_hindi" id="centreMrkHeaderHindi" value="${esc(m.header_hindi || 'पूर्वांचल एजुकेशन एंड स्किल काउंसिल')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
-            </div>
-            <div style="grid-column:1 / -1;">
-              <label style="font-size:0.82rem; font-weight:700;">Subtitle / Authority Subheading</label>
-              <input name="header_subtitle" id="centreMrkHeaderSubtitle" value="${esc(m.header_subtitle || 'An Autonomous Body Established Under The Aegis Of Govt. Act / Registered Under Section 8 Of MCA, Govt. Of India')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Centre English Name (संस्थान का नाम - English)</label>
-              <input name="centre_name" value="${esc(m.centre_name || (currentCentre ? currentCentre.name : ''))}" placeholder="e.g. Aryavart Institute of Technology" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Centre Hindi Name (संस्थान का नाम - हिंदी)</label>
-              <input name="centre_name_hi" value="${esc(m.centre_name_hi || (currentCentre ? currentCentre.name_hi : ''))}" placeholder="उदा. आर्यावर्त इंस्टिट्यूट ऑफ़ टेक्नोलॉजी" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Council Address (परिषद कार्यालय पता)</label>
-              <input name="council_address" value="${esc(m.council_address || 'Head Office: Gorakhpur / Varanasi, Uttar Pradesh - 273001')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Centre Office Address (संस्थान केंद्र पता)</label>
-              <input name="centre_address" value="${esc(m.centre_address || (currentCentre ? currentCentre.address : ''))}" placeholder="Authorized Study & Exam Centre Address" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
-            </div>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Candidate's Name (परीक्षार्थी का नाम) *</label>
-            <input name="student_name" value="${esc(studentName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Father's / Husband's Name *</label>
-            <input name="father_name" value="${esc(fatherName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Mother's Name</label>
-            <input name="mother_name" value="${esc(motherName)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Roll Number *</label>
-            <input name="roll_no" value="${esc(rollNo)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Student Reg. Code</label>
-            <input name="student_code" value="${esc(studentCode)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Course Name *</label>
-            <input name="course_name" value="${esc(courseName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Academic Session / Batch</label>
-            <input name="exam_session" value="${esc(examSession)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Term / Scheme</label>
-            <input name="term" value="${esc(term)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Evaluation Type</label>
-            <select name="evaluation_type" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-              <option value="annual" ${evaluationType !== 'semester' ? 'selected' : ''}>Annual Scheme (वार्षिक)</option>
-              <option value="semester" ${evaluationType === 'semester' ? 'selected' : ''}>Semester System (सेमेस्टर)</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Document Ref / Marksheet No</label>
-            <input name="marksheet_no" value="${esc(marksheetNo)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Date of Issue</label>
-            <input name="issue_date" value="${esc(issueDate)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Final Result Text</label>
-            <input name="result" id="centreMrkEditResult" value="${esc(resultText)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-weight:700;">
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 8px;">
-          <h4 style="margin:0; color:#064e3b; font-size:1rem;">📚 Subject Marks &amp; Papers:</h4>
-          <button type="button" id="btnAddSubRow" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:6px 14px; border-radius:6px; border:none; cursor:pointer;">
-            ➕ Add Subject Row
-          </button>
-        </div>
-        <div style="overflow-x:auto; margin-bottom:16px;">
-          <table style="width:100%; border-collapse:collapse; font-size:0.82rem; text-align:center; border:1px solid #cbd5e1;">
-            <thead>
-              <tr style="background:#f1f5f9; font-weight:800;">
-                <th style="padding:6px; border:1px solid #cbd5e1; width:14%;">Code</th>
-                <th style="padding:6px; border:1px solid #cbd5e1; width:36%; text-align:left;">Subject Title</th>
-                <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Th Max</th>
-                <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Th Obt</th>
-                <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Pr Max</th>
-                <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Pr Obt</th>
-                <th style="padding:6px; border:1px solid #cbd5e1; width:6%;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="centreMrkEditSubsBody">
-              ${subs.map((sub, idx) => `
-                <tr style="border-bottom:1px solid #e2e8f0;">
-                  <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-code" value="${esc(sub.code || `SUB0${idx+1}`)}" style="width:100%; padding:4px; font-family:monospace; border:1px solid #cbd5e1; border-radius:4px; text-align:center;"></td>
-                  <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-name" value="${esc(sub.name || `Subject ${idx+1}`)}" style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:4px;"></td>
-                  <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-max" value="${sub.max_theory !== undefined ? sub.max_theory : (sub.max ? Math.round(sub.max*0.5) : 50)}" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
-                  <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-obt" value="${sub.obt_theory !== undefined ? sub.obt_theory : (sub.obt ? Math.round(sub.obt*0.5) : 38)}" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
-                  <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-max" value="${sub.max_practical !== undefined ? sub.max_practical : (sub.max ? Math.round(sub.max*0.5) : 50)}" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
-                  <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-obt" value="${sub.obt_practical !== undefined ? sub.obt_practical : (sub.obt ? Math.round(sub.obt*0.5) : 40)}" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
-                  <td style="padding:4px; border:1px solid #cbd5e1; text-align:center;">
-                    <button type="button" class="btn danger sm btn-del-sub" style="padding:3px 8px; font-size:0.75rem; border:none; cursor:pointer;" title="Delete Subject">🗑️</button>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Calculated Summary Box -->
-        <div style="background:#f8fafc; border:1.5px solid #059669; border-radius:8px; padding:10px 16px; margin-bottom:18px; display:flex; justify-content:space-around; align-items:center; font-size:0.92rem; font-weight:800;">
-          <div>Grand Max: <span id="lblCentreGrandMax" style="color:#0f172a;">--</span></div>
-          <div>Grand Obt: <span id="lblCentreGrandObt" style="color:#0284c7;">--</span></div>
-          <div>Percentage: <span id="lblCentrePct" style="color:#16a34a;">--%</span></div>
-          <div>Grade: <span id="lblCentreGrade" style="color:#7c3aed;">--</span></div>
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
-          <button type="button" class="btn alt" onclick="document.getElementById('centreEditMarksheetModal').remove()">Cancel</button>
-          <button type="submit" class="btn gold" style="font-weight:800; padding:10px 24px;">💾 Save Changes &amp; Update Marksheet</button>
-        </div>
-      </form>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const calcScore = () => {
-    let totMax = 0, totObt = 0;
-    modal.querySelectorAll('#centreMrkEditSubsBody tr').forEach(tr => {
-      const thM = +tr.querySelector('.sub-th-max').value || 0;
-      const thO = +tr.querySelector('.sub-th-obt').value || 0;
-      const prM = +tr.querySelector('.sub-pr-max').value || 0;
-      const prO = +tr.querySelector('.sub-pr-obt').value || 0;
-      totMax += (thM + prM);
-      totObt += (thO + prO);
-    });
-    const pct = totMax > 0 ? Math.round((totObt / totMax) * 1000) / 10 : 0;
-    const grade = pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : pct >= 50 ? 'C' : 'D';
-    modal.querySelector('#lblCentreGrandMax').textContent = totMax;
-    modal.querySelector('#lblCentreGrandObt').textContent = totObt;
-    modal.querySelector('#lblCentrePct').textContent = pct + '%';
-    modal.querySelector('#lblCentreGrade').textContent = grade;
-    return { totMax, totObt, pct, grade };
-  };
-  calcScore();
-
-  const subsBody = modal.querySelector('#centreMrkEditSubsBody');
-  subsBody.addEventListener('input', calcScore);
-  subsBody.addEventListener('click', (e) => {
-    const delBtn = e.target.closest('.btn-del-sub');
-    if (delBtn) {
-      const rows = subsBody.querySelectorAll('tr');
-      if (rows.length <= 1) {
-        alert('कम से कम 1 विषय होना अनिवार्य है!');
-        return;
-      }
-      delBtn.closest('tr').remove();
-      calcScore();
-    }
-  });
-
-  const addBtn = modal.querySelector('#btnAddSubRow');
-  if (addBtn) {
-    addBtn.onclick = () => {
-      const currentCount = subsBody.querySelectorAll('tr').length + 1;
-      const tr = document.createElement('tr');
-      tr.style.cssText = 'border-bottom:1px solid #e2e8f0;';
-      tr.innerHTML = `
-        <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-code" value="SUB${String(currentCount).padStart(2, '0')}" style="width:100%; padding:4px; font-family:monospace; border:1px solid #cbd5e1; border-radius:4px; text-align:center;"></td>
-        <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-name" value="New Subject Title" style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:4px;"></td>
-        <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-max" value="50" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
-        <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-obt" value="40" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
-        <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-max" value="50" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
-        <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-obt" value="40" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
-        <td style="padding:4px; border:1px solid #cbd5e1; text-align:center;">
-          <button type="button" class="btn danger sm btn-del-sub" style="padding:3px 8px; font-size:0.75rem; border:none; cursor:pointer;" title="Delete Subject">🗑️</button>
-        </td>
-      `;
-      subsBody.appendChild(tr);
-      calcScore();
-    };
-  }
-
-  calcScore();
-
-  modal.querySelector('#centreEditMrkForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const { totMax, totObt, pct, grade } = calcScore();
-
-    const subsPayload = [];
-    modal.querySelectorAll('#centreMrkEditSubsBody tr').forEach(tr => {
-      const code = tr.querySelector('.sub-code').value.trim();
-      const name = tr.querySelector('.sub-name').value.trim();
-      const max_theory = +tr.querySelector('.sub-th-max').value || 0;
-      const obt_theory = +tr.querySelector('.sub-th-obt').value || 0;
-      const max_practical = +tr.querySelector('.sub-pr-max').value || 0;
-      const obt_practical = +tr.querySelector('.sub-pr-obt').value || 0;
-      subsPayload.push({
-        code,
-        name,
-        max_theory,
-        obt_theory,
-        max_practical,
-        obt_practical,
-        total_max: max_theory + max_practical,
-        total_obt: obt_theory + obt_practical,
-        max: max_theory + max_practical,
-        obt: obt_theory + obt_practical
-      });
-    });
-
-    const payload = {
-      header_type: fd.get('header_type'),
-      header_title: fd.get('header_title'),
-      header_hindi: fd.get('header_hindi'),
-      header_subtitle: fd.get('header_subtitle'),
-      scheme: fd.get('scheme'),
-      centre_name: fd.get('centre_name'),
-      centre_name_hi: fd.get('centre_name_hi'),
-      council_address: fd.get('council_address'),
-      centre_address: fd.get('centre_address'),
-      student_name: fd.get('student_name'),
-      father_name: fd.get('father_name'),
-      mother_name: fd.get('mother_name'),
-      roll_no: fd.get('roll_no'),
-      student_code: fd.get('student_code'),
-      course_name: fd.get('course_name'),
-      exam_session: fd.get('exam_session'),
-      term: fd.get('term'),
-      evaluation_type: fd.get('evaluation_type'),
-      marksheet_no: fd.get('marksheet_no'),
-      issue_date: fd.get('issue_date'),
-      result: fd.get('result') || 'PASS',
-      total_max: totMax,
-      total_obtained: totObt,
-      percentage: pct,
-      grade: grade,
-      subjects: subsPayload
-    };
-
-    const targetId = (mrk && mrk.id) ? mrk.id : sId;
-    payload.student_id = sId;
-    payload.term = fd.get('term') || activeTerm || 'Annual Examination';
-    try {
-      const res = await api(`/api/centre/marksheets/${targetId}/edit`, {
-        method: 'POST',
-        body: payload
-      });
-
-      const updatedMrk = (res && res.marksheet) ? { ...res.marksheet, subjects: subsPayload } : { id: targetId, student_id: sId, ...payload };
-      window._centreMarksheets = window._centreMarksheets || [];
-      const mIdx = window._centreMarksheets.findIndex(item => 
-        Number(item.id) === Number(updatedMrk.id) || 
-        (Number(item.student_id) === sId && String(item.term || '').toLowerCase() === String(payload.term || '').toLowerCase())
-      );
-      if (mIdx >= 0) window._centreMarksheets[mIdx] = { ...window._centreMarksheets[mIdx], ...updatedMrk };
-      else window._centreMarksheets.unshift(updatedMrk);
-
-      if (stu) {
-        if (payload.student_name) stu.name = payload.student_name;
-        if (payload.father_name) stu.father_name = payload.father_name;
-        if (payload.mother_name) stu.mother_name = payload.mother_name;
-        if (payload.roll_no) stu.roll_no = payload.roll_no;
-        if (payload.course_name) stu.course = payload.course_name;
-      }
-      if (window._currentStudents) {
-        const foundS = window._currentStudents.find(s => Number(s.id) === sId);
-        if (foundS) {
-          if (payload.student_name) foundS.name = payload.student_name;
-          if (payload.father_name) foundS.father_name = payload.father_name;
-          if (payload.mother_name) foundS.mother_name = payload.mother_name;
-          if (payload.roll_no) foundS.roll_no = payload.roll_no;
-          if (payload.course_name) foundS.course = payload.course_name;
+    let stu = (window._currentStudents || []).find(s => Number(s.id) === sId);
+    if (!stu && sId) {
+      const sel = document.getElementById('mrkStudentSelect') || document.getElementById('semCertStudentSelect');
+      if (sel) {
+        const opt = sel.querySelector(`option[value="${sId}"]`) || sel.selectedOptions[0];
+        if (opt && opt.value) {
+          stu = {
+            id: sId,
+            name: opt.dataset.name,
+            father_name: opt.dataset.father,
+            mother_name: opt.dataset.mother,
+            student_code: opt.dataset.code,
+            course: opt.dataset.course,
+            photo_url: opt.dataset.photo
+          };
         }
       }
-
-      // Update student select option text if name or course changed
-      const selOpt = document.querySelector(`#mrkStudentSelect option[value="${sId}"]`);
-      if (selOpt) {
-        if (payload.student_name) selOpt.dataset.name = payload.student_name;
-        if (payload.father_name) selOpt.dataset.father = payload.father_name;
-        if (payload.mother_name) selOpt.dataset.mother = payload.mother_name;
-        if (payload.roll_no) selOpt.dataset.code = payload.roll_no;
-        if (payload.course_name) selOpt.dataset.course = payload.course_name;
-        selOpt.textContent = `${payload.student_name || stu.name} (${payload.student_code || payload.roll_no || stu.student_code}) – ${payload.course_name || stu.course}`;
-      }
-
-      window._customMarksheetData = window._customMarksheetData || {};
-      window._customMarksheetData[termKey] = subsPayload;
-      window._customMarksheetData[sId] = subsPayload;
-      try {
-        localStorage.setItem('pesc_custom_marks_' + termKey, JSON.stringify(subsPayload));
-        localStorage.setItem('pesc_custom_marks_' + sId, JSON.stringify(subsPayload));
-      } catch (_) {}
-
-      toast('Marksheet particulars and marks updated successfully!');
-      modal.remove();
-      if (typeof updateMrkPreview === 'function') updateMrkPreview(sId);
-      if (typeof views.MyStudents === 'function' && activeTab === 'MyStudents') views.MyStudents();
-    } catch (err) {
-      alert('Error updating marksheet: ' + (err.message || err));
     }
-  };
+
+    let mrk = (window._centreMarksheets || []).find(m => {
+      if (mrkId && Number(m.id) === Number(mrkId) && Number(m.id) !== sId) return true;
+      if (Number(m.student_id) === sId) {
+        if (!activeTerm) return true;
+        const mTerm = String(m.term || '').toLowerCase();
+        const selTerm = activeTerm.toLowerCase();
+        if (selTerm.includes('sem 1') || selTerm.includes('semester 1')) return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm.includes('1st sem') || mTerm.includes('sem-1');
+        if (selTerm.includes('sem 2') || selTerm.includes('semester 2')) return mTerm.includes('sem 2') || mTerm.includes('semester 2') || mTerm.includes('2nd sem') || mTerm.includes('sem-2');
+        return mTerm.includes(selTerm) || selTerm.includes(mTerm);
+      }
+      return false;
+    });
+
+    const s = stu || {};
+    const m = mrk || {};
+
+    const studentName = m.student_name || s.name || '';
+    const fatherName = m.father_name || s.father_name || '';
+    const motherName = m.mother_name || s.mother_name || '';
+    const rollNo = m.roll_no || s.roll_no || s.student_code || 'PESC-26-00008';
+    const studentCode = m.student_code || s.student_code || rollNo;
+    const courseName = m.course_name || s.course || s.course_name || 'Diploma Course';
+    const examSession = m.exam_session || '2026-27';
+    const term = m.term || activeTerm || 'Annual Examination';
+    const isSemester = window.mrkEvalPattern === 'semester' || String(term).toLowerCase().includes('sem') || String(s.evaluation_type || '').toLowerCase().includes('semester');
+    const evaluationType = m.evaluation_type || (isSemester ? 'semester' : 'annual');
+    const marksheetNo = m.marksheet_no || `PESC/MRK/2026/${String(sId || 1).padStart(5, '0')}`;
+    const issueDate = m.issue_date || (m.issued_at ? m.issued_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
+    const resultText = m.result || 'PASS';
+    const termKey = `${sId}_${String(term || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+    let subs = [];
+    if (m.subjects) {
+      try {
+        subs = typeof m.subjects === 'string' ? JSON.parse(m.subjects) : m.subjects;
+      } catch (_) { subs = []; }
+    }
+    if (!subs.length && window._customMarksheetData && window._customMarksheetData[termKey]) {
+      subs = window._customMarksheetData[termKey];
+    }
+    if (!subs.length) {
+      try {
+        const saved = localStorage.getItem('pesc_custom_marks_' + termKey);
+        if (saved) subs = JSON.parse(saved);
+      } catch (_) {}
+    }
+    if (!subs.length && typeof getCourseCurriculumSubjects === 'function') {
+      subs = getCourseCurriculumSubjects(courseName, isSemester ? 'semester' : 'yearly', term);
+    }
+
+    let normalizedSubs = (Array.isArray(subs) && subs.length ? subs : []).map((sub, idx) => {
+      if (!sub) return { code: `SUB0${idx+1}`, name: `Subject ${idx+1}`, max_theory: 50, obt_theory: 40, max_practical: 50, obt_practical: 40 };
+      if (typeof sub === 'string') return { code: `SUB0${idx+1}`, name: sub, max_theory: 50, obt_theory: 40, max_practical: 50, obt_practical: 40 };
+      return {
+        code: sub.code || `SUB0${idx+1}`,
+        name: sub.name || `Subject ${idx+1}`,
+        max_theory: sub.max_theory !== undefined ? sub.max_theory : (sub.max ? Math.round(sub.max*0.5) : 50),
+        obt_theory: sub.obt_theory !== undefined ? sub.obt_theory : (sub.obt ? Math.round(sub.obt*0.5) : 38),
+        max_practical: sub.max_practical !== undefined ? sub.max_practical : (sub.max ? Math.round(sub.max*0.5) : 50),
+        obt_practical: sub.obt_practical !== undefined ? sub.obt_practical : (sub.obt ? Math.round(sub.obt*0.5) : 40)
+      };
+    });
+    if (!normalizedSubs.length) {
+      normalizedSubs = [
+        { code: 'DCA101', name: 'Information Technology & Tools', max_theory: 50, obt_theory: 45, max_practical: 50, obt_practical: 45 },
+        { code: 'DCA102', name: 'Computer Applications & Office', max_theory: 50, obt_theory: 42, max_practical: 50, obt_practical: 46 }
+      ];
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'centreEditMarksheetModal';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.82); display:flex; align-items:center; justify-content:center; z-index:9999999 !important; padding:16px; overflow-y:auto;';
+
+    modal.innerHTML = `
+      <div style="background:#ffffff; border-radius:14px; max-width:920px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.45); position:relative;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
+          <div>
+            <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">✏️ Edit Marksheet Particulars &amp; Examination Marks</h3>
+            <span class="muted" style="font-size:0.85rem;">Document: <b>${safeEsc(marksheetNo)}</b> &bull; Candidate: <b>${safeEsc(studentName || 'Candidate')}</b> (${safeEsc(term)})</span>
+          </div>
+          <button type="button" class="btn danger sm" onclick="document.getElementById('centreEditMarksheetModal').remove()">✕ Close</button>
+        </div>
+
+        <!-- Security Notice: Signatures & Seals Locked -->
+        <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.86rem; color:#14532d; display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">🔒</span>
+          <div>
+            <b>Official Council Security Guard:</b> Council seals, coordinator stamps, and official signatures are permanently locked to verified credentials and cannot be edited. All candidate particulars and subject marks can be updated below.
+          </div>
+        </div>
+
+        <form id="centreEditMrkForm">
+          <!-- Header & Authority Customization Box -->
+          <div style="background:#f8fafc; border:1.5px solid #059669; border-radius:10px; padding:14px; margin-bottom:16px;">
+            <h4 style="margin:0 0 10px; color:#064e3b; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+              🏛️ Authority Header &amp; Scheme Settings (शीर्षक व योजना चयन)
+            </h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Header Authority (शीर्षक किसके नाम से रहेगा) *</label>
+                <select name="header_type" id="centreMrkHeaderType" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                  <option value="council" ${m.header_type !== 'centre' ? 'selected' : ''}>Council Header (परिषद के नाम से - Purvanchal Education &amp; Skill Council)</option>
+                  <option value="centre" ${m.header_type === 'centre' ? 'selected' : ''}>Centre Header (सेंटर / संस्थान के नाम से)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Examination Scheme (परीक्षा योजना / प्रकार) *</label>
+                <select name="scheme" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                  <option value="annual" ${m.scheme === 'annual' || (!m.scheme && evaluationType !== 'semester') ? 'selected' : ''}>Annual Scheme (Singhal / वार्षिक)</option>
+                  <option value="single_semester" ${m.scheme === 'single_semester' || (!m.scheme && evaluationType === 'semester') ? 'selected' : ''}>Single Semester (एकल सेमेस्टर)</option>
+                  <option value="double_semester" ${m.scheme === 'double_semester' ? 'selected' : ''}>Double Semester (दोहरा सेमेस्टर)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Main Header Title (मुख्य नाम) *</label>
+                <input name="header_title" id="centreMrkHeaderTitle" value="${safeEsc(m.header_title || 'Purvanchal Education & Skill Council')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Hindi Header Title (हिंदी नाम) *</label>
+                <input name="header_hindi" id="centreMrkHeaderHindi" value="${safeEsc(m.header_hindi || 'पूर्वांचल एजुकेशन एंड स्किल काउंसिल')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+              </div>
+              <div style="grid-column:1 / -1;">
+                <label style="font-size:0.82rem; font-weight:700;">Subtitle / Authority Subheading</label>
+                <input name="header_subtitle" id="centreMrkHeaderSubtitle" value="${safeEsc(m.header_subtitle || 'An Autonomous Body Established Under The Aegis Of Govt. Act / Registered Under Section 8 Of MCA, Govt. Of India')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Centre English Name (संस्थान का नाम - English)</label>
+                <input name="centre_name" value="${safeEsc(m.centre_name || activeCentre.name || '')}" placeholder="e.g. Aryavart Institute of Technology" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Centre Hindi Name (संस्थान का नाम - हिंदी)</label>
+                <input name="centre_name_hi" value="${safeEsc(m.centre_name_hi || activeCentre.name_hi || '')}" placeholder="उदा. आर्यावर्त इंस्टिट्यूट ऑफ़ टेक्नोलॉजी" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Council Address (परिषद कार्यालय पता)</label>
+                <input name="council_address" value="${safeEsc(m.council_address || 'Head Office: Gorakhpur / Varanasi, Uttar Pradesh - 273001')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Centre Office Address (संस्थान केंद्र पता)</label>
+                <input name="centre_address" value="${safeEsc(m.centre_address || activeCentre.address || '')}" placeholder="Authorized Study & Exam Centre Address" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Candidate's Name (परीक्षार्थी का नाम) *</label>
+              <input name="student_name" value="${safeEsc(studentName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Father's / Husband's Name *</label>
+              <input name="father_name" value="${safeEsc(fatherName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Mother's Name</label>
+              <input name="mother_name" value="${safeEsc(motherName)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Roll Number *</label>
+              <input name="roll_no" value="${safeEsc(rollNo)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Student Reg. Code</label>
+              <input name="student_code" value="${safeEsc(studentCode)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Course Name *</label>
+              <input name="course_name" value="${safeEsc(courseName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Academic Session / Batch</label>
+              <input name="exam_session" value="${safeEsc(examSession)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Term / Scheme</label>
+              <input name="term" value="${safeEsc(term)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Evaluation Type</label>
+              <select name="evaluation_type" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+                <option value="annual" ${evaluationType !== 'semester' ? 'selected' : ''}>Annual Scheme (वार्षिक)</option>
+                <option value="semester" ${evaluationType === 'semester' ? 'selected' : ''}>Semester System (सेमेस्टर)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Document Ref / Marksheet No</label>
+              <input name="marksheet_no" value="${safeEsc(marksheetNo)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Date of Issue</label>
+              <input name="issue_date" value="${safeEsc(issueDate)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Final Result Text</label>
+              <input name="result" id="centreMrkEditResult" value="${safeEsc(resultText)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-weight:700;">
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 8px;">
+            <h4 style="margin:0; color:#064e3b; font-size:1rem;">📚 Subject Marks &amp; Papers:</h4>
+            <button type="button" id="btnAddSubRow" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:6px 14px; border-radius:6px; border:none; cursor:pointer;">
+              ➕ Add Subject Row
+            </button>
+          </div>
+          <div style="overflow-x:auto; margin-bottom:16px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.82rem; text-align:center; border:1px solid #cbd5e1;">
+              <thead>
+                <tr style="background:#f1f5f9; font-weight:800;">
+                  <th style="padding:6px; border:1px solid #cbd5e1; width:14%;">Code</th>
+                  <th style="padding:6px; border:1px solid #cbd5e1; width:36%; text-align:left;">Subject Title</th>
+                  <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Th Max</th>
+                  <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Th Obt</th>
+                  <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Pr Max</th>
+                  <th style="padding:6px; border:1px solid #cbd5e1; width:11%;">Pr Obt</th>
+                  <th style="padding:6px; border:1px solid #cbd5e1; width:6%;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="centreMrkEditSubsBody">
+                ${normalizedSubs.map((sub, idx) => `
+                  <tr style="border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-code" value="${safeEsc(sub.code || `SUB0${idx+1}`)}" style="width:100%; padding:4px; font-family:monospace; border:1px solid #cbd5e1; border-radius:4px; text-align:center;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-name" value="${safeEsc(sub.name || `Subject ${idx+1}`)}" style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-max" value="${sub.max_theory !== undefined ? sub.max_theory : (sub.max ? Math.round(sub.max*0.5) : 50)}" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-obt" value="${sub.obt_theory !== undefined ? sub.obt_theory : (sub.obt ? Math.round(sub.obt*0.5) : 38)}" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-max" value="${sub.max_practical !== undefined ? sub.max_practical : (sub.max ? Math.round(sub.max*0.5) : 50)}" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-obt" value="${sub.obt_practical !== undefined ? sub.obt_practical : (sub.obt ? Math.round(sub.obt*0.5) : 40)}" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1; text-align:center;">
+                      <button type="button" class="btn danger sm btn-del-sub" style="padding:3px 8px; font-size:0.75rem; border:none; cursor:pointer;" title="Delete Subject">🗑️</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Calculated Summary Box -->
+          <div style="background:#f8fafc; border:1.5px solid #059669; border-radius:8px; padding:10px 16px; margin-bottom:18px; display:flex; justify-content:space-around; align-items:center; font-size:0.92rem; font-weight:800;">
+            <div>Grand Max: <span id="lblCentreGrandMax" style="color:#0f172a;">--</span></div>
+            <div>Grand Obt: <span id="lblCentreGrandObt" style="color:#0284c7;">--</span></div>
+            <div>Percentage: <span id="lblCentrePct" style="color:#16a34a;">--%</span></div>
+            <div>Grade: <span id="lblCentreGrade" style="color:#7c3aed;">--</span></div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn alt" onclick="document.getElementById('centreEditMarksheetModal').remove()">Cancel</button>
+            <button type="submit" class="btn gold" style="font-weight:800; padding:10px 24px;">💾 Save Changes &amp; Update Marksheet</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const calcScore = () => {
+      let totMax = 0, totObt = 0;
+      modal.querySelectorAll('#centreMrkEditSubsBody tr').forEach(tr => {
+        const thM = +tr.querySelector('.sub-th-max').value || 0;
+        const thO = +tr.querySelector('.sub-th-obt').value || 0;
+        const prM = +tr.querySelector('.sub-pr-max').value || 0;
+        const prO = +tr.querySelector('.sub-pr-obt').value || 0;
+        totMax += (thM + prM);
+        totObt += (thO + prO);
+      });
+      const pct = totMax > 0 ? Math.round((totObt / totMax) * 1000) / 10 : 0;
+      const grade = pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : pct >= 50 ? 'C' : 'D';
+      modal.querySelector('#lblCentreGrandMax').textContent = totMax;
+      modal.querySelector('#lblCentreGrandObt').textContent = totObt;
+      modal.querySelector('#lblCentrePct').textContent = pct + '%';
+      modal.querySelector('#lblCentreGrade').textContent = grade;
+      return { totMax, totObt, pct, grade };
+    };
+    calcScore();
+
+    const subsBody = modal.querySelector('#centreMrkEditSubsBody');
+    subsBody.addEventListener('input', calcScore);
+    subsBody.addEventListener('click', (e) => {
+      const delBtn = e.target.closest('.btn-del-sub');
+      if (delBtn) {
+        const rows = subsBody.querySelectorAll('tr');
+        if (rows.length <= 1) {
+          alert('कम से कम 1 विषय होना अनिवार्य है!');
+          return;
+        }
+        delBtn.closest('tr').remove();
+        calcScore();
+      }
+    });
+
+    const addBtn = modal.querySelector('#btnAddSubRow');
+    if (addBtn) {
+      addBtn.onclick = () => {
+        const currentCount = subsBody.querySelectorAll('tr').length + 1;
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom:1px solid #e2e8f0;';
+        tr.innerHTML = `
+          <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-code" value="SUB${String(currentCount).padStart(2, '0')}" style="width:100%; padding:4px; font-family:monospace; border:1px solid #cbd5e1; border-radius:4px; text-align:center;"></td>
+          <td style="padding:4px; border:1px solid #cbd5e1;"><input class="sub-name" value="New Subject Title" style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:4px;"></td>
+          <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-max" value="50" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
+          <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-th-obt" value="40" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
+          <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-max" value="50" style="width:100%; padding:4px; text-align:center; border:1px solid #cbd5e1; border-radius:4px;"></td>
+          <td style="padding:4px; border:1px solid #cbd5e1;"><input type="number" class="sub-pr-obt" value="40" style="width:100%; padding:4px; text-align:center; font-weight:700; border:1px solid #cbd5e1; border-radius:4px;"></td>
+          <td style="padding:4px; border:1px solid #cbd5e1; text-align:center;">
+            <button type="button" class="btn danger sm btn-del-sub" style="padding:3px 8px; font-size:0.75rem; border:none; cursor:pointer;" title="Delete Subject">🗑️</button>
+          </td>
+        `;
+        subsBody.appendChild(tr);
+        calcScore();
+      };
+    }
+
+    calcScore();
+
+    modal.querySelector('#centreEditMrkForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const { totMax, totObt, pct, grade } = calcScore();
+
+      const subsPayload = [];
+      modal.querySelectorAll('#centreMrkEditSubsBody tr').forEach(tr => {
+        const code = tr.querySelector('.sub-code').value.trim();
+        const name = tr.querySelector('.sub-name').value.trim();
+        const max_theory = +tr.querySelector('.sub-th-max').value || 0;
+        const obt_theory = +tr.querySelector('.sub-th-obt').value || 0;
+        const max_practical = +tr.querySelector('.sub-pr-max').value || 0;
+        const obt_practical = +tr.querySelector('.sub-pr-obt').value || 0;
+        subsPayload.push({
+          code,
+          name,
+          max_theory,
+          obt_theory,
+          max_practical,
+          obt_practical,
+          total_max: max_theory + max_practical,
+          total_obt: obt_theory + obt_practical,
+          max: max_theory + max_practical,
+          obt: obt_theory + obt_practical
+        });
+      });
+
+      const payload = {
+        header_type: fd.get('header_type'),
+        header_title: fd.get('header_title'),
+        header_hindi: fd.get('header_hindi'),
+        header_subtitle: fd.get('header_subtitle'),
+        scheme: fd.get('scheme'),
+        centre_name: fd.get('centre_name'),
+        centre_name_hi: fd.get('centre_name_hi'),
+        council_address: fd.get('council_address'),
+        centre_address: fd.get('centre_address'),
+        student_name: fd.get('student_name'),
+        father_name: fd.get('father_name'),
+        mother_name: fd.get('mother_name'),
+        roll_no: fd.get('roll_no'),
+        student_code: fd.get('student_code'),
+        course_name: fd.get('course_name'),
+        exam_session: fd.get('exam_session'),
+        term: fd.get('term'),
+        evaluation_type: fd.get('evaluation_type'),
+        marksheet_no: fd.get('marksheet_no'),
+        issue_date: fd.get('issue_date'),
+        result: fd.get('result') || 'PASS',
+        total_max: totMax,
+        total_obtained: totObt,
+        percentage: pct,
+        grade: grade,
+        subjects: subsPayload
+      };
+
+      const targetId = (mrk && mrk.id) ? mrk.id : sId;
+      payload.student_id = sId;
+      payload.term = fd.get('term') || activeTerm || 'Annual Examination';
+      try {
+        const res = await api(`/api/centre/marksheets/${targetId}/edit`, {
+          method: 'POST',
+          body: payload
+        });
+
+        const updatedMrk = (res && res.marksheet) ? { ...res.marksheet, subjects: subsPayload } : { id: targetId, student_id: sId, ...payload };
+        window._centreMarksheets = window._centreMarksheets || [];
+        const mIdx = window._centreMarksheets.findIndex(item => 
+          Number(item.id) === Number(updatedMrk.id) || 
+          (Number(item.student_id) === sId && String(item.term || '').toLowerCase() === String(payload.term || '').toLowerCase())
+        );
+        if (mIdx >= 0) window._centreMarksheets[mIdx] = { ...window._centreMarksheets[mIdx], ...updatedMrk };
+        else window._centreMarksheets.unshift(updatedMrk);
+
+        if (stu) {
+          if (payload.student_name) stu.name = payload.student_name;
+          if (payload.father_name) stu.father_name = payload.father_name;
+          if (payload.mother_name) stu.mother_name = payload.mother_name;
+          if (payload.roll_no) stu.roll_no = payload.roll_no;
+          if (payload.course_name) stu.course = payload.course_name;
+        }
+        if (window._currentStudents) {
+          const foundS = window._currentStudents.find(s => Number(s.id) === sId);
+          if (foundS) {
+            if (payload.student_name) foundS.name = payload.student_name;
+            if (payload.father_name) foundS.father_name = payload.father_name;
+            if (payload.mother_name) foundS.mother_name = payload.mother_name;
+            if (payload.roll_no) foundS.roll_no = payload.roll_no;
+            if (payload.course_name) foundS.course = payload.course_name;
+          }
+        }
+
+        // Update student select option text if name or course changed
+        const selOpt = document.querySelector(`#mrkStudentSelect option[value="${sId}"]`);
+        if (selOpt) {
+          if (payload.student_name) selOpt.dataset.name = payload.student_name;
+          if (payload.father_name) selOpt.dataset.father = payload.father_name;
+          if (payload.mother_name) selOpt.dataset.mother = payload.mother_name;
+          if (payload.roll_no) selOpt.dataset.code = payload.roll_no;
+          if (payload.course_name) selOpt.dataset.course = payload.course_name;
+          selOpt.textContent = `${payload.student_name || stu.name} (${payload.student_code || payload.roll_no || stu.student_code}) – ${payload.course_name || stu.course}`;
+        }
+
+        window._customMarksheetData = window._customMarksheetData || {};
+        window._customMarksheetData[termKey] = subsPayload;
+        window._customMarksheetData[sId] = subsPayload;
+        try {
+          localStorage.setItem('pesc_custom_marks_' + termKey, JSON.stringify(subsPayload));
+          localStorage.setItem('pesc_custom_marks_' + sId, JSON.stringify(subsPayload));
+        } catch (_) {}
+
+        if (typeof toast === 'function') toast('Marksheet particulars and marks updated successfully!');
+        else alert('✅ Marksheet particulars and marks updated successfully!');
+        modal.remove();
+        if (typeof updateMrkPreview === 'function') updateMrkPreview(sId);
+        if (typeof views !== 'undefined' && typeof views.MyStudents === 'function' && typeof activeTab !== 'undefined' && activeTab === 'MyStudents') views.MyStudents();
+      } catch (err) {
+        alert('Error updating marksheet: ' + (err.message || err));
+      }
+    };
+  } catch (err) {
+    console.error('Error opening Marksheet Editor:', err);
+    alert('❌ अंकतालिका एडिटर खोलने में समस्या आई: ' + (err.message || err));
+  }
 };
 
 // Centre Certificate Editor Modal (Seals & Signatures Permanently Locked)
 window.openCentreEditCertModal = function(certId, studentId) {
-  const existing = document.getElementById('centreEditCertModal');
-  if (existing) existing.remove();
+  try {
+    const existing = document.getElementById('centreEditCertModal');
+    if (existing) existing.remove();
 
-  let sId = Number(studentId || 0);
-  if (!sId && certId && window._centreCertificates) {
-    const foundC = window._centreCertificates.find(c => Number(c.id) === Number(certId));
-    if (foundC && foundC.student_id) sId = Number(foundC.student_id);
-  }
-  if (!sId && certId) sId = Number(certId);
+    const safeEsc = (typeof window.esc === 'function') ? window.esc : ((s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
+    const activeCentre = (typeof currentCentre !== 'undefined' && currentCentre) ? currentCentre : (window._currentCentre || {});
 
-  // Auto-detect selected candidate from UI if not provided
-  if (!sId) {
-    const sel = document.getElementById('certStudentSelect') || document.getElementById('semCertStudentSelect') || document.getElementById('mrkStudentSelect');
-    if (sel && sel.value) sId = Number(sel.value);
-  }
-
-  let stu = (window._currentStudents || []).find(s => Number(s.id) === sId);
-  if (!stu && sId) {
-    const sel = document.getElementById('certStudentSelect') || document.getElementById('mrkStudentSelect');
-    if (sel) {
-      const opt = sel.querySelector(`option[value="${sId}"]`) || sel.selectedOptions[0];
-      if (opt && opt.value) {
-        stu = {
-          id: sId,
-          name: opt.dataset.name,
-          father_name: opt.dataset.father,
-          mother_name: opt.dataset.mother,
-          student_code: opt.dataset.code,
-          course: opt.dataset.course,
-          photo_url: opt.dataset.photo
-        };
-      }
+    let sId = Number(studentId || 0);
+    if (!sId && certId && window._centreCertificates) {
+      const foundC = window._centreCertificates.find(c => Number(c.id) === Number(certId));
+      if (foundC && foundC.student_id) sId = Number(foundC.student_id);
     }
-  }
+    if (!sId && certId) sId = Number(certId);
 
-  let cert = (window._centreCertificates || []).find(c => {
-    if (certId && Number(c.id) === Number(certId) && Number(c.id) !== sId) return true;
-    return Number(c.student_id) === sId;
-  });
+    // Auto-detect selected candidate from UI if not provided
+    if (!sId) {
+      const sel = document.getElementById('certStudentSelect') || document.getElementById('semCertStudentSelect') || document.getElementById('mrkStudentSelect');
+      if (sel && sel.value) sId = Number(sel.value);
+    }
 
-  const s = stu || {};
-  const c = cert || {};
-
-  const studentName = c.student_name || s.name || '';
-  const fatherName = c.father_name || s.father_name || '';
-  const motherName = c.mother_name || s.mother_name || '';
-  const rollNo = c.roll_no || s.roll_no || s.student_code || 'PESC-26-00008';
-  const studentCode = c.student_code || s.student_code || rollNo;
-  const courseName = c.course_name || s.course || s.course_name || 'Diploma Course';
-  const duration = c.duration || '1 Year';
-  const examSession = c.exam_session || '2026-27';
-  const term = c.term || 'Annual Examination';
-  const certNo = c.cert_no || `PESC/CERT/2026/${String(sId || 1).padStart(5, '0')}`;
-  const issueDate = c.issue_date || (c.issued_at ? c.issued_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
-  const grade = c.grade || 'A+';
-
-  const modal = document.createElement('div');
-  modal.id = 'centreEditCertModal';
-  modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:center; justify-content:center; z-index:10000; padding:16px; overflow-y:auto;';
-
-  modal.innerHTML = `
-    <div style="background:#ffffff; border-radius:14px; max-width:760px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.45);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
-        <div>
-          <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">✏️ Edit Certificate Particulars</h3>
-          <span class="muted" style="font-size:0.85rem;">Certificate No: <b>${esc(certNo)}</b> &bull; Candidate: <b>${esc(studentName || 'Candidate')}</b></span>
-        </div>
-        <button type="button" class="btn danger sm" onclick="document.getElementById('centreEditCertModal').remove()">✕ Close</button>
-      </div>
-
-      <!-- Security Notice -->
-      <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.86rem; color:#14532d; display:flex; align-items:center; gap:10px;">
-        <span style="font-size:1.4rem;">🔒</span>
-        <div>
-          <b>Official Council Security Guard:</b> Council seals, coordinator stamps, and official signatures are permanently locked to verified credentials and cannot be edited. All candidate particulars and certificate fields can be updated below.
-        </div>
-      </div>
-
-      <form id="centreEditCertForm">
-        <!-- Header & Authority Customization Box -->
-        <div style="background:#f8fafc; border:1.5px solid #059669; border-radius:10px; padding:14px; margin-bottom:16px;">
-          <h4 style="margin:0 0 10px; color:#064e3b; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
-            🏛️ Authority Header &amp; Scheme Settings (शीर्षक व योजना चयन)
-          </h4>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Header Authority (शीर्षक किसके नाम से रहेगा) *</label>
-              <select name="header_type" id="centreCertHeaderType" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
-                <option value="council" ${c.header_type !== 'centre' ? 'selected' : ''}>Council Header (परिषद के नाम से - Purvanchal Education &amp; Skill Council)</option>
-                <option value="centre" ${c.header_type === 'centre' ? 'selected' : ''}>Centre Header (सेंटर / संस्थान के नाम से)</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Examination Scheme (परीक्षा योजना / प्रकार) *</label>
-              <select name="scheme" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
-                <option value="annual" ${c.scheme === 'annual' || (!c.scheme && term && !term.toLowerCase().includes('semester')) ? 'selected' : ''}>Annual Scheme (Singhal / वार्षिक)</option>
-                <option value="single_semester" ${c.scheme === 'single_semester' || (!c.scheme && term && term.toLowerCase().includes('semester')) ? 'selected' : ''}>Single Semester (एकल सेमेस्टर)</option>
-                <option value="double_semester" ${c.scheme === 'double_semester' ? 'selected' : ''}>Double Semester (दोहरा सेमेस्टर)</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Main Header Title (मुख्य नाम) *</label>
-              <input name="header_title" id="centreCertHeaderTitle" value="${esc(c.header_title || 'Purvanchal Education & Skill Council')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Hindi Header Title (हिंदी नाम) *</label>
-              <input name="header_hindi" id="centreCertHeaderHindi" value="${esc(c.header_hindi || 'पूर्वांचल एजुकेशन एंड स्किल काउंसिल')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
-            </div>
-            <div style="grid-column:1 / -1;">
-              <label style="font-size:0.82rem; font-weight:700;">Subtitle / Authority Subheading</label>
-              <input name="header_subtitle" id="centreCertHeaderSubtitle" value="${esc(c.header_subtitle || 'An Autonomous Body Established Under The Aegis Of Govt. Act / Registered Under Section 8 Of MCA, Govt. Of India')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Centre English Name (संस्थान का नाम - English)</label>
-              <input name="centre_name" value="${esc(c.centre_name || (currentCentre ? currentCentre.name : ''))}" placeholder="e.g. Aryavart Institute of Technology" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Centre Hindi Name (संस्थान का नाम - हिंदी)</label>
-              <input name="centre_name_hi" value="${esc(c.centre_name_hi || (currentCentre ? currentCentre.name_hi : ''))}" placeholder="उदा. आर्यावर्त इंस्टिट्यूट ऑफ़ टेक्नोलॉजी" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Council Address (परिषद कार्यालय पता)</label>
-              <input name="council_address" value="${esc(c.council_address || 'Head Office: Gorakhpur / Varanasi, Uttar Pradesh - 273001')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem; font-weight:700;">Centre Office Address (संस्थान केंद्र पता)</label>
-              <input name="centre_address" value="${esc(c.centre_address || (currentCentre ? currentCentre.address : ''))}" placeholder="Authorized Study & Exam Centre Address" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
-            </div>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Candidate Name (परीक्षार्थी का नाम) *</label>
-            <input name="student_name" value="${esc(studentName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Father's / Husband's Name *</label>
-            <input name="father_name" value="${esc(fatherName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Mother's Name</label>
-            <input name="mother_name" value="${esc(motherName)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Roll Number *</label>
-            <input name="roll_no" value="${esc(rollNo)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Student Reg. Code</label>
-            <input name="student_code" value="${esc(studentCode)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Course Name *</label>
-            <input name="course_name" value="${esc(courseName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Course Duration</label>
-            <input name="duration" value="${esc(duration)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Academic Session / Batch</label>
-            <input name="exam_session" value="${esc(examSession)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Term / Scheme</label>
-            <input name="term" value="${esc(term)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Grade Awarded</label>
-            <input name="grade" value="${esc(grade)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-weight:700;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Certificate Document No</label>
-            <input name="cert_no" value="${esc(certNo)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
-          </div>
-          <div>
-            <label style="font-size:0.82rem; font-weight:700;">Date of Issue</label>
-            <input name="issue_date" value="${esc(issueDate)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
-          <button type="button" class="btn alt" onclick="document.getElementById('centreEditCertModal').remove()">Cancel</button>
-          <button type="submit" class="btn gold" style="font-weight:800; padding:10px 24px;">💾 Save Changes &amp; Update Certificate</button>
-        </div>
-      </form>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  modal.querySelector('#centreEditCertForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const payload = {
-      header_type: fd.get('header_type'),
-      header_title: fd.get('header_title'),
-      header_hindi: fd.get('header_hindi'),
-      header_subtitle: fd.get('header_subtitle'),
-      scheme: fd.get('scheme'),
-      centre_name: fd.get('centre_name'),
-      centre_name_hi: fd.get('centre_name_hi'),
-      council_address: fd.get('council_address'),
-      centre_address: fd.get('centre_address'),
-      student_name: fd.get('student_name'),
-      father_name: fd.get('father_name'),
-      mother_name: fd.get('mother_name'),
-      roll_no: fd.get('roll_no'),
-      student_code: fd.get('student_code'),
-      course_name: fd.get('course_name'),
-      duration: fd.get('duration'),
-      exam_session: fd.get('exam_session'),
-      term: fd.get('term'),
-      cert_no: fd.get('cert_no'),
-      issue_date: fd.get('issue_date'),
-      grade: fd.get('grade')
-    };
-
-    const targetId = (cert && cert.id) || sId;
-    payload.student_id = sId;
-    try {
-      const res = await api(`/api/centre/certificates/${targetId}/edit`, {
-        method: 'POST',
-        body: payload
-      });
-
-      const updatedCert = (res && res.certificate) ? res.certificate : { id: targetId, student_id: sId, ...payload };
-      window._centreCertificates = window._centreCertificates || [];
-      const cIdx = window._centreCertificates.findIndex(c => Number(c.id) === Number(updatedCert.id) || Number(c.student_id) === sId);
-      if (cIdx >= 0) window._centreCertificates[cIdx] = { ...window._centreCertificates[cIdx], ...updatedCert };
-      else window._centreCertificates.unshift(updatedCert);
-
-      if (stu) {
-        if (payload.student_name) stu.name = payload.student_name;
-        if (payload.father_name) stu.father_name = payload.father_name;
-        if (payload.mother_name) stu.mother_name = payload.mother_name;
-        if (payload.roll_no) stu.roll_no = payload.roll_no;
-        if (payload.course_name) stu.course = payload.course_name;
-      }
-      if (window._currentStudents) {
-        const foundS = window._currentStudents.find(s => Number(s.id) === sId);
-        if (foundS) {
-          if (payload.student_name) foundS.name = payload.student_name;
-          if (payload.father_name) foundS.father_name = payload.father_name;
-          if (payload.mother_name) foundS.mother_name = payload.mother_name;
-          if (payload.roll_no) foundS.roll_no = payload.roll_no;
-          if (payload.course_name) foundS.course = payload.course_name;
+    let stu = (window._currentStudents || []).find(s => Number(s.id) === sId);
+    if (!stu && sId) {
+      const sel = document.getElementById('certStudentSelect') || document.getElementById('mrkStudentSelect');
+      if (sel) {
+        const opt = sel.querySelector(`option[value="${sId}"]`) || sel.selectedOptions[0];
+        if (opt && opt.value) {
+          stu = {
+            id: sId,
+            name: opt.dataset.name,
+            father_name: opt.dataset.father,
+            mother_name: opt.dataset.mother,
+            student_code: opt.dataset.code,
+            course: opt.dataset.course,
+            photo_url: opt.dataset.photo
+          };
         }
       }
-
-      toast('Certificate particulars updated successfully!');
-      modal.remove();
-      if (typeof updateCertPreview === 'function') updateCertPreview();
-      if (typeof views.MyStudents === 'function' && activeTab === 'MyStudents') views.MyStudents();
-    } catch (err) {
-      alert('Error updating certificate: ' + (err.message || err));
     }
-  };
+
+    let cert = (window._centreCertificates || []).find(c => {
+      if (certId && Number(c.id) === Number(certId) && Number(c.id) !== sId) return true;
+      return Number(c.student_id) === sId;
+    });
+
+    const s = stu || {};
+    const c = cert || {};
+
+    const studentName = c.student_name || s.name || '';
+    const fatherName = c.father_name || s.father_name || '';
+    const motherName = c.mother_name || s.mother_name || '';
+    const rollNo = c.roll_no || s.roll_no || s.student_code || 'PESC-26-00008';
+    const studentCode = c.student_code || s.student_code || rollNo;
+    const courseName = c.course_name || s.course || s.course_name || 'Diploma Course';
+    const duration = c.duration || '1 Year';
+    const examSession = c.exam_session || '2026-27';
+    const term = c.term || 'Annual Examination';
+    const certNo = c.cert_no || `PESC/CERT/2026/${String(sId || 1).padStart(5, '0')}`;
+    const issueDate = c.issue_date || (c.issued_at ? c.issued_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
+    const grade = c.grade || 'A+';
+
+    const modal = document.createElement('div');
+    modal.id = 'centreEditCertModal';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.82); display:flex; align-items:center; justify-content:center; z-index:9999999 !important; padding:16px; overflow-y:auto;';
+
+    modal.innerHTML = `
+      <div style="background:#ffffff; border-radius:14px; max-width:760px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.45); position:relative;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
+          <div>
+            <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">✏️ Edit Certificate Particulars</h3>
+            <span class="muted" style="font-size:0.85rem;">Certificate No: <b>${safeEsc(certNo)}</b> &bull; Candidate: <b>${safeEsc(studentName || 'Candidate')}</b></span>
+          </div>
+          <button type="button" class="btn danger sm" onclick="document.getElementById('centreEditCertModal').remove()">✕ Close</button>
+        </div>
+
+        <!-- Security Notice -->
+        <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.86rem; color:#14532d; display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.4rem;">🔒</span>
+          <div>
+            <b>Official Council Security Guard:</b> Council seals, coordinator stamps, and official signatures are permanently locked to verified credentials and cannot be edited. All candidate particulars and certificate fields can be updated below.
+          </div>
+        </div>
+
+        <form id="centreEditCertForm">
+          <!-- Header & Authority Customization Box -->
+          <div style="background:#f8fafc; border:1.5px solid #059669; border-radius:10px; padding:14px; margin-bottom:16px;">
+            <h4 style="margin:0 0 10px; color:#064e3b; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+              🏛️ Authority Header &amp; Scheme Settings (शीर्षक व योजना चयन)
+            </h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px;">
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Header Authority (शीर्षक किसके नाम से रहेगा) *</label>
+                <select name="header_type" id="centreCertHeaderType" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                  <option value="council" ${c.header_type !== 'centre' ? 'selected' : ''}>Council Header (परिषद के नाम से - Purvanchal Education &amp; Skill Council)</option>
+                  <option value="centre" ${c.header_type === 'centre' ? 'selected' : ''}>Centre Header (सेंटर / संस्थान के नाम से)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Examination Scheme (परीक्षा योजना / प्रकार) *</label>
+                <select name="scheme" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+                  <option value="annual" ${c.scheme === 'annual' || (!c.scheme && term && !term.toLowerCase().includes('semester')) ? 'selected' : ''}>Annual Scheme (Singhal / वार्षिक)</option>
+                  <option value="single_semester" ${c.scheme === 'single_semester' || (!c.scheme && term && term.toLowerCase().includes('semester')) ? 'selected' : ''}>Single Semester (एकल सेमेस्टर)</option>
+                  <option value="double_semester" ${c.scheme === 'double_semester' ? 'selected' : ''}>Double Semester (दोहरा सेमेस्टर)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Main Header Title (मुख्य नाम) *</label>
+                <input name="header_title" id="centreCertHeaderTitle" value="${safeEsc(c.header_title || 'Purvanchal Education & Skill Council')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Hindi Header Title (हिंदी नाम) *</label>
+                <input name="header_hindi" id="centreCertHeaderHindi" value="${safeEsc(c.header_hindi || 'पूर्वांचल एजुकेशन एंड स्किल काउंसिल')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+              </div>
+              <div style="grid-column:1 / -1;">
+                <label style="font-size:0.82rem; font-weight:700;">Subtitle / Authority Subheading</label>
+                <input name="header_subtitle" id="centreCertHeaderSubtitle" value="${safeEsc(c.header_subtitle || 'An Autonomous Body Established Under The Aegis Of Govt. Act / Registered Under Section 8 Of MCA, Govt. Of India')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Centre English Name (संस्थान का नाम - English)</label>
+                <input name="centre_name" value="${safeEsc(c.centre_name || activeCentre.name || '')}" placeholder="e.g. Aryavart Institute of Technology" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Centre Hindi Name (संस्थान का नाम - हिंदी)</label>
+                <input name="centre_name_hi" value="${safeEsc(c.centre_name_hi || activeCentre.name_hi || '')}" placeholder="उदा. आर्यावर्त इंस्टिट्यूट ऑफ़ टेक्नोलॉजी" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Council Address (परिषद कार्यालय पता)</label>
+                <input name="council_address" value="${safeEsc(c.council_address || 'Head Office: Gorakhpur / Varanasi, Uttar Pradesh - 273001')}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700;">Centre Office Address (संस्थान केंद्र पता)</label>
+                <input name="centre_address" value="${safeEsc(c.centre_address || activeCentre.address || '')}" placeholder="Authorized Study & Exam Centre Address" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Candidate Name (परीक्षार्थी का नाम) *</label>
+              <input name="student_name" value="${safeEsc(studentName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Father's / Husband's Name *</label>
+              <input name="father_name" value="${safeEsc(fatherName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Mother's Name</label>
+              <input name="mother_name" value="${safeEsc(motherName)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Roll Number *</label>
+              <input name="roll_no" value="${safeEsc(rollNo)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Student Reg. Code</label>
+              <input name="student_code" value="${safeEsc(studentCode)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Course Name *</label>
+              <input name="course_name" value="${safeEsc(courseName)}" required style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Course Duration</label>
+              <input name="duration" value="${safeEsc(duration)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Academic Session / Batch</label>
+              <input name="exam_session" value="${safeEsc(examSession)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Term / Scheme</label>
+              <input name="term" value="${safeEsc(term)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Grade Awarded</label>
+              <input name="grade" value="${safeEsc(grade)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-weight:700;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Certificate Document No</label>
+              <input name="cert_no" value="${safeEsc(certNo)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem; font-family:monospace;">
+            </div>
+            <div>
+              <label style="font-size:0.82rem; font-weight:700;">Date of Issue</label>
+              <input name="issue_date" value="${safeEsc(issueDate)}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.9rem;">
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn alt" onclick="document.getElementById('centreEditCertModal').remove()">Cancel</button>
+            <button type="submit" class="btn gold" style="font-weight:800; padding:10px 24px;">💾 Save Changes &amp; Update Certificate</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector('#centreEditCertForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = {
+        header_type: fd.get('header_type'),
+        header_title: fd.get('header_title'),
+        header_hindi: fd.get('header_hindi'),
+        header_subtitle: fd.get('header_subtitle'),
+        scheme: fd.get('scheme'),
+        centre_name: fd.get('centre_name'),
+        centre_name_hi: fd.get('centre_name_hi'),
+        council_address: fd.get('council_address'),
+        centre_address: fd.get('centre_address'),
+        student_name: fd.get('student_name'),
+        father_name: fd.get('father_name'),
+        mother_name: fd.get('mother_name'),
+        roll_no: fd.get('roll_no'),
+        student_code: fd.get('student_code'),
+        course_name: fd.get('course_name'),
+        duration: fd.get('duration'),
+        exam_session: fd.get('exam_session'),
+        term: fd.get('term'),
+        cert_no: fd.get('cert_no'),
+        issue_date: fd.get('issue_date'),
+        grade: fd.get('grade')
+      };
+
+      const targetId = (cert && cert.id) || sId;
+      payload.student_id = sId;
+      try {
+        const res = await api(`/api/centre/certificates/${targetId}/edit`, {
+          method: 'POST',
+          body: payload
+        });
+
+        const updatedCert = (res && res.certificate) ? res.certificate : { id: targetId, student_id: sId, ...payload };
+        window._centreCertificates = window._centreCertificates || [];
+        const cIdx = window._centreCertificates.findIndex(c => Number(c.id) === Number(updatedCert.id) || Number(c.student_id) === sId);
+        if (cIdx >= 0) window._centreCertificates[cIdx] = { ...window._centreCertificates[cIdx], ...updatedCert };
+        else window._centreCertificates.unshift(updatedCert);
+
+        if (stu) {
+          if (payload.student_name) stu.name = payload.student_name;
+          if (payload.father_name) stu.father_name = payload.father_name;
+          if (payload.mother_name) stu.mother_name = payload.mother_name;
+          if (payload.roll_no) stu.roll_no = payload.roll_no;
+          if (payload.course_name) stu.course = payload.course_name;
+        }
+        if (window._currentStudents) {
+          const foundS = window._currentStudents.find(s => Number(s.id) === sId);
+          if (foundS) {
+            if (payload.student_name) foundS.name = payload.student_name;
+            if (payload.father_name) foundS.father_name = payload.father_name;
+            if (payload.mother_name) foundS.mother_name = payload.mother_name;
+            if (payload.roll_no) foundS.roll_no = payload.roll_no;
+            if (payload.course_name) foundS.course = payload.course_name;
+          }
+        }
+
+        if (typeof toast === 'function') toast('Certificate particulars updated successfully!');
+        else alert('✅ Certificate particulars updated successfully!');
+        modal.remove();
+        if (typeof updateCertPreview === 'function') updateCertPreview();
+        if (typeof views !== 'undefined' && typeof views.MyStudents === 'function' && typeof activeTab !== 'undefined' && activeTab === 'MyStudents') views.MyStudents();
+      } catch (err) {
+        alert('Error updating certificate: ' + (err.message || err));
+      }
+    };
+  } catch (err) {
+    console.error('Error opening Certificate Editor:', err);
+    alert('❌ प्रमाण पत्र एडिटर खोलने में समस्या आई: ' + (err.message || err));
+  }
 };
 
 // Aliases for compatibility
