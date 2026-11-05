@@ -7,6 +7,17 @@ const argon2 = require('../hash');
 const cfg = require('../config');
 const { HttpError, now, str, h, audit, paginate, next: counter, nextStudentCode, rand, sha } = require('../lib');
 
+function getDefaultStudentFee(durationMonths, code) {
+  const c = String(code || '').toUpperCase();
+  if (c.includes('ADCA') || c.includes('PGDCA') || (durationMonths && durationMonths >= 12)) return 12000;
+  if (c.includes('DCA') || (durationMonths && durationMonths >= 6)) return 6500;
+  if (c.includes('TALLY') || durationMonths === 3) return 4000;
+  if (c.includes('CCC')) return 2500;
+  if (c.includes('TYPING') || (durationMonths && durationMonths <= 2)) return 2000;
+  if (durationMonths && durationMonths >= 9) return 9000;
+  return (durationMonths && durationMonths >= 6) ? 6500 : 3500;
+}
+
 // Auto-Context Middleware:
 // If authenticated centre user exists, use them.
 // Otherwise, dynamically resolve the centre from tenant (subdomain), query ?centre=, header x-centre-slug,
@@ -511,21 +522,36 @@ router.post('/students/:id/account', h(async (req, res) => {
 // 3. My Courses - Centre apna selling price khud set karega (Head office courses read-only)
 router.get('/courses', (req, res) => {
   const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.subjects, co.total_marks, co.fee_paise AS system_fee_paise,
-    COALESCE(cc.selling_price_paise, co.fee_paise * 2, 800000) AS selling_price_paise,
+    cc.selling_price_paise,
     (SELECT COUNT(*) FROM students WHERE course_id=co.id AND centre_id=?) AS enrolled_count
     FROM courses co
-    JOIN centre_courses cc ON cc.course_id=co.id
-    WHERE cc.centre_id=? AND co.active=1
+    LEFT JOIN centre_courses cc ON cc.course_id=co.id AND cc.centre_id=?
+    WHERE co.active=1
     ORDER BY co.duration_months DESC, co.name ASC`).all(cid(req), cid(req));
-  res.json({ courses });
+
+  const mappedCourses = courses.map(co => {
+    const studentFeePaise = (co.selling_price_paise && co.selling_price_paise > 0)
+      ? co.selling_price_paise
+      : (getDefaultStudentFee(co.duration_months, co.code) * 100);
+    return {
+      ...co,
+      selling_price_paise: studentFeePaise,
+      fee_rupees: Math.round(studentFeePaise / 100)
+    };
+  });
+  res.json({ courses: mappedCourses });
 });
 
 router.put('/courses/:id/price', (req, res) => {
   const courseId = +req.params.id;
-  const sellingRupees = Math.max(0, Math.round(+req.body.selling_price_rupees));
-  db.prepare("UPDATE centre_courses SET selling_price_paise=? WHERE centre_id=? AND course_id=?")
-    .run(sellingRupees * 100, cid(req), courseId);
-  res.json({ ok: true, selling_price_paise: sellingRupees * 100 });
+  const sellingRupees = Math.max(0, Math.round(+req.body.selling_price_rupees || +req.body.fee_rupees || 0));
+  const sellingPaise = sellingRupees * 100;
+  db.prepare(`
+    INSERT INTO centre_courses (centre_id, course_id, selling_price_paise)
+    VALUES (?, ?, ?)
+    ON CONFLICT(centre_id, course_id) DO UPDATE SET selling_price_paise=excluded.selling_price_paise
+  `).run(cid(req), courseId, sellingPaise);
+  res.json({ ok: true, selling_price_paise: sellingPaise, fee_rupees: sellingRupees });
 });
 
 // 4. Fees Collection & Receipt Generation

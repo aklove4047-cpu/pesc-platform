@@ -464,3 +464,47 @@ test('website customizer: centre owner can customize theme colors, hero banner, 
   assert.equal(pubSite.json.website_settings.hero_title, 'Premier Computer Institute in Varanasi');
 });
 
+test('centre public website displays all council courses with centre student fee and hides council base fee', async () => {
+  // 1. Centre admin gets all authorized courses
+  const cListRes = await call('GET', '/api/centre/courses', { host: A.host, cookie: A.cookie });
+  assert.equal(cListRes.status, 200);
+  assert.ok(cListRes.json.courses.length >= 1, 'Centre should have council courses');
+  const dcaCourse = cListRes.json.courses.find(c => c.code === 'DCA') || cListRes.json.courses[0];
+
+  // 2. Centre admin sets custom student training fee (e.g. ₹8,500 for DCA)
+  const setPriceRes = await call('PUT', `/api/centre/courses/${dcaCourse.id}/price`, {
+    host: A.host,
+    cookie: A.cookie,
+    body: { selling_price_rupees: 8500 }
+  });
+  assert.equal(setPriceRes.status, 200);
+  assert.equal(setPriceRes.json.ok, true);
+
+  // 3. Query public site API for students/visitors
+  const pubRes = await call('GET', '/api/public/site', { host: A.host });
+  assert.equal(pubRes.status, 200);
+  assert.ok(pubRes.json.courses.length >= 1);
+
+  // Verify that the DCA course on public site shows ₹8,500
+  const pubDca = pubRes.json.courses.find(c => c.id === dcaCourse.id);
+  assert.ok(pubDca, 'DCA course should be visible on centre public website');
+  assert.equal(pubDca.local_fee_rupees, 8500, 'Centre custom student fee should be shown');
+  assert.equal(pubDca.fee_rupees, 8500);
+
+  // Verify that council base fees are NEVER exposed to the public
+  for (const c of pubRes.json.courses) {
+    assert.equal(c.fee_paise, undefined, 'Council base fee_paise must NOT be in public course payload');
+    assert.equal(c.system_fee_paise, undefined, 'Council system_fee_paise must NOT be in public payload');
+    assert.equal(c.single_fee_paise, undefined, 'Council single_fee_paise must NOT be in public payload');
+    assert.equal(c.semester_fee_paise, undefined, 'Council semester_fee_paise must NOT be in public payload');
+  }
+
+  // 4. Verify SSR HTML contains student fees and no council base fees
+  const htmlRes = await call('GET', '/', { host: A.host });
+  assert.equal(htmlRes.status, 200);
+  const html = htmlRes.buf.toString();
+  assert.ok(html.includes('8,500'), 'Public HTML should display the centre custom student fee (₹8,500)');
+  assert.ok(html.includes('Course Fees:'), 'Public HTML should label fee as Course Fees');
+});
+
+

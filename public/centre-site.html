@@ -1939,23 +1939,23 @@
       const grid = $('#courseGrid');
       const select = $('#inqCourseSelect');
 
-      const coursesToDisplay = (d.courses && d.courses.length >= 3) ? d.courses.map(co => ({
+      const coursesToDisplay = (d.courses && d.courses.length > 0) ? d.courses.map(co => ({
         id: co.id,
         code: co.code,
         name: co.name,
         duration: `${co.duration_months} Months`,
-        fee: `₹${(co.local_fee_rupees || 4000).toLocaleString('en-IN')}`,
+        fee: `₹${(co.local_fee_rupees || co.fee_rupees || 4000).toLocaleString('en-IN')}`,
         icon: co.code.includes('DCA') ? '📄' : co.code.includes('TALLY') ? '🧮' : co.code.includes('TYPE') ? '⌨️' : '💻'
       })) : mockupCourses;
 
-      grid.innerHTML = coursesToDisplay.slice(0, 5).map(co => `
+      grid.innerHTML = coursesToDisplay.map(co => `
         <div class="c-course-card">
           <div class="c-course-icon">${co.icon}</div>
           <h4>${esc(co.code)}</h4>
           <span class="sub">${esc(co.name)}</span>
           <div class="c-course-duration">Duration: ${esc(co.duration)}</div>
           <div class="c-course-fee">
-            Local Fees: <b>${esc(co.fee)}</b>
+            Course Fees: <b>${esc(co.fee)}</b>
           </div>
           <button class="c-btn-enroll" onclick="openApplyWithCourse('${esc(co.code)}')">Apply Now</button>
         </div>

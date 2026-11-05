@@ -43,6 +43,17 @@ app.use('/assets', express.static(PUB, { index: false }));
 const page = (f) => (req, res) => res.sendFile(path.join(PUB, f));
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+function getDefaultStudentFee(durationMonths, code) {
+  const c = String(code || '').toUpperCase();
+  if (c.includes('ADCA') || c.includes('PGDCA') || (durationMonths && durationMonths >= 12)) return 12000;
+  if (c.includes('DCA') || (durationMonths && durationMonths >= 6)) return 6500;
+  if (c.includes('TALLY') || durationMonths === 3) return 4000;
+  if (c.includes('CCC')) return 2500;
+  if (c.includes('TYPING') || (durationMonths && durationMonths <= 2)) return 2000;
+  if (durationMonths && durationMonths >= 9) return 9000;
+  return (durationMonths && durationMonths >= 6) ? 6500 : 3500;
+}
+
 let centreSiteTemplate = null;
 function getCentreSiteTemplate() {
   if (!centreSiteTemplate || process.env.NODE_ENV !== 'production') {
@@ -249,6 +260,52 @@ ${JSON.stringify(schemaJson, null, 2)}
     </a>`;
     html = html.replace('</body>', `${waFloatHtml}\n</body>`);
   }
+
+  // Pre-render Authorized Courses & Student Fees (All Council Courses, Centre Student Fee Only)
+  const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.total_marks,
+    cc.selling_price_paise
+    FROM courses co
+    LEFT JOIN centre_courses cc ON cc.course_id=co.id AND cc.centre_id=?
+    WHERE co.active=1
+    ORDER BY co.duration_months DESC, co.name ASC`).all(centre.id);
+
+  const safeCourses = courses.map(co => {
+    const studentFeeRupees = (co.selling_price_paise && co.selling_price_paise > 0)
+      ? Math.round(co.selling_price_paise / 100)
+      : getDefaultStudentFee(co.duration_months, co.code);
+    return {
+      id: co.id,
+      code: co.code,
+      name: co.name,
+      duration_months: co.duration_months || 6,
+      local_fee_rupees: studentFeeRupees,
+      fee_rupees: studentFeeRupees,
+      tag: (co.duration_months || 6) >= 12 ? 'Diploma' : (co.duration_months || 6) >= 6 ? 'Certificate' : 'Short Term'
+    };
+  });
+
+  const courseCardsHtml = safeCourses.map(co => {
+    const icon = co.code.includes('DCA') ? '📄' : co.code.includes('TALLY') ? '🧮' : co.code.includes('TYPE') ? '⌨️' : '💻';
+    const duration = `${co.duration_months} Months`;
+    const feeStr = `₹${co.fee_rupees.toLocaleString('en-IN')}`;
+    return `
+        <div class="c-course-card">
+          <div class="c-course-icon">${icon}</div>
+          <h4>${esc(co.code)}</h4>
+          <span class="sub">${esc(co.name)}</span>
+          <div class="c-course-duration">Duration: ${esc(duration)}</div>
+          <div class="c-course-fee">
+            Course Fees: <b>${esc(feeStr)}</b>
+          </div>
+          <button class="c-btn-enroll" onclick="openApplyWithCourse('${esc(co.code)}')">Apply Now</button>
+        </div>`;
+  }).join('');
+
+  html = html.replace(/<div class="c-course-grid" id="courseGrid">[\s\S]*?<\/div>/, `<div class="c-course-grid" id="courseGrid">${courseCardsHtml}\n      </div>`);
+
+  const inqOptionsHtml = `<option value="">Select a course…</option>` +
+    safeCourses.map(co => `<option value="${co.id}">${esc(co.code)} - ${esc(co.name)} (${co.duration_months} Months)</option>`).join('');
+  html = html.replace(/<select id="inqCourseSelect"[\s\S]*?<\/select>/, `<select id="inqCourseSelect" required style="width:100%; padding:11px 13px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.95rem; background:#fff;">${inqOptionsHtml}</select>`);
 
   return html;
 }

@@ -4,6 +4,17 @@ const cfg = require('../config');
 const { HttpError, now, str, h, next: counter } = require('../lib');
 const { resolveSlug } = require('../tenant');
 
+function getDefaultStudentFee(durationMonths, code) {
+  const c = String(code || '').toUpperCase();
+  if (c.includes('ADCA') || c.includes('PGDCA') || (durationMonths && durationMonths >= 12)) return 12000;
+  if (c.includes('DCA') || (durationMonths && durationMonths >= 6)) return 6500;
+  if (c.includes('TALLY') || durationMonths === 3) return 4000;
+  if (c.includes('CCC')) return 2500;
+  if (c.includes('TYPING') || (durationMonths && durationMonths <= 2)) return 2000;
+  if (durationMonths && durationMonths >= 9) return 9000;
+  return (durationMonths && durationMonths >= 6) ? 6500 : 3500;
+}
+
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
 const slugProblem = (slug) => {
   if (!SLUG_RE.test(slug)) return 'Subdomain must be 3-30 chars: a-z, 0-9, hyphen';
@@ -88,14 +99,12 @@ router.get('/site', (req, res) => {
   if (!tenant || tenant.status !== 'active') throw new HttpError(404, 'Centre site not found');
 
   const owner = db.prepare("SELECT u.name, u.email, u.mobile FROM users u WHERE u.centre_id=? AND u.role='centre_owner'").get(tenant.id) || {};
-  let courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.fee_paise, co.total_marks
+  const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.total_marks,
+    cc.selling_price_paise
     FROM courses co
-    JOIN centre_courses cc ON cc.course_id=co.id
-    WHERE cc.centre_id=? AND co.active=1
+    LEFT JOIN centre_courses cc ON cc.course_id=co.id AND cc.centre_id=?
+    WHERE co.active=1
     ORDER BY co.duration_months DESC, co.name ASC`).all(tenant.id);
-  if (!courses || courses.length === 0) {
-    courses = db.prepare(`SELECT id, code, name, duration_months, fee_paise, total_marks FROM courses WHERE active=1 ORDER BY duration_months DESC, name ASC LIMIT 6`).all();
-  }
 
   const studentCount = db.prepare('SELECT count(*) n FROM students WHERE centre_id=?').get(tenant.id).n;
   const certCount = db.prepare("SELECT count(*) n FROM certificates WHERE centre_id=? AND status='Valid'").get(tenant.id).n;
@@ -124,14 +133,20 @@ router.get('/site', (req, res) => {
       email: owner.email || `desk@${tenant.slug}.pescouncil.in`,
       mobile: owner.mobile || '+91 98765 43210',
     },
-    courses: courses.map(c => ({
-      id: c.id,
-      code: c.code,
-      name: c.name,
-      duration_months: c.duration_months,
-      local_fee_rupees: c.fee_paise ? Math.round(c.fee_paise / 100) : (c.duration_months >= 12 ? 12000 : c.duration_months >= 6 ? 6500 : 4000),
-      tag: c.duration_months >= 12 ? 'Diploma' : c.duration_months >= 6 ? 'Certificate' : 'Short Term',
-    })),
+    courses: courses.map(c => {
+      const studentFeeRupees = (c.selling_price_paise && c.selling_price_paise > 0)
+        ? Math.round(c.selling_price_paise / 100)
+        : getDefaultStudentFee(c.duration_months, c.code);
+      return {
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        duration_months: c.duration_months,
+        local_fee_rupees: studentFeeRupees,
+        fee_rupees: studentFeeRupees,
+        tag: c.duration_months >= 12 ? 'Diploma' : c.duration_months >= 6 ? 'Certificate' : 'Short Term',
+      };
+    }),
     stats: {
       students: studentCount,
       certificates: certCount,

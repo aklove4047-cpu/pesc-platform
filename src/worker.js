@@ -832,6 +832,17 @@ function slugOf(hostHeader) {
   return { kind: 'main' };
 }
 
+function getDefaultStudentFee(durationMonths, code) {
+  const c = String(code || '').toUpperCase();
+  if (c.includes('ADCA') || c.includes('PGDCA') || (durationMonths && durationMonths >= 12)) return 12000;
+  if (c.includes('DCA') || (durationMonths && durationMonths >= 6)) return 6500;
+  if (c.includes('TALLY') || durationMonths === 3) return 4000;
+  if (c.includes('CCC')) return 2500;
+  if (c.includes('TYPING') || (durationMonths && durationMonths <= 2)) return 2000;
+  if (durationMonths && durationMonths >= 9) return 9000;
+  return (durationMonths && durationMonths >= 6) ? 6500 : 3500;
+}
+
 function renderCentreSite(templateHtml, centre, host) {
   let html = templateHtml;
   const cName = centre.name || 'Authorized Computer Training Institute';
@@ -1007,6 +1018,53 @@ ${JSON.stringify(schemaJson, null, 2)}
     html = html.replace('</body>', `${waFloatHtml}\n</body>`);
   }
 
+  // Pre-render Authorized Courses & Student Fees (All Council Courses, Centre Student Fee Only)
+  const allActiveCourses = (centre.courses_list && centre.courses_list.length)
+    ? centre.courses_list.filter(co => co.active !== false)
+    : store.courses.filter(co => co.active !== 0);
+
+  const safeCoursesForClient = allActiveCourses.map(co => {
+    let studentFeeRupees = 0;
+    if (centre.course_prices && centre.course_prices[co.id] !== undefined && centre.course_prices[co.id] > 0) {
+      studentFeeRupees = Math.round(centre.course_prices[co.id] / 100);
+    } else {
+      studentFeeRupees = getDefaultStudentFee(co.duration_months, co.code);
+    }
+    return {
+      id: co.id,
+      code: co.code,
+      name: co.name,
+      duration_months: co.duration_months || 6,
+      local_fee_rupees: studentFeeRupees,
+      fee_rupees: studentFeeRupees,
+      tag: (co.duration_months || 6) >= 12 ? 'Diploma' : (co.duration_months || 6) >= 6 ? 'Certificate' : 'Short Term',
+      description: co.description || ''
+    };
+  });
+
+  const courseCardsHtml = safeCoursesForClient.map(co => {
+    const icon = co.code.includes('DCA') ? '📄' : co.code.includes('TALLY') ? '🧮' : co.code.includes('TYPE') ? '⌨️' : '💻';
+    const duration = `${co.duration_months} Months`;
+    const feeStr = `₹${co.fee_rupees.toLocaleString('en-IN')}`;
+    return `
+        <div class="c-course-card">
+          <div class="c-course-icon">${icon}</div>
+          <h4>${esc(co.code)}</h4>
+          <span class="sub">${esc(co.name)}</span>
+          <div class="c-course-duration">Duration: ${esc(duration)}</div>
+          <div class="c-course-fee">
+            Course Fees: <b>${esc(feeStr)}</b>
+          </div>
+          <button class="c-btn-enroll" onclick="openApplyWithCourse('${esc(co.code)}')">Apply Now</button>
+        </div>`;
+  }).join('');
+
+  html = html.replace(/<div class="c-course-grid" id="courseGrid">[\s\S]*?<\/div>/, `<div class="c-course-grid" id="courseGrid">${courseCardsHtml}\n      </div>`);
+
+  const inqOptionsHtml = `<option value="">Select a course…</option>` +
+    safeCoursesForClient.map(co => `<option value="${co.id}">${esc(co.code)} - ${esc(co.name)} (${co.duration_months} Months)</option>`).join('');
+  html = html.replace(/<select id="inqCourseSelect"[\s\S]*?<\/select>/, `<select id="inqCourseSelect" required style="width:100%; padding:11px 13px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.95rem; background:#fff;">${inqOptionsHtml}</select>`);
+
   const centreDataInject = `
   <script>
     window.__CENTRE_DATA__ = ${JSON.stringify({
@@ -1032,6 +1090,7 @@ ${JSON.stringify(schemaJson, null, 2)}
         website_settings: ws
       },
       website_settings: ws,
+      courses: safeCoursesForClient,
       owner: {
         name: cDirector,
         mobile: cPhone,
@@ -1565,6 +1624,26 @@ export default {
       const activeCourses = (c.courses_list && c.courses_list.length) 
         ? c.courses_list.filter(co => co.active !== false) 
         : store.courses.filter(co => co.active !== 0);
+
+      const safeCourses = activeCourses.map(co => {
+        let studentFeeRupees = 0;
+        if (c.course_prices && c.course_prices[co.id] !== undefined && c.course_prices[co.id] > 0) {
+          studentFeeRupees = Math.round(c.course_prices[co.id] / 100);
+        } else {
+          studentFeeRupees = getDefaultStudentFee(co.duration_months, co.code);
+        }
+        return {
+          id: co.id,
+          code: co.code,
+          name: co.name,
+          duration_months: co.duration_months || 6,
+          local_fee_rupees: studentFeeRupees,
+          fee_rupees: studentFeeRupees,
+          tag: (co.duration_months || 6) >= 12 ? 'Diploma' : (co.duration_months || 6) >= 6 ? 'Certificate' : 'Short Term',
+          description: co.description || ''
+        };
+      });
+
       const cPhone = c.phone || '+91 98765 43210';
       const upiId = c.upi_id || `${cPhone.replace(/[^0-9]/g, '')}@paytm`;
       const bankHolder = c.account_holder || c.director_name || c.name;
@@ -1600,7 +1679,7 @@ export default {
           mobile: cPhone,
           email: c.email || `director@${c.slug}.pescouncil.in`
         },
-        courses: activeCourses,
+        courses: safeCourses,
         authorities: getAuthorities(c),
         stats: { established_year: 2021 }
       });
@@ -4909,8 +4988,11 @@ export default {
       if (path === '/api/centre/courses') {
         if (!c.course_prices) c.course_prices = {};
         const centreCourses = store.courses.filter(co => co.active !== 0).map(co => {
-          const sysFeePaise = co.fee_paise || 550000;
-          const sellFeePaise = c.course_prices[co.id] !== undefined ? c.course_prices[co.id] : (sysFeePaise * 1.5);
+          const sysFeePaise = co.fee_paise || 20000;
+          const defaultStudentFee = getDefaultStudentFee(co.duration_months, co.code) * 100;
+          const sellFeePaise = (c.course_prices && c.course_prices[co.id] !== undefined && c.course_prices[co.id] > 0)
+            ? c.course_prices[co.id]
+            : defaultStudentFee;
           let subStr = co.subjects || '[]';
           let cur = null;
           try { cur = typeof co.curriculum === 'string' ? JSON.parse(co.curriculum) : co.curriculum; } catch(_) {}
