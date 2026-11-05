@@ -1,8 +1,7 @@
 // Purvanchal Education & Skill Council (PESC)
 // Authorized Franchise Centre ERP & Management Suite - 17 Modules Complete Implementation
 
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-window.esc = esc;
+window.esc = window.esc || ((s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
 
 const V = {
   get el() { return $('#view'); },
