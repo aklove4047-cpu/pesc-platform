@@ -100,6 +100,12 @@ router.get('/site', (req, res) => {
   const studentCount = db.prepare('SELECT count(*) n FROM students WHERE centre_id=?').get(tenant.id).n;
   const certCount = db.prepare("SELECT count(*) n FROM certificates WHERE centre_id=? AND status='Valid'").get(tenant.id).n;
 
+  let ws = {};
+  try {
+    const s = JSON.parse(tenant.settings || '{}');
+    ws = s.website_settings || {};
+  } catch (_) {}
+
   res.json({
     centre: {
       id: tenant.id,
@@ -110,7 +116,9 @@ router.get('/site', (req, res) => {
       state: tenant.state,
       address: tenant.address || `${tenant.district}, ${tenant.state}`,
       created_at: tenant.created_at,
+      website_settings: ws,
     },
+    website_settings: ws,
     owner: {
       name: owner.name || 'Centre Director',
       email: owner.email || `desk@${tenant.slug}.pescouncil.in`,

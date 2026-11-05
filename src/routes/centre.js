@@ -1243,4 +1243,31 @@ router.post('/change-password', h(async (req, res) => {
   res.json({ ok: true, message: 'Password changed successfully! Head Office records have been updated.' });
 }));
 
+// 20. Website Customization (Theme, Banners, Notices, WhatsApp)
+router.get('/website-settings', (req, res) => {
+  const c = db.prepare('SELECT id, settings FROM centres WHERE id=?').get(cid(req));
+  let ws = {};
+  try {
+    const s = JSON.parse(c?.settings || '{}');
+    ws = s.website_settings || {};
+  } catch (_) {}
+  res.json({ ok: true, website_settings: ws });
+});
+
+router.post('/website-settings', (req, res) => {
+  const centreId = cid(req);
+  const c = db.prepare('SELECT id, settings FROM centres WHERE id=?').get(centreId);
+  if (!c) throw new HttpError(404, 'Centre not found');
+  let s = {};
+  try { s = JSON.parse(c.settings || '{}'); } catch (_) {}
+  const ws = req.body.website_settings || req.body || {};
+  s.website_settings = { ...(s.website_settings || {}), ...ws };
+  db.prepare('UPDATE centres SET settings=? WHERE id=?').run(JSON.stringify(s), centreId);
+  res.json({
+    ok: true,
+    message: '🎉 Centre website look & banners updated successfully!',
+    website_settings: s.website_settings
+  });
+});
+
 module.exports = router;

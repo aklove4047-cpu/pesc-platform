@@ -854,6 +854,7 @@ const MODULES = [
   { id: 'Payments', num: '17', title: 'Payments / Wallet', desc: 'Council ko System Fees jama, Wallet balance', icon: '💳' },
   { id: 'Profile', num: '18', title: 'Profile / Settings', desc: 'Logo, Name, Address, portal website settings', icon: '⚙️' },
   { id: 'AffiliationCert', num: '19', title: 'Affiliation Certificate', desc: 'Council dwara jaree Kendra Manyata Praman Patra', icon: '🏆' },
+  { id: 'WebsiteDesign', num: '20', title: 'Website Look & Banners', desc: 'Theme color, Banner, Notice, Gallery aur WhatsApp button customize karein', icon: '🎨' },
 ];
 
 // Render Left Sidebar Navigation (17 Items)
@@ -981,6 +982,7 @@ const views = {
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn gold" onclick="switchModule('AffiliationCert')" style="font-weight:700;">📜 View Affiliation Certificate</button>
           <button class="btn gold" onclick="switchModule('AddStudent')">➕ Add New Student Admission</button>
+          <button class="btn" onclick="switchModule('WebsiteDesign')" style="background:#0284c7; color:#fff; font-weight:700;">🎨 Website Look &amp; Banners</button>
         </div>
       </div>
 
@@ -3164,6 +3166,21 @@ const views = {
             </div>
           </form>
         </div>
+
+        <!-- Website Look & Banners Shortcut Card -->
+        <div class="card" style="background:linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border:2px solid #047857; border-radius:14px; padding:24px; margin-top:24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h3 style="margin:0 0 6px; color:#064e3b; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+              <span>🎨</span> Franchise Website Look, Banners &amp; Themes
+            </h3>
+            <p class="muted" style="margin:0; font-size:0.88rem;">
+              Apni website ka theme color change karein, custom lab/classroom banner lagayein, aur WhatsApp enquiry button on karein.
+            </p>
+          </div>
+          <button type="button" class="btn" style="background:#047857; color:#fff; font-weight:700; padding:10px 22px;" onclick="switchModule('WebsiteDesign')">
+            🎨 Open Website Customizer →
+          </button>
+        </div>
       </div>
     `;
 
@@ -3297,6 +3314,442 @@ const views = {
         ${window.OfficialTemplates && window.OfficialTemplates.renderAffiliationCertificateHtml ? window.OfficialTemplates.renderAffiliationCertificateHtml({ certificate: cert, authorities: window._councilAuthorities }) : 'Loading Certificate...'}
       </div>
     `;
+  },
+
+  // 20. Website Look, Theme & Banners (वेबसाइट डिज़ाइन व कस्टमाइज़ेशन)
+  async WebsiteDesign() {
+    const [cData, wsData] = await Promise.all([
+      api('/api/centre/settings').catch(() => ({})),
+      api('/api/centre/website-settings').catch(() => ({}))
+    ]);
+    const c = cData.centre || currentCentre || {};
+    const ws = wsData.website_settings || c.website_settings || {};
+    const liveSiteUrl = `https://${(c.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management' : (c.slug || 'gyaneducation'))}.pescouncil.in`;
+
+    V.innerHTML = `
+      <div style="max-width:1040px; margin:0 auto; padding-bottom:40px;">
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:24px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+              <span style="background:#ecfdf5; color:#047857; font-size:0.75rem; font-weight:800; padding:2px 10px; border-radius:20px; text-transform:uppercase;">Franchise Website CMS</span>
+              <span class="badge active">Live Subdomain</span>
+            </div>
+            <h2 style="margin:0 0 4px; color:#064e3b; font-size:1.6rem; display:flex; align-items:center; gap:8px;">
+              <span>🎨</span> 20. Website Look, Theme &amp; Banners
+            </h2>
+            <p class="muted" style="margin:0; font-size:0.92rem;">
+              Apne centre ki public website ka look &amp; feel customize karein: theme color chunein, custom banner images lagayein, notice marquee set karein aur direct WhatsApp button on karein.
+            </p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <a href="${esc(liveSiteUrl)}" target="_blank" class="btn" style="background:#047857; color:#fff; font-weight:700; padding:10px 18px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(4,120,87,0.2);">
+              <span>🌐</span> View Live Website ↗
+            </a>
+          </div>
+        </div>
+
+        <form id="centreWebsiteSettingsForm">
+          <!-- 1. Theme Color Palettes (रंग व थीम) -->
+          <div class="card" style="background:#ffffff; border-radius:14px; padding:26px; border:1px solid #e2e8f0; margin-bottom:24px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h3 style="margin:0 0 4px; color:#064e3b; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+                  <span>🎨</span> Website Theme &amp; Brand Colors (वेबसाइट का रंग-रूप)
+                </h3>
+                <p class="muted" style="font-size:0.85rem; margin:0;">
+                  Apni pasand ka color theme chunein. 1-click me aapki poori website ka header, buttons, highlight aur design badal jayega.
+                </p>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:20px;" id="themePaletteGrid">
+              <!-- Preset 1: PESC Official Forest Green -->
+              <div class="theme-preset-card" data-primary="#064e3b" data-accent="#047857" data-dark="#022c22" data-light="#ecfdf5" data-border="#a7f3d0" style="border:2px solid ${ws.theme_primary === '#064e3b' || !ws.theme_primary ? '#047857' : '#e2e8f0'}; border-radius:10px; padding:12px; cursor:pointer; background:#ffffff; transition:all 0.2s;">
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                  <span style="width:24px; height:24px; border-radius:50%; background:#064e3b; display:inline-block;"></span>
+                  <span style="width:24px; height:24px; border-radius:50%; background:#047857; display:inline-block;"></span>
+                </div>
+                <b style="font-size:0.86rem; color:#0f172a; display:block;">🌲 Royal Green</b>
+                <span style="font-size:0.75rem; color:#64748b;">(PESC Official)</span>
+              </div>
+
+              <!-- Preset 2: Deep Navy Blue -->
+              <div class="theme-preset-card" data-primary="#1e3a8a" data-accent="#2563eb" data-dark="#0f172a" data-light="#eff6ff" data-border="#bfdbfe" style="border:2px solid ${ws.theme_primary === '#1e3a8a' ? '#2563eb' : '#e2e8f0'}; border-radius:10px; padding:12px; cursor:pointer; background:#ffffff; transition:all 0.2s;">
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                  <span style="width:24px; height:24px; border-radius:50%; background:#1e3a8a; display:inline-block;"></span>
+                  <span style="width:24px; height:24px; border-radius:50%; background:#2563eb; display:inline-block;"></span>
+                </div>
+                <b style="font-size:0.86rem; color:#0f172a; display:block;">🌊 Ocean Navy</b>
+                <span style="font-size:0.75rem; color:#64748b;">(Professional)</span>
+              </div>
+
+              <!-- Preset 3: Royal Burgundy Maroon -->
+              <div class="theme-preset-card" data-primary="#881337" data-accent="#be123c" data-dark="#4c0519" data-light="#fff1f2" data-border="#fecdd3" style="border:2px solid ${ws.theme_primary === '#881337' ? '#be123c' : '#e2e8f0'}; border-radius:10px; padding:12px; cursor:pointer; background:#ffffff; transition:all 0.2s;">
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                  <span style="width:24px; height:24px; border-radius:50%; background:#881337; display:inline-block;"></span>
+                  <span style="width:24px; height:24px; border-radius:50%; background:#be123c; display:inline-block;"></span>
+                </div>
+                <b style="font-size:0.86rem; color:#0f172a; display:block;">🍷 Royal Maroon</b>
+                <span style="font-size:0.75rem; color:#64748b;">(Prestigious)</span>
+              </div>
+
+              <!-- Preset 4: Imperial Purple -->
+              <div class="theme-preset-card" data-primary="#581c87" data-accent="#7e22ce" data-dark="#3b0764" data-light="#faf5ff" data-border="#e9d5ff" style="border:2px solid ${ws.theme_primary === '#581c87' ? '#7e22ce' : '#e2e8f0'}; border-radius:10px; padding:12px; cursor:pointer; background:#ffffff; transition:all 0.2s;">
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                  <span style="width:24px; height:24px; border-radius:50%; background:#581c87; display:inline-block;"></span>
+                  <span style="width:24px; height:24px; border-radius:50%; background:#7e22ce; display:inline-block;"></span>
+                </div>
+                <b style="font-size:0.86rem; color:#0f172a; display:block;">🔮 Executive Purple</b>
+                <span style="font-size:0.75rem; color:#64748b;">(Creative &amp; Modern)</span>
+              </div>
+
+              <!-- Preset 5: Peacock Teal -->
+              <div class="theme-preset-card" data-primary="#0f766e" data-accent="#0d9488" data-dark="#134e4a" data-light="#f0fdfa" data-border="#99f6e4" style="border:2px solid ${ws.theme_primary === '#0f766e' ? '#0d9488' : '#e2e8f0'}; border-radius:10px; padding:12px; cursor:pointer; background:#ffffff; transition:all 0.2s;">
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                  <span style="width:24px; height:24px; border-radius:50%; background:#0f766e; display:inline-block;"></span>
+                  <span style="width:24px; height:24px; border-radius:50%; background:#0d9488; display:inline-block;"></span>
+                </div>
+                <b style="font-size:0.86rem; color:#0f172a; display:block;">🦚 Peacock Teal</b>
+                <span style="font-size:0.75rem; color:#64748b;">(Fresh Tech)</span>
+              </div>
+
+              <!-- Preset 6: Charcoal Slate & Gold -->
+              <div class="theme-preset-card" data-primary="#1e293b" data-accent="#d97706" data-dark="#0f172a" data-light="#fffbeb" data-border="#fde68a" style="border:2px solid ${ws.theme_primary === '#1e293b' ? '#d97706' : '#e2e8f0'}; border-radius:10px; padding:12px; cursor:pointer; background:#ffffff; transition:all 0.2s;">
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                  <span style="width:24px; height:24px; border-radius:50%; background:#1e293b; display:inline-block;"></span>
+                  <span style="width:24px; height:24px; border-radius:50%; background:#d97706; display:inline-block;"></span>
+                </div>
+                <b style="font-size:0.86rem; color:#0f172a; display:block;">⚡ Slate &amp; Gold</b>
+                <span style="font-size:0.75rem; color:#64748b;">(Corporate High-End)</span>
+              </div>
+            </div>
+
+            <!-- Custom Color Pickers & Live Preview Strip -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+              <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+                <div>
+                  <label style="font-size:0.8rem; font-weight:700; color:#475569; display:block; margin-bottom:4px;">Primary Brand Color</label>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="color" id="themePrimaryPicker" value="${esc(ws.theme_primary || '#064e3b')}" style="width:38px; height:38px; border:none; border-radius:6px; cursor:pointer;">
+                    <input name="theme_primary" id="themePrimaryInput" value="${esc(ws.theme_primary || '#064e3b')}" style="width:100px; padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-family:monospace; font-weight:700;">
+                  </div>
+                </div>
+
+                <div>
+                  <label style="font-size:0.8rem; font-weight:700; color:#475569; display:block; margin-bottom:4px;">Accent Highlight Color</label>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="color" id="themeAccentPicker" value="${esc(ws.theme_accent || '#047857')}" style="width:38px; height:38px; border:none; border-radius:6px; cursor:pointer;">
+                    <input name="theme_accent" id="themeAccentInput" value="${esc(ws.theme_accent || '#047857')}" style="width:100px; padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-family:monospace; font-weight:700;">
+                  </div>
+                </div>
+
+                <input type="hidden" name="theme_dark" id="themeDarkInput" value="${esc(ws.theme_dark || '#022c22')}">
+                <input type="hidden" name="theme_light" id="themeLightInput" value="${esc(ws.theme_light || '#ecfdf5')}">
+                <input type="hidden" name="theme_border" id="themeBorderInput" value="${esc(ws.theme_border || '#a7f3d0')}">
+              </div>
+
+              <!-- Live Preview Widget -->
+              <div id="themeLivePreviewWidget" style="background:${esc(ws.theme_primary || '#064e3b')}; color:#ffffff; padding:12px 20px; border-radius:8px; display:flex; align-items:center; gap:14px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                <span style="font-weight:800; font-size:0.9rem;">Live Color Preview</span>
+                <span id="themePreviewBadge" style="background:${esc(ws.theme_accent || '#047857')}; padding:3px 10px; border-radius:6px; font-size:0.8rem; font-weight:700;">Active Theme</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Hero Section Banners & Main Headlines (बैनर व शीर्षक) -->
+          <div class="card" style="background:#ffffff; border-radius:14px; padding:26px; border:1px solid #e2e8f0; margin-bottom:24px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h3 style="margin:0 0 4px; color:#064e3b; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+                  <span>🖼️</span> Hero Banner Photo &amp; Main Headlines (बैनर व मुख्य शीर्षक)
+                </h3>
+                <p class="muted" style="font-size:0.85rem; margin:0;">
+                  Apni website ke main top banner par apni computer lab, classroom ya campus ki photo lagayein aur headline set karein.
+                </p>
+              </div>
+            </div>
+
+            <!-- Banner Photo Preview & Upload Box -->
+            <div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:12px; padding:20px; margin-bottom:22px;">
+              <div style="display:flex; gap:22px; align-items:center; flex-wrap:wrap;">
+                <div style="width:260px; height:150px; border-radius:10px; border:2px solid #047857; overflow:hidden; background:#e2e8f0; display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative;" id="heroBannerPreviewBox">
+                  <img src="${esc(ws.hero_banner_url || c.center_photo || c.photo_url || '/assets/img/classroom.jpg')}" id="heroBannerPreviewImg" style="width:100%; height:100%; object-fit:cover;">
+                  <div style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent, rgba(0,0,0,0.7)); color:#fff; font-size:0.75rem; padding:6px 10px; text-align:center;">
+                    Banner Preview
+                  </div>
+                </div>
+
+                <div style="flex:1; min-width:260px;">
+                  <h4 style="margin:0 0 6px; color:#064e3b;">📷 Custom Hero Banner Image</h4>
+                  <p class="muted" style="font-size:0.84rem; margin:0 0 12px; line-height:1.4;">
+                    Yeh banner photo aapki franchise website ke top hero section me right side par prominent display hogi.
+                  </p>
+
+                  <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+                    <label class="btn sm gold" style="cursor:pointer; display:inline-block; font-weight:700;">
+                      📁 Choose Banner Photo File
+                      <input type="file" id="heroBannerFileInput" accept="image/*" style="display:none;">
+                    </label>
+                    <span style="font-size:0.75rem; color:#64748b;">(JPG/PNG photo) ya direct URL paste karein:</span>
+                  </div>
+
+                  <input name="hero_banner_url" id="heroBannerUrlInput" value="${esc(ws.hero_banner_url || '')}" placeholder="https://... ya computer se banner photo upload karein" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+
+                  <!-- Quick Banner Presets -->
+                  <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <span style="font-size:0.75rem; color:#64748b;">Preset Banners:</span>
+                    <button type="button" class="btn sm" style="background:#e0f2fe; color:#0369a1; padding:3px 8px; font-size:0.75rem; border:none;" onclick="$('#heroBannerUrlInput').value='/assets/img/classroom.jpg'; $('#heroBannerPreviewImg').src='/assets/img/classroom.jpg';">💻 Computer Lab</button>
+                    <button type="button" class="btn sm" style="background:#e0f2fe; color:#0369a1; padding:3px 8px; font-size:0.75rem; border:none;" onclick="$('#heroBannerUrlInput').value='/assets/img/centre_varanasi.jpg'; $('#heroBannerPreviewImg').src='/assets/img/centre_varanasi.jpg';">🏛️ Campus Building</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Headline, Badge and Subtitle Form -->
+            <div class="row">
+              <div style="grid-column:span 2;">
+                <label style="font-weight:700; color:#064e3b; margin-bottom:4px; display:block;">Hero Admission Badge Text</label>
+                <input name="hero_badge" value="${esc(ws.hero_badge || '🎓 ADMISSION OPEN 2026-27 | 100% Practical Training')}" placeholder="e.g. 🎓 ADMISSION OPEN 2026-27" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700;">
+              </div>
+
+              <div>
+                <label style="font-weight:700; color:#064e3b; margin-bottom:4px; display:block;">Main Hero Headline *</label>
+                <input name="hero_title" value="${esc(ws.hero_title || 'Admission Open')}" placeholder="e.g. Admission Open ya Best Computer Training" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; font-size:1.05rem;">
+              </div>
+
+              <div>
+                <label style="font-weight:700; color:#064e3b; margin-bottom:4px; display:block;">Headline Highlight / Sub-text</label>
+                <input name="hero_title_sub" value="${esc(ws.hero_title_sub || '2026-27')}" placeholder="e.g. 2026-27 ya Institute of IT" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; font-size:1.05rem;">
+              </div>
+
+              <div style="grid-column:span 2;">
+                <label style="font-weight:700; color:#064e3b; margin-bottom:4px; display:block;">Hero Subtitle / Description *</label>
+                <textarea name="hero_subtitle" rows="3" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.92rem; line-height:1.5;">${esc(ws.hero_subtitle || `Join ${c.name} for professional computer diploma and IT courses. Build practical skills, get certified, and kickstart your career.`)}</textarea>
+              </div>
+
+              <div>
+                <label style="font-weight:700; color:#064e3b; margin-bottom:4px; display:block;">Primary Call to Action Button Text</label>
+                <input name="hero_cta_text" value="${esc(ws.hero_cta_text || 'Apply for Admission →')}" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Top Announcement Ticker Bar (शीर्ष सूचना पट्टी) -->
+          <div class="card" style="background:#ffffff; border-radius:14px; padding:26px; border:1px solid #e2e8f0; margin-bottom:24px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h3 style="margin:0 0 4px; color:#064e3b; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+                  <span>📢</span> Top Announcement Bar / Notice Marquee (शीर्ष सूचना पट्टी)
+                </h3>
+                <p class="muted" style="font-size:0.85rem; margin:0;">
+                  Aapki website ke sabse upar ek attractive notice पट्टी dikhegi jisme naye batch, chhutti ya admission announcement flash hoga.
+                </p>
+              </div>
+              <label style="display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer;">
+                <input type="checkbox" id="chkShowAnnouncement" ${ws.show_announcement !== false ? 'checked' : ''} style="width:18px; height:18px;">
+                <span>Enable Notice Bar</span>
+              </label>
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <label style="font-weight:700; color:#064e3b; margin-bottom:4px; display:block;">Notice / Announcement Text</label>
+              <input name="announcement_text" value="${esc(ws.announcement_text || '📢 Admission Open for Session 2026-27! New batches for DCA & ADCA starting Monday. Contact for free demo classes.')}" placeholder="e.g. 📢 DCA, ADCA aur Tally ke naye batch 10 tarikh se shuru! Limited seats." style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.92rem; font-weight:600;">
+            </div>
+          </div>
+
+          <!-- 4. About Us & Director's Desk (संस्थान परिचय व डायरेक्टर संदेश) -->
+          <div class="card" style="background:#ffffff; border-radius:14px; padding:26px; border:1px solid #e2e8f0; margin-bottom:24px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+            <h3 style="margin:0 0 4px; color:#064e3b; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+              <span>🏢</span> About Our Institute &amp; Director's Desk (संस्थान परिचय)
+            </h3>
+            <p class="muted" style="font-size:0.85rem; margin:0 0 16px;">
+              Aapki website ke "About Our Centre" section me display hone wala text yahan se edit karein.
+            </p>
+
+            <div style="margin-bottom:16px;">
+              <label style="font-weight:700; color:#064e3b; margin-bottom:4px; display:block;">About Our Centre Story / Overview *</label>
+              <textarea name="about_text" rows="4" required style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.92rem; line-height:1.5;">${esc(ws.about_text || `Established as an authorized franchise centre of Purvanchal Education & Skill Council (PESC), ${c.name} is dedicated to providing quality computer education and skill training in ${c.district || 'Varanasi'}, ${c.state || 'Uttar Pradesh'}.`)}</textarea>
+            </div>
+
+            <div>
+              <label style="font-weight:700; color:#064e3b; margin-bottom:4px; display:block;">Director's Welcome Note / Message (Optional)</label>
+              <textarea name="director_message" rows="3" placeholder="e.g. Welcome students to our institute! Digital skills are essential for career success. We provide 100% practical exposure..." style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.92rem; line-height:1.5;">${esc(ws.director_message || '')}</textarea>
+            </div>
+          </div>
+
+          <!-- 5. Floating WhatsApp Direct Chat & Social Links (व्हाट्सएप व सोशल लिंक) -->
+          <div class="card" style="background:#ffffff; border-radius:14px; padding:26px; border:2px solid #25D366; margin-bottom:24px; box-shadow:0 4px 14px rgba(37,211,102,0.1);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h3 style="margin:0 0 4px; color:#065f46; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+                  <span>💬</span> Floating WhatsApp Direct Chat Button (व्हाट्सएप इंक्वायरी)
+                </h3>
+                <p class="muted" style="font-size:0.85rem; margin:0;">
+                  Aapki website par bottom-right corner par green WhatsApp button dikhega. Student click karte hi seedhe aapke WhatsApp par admission enquiry message bhej sakega!
+                </p>
+              </div>
+              <label style="display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer;">
+                <input type="checkbox" id="chkShowWhatsapp" ${ws.show_whatsapp !== false ? 'checked' : ''} style="width:18px; height:18px;">
+                <span>Enable WhatsApp Button</span>
+              </label>
+            </div>
+
+            <div class="row">
+              <div>
+                <label style="font-weight:700; color:#065f46; margin-bottom:4px; display:block;">WhatsApp Number (10 Digits) *</label>
+                <input name="whatsapp_number" value="${esc(ws.whatsapp_number || c.phone || '')}" placeholder="e.g. 9876543210" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-family:monospace; font-weight:700; font-size:1rem;">
+              </div>
+
+              <div>
+                <label style="font-weight:700; color:#065f46; margin-bottom:4px; display:block;">Pre-filled WhatsApp Message</label>
+                <input name="whatsapp_message" value="${esc(ws.whatsapp_message || `Hello, I want admission enquiry in computer course at ${c.name}`)}" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
+              </div>
+
+              <div>
+                <label style="font-weight:700; color:#475569; margin-bottom:4px; display:block;">Facebook Page URL (Optional)</label>
+                <input name="facebook_url" value="${esc(ws.facebook_url || '')}" placeholder="https://facebook.com/yourcentre" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+
+              <div>
+                <label style="font-weight:700; color:#475569; margin-bottom:4px; display:block;">YouTube Channel URL (Optional)</label>
+                <input name="youtube_url" value="${esc(ws.youtube_url || '')}" placeholder="https://youtube.com/@yourcentre" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Save Floating Action Bar -->
+          <div style="position:sticky; bottom:20px; z-index:100; background:linear-gradient(135deg, #ffffff, #f8fafc); border:2px solid #047857; border-radius:14px; padding:16px 24px; box-shadow:0 8px 30px rgba(0,0,0,0.15); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+            <div style="font-size:0.9rem; color:#0f172a;">
+              <b>Ready to publish?</b> Click save to instantly update your live website.
+            </div>
+            <div style="display:flex; gap:12px; align-items:center;">
+              <a href="${esc(liveSiteUrl)}" target="_blank" class="btn sm" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1; text-decoration:none; padding:10px 16px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+                Preview ↗
+              </a>
+              <button type="submit" class="btn gold" style="padding:12px 28px; font-weight:800; font-size:1.02rem; box-shadow:0 4px 12px rgba(217,119,6,0.3);">
+                💾 Save All Website Customizations
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    `;
+
+    // 1. Theme Palette Click Handlers
+    const paletteCards = $$('.theme-preset-card', V);
+    paletteCards.forEach(card => {
+      card.onclick = () => {
+        paletteCards.forEach(c => c.style.borderColor = '#e2e8f0');
+        card.style.borderColor = card.dataset.accent;
+
+        $('#themePrimaryPicker').value = card.dataset.primary;
+        $('#themePrimaryInput').value = card.dataset.primary;
+        $('#themeAccentPicker').value = card.dataset.accent;
+        $('#themeAccentInput').value = card.dataset.accent;
+        $('#themeDarkInput').value = card.dataset.dark;
+        $('#themeLightInput').value = card.dataset.light;
+        $('#themeBorderInput').value = card.dataset.border;
+
+        // Update live preview widget
+        const widget = $('#themeLivePreviewWidget');
+        if (widget) widget.style.background = card.dataset.primary;
+        const badge = $('#themePreviewBadge');
+        if (badge) badge.style.background = card.dataset.accent;
+      };
+    });
+
+    // Custom color picker inputs
+    const pPicker = $('#themePrimaryPicker');
+    const pInput = $('#themePrimaryInput');
+    if (pPicker && pInput) {
+      pPicker.oninput = () => {
+        pInput.value = pPicker.value;
+        const widget = $('#themeLivePreviewWidget');
+        if (widget) widget.style.background = pPicker.value;
+      };
+      pInput.oninput = () => {
+        pPicker.value = pInput.value;
+        const widget = $('#themeLivePreviewWidget');
+        if (widget) widget.style.background = pInput.value;
+      };
+    }
+
+    const aPicker = $('#themeAccentPicker');
+    const aInput = $('#themeAccentInput');
+    if (aPicker && aInput) {
+      aPicker.oninput = () => {
+        aInput.value = aPicker.value;
+        const badge = $('#themePreviewBadge');
+        if (badge) badge.style.background = aPicker.value;
+      };
+      aInput.oninput = () => {
+        aPicker.value = aInput.value;
+        const badge = $('#themePreviewBadge');
+        if (badge) badge.style.background = aInput.value;
+      };
+    }
+
+    // 2. Hero Banner file upload
+    const bFile = $('#heroBannerFileInput');
+    const bUrl = $('#heroBannerUrlInput');
+    const bImg = $('#heroBannerPreviewImg');
+    if (bFile) {
+      bFile.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 4 * 1024 * 1024) { toast('Banner photo must be under 4MB', false); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if (bUrl) bUrl.value = ev.target.result;
+          if (bImg) bImg.src = ev.target.result;
+          toast('Banner image loaded! Click Save to apply.');
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+    if (bUrl && bImg) {
+      bUrl.oninput = () => {
+        if (bUrl.value.trim()) bImg.src = bUrl.value.trim();
+      };
+    }
+
+    // 3. Form Submit
+    $('#centreWebsiteSettingsForm').onsubmit = (e) => {
+      e.preventDefault();
+      guard(async () => {
+        const raw = form(e.target);
+        const payload = {
+          theme_primary: raw.theme_primary,
+          theme_accent: raw.theme_accent,
+          theme_dark: raw.theme_dark,
+          theme_light: raw.theme_light,
+          theme_border: raw.theme_border,
+          hero_banner_url: raw.hero_banner_url,
+          hero_badge: raw.hero_badge,
+          hero_title: raw.hero_title,
+          hero_title_sub: raw.hero_title_sub,
+          hero_subtitle: raw.hero_subtitle,
+          hero_cta_text: raw.hero_cta_text,
+          show_announcement: $('#chkShowAnnouncement') ? $('#chkShowAnnouncement').checked : true,
+          announcement_text: raw.announcement_text,
+          about_text: raw.about_text,
+          director_message: raw.director_message,
+          show_whatsapp: $('#chkShowWhatsapp') ? $('#chkShowWhatsapp').checked : true,
+          whatsapp_number: raw.whatsapp_number,
+          whatsapp_message: raw.whatsapp_message,
+          facebook_url: raw.facebook_url,
+          youtube_url: raw.youtube_url
+        };
+
+        const res = await api('/api/centre/website-settings', {
+          method: 'POST',
+          body: { website_settings: payload }
+        });
+        toast('🎉 वेबसाइट लुक, बैनर व सेटिंग्स सफलतापूर्वक सेव हो गईं!');
+        alert('✅ वेबसाइट कस्टमाइज़ेशन सेव हो गया!\n\nअब आपकी सेंटर वेबसाइट (' + liveSiteUrl + ') पर नया लुक, थीम कलर और बैनर लाइव हो चुका है।');
+      });
+    };
   }
 };
 

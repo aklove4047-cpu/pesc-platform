@@ -185,6 +185,71 @@ ${JSON.stringify(schemaJson, null, 2)}
   html = html.replace(/href="\/portal"/g, `href="/portal?centre=${encodeURIComponent(cSlug)}"`);
   html = html.replace(/id="demoCentreCode">[^<]*</, `id="demoCentreCode">${esc(cCode)}<`);
 
+  // --- Dynamic Centre Website Customizations (Theme, Banners, Notices, WhatsApp) ---
+  let ws = {};
+  try {
+    const s = JSON.parse(centre.settings || '{}');
+    ws = s.website_settings || {};
+  } catch (_) {}
+
+  // Custom Theme CSS Injection
+  if (ws.theme_primary) {
+    const customThemeCss = `
+  <style id="centreCustomThemeStyle">
+    :root {
+      --c-green-dark: ${ws.theme_dark || '#022c22'} !important;
+      --c-green-primary: ${ws.theme_primary || '#064e3b'} !important;
+      --c-green-emerald: ${ws.theme_accent || '#047857'} !important;
+      --c-green-light: ${ws.theme_light || '#ecfdf5'} !important;
+      --c-green-border: ${ws.theme_border || '#a7f3d0'} !important;
+    }
+    .c-header { border-top: 3px solid var(--c-green-emerald); }
+  </style>`;
+    html = html.replace('</head>', `${customThemeCss}\n</head>`);
+  }
+
+  // Custom Hero Banner Image
+  const bannerImgUrl = ws.hero_banner_url || centre.center_photo || centre.photo_url;
+  if (bannerImgUrl) {
+    html = html.replace(/src="\/assets\/img\/classroom\.jpg"/g, `src="${esc(bannerImgUrl)}"`);
+  }
+
+  // Custom Hero Headline & Subtitle
+  if (ws.hero_title) {
+    const subPart = ws.hero_title_sub ? `<span>${esc(ws.hero_title_sub)}</span>` : '';
+    html = html.replace(/<h2>\s*Admission Open\s*<span>2026-27<\/span>\s*<\/h2>/i, `<h2>${esc(ws.hero_title)} ${subPart}</h2>`);
+  }
+  if (ws.hero_subtitle) {
+    html = html.replace(/id="heroDesc">[^<]*</, `id="heroDesc">${esc(ws.hero_subtitle)}<`);
+  }
+
+  // Top Announcement Bar
+  if (ws.show_announcement && ws.announcement_text) {
+    const barHtml = `
+    <div class="c-announcement-bar" style="background:${ws.theme_dark || '#022c22'}; color:#ffffff; padding:10px 16px; font-size:0.9rem; font-weight:700; text-align:center; display:flex; align-items:center; justify-content:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.15);">
+      <span style="background:${ws.theme_accent || '#047857'}; color:#ffffff; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:800; letter-spacing:0.5px;">📢 NOTICE</span>
+      <span>${esc(ws.announcement_text)}</span>
+    </div>`;
+    html = html.replace('<body>', `<body>\n${barHtml}`);
+  }
+
+  // Custom About Us Text
+  if (ws.about_text) {
+    html = html.replace(/id="aboutStory">[^<]*</, `id="aboutStory">${esc(ws.about_text)}<`);
+  }
+
+  // Floating WhatsApp Button
+  if (ws.show_whatsapp !== false && (ws.whatsapp_number || cPhone)) {
+    const waNum = (ws.whatsapp_number || cPhone).replace(/[^0-9]/g, '');
+    const cleanNum = waNum.startsWith('91') ? waNum : (waNum.length === 10 ? '91' + waNum : waNum);
+    const waMsg = encodeURIComponent(ws.whatsapp_message || `Hello, I want admission enquiry in computer courses at ${cName}`);
+    const waFloatHtml = `
+    <a href="https://wa.me/${cleanNum}?text=${waMsg}" target="_blank" rel="noopener" class="c-wa-float" style="position:fixed; bottom:24px; right:24px; z-index:9999; background:#25D366; color:#ffffff; width:58px; height:58px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(37,211,102,0.45); text-decoration:none; transition:all 0.2s;" title="Chat with ${esc(cName)} on WhatsApp">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="#ffffff"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm5.8 14.15c-.24.67-1.39 1.28-1.92 1.36-.51.08-1.17.11-3.37-.8-2.61-1.08-4.32-3.73-4.45-3.9-.13-.18-1.07-1.42-1.07-2.72 0-1.29.68-1.93.92-2.19.24-.26.53-.32.71-.32.18 0 .36 0 .52.01.17.01.39-.06.61.47.23.55.77 1.88.84 2.02.07.14.11.3.02.48-.09.18-.14.29-.28.45-.14.16-.29.35-.42.47-.14.14-.29.29-.12.58.17.28.74 1.22 1.6 1.98 1.1.98 2.03 1.29 2.32 1.43.29.14.46.12.63-.07.17-.2.74-.86.94-1.15.2-.29.4-.24.67-.14.28.1 1.76.83 2.06.98.3.15.5.23.57.36.07.13.07.76-.17 1.43z"/></svg>
+    </a>`;
+    html = html.replace('</body>', `${waFloatHtml}\n</body>`);
+  }
+
   return html;
 }
 

@@ -412,3 +412,55 @@ test('offline wallet top-up: UTR submission, pre-filled WhatsApp link, admin 1-c
   assert.equal(freshSettings.json.settings.whatsapp_number, '919876543210');
 });
 
+test('website customizer: centre owner can customize theme colors, hero banner, announcements, and WhatsApp button', async () => {
+  // 1. Get current website settings
+  const getRes = await call('GET', '/api/centre/website-settings', { host: A.host, cookie: A.cookie });
+  assert.equal(getRes.status, 200);
+
+  // 2. Save custom website look & feel
+  const customWs = {
+    theme_primary: '#1e3a8a',
+    theme_accent: '#2563eb',
+    theme_dark: '#0f172a',
+    theme_light: '#eff6ff',
+    theme_border: '#bfdbfe',
+    hero_title: 'Premier Computer Institute in Varanasi',
+    hero_title_sub: '2026-27',
+    hero_subtitle: 'Join for certified DCA, ADCA & Tally Prime courses.',
+    hero_banner_url: 'https://images.unsplash.com/photo-computer-lab-hd',
+    hero_badge: '🎓 ADMISSION OPEN 2026-27 | Limited Seats',
+    show_announcement: true,
+    announcement_text: '📢 Special 20% scholarship on ADCA admissions this month!',
+    about_text: 'Welcome to Navya Computer Centre. Established in 2024 with modern air-conditioned labs.',
+    show_whatsapp: true,
+    whatsapp_number: '9876543210',
+    whatsapp_message: 'Hi, I need info about DCA course'
+  };
+
+  const saveRes = await call('POST', '/api/centre/website-settings', {
+    host: A.host,
+    cookie: A.cookie,
+    body: { website_settings: customWs }
+  });
+  assert.equal(saveRes.status, 200);
+  assert.equal(saveRes.json.ok, true);
+  assert.equal(saveRes.json.website_settings.theme_primary, '#1e3a8a');
+  assert.equal(saveRes.json.website_settings.hero_title, 'Premier Computer Institute in Varanasi');
+
+  // 3. Verify public site SSR delivers the customized theme, banner and texts
+  const siteRes = await call('GET', '/', { host: A.host });
+  assert.equal(siteRes.status, 200);
+  const html = siteRes.buf.toString();
+  assert.ok(html.includes('#1e3a8a'), 'HTML should contain primary theme color #1e3a8a');
+  assert.ok(html.includes('Premier Computer Institute in Varanasi'), 'HTML should contain custom hero title');
+  assert.ok(html.includes('https://images.unsplash.com/photo-computer-lab-hd'), 'HTML should contain custom banner image');
+  assert.ok(html.includes('Special 20% scholarship on ADCA admissions this month!'), 'HTML should contain announcement marquee');
+  assert.ok(html.includes('c-wa-float'), 'HTML should contain floating WhatsApp button');
+
+  // 4. Verify /api/public/site returns website_settings
+  const pubSite = await call('GET', '/api/public/site', { host: A.host });
+  assert.equal(pubSite.status, 200);
+  assert.equal(pubSite.json.website_settings.theme_primary, '#1e3a8a');
+  assert.equal(pubSite.json.website_settings.hero_title, 'Premier Computer Institute in Varanasi');
+});
+
