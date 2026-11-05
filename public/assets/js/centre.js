@@ -6294,11 +6294,12 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
   const existing = document.getElementById('centreEditMarksheetModal');
   if (existing) existing.remove();
 
-  let sId = Number(studentId || mrkId || 0);
-  if ((!sId || mrkId) && window._centreMarksheets) {
+  let sId = Number(studentId || 0);
+  if (!sId && mrkId && window._centreMarksheets) {
     const foundM = window._centreMarksheets.find(m => Number(m.id) === Number(mrkId));
     if (foundM && foundM.student_id) sId = Number(foundM.student_id);
   }
+  if (!sId && mrkId) sId = Number(mrkId);
 
   // Read currently selected term from the UI
   const termSel = $('#mrkTermSelect');
@@ -6312,30 +6313,15 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
     } catch (_) {}
   }
 
-  // 🔒 Check if marksheet has been officially paid & issued
-  const isApproved = (m) => m && (m.status === 'Approved' || m.status === 'Valid' || m.status === 'Issued' || m.marksheet_no);
-  const termLower = (activeTerm || '').toLowerCase();
-  const hasPaidMrk = (window._centreMarksheets || []).some(m => {
-    if (Number(m.student_id) !== sId || !isApproved(m)) return false;
-    if (!termLower) return true;
-    const mTerm = String(m.term || '').toLowerCase();
-    return mTerm.includes(termLower) || termLower.includes(mTerm);
-  }) || (window._issuedMrks && (window._issuedMrks[sId] || (stu && window._issuedMrks[stu.student_code])));
-
-  if (!hasPaidMrk) {
-    alert('🔒 यह अंकतालिका अभी लॉक है!\n\nपहले "Pay from Wallet & Issue" बटन पर क्लिक करके अंकतालिका जारी करें। भुगतान होने के बाद ही अंकतालिका देखने, एडिट करने और प्रिंट करने का विकल्प खुलेगा।');
-    return;
-  }
-
   let mrk = (window._centreMarksheets || []).find(m => {
-    if (mrkId && mrkId !== sId && Number(m.id) === Number(mrkId)) return true;
+    if (mrkId && Number(m.id) === Number(mrkId) && Number(m.id) !== sId) return true;
     if (Number(m.student_id) === sId) {
       if (!activeTerm) return true;
       const mTerm = String(m.term || '').toLowerCase();
       const selTerm = activeTerm.toLowerCase();
-      if (selTerm.includes('sem 1') || selTerm.includes('semester 1')) return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm.includes('1st sem');
-      if (selTerm.includes('sem 2') || selTerm.includes('semester 2')) return mTerm.includes('sem 2') || mTerm.includes('semester 2') || mTerm.includes('2nd sem');
-      return mTerm.includes(selTerm);
+      if (selTerm.includes('sem 1') || selTerm.includes('semester 1')) return mTerm.includes('sem 1') || mTerm.includes('semester 1') || mTerm.includes('1st sem') || mTerm.includes('sem-1');
+      if (selTerm.includes('sem 2') || selTerm.includes('semester 2')) return mTerm.includes('sem 2') || mTerm.includes('semester 2') || mTerm.includes('2nd sem') || mTerm.includes('sem-2');
+      return mTerm.includes(selTerm) || selTerm.includes(mTerm);
     }
     return false;
   });
@@ -6585,6 +6571,7 @@ window.openCentreEditMrkModal = async function(mrkId, studentId) {
     modal.querySelector('#lblCentreGrade').textContent = grade;
     return { totMax, totObt, pct, grade };
   };
+  calcScore();
 
   const subsBody = modal.querySelector('#centreMrkEditSubsBody');
   subsBody.addEventListener('input', calcScore);
@@ -6742,21 +6729,6 @@ window.openCentreEditCertModal = async function(certId, studentId) {
   }
 
   const s = stu || {};
-
-  // 🔒 Check if certificate has been officially paid & issued
-  const isCertPaid = Boolean(
-    s.certificate_id ||
-    s.cert_no ||
-    s.has_certificate ||
-    (s.cert_status && s.cert_status === 'Valid') ||
-    (cert && (cert.status === 'Valid' || cert.status === 'Approved' || cert.cert_no)) ||
-    (window._issuedCerts && (window._issuedCerts[sId] || (s.student_code && window._issuedCerts[s.student_code])))
-  );
-
-  if (!isCertPaid) {
-    alert('🔒 यह प्रमाणपत्र अभी लॉक है!\n\nपहले "Pay from Wallet & Issue" बटन पर क्लिक करके प्रमाणपत्र जारी करें। भुगतान होने के बाद ही प्रमाणपत्र देखने, एडिट करने और प्रिंट करने का विकल्प खुलेगा।');
-    return;
-  }
   const c = cert || {};
 
   const studentName = c.student_name || s.name || '';
