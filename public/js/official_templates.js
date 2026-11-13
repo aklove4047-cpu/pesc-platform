@@ -208,15 +208,15 @@
       `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
       `<div style="padding-top:35px; font-size:0.65rem; font-weight:800; color:#64748b; line-height:1.3; text-transform:uppercase;">PASTE<br>PHOTOGRAPH<br>HERE</div>`;
 
-    const isMale = !s.gender || s.gender.toLowerCase() === 'male';
+    const isMale = s.gender && s.gender.toLowerCase() === 'male';
     const isFemale = s.gender && s.gender.toLowerCase() === 'female';
-    const cat = s.category || 'Gen';
+    const cat = s.category || '';
     const durationStr = s.duration_months ? `${Math.round(s.duration_months/12) || 1} Year` : '1 Year';
 
     const quals = s.academic_qualifications || {};
-    const q10 = quals.tenth || quals['10th'] || { board: 'State Board / CBSE', year: '2020', marks: '420/500', pct: '84.0%' };
-    const q12 = quals.twelfth || quals['12th'] || { board: 'State Board / UP Board', year: '2022', marks: '395/500', pct: '79.0%' };
-    const qGrad = quals.graduation || { board: 'University', year: '2025', marks: '1150/1500', pct: '76.6%' };
+    const q10 = quals.tenth || quals['10th'] || {};
+    const q12 = quals.twelfth || quals['12th'] || {};
+    const qGrad = quals.graduation || {};
 
     const { centreSeal, centreSign, centreLogo, coordSeal, coordSign, councilLogo, councilSeal, councilSign, chairmanSign, hoName, coordName, directorName } = resolveSeals(data, c);
 
@@ -298,8 +298,8 @@
                   Mother's Name: <b style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.mother_name || 'N/A')}</b>
                 </div>
                 <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                  <span>Category: [${cat==='Gen'?'✓':'&nbsp;'}] Gen &nbsp; [${cat==='OBC'?'✓':'&nbsp;'}] OBC &nbsp; [${cat==='SC'?'✓':'&nbsp;'}] SC &nbsp; [${cat==='ST'?'✓':'&nbsp;'}] ST</span>
-                  <span>| &nbsp; Blood Group: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.blood_group || 'O+')}</b></span>
+                  <span>Category: [${cat==='Gen'||cat==='General'?'✓':'&nbsp;'}] Gen &nbsp; [${cat==='OBC'?'✓':'&nbsp;'}] OBC &nbsp; [${cat==='SC'?'✓':'&nbsp;'}] SC &nbsp; [${cat==='ST'?'✓':'&nbsp;'}] ST</span>
+                  <span>| &nbsp; Blood Group: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.blood_group || '—')}</b></span>
                 </div>
               </div>
             </div>
@@ -355,24 +355,24 @@
             <tbody>
               <tr>
                 <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">High School (10<sup>th</sup>)</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.board || 'State Board / CBSE')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.year || '2020')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.marks || '420/500')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(q10.pct || '84.0%')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.board || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.year || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.marks || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(q10.pct || '—')}</td>
               </tr>
               <tr style="background:#f8fafc;">
                 <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">Intermediate (12<sup>th</sup>)</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.board || 'State Board / UP Board')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.year || '2022')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.marks || '395/500')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(q12.pct || '79.0%')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.board || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.year || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.marks || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(q12.pct || '—')}</td>
               </tr>
               <tr>
                 <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">Graduation</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.board || 'VBSPU / University')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.year || '2025')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.marks || '1150/1500')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(qGrad.pct || '76.6%')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.board || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.year || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.marks || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(qGrad.pct || '—')}</td>
               </tr>
               <tr style="background:#f8fafc;">
                 <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">Others</td>

@@ -261,6 +261,26 @@ ${JSON.stringify(schemaJson, null, 2)}
     html = html.replace('</body>', `${waFloatHtml}\n</body>`);
   }
 
+  // Hero Banner Slider Pre-render
+  let heroBanners = [];
+  if (Array.isArray(ws.hero_banners) && ws.hero_banners.length > 0) {
+    heroBanners = ws.hero_banners.filter(Boolean);
+  } else if (ws.hero_banner_url || centre.center_photo || centre.photo_url) {
+    heroBanners = [ws.hero_banner_url || centre.center_photo || centre.photo_url];
+  }
+  if (!heroBanners.length) {
+    heroBanners = ['/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+  }
+
+  const sliderSlidesHtml = heroBanners.map((bUrl, idx) => `
+            <div class="c-hero-slide ${idx === 0 ? 'active' : ''}">
+              <img src="${esc(bUrl)}" alt="Institute Banner ${idx + 1}" class="c-hero-img"${idx === 0 ? ' id="heroBannerImg"' : ''}>
+            </div>`).join('');
+  html = html.replace(/<div class="c-hero-slider" id="heroSlider">[\s\S]*?<\/div>\s*<div class="c-hero-fade">/, `<div class="c-hero-slider" id="heroSlider">${sliderSlidesHtml}\n          </div>\n          <div class="c-hero-fade">`);
+
+  const sliderDotsHtml = heroBanners.map((_, idx) => `<div class="c-slider-dot ${idx === 0 ? 'active' : ''}" onclick="goToHeroSlide(${idx})"></div>`).join('');
+  html = html.replace(/<div class="c-slider-dots" id="sliderDots"><\/div>/, `<div class="c-slider-dots" id="sliderDots">${sliderDotsHtml}</div>`);
+
   // Pre-render Authorized Courses & Student Fees (All Council Courses, Centre Student Fee Only)
   const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.total_marks,
     cc.selling_price_paise
@@ -269,7 +289,7 @@ ${JSON.stringify(schemaJson, null, 2)}
     WHERE co.active=1
     ORDER BY co.duration_months DESC, co.name ASC`).all(centre.id);
 
-  const safeCourses = courses.map(co => {
+  let safeCourses = courses.map(co => {
     const studentFeeRupees = (co.selling_price_paise && co.selling_price_paise > 0)
       ? Math.round(co.selling_price_paise / 100)
       : getDefaultStudentFee(co.duration_months, co.code);
@@ -283,6 +303,13 @@ ${JSON.stringify(schemaJson, null, 2)}
       tag: (co.duration_months || 6) >= 12 ? 'Diploma' : (co.duration_months || 6) >= 6 ? 'Certificate' : 'Short Term'
     };
   });
+
+  // Filter Popular Courses as configured by Centre Admin
+  if (ws.featured_course_ids && Array.isArray(ws.featured_course_ids) && ws.featured_course_ids.length > 0) {
+    const featSet = new Set(ws.featured_course_ids.map(Number));
+    const filtered = safeCourses.filter(co => featSet.has(Number(co.id)));
+    if (filtered.length > 0) safeCourses = filtered;
+  }
 
   const courseCardsHtml = safeCourses.map(co => {
     const icon = co.code.includes('DCA') ? '📄' : co.code.includes('TALLY') ? '🧮' : co.code.includes('TYPE') ? '⌨️' : '💻';

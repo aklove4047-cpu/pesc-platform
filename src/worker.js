@@ -1018,10 +1018,37 @@ ${JSON.stringify(schemaJson, null, 2)}
     html = html.replace('</body>', `${waFloatHtml}\n</body>`);
   }
 
+  // Hero Banner Slider Pre-render
+  let heroBanners = [];
+  if (Array.isArray(ws.hero_banners) && ws.hero_banners.length > 0) {
+    heroBanners = ws.hero_banners.filter(Boolean);
+  } else if (ws.hero_banner_url || centre.center_photo || centre.photo_url) {
+    heroBanners = [ws.hero_banner_url || centre.center_photo || centre.photo_url];
+  }
+  if (!heroBanners.length) {
+    heroBanners = ['/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+  }
+
+  const sliderSlidesHtml = heroBanners.map((bUrl, idx) => `
+            <div class="c-hero-slide ${idx === 0 ? 'active' : ''}">
+              <img src="${esc(bUrl)}" alt="Institute Banner ${idx + 1}" class="c-hero-img"${idx === 0 ? ' id="heroBannerImg"' : ''}>
+            </div>`).join('');
+  html = html.replace(/<div class="c-hero-slider" id="heroSlider">[\s\S]*?<\/div>\s*<div class="c-hero-fade">/, `<div class="c-hero-slider" id="heroSlider">${sliderSlidesHtml}\n          </div>\n          <div class="c-hero-fade">`);
+
+  const sliderDotsHtml = heroBanners.map((_, idx) => `<div class="c-slider-dot ${idx === 0 ? 'active' : ''}" onclick="goToHeroSlide(${idx})"></div>`).join('');
+  html = html.replace(/<div class="c-slider-dots" id="sliderDots"><\/div>/, `<div class="c-slider-dots" id="sliderDots">${sliderDotsHtml}</div>`);
+
   // Pre-render Authorized Courses & Student Fees (All Council Courses, Centre Student Fee Only)
-  const allActiveCourses = (centre.courses_list && centre.courses_list.length)
+  let allActiveCourses = (centre.courses_list && centre.courses_list.length)
     ? centre.courses_list.filter(co => co.active !== false)
     : store.courses.filter(co => co.active !== 0);
+
+  // Filter Popular Courses as configured by Centre Admin
+  if (ws.featured_course_ids && Array.isArray(ws.featured_course_ids) && ws.featured_course_ids.length > 0) {
+    const featSet = new Set(ws.featured_course_ids.map(Number));
+    const filtered = allActiveCourses.filter(co => featSet.has(Number(co.id)));
+    if (filtered.length > 0) allActiveCourses = filtered;
+  }
 
   const safeCoursesForClient = allActiveCourses.map(co => {
     let studentFeeRupees = 0;
@@ -1644,6 +1671,14 @@ export default {
         };
       });
 
+      const ws = c.website_settings || {};
+      let filteredSafeCourses = safeCourses;
+      if (ws.featured_course_ids && Array.isArray(ws.featured_course_ids) && ws.featured_course_ids.length > 0) {
+        const featSet = new Set(ws.featured_course_ids.map(Number));
+        const customFiltered = safeCourses.filter(co => featSet.has(Number(co.id)));
+        if (customFiltered.length > 0) filteredSafeCourses = customFiltered;
+      }
+
       const cPhone = c.phone || '+91 98765 43210';
       const upiId = c.upi_id || `${cPhone.replace(/[^0-9]/g, '')}@paytm`;
       const bankHolder = c.account_holder || c.director_name || c.name;
@@ -1671,15 +1706,16 @@ export default {
           account_no: bankAcc,
           ifsc: bankIfsc,
           account_holder: bankHolder,
-          website_settings: c.website_settings || {}
+          website_settings: ws
         },
-        website_settings: c.website_settings || {},
+        website_settings: ws,
         owner: {
           name: c.director_name || 'Centre Director',
           mobile: cPhone,
           email: c.email || `director@${c.slug}.pescouncil.in`
         },
-        courses: safeCourses,
+        courses: filteredSafeCourses,
+        all_courses: safeCourses,
         authorities: getAuthorities(c),
         stats: { established_year: 2021 }
       });
@@ -4612,8 +4648,10 @@ export default {
         let totalPaid = 0;
         let totalPending = 0;
         stus.forEach(s => {
-          totalPaid += (s.fee_paid || 8000);
-          totalPending += Math.max(0, (s.fee_total || 12000) - (s.fee_paid || 8000));
+          const sTotal = Number(s.fee_total !== undefined ? s.fee_total : 12000);
+          const sPaid = Number(s.fee_paid !== undefined ? s.fee_paid : 0);
+          totalPaid += sPaid;
+          totalPending += Math.max(0, sTotal - sPaid);
         });
         return jsonResponse({
           centre: c,
@@ -4718,9 +4756,11 @@ export default {
               study_mode: body.study_mode || 'Regular',
               registration_charge: body.registration_charge || '35 Rs Registration Fee + Ebook + Advance Certificate Fee',
               session: body.session || '2026-27',
-              fee_total: +body.fee_total || +body.fee || 12000,
-              fee_paid: +body.fee_paid || 5000,
-              fee_pending: Math.max(0, (+body.fee_total || +body.fee || 12000) - (+body.fee_paid || 5000)),
+              category: body.category || '',
+              blood_group: body.blood_group || '',
+              fee_total: +body.fee_total !== undefined && +body.fee_total >= 0 ? +body.fee_total : (+body.fee || 12000),
+              fee_paid: +body.fee_paid !== undefined && +body.fee_paid >= 0 ? +body.fee_paid : 0,
+              fee_pending: Math.max(0, (+body.fee_total || 12000) - (+body.fee_paid || 0)),
               aadhar_no: body.aadhar_no || '',
               apaar_id: body.apaar_id || '',
               academic_qualifications: body.academic_qualifications || {},

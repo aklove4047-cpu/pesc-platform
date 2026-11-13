@@ -156,7 +156,7 @@ router.get('/dashboard', (req, res) => {
 router.get('/students', (req, res) => {
   const { size, offset } = paginate(req);
   const q = `%${str(req.query.q, 50)}%`;
-  const rows = db.prepare(`SELECT s.id, s.student_code, s.name, s.father_name, s.mother_name, s.mobile, s.email, s.dob, s.status, s.session,
+  const rows = db.prepare(`SELECT s.id, s.student_code, s.name, s.father_name, s.mother_name, s.gender, s.category, s.blood_group, s.address, s.qualifications, s.mobile, s.email, s.dob, s.status, s.session,
     s.fee_total, s.fee_paid, (s.fee_total - s.fee_paid) AS fee_pending, s.photo_url, s.initial_password, s.course_id, s.evaluation_type, s.term,
     s.centre_id, ce.name AS centre_name, ce.centre_code, ce.director_name, ce.district AS centre_district, ce.state AS centre_state, ce.address AS centre_address,
     ce.seal_url AS centre_seal_url, ce.signature_url AS centre_signature_url, ce.logo_url AS centre_logo_url,
@@ -377,18 +377,20 @@ router.post('/students', h(async (req, res) => {
   const name = str(b.name, 100);
   const father_name = str(b.father_name, 100);
   const mother_name = str(b.mother_name, 100);
+  const gender = str(b.gender, 20) || 'Male';
   const mobile = str(b.mobile || b.student_whatsapp, 15);
   const email = str(b.email, 200);
   const dob = str(b.dob, 10);
   const course_id = +b.course_id;
   const session = str(b.session, 20) || '2026-27';
-  const fee_total = +b.fee_total || 12000;
-  const fee_paid = +b.fee_paid || 0;
+  const fee_total = (+b.fee_total !== undefined && !isNaN(+b.fee_total) && +b.fee_total >= 0) ? +b.fee_total : 12000;
+  const fee_paid = (+b.fee_paid !== undefined && !isNaN(+b.fee_paid) && +b.fee_paid >= 0) ? +b.fee_paid : 0;
   const photo_url = b.photo_url || null;
-  const category = str(b.category, 20);
-  const blood_group = str(b.blood_group, 10);
+  const category = str(b.category, 20) || 'General';
+  const blood_group = str(b.blood_group, 10) || '—';
   const address = str(b.local_address || b.address, 300);
-  const qualifications = b.qualifications ? (typeof b.qualifications === 'string' ? b.qualifications : JSON.stringify(b.qualifications)) : '{}';
+  const rawQuals = b.academic_qualifications || b.qualifications || {};
+  const qualifications = typeof rawQuals === 'string' ? rawQuals : JSON.stringify(rawQuals);
 
   if (!name) throw new HttpError(400, 'Student name is required');
   if (!course_id) throw new HttpError(400, 'Course selection is required');
@@ -416,9 +418,9 @@ router.post('/students', h(async (req, res) => {
     const evalType = isSemester ? 'semester' : 'annual';
     const termVal = b.term || (isSemester ? 'Semester 1' : 'Annual');
 
-    const r = db.prepare(`INSERT INTO students(student_code,centre_id,user_id,name,father_name,mother_name,category,blood_group,address,qualifications,mobile,email,dob,course_id,session,fee_total,fee_paid,photo_url,initial_password,evaluation_type,term,created_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .run(code, cid(req), userId, name, father_name, mother_name, category, blood_group, address, qualifications, mobile, studentEmail, dob, course_id, session, fee_total, fee_paid, photo_url, defaultPw, evalType, termVal, now());
+    const r = db.prepare(`INSERT INTO students(student_code,centre_id,user_id,name,father_name,mother_name,gender,category,blood_group,address,qualifications,mobile,email,dob,course_id,session,fee_total,fee_paid,photo_url,initial_password,evaluation_type,term,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .run(code, cid(req), userId, name, father_name, mother_name, gender, category, blood_group, address, qualifications, mobile, studentEmail, dob, course_id, session, fee_total, fee_paid, photo_url, defaultPw, evalType, termVal, now());
     fees.charge(cid(req), 'admission', r.lastInsertRowid, req.user.id); // rolls the whole admission back if balance is short (35 Rs)
     return r.lastInsertRowid;
   })();
@@ -435,6 +437,7 @@ router.post('/students', h(async (req, res) => {
       name,
       father_name,
       mother_name,
+      gender,
       student_code: code,
       roll_no: code,
       mobile,
@@ -444,6 +447,8 @@ router.post('/students', h(async (req, res) => {
       session,
       category,
       blood_group,
+      fee_total,
+      fee_paid,
       address,
       qualifications,
       photo_url,

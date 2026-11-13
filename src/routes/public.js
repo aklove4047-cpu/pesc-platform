@@ -115,6 +115,28 @@ router.get('/site', (req, res) => {
     ws = s.website_settings || {};
   } catch (_) {}
 
+  const allSafeCourses = courses.map(c => {
+    const studentFeeRupees = (c.selling_price_paise && c.selling_price_paise > 0)
+      ? Math.round(c.selling_price_paise / 100)
+      : getDefaultStudentFee(c.duration_months, c.code);
+    return {
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      duration_months: c.duration_months,
+      local_fee_rupees: studentFeeRupees,
+      fee_rupees: studentFeeRupees,
+      tag: c.duration_months >= 12 ? 'Diploma' : c.duration_months >= 6 ? 'Certificate' : 'Short Term',
+    };
+  });
+
+  let filteredCourses = allSafeCourses;
+  if (ws.featured_course_ids && Array.isArray(ws.featured_course_ids) && ws.featured_course_ids.length > 0) {
+    const featSet = new Set(ws.featured_course_ids.map(Number));
+    const customFiltered = allSafeCourses.filter(co => featSet.has(Number(co.id)));
+    if (customFiltered.length > 0) filteredCourses = customFiltered;
+  }
+
   res.json({
     centre: {
       id: tenant.id,
@@ -133,20 +155,8 @@ router.get('/site', (req, res) => {
       email: owner.email || `desk@${tenant.slug}.pescouncil.in`,
       mobile: owner.mobile || '+91 98765 43210',
     },
-    courses: courses.map(c => {
-      const studentFeeRupees = (c.selling_price_paise && c.selling_price_paise > 0)
-        ? Math.round(c.selling_price_paise / 100)
-        : getDefaultStudentFee(c.duration_months, c.code);
-      return {
-        id: c.id,
-        code: c.code,
-        name: c.name,
-        duration_months: c.duration_months,
-        local_fee_rupees: studentFeeRupees,
-        fee_rupees: studentFeeRupees,
-        tag: c.duration_months >= 12 ? 'Diploma' : c.duration_months >= 6 ? 'Certificate' : 'Short Term',
-      };
-    }),
+    courses: filteredCourses,
+    all_courses: allSafeCourses,
     stats: {
       students: studentCount,
       certificates: certCount,

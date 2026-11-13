@@ -507,4 +507,86 @@ test('centre public website displays all council courses with centre student fee
   assert.ok(html.includes('Course Fees:'), 'Public HTML should label fee as Course Fees');
 });
 
+test('student admission records accurate fees, gender, qualifications, and centre website supports hero slider & popular course selection', async () => {
+  // 1. Centre admin creates student with specific fee paid/pending, gender female, OBC, and qualifications
+  const cListRes = await call('GET', '/api/centre/courses', { host: A.host, cookie: A.cookie });
+  const course = cListRes.json.courses[0];
+
+  const stuPayload = {
+    name: 'Pooja Verma',
+    father_name: 'Rajendra Verma',
+    mother_name: 'Sunita Verma',
+    gender: 'Female',
+    category: 'OBC',
+    blood_group: 'B+',
+    mobile: '9876501234',
+    dob: '2004-06-12',
+    course_id: course.id,
+    fee_total: 15000,
+    fee_paid: 3000,
+    academic_qualifications: {
+      tenth: { exam: 'High School (10th)', board: 'UP Board', year: '2020', marks_obt: '430/600', percentage: '71.6%' }
+    }
+  };
+
+  const createStuRes = await call('POST', '/api/centre/students', {
+    host: A.host,
+    cookie: A.cookie,
+    body: stuPayload
+  });
+  assert.equal(createStuRes.status, 201);
+  assert.equal(createStuRes.json.student.name, 'Pooja Verma');
+  assert.equal(createStuRes.json.student.gender, 'Female');
+  assert.equal(createStuRes.json.student.category, 'OBC');
+  assert.equal(createStuRes.json.student.blood_group, 'B+');
+  assert.equal(createStuRes.json.student.fee_total, 15000);
+  assert.equal(createStuRes.json.student.fee_paid, 3000);
+
+  // 2. Verify students roster in centre panel returns these exact values without fallback
+  const stuListRes = await call('GET', '/api/centre/students?q=Pooja', { host: A.host, cookie: A.cookie });
+  assert.equal(stuListRes.status, 200);
+  const foundStu = stuListRes.json.students.find(s => s.name === 'Pooja Verma');
+  assert.ok(foundStu, 'Created student should be found in roster');
+  assert.equal(foundStu.gender, 'Female');
+  assert.equal(foundStu.category, 'OBC');
+  assert.equal(foundStu.blood_group, 'B+');
+  assert.equal(foundStu.fee_total, 15000);
+  assert.equal(foundStu.fee_paid, 3000);
+  assert.equal(foundStu.fee_pending, 12000);
+
+  // 3. Centre admin customizes hero banner slider & selects specific popular courses
+  const sliderBanners = [
+    '/assets/img/classroom.jpg',
+    '/assets/img/centre_varanasi.jpg',
+    'https://images.unsplash.com/photo-campus-3'
+  ];
+  const updateSettingsRes = await call('POST', '/api/centre/website-settings', {
+    host: A.host,
+    cookie: A.cookie,
+    body: {
+      website_settings: {
+        hero_banners: sliderBanners,
+        featured_course_ids: [course.id]
+      }
+    }
+  });
+  assert.equal(updateSettingsRes.status, 200);
+  assert.equal(updateSettingsRes.json.ok, true);
+  assert.deepEqual(updateSettingsRes.json.website_settings.hero_banners, sliderBanners);
+  assert.deepEqual(updateSettingsRes.json.website_settings.featured_course_ids, [course.id]);
+
+  // 4. Verify public site SSR and API filter popular courses by featured_course_ids and render banner slider
+  const pubSiteRes = await call('GET', '/api/public/site', { host: A.host });
+  assert.equal(pubSiteRes.status, 200);
+  assert.equal(pubSiteRes.json.courses.length, 1, 'Only selected featured course should be returned');
+  assert.equal(pubSiteRes.json.courses[0].id, course.id);
+
+  const homeHtmlRes = await call('GET', '/', { host: A.host });
+  assert.equal(homeHtmlRes.status, 200);
+  const homeHtml = homeHtmlRes.buf.toString();
+  assert.ok(homeHtml.includes('c-hero-slider'), 'HTML should contain hero slider');
+  assert.ok(homeHtml.includes('centre_varanasi.jpg'), 'HTML should include second slider banner');
+  assert.ok(homeHtml.includes(course.code), 'HTML should include selected featured course');
+});
+
 

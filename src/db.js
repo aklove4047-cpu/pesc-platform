@@ -318,6 +318,7 @@ try { rawDb.exec("ALTER TABLE centres ADD COLUMN affiliation_issue_date TEXT;");
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN affiliation_valid_thru TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE centres ADD COLUMN affiliation_session TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE students ADD COLUMN mother_name TEXT;"); } catch (_) {}
+try { rawDb.exec("ALTER TABLE students ADD COLUMN gender TEXT DEFAULT 'Male';"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE students ADD COLUMN category TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE students ADD COLUMN blood_group TEXT;"); } catch (_) {}
 try { rawDb.exec("ALTER TABLE students ADD COLUMN address TEXT;"); } catch (_) {}

@@ -282,7 +282,26 @@
     .c-hero-right {
       position: relative;
       overflow: hidden;
-      min-height: 380px;
+      min-height: 400px;
+    }
+    .c-hero-slider {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+    }
+    .c-hero-slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+      transform: scale(1.02);
+      pointer-events: none;
+    }
+    .c-hero-slide.active {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
     }
     .c-hero-img {
       width: 100%;
@@ -294,8 +313,61 @@
     .c-hero-fade {
       position: absolute;
       inset: 0;
-      background: linear-gradient(to right, #064e3b 0%, rgba(6, 78, 59, 0.45) 25%, transparent 60%);
+      background: linear-gradient(to right, #064e3b 0%, rgba(6, 78, 59, 0.4) 30%, transparent 65%);
       pointer-events: none;
+      z-index: 3;
+    }
+    .c-slider-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.45);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: all 0.2s;
+      outline: none;
+      backdrop-filter: blur(4px);
+    }
+    .c-slider-btn:hover {
+      background: rgba(4, 120, 87, 0.95);
+      border-color: #ffffff;
+      transform: translateY(-50%) scale(1.08);
+    }
+    .c-slider-btn.prev { left: 14px; }
+    .c-slider-btn.next { right: 14px; }
+    .c-slider-dots {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 7px;
+      z-index: 10;
+    }
+    .c-slider-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+    .c-slider-dot.active {
+      background: #ffffff;
+      width: 24px;
+      border-radius: 6px;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
     }
 
     /* Popular Courses Section */
@@ -774,8 +846,18 @@
         </div>
 
         <div class="c-hero-right">
-          <img src="/assets/img/classroom.jpg" alt="Computer Lab Classroom" class="c-hero-img">
+          <div class="c-hero-slider" id="heroSlider">
+            <div class="c-hero-slide active">
+              <img src="/assets/img/classroom.jpg" alt="Computer Lab Classroom" class="c-hero-img" id="heroBannerImg">
+            </div>
+            <div class="c-hero-slide">
+              <img src="/assets/img/centre_varanasi.jpg" alt="Institute Campus" class="c-hero-img">
+            </div>
+          </div>
           <div class="c-hero-fade"></div>
+          <button type="button" class="c-slider-btn prev" id="sliderPrevBtn" aria-label="Previous Slide">‹</button>
+          <button type="button" class="c-slider-btn next" id="sliderNextBtn" aria-label="Next Slide">›</button>
+          <div class="c-slider-dots" id="sliderDots"></div>
         </div>
       </div>
     </section>
@@ -1939,7 +2021,71 @@
       const grid = $('#courseGrid');
       const select = $('#inqCourseSelect');
 
-      const coursesToDisplay = (d.courses && d.courses.length > 0) ? d.courses.map(co => ({
+      
+      // --- Dynamic Slider & Popular Courses Configuration ---
+      const ws = d.website_settings || c.website_settings || {};
+      let heroBanners = [];
+      if (Array.isArray(ws.hero_banners) && ws.hero_banners.length > 0) {
+        heroBanners = ws.hero_banners.filter(Boolean);
+      } else if (ws.hero_banner_url || c.center_photo || c.photo_url) {
+        heroBanners = [ws.hero_banner_url || c.center_photo || c.photo_url];
+      }
+      if (!heroBanners.length) {
+        heroBanners = ['/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+      }
+
+      const sliderEl = document.getElementById('heroSlider');
+      const dotsEl = document.getElementById('sliderDots');
+      if (sliderEl && heroBanners.length > 0) {
+        sliderEl.innerHTML = heroBanners.map((bUrl, idx) => `
+          <div class="c-hero-slide ${idx === 0 ? 'active' : ''}">
+            <img src="${esc(bUrl)}" class="c-hero-img" alt="Institute Banner ${idx + 1}">
+          </div>
+        `).join('');
+
+        if (dotsEl) {
+          dotsEl.innerHTML = heroBanners.map((_, idx) => `
+            <div class="c-slider-dot ${idx === 0 ? 'active' : ''}" onclick="goToHeroSlide(${idx})"></div>
+          `).join('');
+        }
+
+        let curSlide = 0;
+        let slideTimer = null;
+        window.goToHeroSlide = function(idx) {
+          const slides = sliderEl.querySelectorAll('.c-hero-slide');
+          const dots = dotsEl ? dotsEl.querySelectorAll('.c-slider-dot') : [];
+          if (!slides.length) return;
+          curSlide = (idx + slides.length) % slides.length;
+          slides.forEach((s, i) => s.classList.toggle('active', i === curSlide));
+          dots.forEach((dot, i) => dot.classList.toggle('active', i === curSlide));
+        };
+
+        const prevBtn = document.getElementById('sliderPrevBtn');
+        const nextBtn = document.getElementById('sliderNextBtn');
+        if (prevBtn) prevBtn.onclick = () => { resetTimer(); goToHeroSlide(curSlide - 1); };
+        if (nextBtn) nextBtn.onclick = () => { resetTimer(); goToHeroSlide(curSlide + 1); };
+
+        function startTimer() {
+          if (heroBanners.length > 1) {
+            slideTimer = setInterval(() => goToHeroSlide(curSlide + 1), 4500);
+          }
+        }
+        function resetTimer() {
+          if (slideTimer) clearInterval(slideTimer);
+          startTimer();
+        }
+        startTimer();
+      }
+
+      // Filter Popular Courses as configured by Centre Admin
+      let availableCourses = (d.courses && d.courses.length > 0) ? d.courses : mockupCourses;
+      if (ws.featured_course_ids && Array.isArray(ws.featured_course_ids) && ws.featured_course_ids.length > 0) {
+        const featSet = new Set(ws.featured_course_ids.map(Number));
+        const filtered = availableCourses.filter(co => featSet.has(Number(co.id)));
+        if (filtered.length > 0) availableCourses = filtered;
+      }
+
+      const coursesToDisplay = availableCourses.map(co => ({
         id: co.id,
         code: co.code,
         name: co.name,

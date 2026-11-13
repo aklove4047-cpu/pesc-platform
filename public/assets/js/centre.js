@@ -1186,7 +1186,34 @@ const views = {
               </div>
             </div>
 
-            <!-- Row 5: Marital Status -->
+            <!-- Row 5: Category & Blood Group (Matches Official Form) -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Category * (वर्ग)</label>
+                <select name="category" required style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem; background:#fff;">
+                  <option value="General">General (सामान्य)</option>
+                  <option value="OBC">OBC (अन्य पिछड़ा वर्ग)</option>
+                  <option value="SC">SC (अनुसूचित जाति)</option>
+                  <option value="ST">ST (अनुसूचित जनजाति)</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Blood Group (रक्त समूह)</label>
+                <select name="blood_group" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem; background:#fff;">
+                  <option value="—">— Not Specified / ज्ञात नहीं</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Row 5b: Marital Status | Aadhar No -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
               <div>
                 <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Marital Status</label>
@@ -1195,7 +1222,10 @@ const views = {
                   <option value="Yes">Yes / Married</option>
                 </select>
               </div>
-              <div></div>
+              <div>
+                <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Aadhar Number (Optional)</label>
+                <input name="aadhar_no" placeholder="12-digit Aadhar No" maxlength="12" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem;">
+              </div>
             </div>
 
             <!-- Row 6: Father/Husband Name * (with Prefix S/o, D/o, W/o) | Mother Name * -->
@@ -1306,6 +1336,85 @@ const views = {
               <label style="display:block; font-size:0.82rem; font-weight:700; color:#475569; margin-bottom:4px;">Registration Charge *</label>
               <input name="registration_charge" value="35 Rs Registration Fee + Ebook + Advance Certificate Fee" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.92rem; background:#f8fafc;">
             </div>
+
+            <!-- Student Course Fees Breakdown (Centre's Student Fee) -->
+            <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:16px; margin-bottom:18px;">
+              <div style="font-weight:800; color:#166534; font-size:0.95rem; margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+                <span>💰</span> Course Fees &amp; Admission Payment (विद्यार्थी फीस विवरण)
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;">
+                <div>
+                  <label style="display:block; font-size:0.82rem; font-weight:700; color:#166534; margin-bottom:4px;">
+                    Total Course Fee (₹) *
+                  </label>
+                  <input name="fee_total" id="addCourseFeeTotal" type="number" value="12000" min="0" required style="width:100%; padding:9px 12px; border:1px solid #86efac; border-radius:4px; font-size:0.95rem; font-weight:700; background:#fff;">
+                  <span style="font-size:0.73rem; color:#15803d;">(सेंटर द्वारा तय की गई फीस)</span>
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.82rem; font-weight:700; color:#166534; margin-bottom:4px;">
+                    Paid Now at Admission (₹)
+                  </label>
+                  <input name="fee_paid" id="addCourseFeePaid" type="number" value="0" min="0" style="width:100%; padding:9px 12px; border:1px solid #86efac; border-radius:4px; font-size:0.95rem; font-weight:700; background:#fff;">
+                  <span style="font-size:0.73rem; color:#15803d;">(प्रवेश के समय जमा राशि - default 0)</span>
+                </div>
+                <div>
+                  <label style="display:block; font-size:0.82rem; font-weight:700; color:#991b1b; margin-bottom:4px;">
+                    Pending Balance (₹)
+                  </label>
+                  <input id="addCourseFeePending" type="text" readonly value="₹12,000" style="width:100%; padding:9px 12px; border:1px solid #fca5a5; border-radius:4px; font-size:0.95rem; font-weight:800; background:#fff1f2; color:#b91c1c;">
+                  <span style="font-size:0.73rem; color:#b91c1c;">(बकाया राशि - ऑटो परिकलित)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 3: Educational Qualifications (शैक्षणिक योग्यता - Optional) -->
+          <div style="margin-bottom:24px;">
+            <div style="background:#fef3c7; color:#92400e; padding:8px 16px; border-radius:4px; font-weight:800; font-size:0.95rem; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+              <span>Educational Qualifications (शैक्षणिक योग्यता)</span>
+              <span style="font-size:0.78rem; font-weight:600; color:#b45309;">* Optional (यदि अभी उपलब्ध नहीं तो खाली छोड़ें)</span>
+            </div>
+            
+            <p style="font-size:0.82rem; color:#64748b; margin:0 0 10px;">
+              यदि छात्र ने अपनी पिछली कक्षाओं (10वीं, 12वीं, आदि) के अंकपत्र दिए हैं, तो नीचे दर्ज करें। खाली छोड़ने पर प्रवेश फॉर्म पर कोई भी फर्जी या गलत अंक नहीं छपेंगे।
+            </p>
+
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.85rem; border:1px solid #cbd5e1;">
+                <thead>
+                  <tr style="background:#f1f5f9; text-align:left; color:#334155;">
+                    <th style="padding:8px 10px; border:1px solid #cbd5e1;">Exam Passed</th>
+                    <th style="padding:8px 10px; border:1px solid #cbd5e1;">Board / University</th>
+                    <th style="padding:8px 10px; border:1px solid #cbd5e1; width:95px;">Passing Year</th>
+                    <th style="padding:8px 10px; border:1px solid #cbd5e1; width:110px;">Marks Obt. / Max</th>
+                    <th style="padding:8px 10px; border:1px solid #cbd5e1; width:95px;">Percentage (%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding:6px 10px; border:1px solid #cbd5e1; font-weight:700;">High School (10th)</td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_10_board" placeholder="e.g. UP Board / CBSE" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_10_year" placeholder="e.g. 2022" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_10_marks" placeholder="e.g. 420/600" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_10_pct" placeholder="e.g. 70.0%" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 10px; border:1px solid #cbd5e1; font-weight:700;">Intermediate (12th)</td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_board" placeholder="e.g. UP Board / CBSE" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_year" placeholder="e.g. 2024" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_marks" placeholder="e.g. 380/500" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_pct" placeholder="e.g. 76.0%" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 10px; border:1px solid #cbd5e1; font-weight:700;">Graduation / Other</td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_grad_board" placeholder="e.g. University Name" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_grad_year" placeholder="Year" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_grad_marks" placeholder="Marks" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_grad_pct" placeholder="%" style="width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:3px;"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- Bottom Action: Create Student (Purple Button - Exact Image 1) -->
@@ -1336,11 +1445,27 @@ const views = {
       }
     };
 
-    // Auto fill duration when course changes
+    // Live Fee Calculation & auto fill duration/fee when course changes
+    const fTotal = $('#addCourseFeeTotal');
+    const fPaid = $('#addCourseFeePaid');
+    const fPend = $('#addCourseFeePending');
+    const updateFeeCalc = () => {
+      const tot = +(fTotal ? fTotal.value : 0) || 0;
+      const pd = +(fPaid ? fPaid.value : 0) || 0;
+      const rem = Math.max(0, tot - pd);
+      if (fPend) fPend.value = '₹' + rem.toLocaleString('en-IN');
+    };
+    if (fTotal) fTotal.oninput = updateFeeCalc;
+    if (fPaid) fPaid.oninput = updateFeeCalc;
+
     $('#addStudentCourseSelect').onchange = (e) => {
       const opt = e.target.selectedOptions[0];
       if (opt && opt.dataset.duration) {
         $('#addCourseDurationInput').value = opt.dataset.duration;
+      }
+      if (opt && opt.dataset.fee && fTotal) {
+        fTotal.value = opt.dataset.fee;
+        updateFeeCalc();
       }
     };
 
@@ -1351,6 +1476,32 @@ const views = {
         const payload = form(e.target);
         payload.course_id = +payload.course_id;
         payload.duration_months = +payload.duration_months || 12;
+        payload.fee_total = +(payload.fee_total !== undefined && payload.fee_total !== '' ? payload.fee_total : 12000);
+        payload.fee_paid = +(payload.fee_paid !== undefined && payload.fee_paid !== '' ? payload.fee_paid : 0);
+
+        const q10 = {
+          exam: 'High School (10th)',
+          board: payload.qual_10_board || '',
+          year: payload.qual_10_year || '',
+          marks_obt: payload.qual_10_marks || '',
+          percentage: payload.qual_10_pct || ''
+        };
+        const q12 = {
+          exam: 'Intermediate (12th)',
+          board: payload.qual_12_board || '',
+          year: payload.qual_12_year || '',
+          marks_obt: payload.qual_12_marks || '',
+          percentage: payload.qual_12_pct || ''
+        };
+        const qGrad = {
+          exam: 'Graduation',
+          board: payload.qual_grad_board || '',
+          year: payload.qual_grad_year || '',
+          marks_obt: payload.qual_grad_marks || '',
+          percentage: payload.qual_grad_pct || ''
+        };
+        payload.academic_qualifications = { tenth: q10, twelfth: q12, graduation: qGrad };
+        payload.qualifications = JSON.stringify(payload.academic_qualifications);
 
         const res = await api('/api/centre/students', { method: 'POST', body: payload });
         const stu = res.student || { name: payload.name, student_code: res.student_code, roll_no: res.roll_no };
@@ -3318,13 +3469,25 @@ const views = {
 
   // 20. Website Look, Theme & Banners (वेबसाइट डिज़ाइन व कस्टमाइज़ेशन)
   async WebsiteDesign() {
-    const [cData, wsData] = await Promise.all([
+    const [cData, wsData, cCoursesData] = await Promise.all([
       api('/api/centre/settings').catch(() => ({})),
-      api('/api/centre/website-settings').catch(() => ({}))
+      api('/api/centre/website-settings').catch(() => ({})),
+      api('/api/centre/courses').catch(() => ({}))
     ]);
     const c = cData.centre || currentCentre || {};
     const ws = wsData.website_settings || c.website_settings || {};
+    const courses = (cCoursesData && cCoursesData.courses) || window._currentCourses || [];
     const liveSiteUrl = `https://${(c.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management' : (c.slug || 'gyaneducation'))}.pescouncil.in`;
+
+    // Ensure hero_banners list is populated
+    let initialBanners = Array.isArray(ws.hero_banners) && ws.hero_banners.length > 0
+      ? ws.hero_banners.filter(Boolean)
+      : (ws.hero_banner_url ? [ws.hero_banner_url] : ['/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg']);
+    if (!initialBanners.length) initialBanners = ['/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+
+    const featuredSet = new Set(Array.isArray(ws.featured_course_ids) && ws.featured_course_ids.length > 0 
+      ? ws.featured_course_ids.map(Number) 
+      : courses.map(co => Number(co.id)));
 
     V.innerHTML = `
       <div style="max-width:1040px; margin:0 auto; padding-bottom:40px;">
@@ -3470,39 +3633,53 @@ const views = {
               </div>
             </div>
 
-            <!-- Banner Photo Preview & Upload Box -->
-            <div style="background:#f8fafc; border:2px dashed #cbd5e1; border-radius:12px; padding:20px; margin-bottom:22px;">
-              <div style="display:flex; gap:22px; align-items:center; flex-wrap:wrap;">
-                <div style="width:260px; height:150px; border-radius:10px; border:2px solid #047857; overflow:hidden; background:#e2e8f0; display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative;" id="heroBannerPreviewBox">
-                  <img src="${esc(ws.hero_banner_url || c.center_photo || c.photo_url || '/assets/img/classroom.jpg')}" id="heroBannerPreviewImg" style="width:100%; height:100%; object-fit:cover;">
-                  <div style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent, rgba(0,0,0,0.7)); color:#fff; font-size:0.75rem; padding:6px 10px; text-align:center;">
-                    Banner Preview
-                  </div>
-                </div>
-
-                <div style="flex:1; min-width:260px;">
-                  <h4 style="margin:0 0 6px; color:#064e3b;">📷 Custom Hero Banner Image</h4>
-                  <p class="muted" style="font-size:0.84rem; margin:0 0 12px; line-height:1.4;">
-                    Yeh banner photo aapki franchise website ke top hero section me right side par prominent display hogi.
+            <!-- Hero Banner Slider Carousel Manager (मल्टीपल बैनर स्लाइडर) -->
+            <div style="background:#f8fafc; border:2px solid #a7f3d0; border-radius:12px; padding:20px; margin-bottom:22px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                <div>
+                  <h4 style="margin:0 0 4px; color:#064e3b; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                    <span>🎞️</span> Interactive Hero Banner Slider / Carousel (स्लाइडर बैनर्स)
+                  </h4>
+                  <p class="muted" style="font-size:0.82rem; margin:0;">
+                    Aap apni pasand ke anusar 1 se lekar 5 tak kitne bhi banners yahan set kar sakte hain. Website par yeh automatically slide honge aur arrows se bhi badlenge!
                   </p>
-
-                  <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
-                    <label class="btn sm gold" style="cursor:pointer; display:inline-block; font-weight:700;">
-                      📁 Choose Banner Photo File
-                      <input type="file" id="heroBannerFileInput" accept="image/*" style="display:none;">
-                    </label>
-                    <span style="font-size:0.75rem; color:#64748b;">(JPG/PNG photo) ya direct URL paste karein:</span>
-                  </div>
-
-                  <input name="hero_banner_url" id="heroBannerUrlInput" value="${esc(ws.hero_banner_url || '')}" placeholder="https://... ya computer se banner photo upload karein" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.88rem;">
-
-                  <!-- Quick Banner Presets -->
-                  <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <span style="font-size:0.75rem; color:#64748b;">Preset Banners:</span>
-                    <button type="button" class="btn sm" style="background:#e0f2fe; color:#0369a1; padding:3px 8px; font-size:0.75rem; border:none;" onclick="$('#heroBannerUrlInput').value='/assets/img/classroom.jpg'; $('#heroBannerPreviewImg').src='/assets/img/classroom.jpg';">💻 Computer Lab</button>
-                    <button type="button" class="btn sm" style="background:#e0f2fe; color:#0369a1; padding:3px 8px; font-size:0.75rem; border:none;" onclick="$('#heroBannerUrlInput').value='/assets/img/centre_varanasi.jpg'; $('#heroBannerPreviewImg').src='/assets/img/centre_varanasi.jpg';">🏛️ Campus Building</button>
-                  </div>
                 </div>
+                <button type="button" class="btn sm gold" id="btnAddBannerSlide" style="font-weight:700; padding:6px 14px;">
+                  ➕ Add Another Banner Slide
+                </button>
+              </div>
+
+              <!-- Slides List Container -->
+              <div id="bannerSlidesContainer" style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px;">
+                ${initialBanners.map((bUrl, idx) => `
+                  <div class="banner-slide-row" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                    <div style="width:110px; height:65px; border-radius:6px; overflow:hidden; border:1px solid #047857; background:#e2e8f0; flex-shrink:0;">
+                      <img src="${esc(bUrl)}" class="slide-thumb-preview" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div style="flex:1; min-width:240px;">
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-size:0.8rem; font-weight:700; color:#334155;">Slide #${idx + 1} Image URL / Upload</span>
+                        <button type="button" class="btn-del-slide" style="background:none; border:none; color:#dc2626; cursor:pointer; font-size:0.8rem; font-weight:700;">🗑️ Remove Slide</button>
+                      </div>
+                      <div style="display:flex; gap:8px; align-items:center;">
+                        <input class="banner-slide-url-input" value="${esc(bUrl)}" placeholder="https://... ya photo upload karein" style="flex:1; padding:7px 10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem;">
+                        <label class="btn sm alt" style="cursor:pointer; font-size:0.8rem; padding:6px 10px; margin:0; white-space:nowrap;">
+                          📁 Upload
+                          <input type="file" class="banner-slide-file-input" accept="image/*" style="display:none;">
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+
+              <!-- Quick 1-Click Banner Presets -->
+              <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <b style="font-size:0.8rem; color:#065f46;">⚡ Quick 1-Click Banner Presets:</b>
+                <button type="button" class="btn sm" style="background:#fff; border:1px solid #a7f3d0; color:#065f46; font-size:0.78rem; padding:4px 8px;" onclick="window.addBannerPreset('/assets/img/classroom.jpg')">💻 Computer Lab</button>
+                <button type="button" class="btn sm" style="background:#fff; border:1px solid #a7f3d0; color:#065f46; font-size:0.78rem; padding:4px 8px;" onclick="window.addBannerPreset('/assets/img/centre_varanasi.jpg')">🏛️ Campus Building</button>
+                <button type="button" class="btn sm" style="background:#fff; border:1px solid #a7f3d0; color:#065f46; font-size:0.78rem; padding:4px 8px;" onclick="window.addBannerPreset('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&q=80')">🖥️ Digital Classroom</button>
+                <button type="button" class="btn sm" style="background:#fff; border:1px solid #a7f3d0; color:#065f46; font-size:0.78rem; padding:4px 8px;" onclick="window.addBannerPreset('https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&q=80')">🎓 Students &amp; Library</button>
               </div>
             </div>
 
@@ -3532,6 +3709,50 @@ const views = {
                 <label style="font-weight:700; color:#064e3b; margin-bottom:4px; display:block;">Primary Call to Action Button Text</label>
                 <input name="hero_cta_text" value="${esc(ws.hero_cta_text || 'Apply for Admission →')}" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600;">
               </div>
+            </div>
+          </div>
+
+          <!-- 2b. Popular Courses on Homepage (होमपेज पर दिखने वाले लोकप्रिय कोर्सेज) -->
+          <div class="card" style="background:#ffffff; border-radius:14px; padding:26px; border:1px solid #e2e8f0; margin-bottom:24px; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h3 style="margin:0 0 4px; color:#064e3b; font-size:1.2rem; display:flex; align-items:center; gap:8px;">
+                  <span>📚</span> Popular Courses on Homepage (होमपेज पर दिखने वाले कोर्सेज)
+                </h3>
+                <p class="muted" style="font-size:0.85rem; margin:0;">
+                  Aapke centre ko council dwara mile sabhi courses yahan hain. Apni website ke homepage par jo-jo courses dikhana chahte hain, unhe tick karein.
+                </p>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button type="button" class="btn sm alt" onclick="window.selectAllPopularCourses(true)">✓ Select All</button>
+                <button type="button" class="btn sm alt" onclick="window.selectAllPopularCourses(false)">✕ Clear All</button>
+              </div>
+            </div>
+
+            <!-- Fee Privacy Notice -->
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.83rem; color:#166534; display:flex; align-items:center; gap:8px;">
+              <span>🔒</span>
+              <span><b>सुरक्षित फीस प्रदर्शन:</b> वेबसाइट पर छात्र को केवल <b>आपकी इंस्टीट्यूट फीस (Student Fee)</b> दिखेगी। काउंसिल की बेस फीस किसी को नहीं दिखेगी।</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;" id="popularCoursesGrid">
+              ${courses.map(co => {
+                const isChecked = featuredSet.has(Number(co.id));
+                const studentFee = co.local_fee_rupees || co.fee_rupees || 4000;
+                return `
+                  <label style="border:1.5px solid ${isChecked ? '#047857' : '#cbd5e1'}; background:${isChecked ? '#f0fdf4' : '#ffffff'}; border-radius:8px; padding:12px; cursor:pointer; display:flex; gap:10px; align-items:flex-start; transition:all 0.2s;" class="popular-course-card">
+                    <input type="checkbox" class="chk-popular-course" value="${co.id}" ${isChecked ? 'checked' : ''} style="margin-top:4px; width:18px; height:18px; accent-color:#047857;">
+                    <div style="flex:1;">
+                      <b style="font-size:0.92rem; color:#0f172a; display:block;">${esc(co.code)}</b>
+                      <span style="font-size:0.82rem; color:#334155; display:block; line-height:1.3; margin-bottom:4px;">${esc(co.name)}</span>
+                      <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem;">
+                        <span style="color:#047857; font-weight:700;">⏱️ ${co.duration_months} Months</span>
+                        <span style="color:#065f46; font-weight:800; background:#dcfce7; padding:2px 8px; border-radius:4px;">Fees: ₹${studentFee.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  </label>
+                `;
+              }).join('')}
             </div>
           </div>
 
@@ -3714,18 +3935,157 @@ const views = {
       };
     }
 
+    // Interactive Slider Management Helpers
+    window.attachSlideEvents = function(row) {
+      const urlInput = row.querySelector('.banner-slide-url-input');
+      const fileInput = row.querySelector('.banner-slide-file-input');
+      const previewImg = row.querySelector('.slide-thumb-preview');
+      const delBtn = row.querySelector('.btn-del-slide');
+
+      if (urlInput && previewImg) {
+        urlInput.oninput = () => { if (urlInput.value.trim()) previewImg.src = urlInput.value.trim(); };
+      }
+      if (fileInput && urlInput && previewImg) {
+        fileInput.onchange = (ev) => {
+          const file = ev.target.files[0];
+          if (!file) return;
+          if (file.size > 4 * 1024 * 1024) { toast('Banner must be under 4MB', false); return; }
+          const reader = new FileReader();
+          reader.onload = (e2) => {
+            urlInput.value = e2.target.result;
+            previewImg.src = e2.target.result;
+          };
+          reader.readAsDataURL(file);
+        };
+      }
+      if (delBtn) {
+        delBtn.onclick = () => {
+          const container = document.getElementById('bannerSlidesContainer');
+          if (container && container.querySelectorAll('.banner-slide-row').length <= 1) {
+            toast('Kam se kam ek banner slide hona zaroori hai!', false);
+            return;
+          }
+          row.remove();
+        };
+      }
+    };
+
+    const slideRows = $('.banner-slide-row', V);
+    slideRows.forEach(r => window.attachSlideEvents(r));
+
+    const btnAddSlide = $('#btnAddBannerSlide');
+    if (btnAddSlide) {
+      btnAddSlide.onclick = () => {
+        const container = document.getElementById('bannerSlidesContainer');
+        if (!container) return;
+        const count = container.querySelectorAll('.banner-slide-row').length + 1;
+        const newRow = document.createElement('div');
+        newRow.className = 'banner-slide-row';
+        newRow.style.cssText = 'background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;';
+        newRow.innerHTML = `
+          <div style="width:110px; height:65px; border-radius:6px; overflow:hidden; border:1px solid #047857; background:#e2e8f0; flex-shrink:0;">
+            <img src="/assets/img/classroom.jpg" class="slide-thumb-preview" style="width:100%; height:100%; object-fit:cover;">
+          </div>
+          <div style="flex:1; min-width:240px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:0.8rem; font-weight:700; color:#334155;">Slide #${count} Image URL / Upload</span>
+              <button type="button" class="btn-del-slide" style="background:none; border:none; color:#dc2626; cursor:pointer; font-size:0.8rem; font-weight:700;">🗑️ Remove Slide</button>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input class="banner-slide-url-input" value="/assets/img/classroom.jpg" placeholder="https://... ya photo upload karein" style="flex:1; padding:7px 10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem;">
+              <label class="btn sm alt" style="cursor:pointer; font-size:0.8rem; padding:6px 10px; margin:0; white-space:nowrap;">
+                📁 Upload
+                <input type="file" class="banner-slide-file-input" accept="image/*" style="display:none;">
+              </label>
+            </div>
+          </div>
+        `;
+        container.appendChild(newRow);
+        window.attachSlideEvents(newRow);
+      };
+    }
+
+    window.addBannerPreset = function(presetUrl) {
+      const container = document.getElementById('bannerSlidesContainer');
+      if (!container) return;
+      const count = container.querySelectorAll('.banner-slide-row').length + 1;
+      const newRow = document.createElement('div');
+      newRow.className = 'banner-slide-row';
+      newRow.style.cssText = 'background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;';
+      newRow.innerHTML = `
+        <div style="width:110px; height:65px; border-radius:6px; overflow:hidden; border:1px solid #047857; background:#e2e8f0; flex-shrink:0;">
+          <img src="${esc(presetUrl)}" class="slide-thumb-preview" style="width:100%; height:100%; object-fit:cover;">
+        </div>
+        <div style="flex:1; min-width:240px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:0.8rem; font-weight:700; color:#334155;">Slide #${count} (Preset)</span>
+            <button type="button" class="btn-del-slide" style="background:none; border:none; color:#dc2626; cursor:pointer; font-size:0.8rem; font-weight:700;">🗑️ Remove Slide</button>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input class="banner-slide-url-input" value="${esc(presetUrl)}" style="flex:1; padding:7px 10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem;">
+            <label class="btn sm alt" style="cursor:pointer; font-size:0.8rem; padding:6px 10px; margin:0; white-space:nowrap;">
+              📁 Upload
+              <input type="file" class="banner-slide-file-input" accept="image/*" style="display:none;">
+            </label>
+          </div>
+        </div>
+      `;
+      container.appendChild(newRow);
+      window.attachSlideEvents(newRow);
+      toast('Preset banner added to slider!');
+    };
+
+    window.selectAllPopularCourses = function(select) {
+      $('.chk-popular-course', V).forEach(chk => {
+        chk.checked = select;
+        const card = chk.closest('.popular-course-card');
+        if (card) {
+          card.style.borderColor = select ? '#047857' : '#cbd5e1';
+          card.style.background = select ? '#f0fdf4' : '#ffffff';
+        }
+      });
+    };
+
+    $('.chk-popular-course', V).forEach(chk => {
+      chk.onchange = () => {
+        const card = chk.closest('.popular-course-card');
+        if (card) {
+          card.style.borderColor = chk.checked ? '#047857' : '#cbd5e1';
+          card.style.background = chk.checked ? '#f0fdf4' : '#ffffff';
+        }
+      };
+    });
+
     // 3. Form Submit
     $('#centreWebsiteSettingsForm').onsubmit = (e) => {
       e.preventDefault();
       guard(async () => {
         const raw = form(e.target);
+
+        // Collect all banner slides
+        const bannerInputs = $('.banner-slide-url-input', V);
+        const collectedBanners = [];
+        bannerInputs.forEach(inp => {
+          const val = inp.value.trim();
+          if (val) collectedBanners.push(val);
+        });
+        if (!collectedBanners.length) collectedBanners.push('/assets/img/classroom.jpg');
+
+        // Collect all selected popular courses
+        const checkedCourses = [];
+        $('.chk-popular-course', V).forEach(chk => {
+          if (chk.checked) checkedCourses.push(+chk.value);
+        });
+
         const payload = {
           theme_primary: raw.theme_primary,
           theme_accent: raw.theme_accent,
           theme_dark: raw.theme_dark,
           theme_light: raw.theme_light,
           theme_border: raw.theme_border,
-          hero_banner_url: raw.hero_banner_url,
+          hero_banners: collectedBanners,
+          hero_banner_url: collectedBanners[0],
+          featured_course_ids: checkedCourses,
           hero_badge: raw.hero_badge,
           hero_title: raw.hero_title,
           hero_title_sub: raw.hero_title_sub,
