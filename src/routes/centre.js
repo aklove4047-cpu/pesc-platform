@@ -460,11 +460,35 @@ router.post('/students', h(async (req, res) => {
 
 router.put('/students/:id', (req, res) => {
   const b = req.body || {};
-  const r = db.prepare(`UPDATE students SET name=?, father_name=?, mobile=?, email=?, dob=?, course_id=?, session=?, fee_total=?, fee_paid=?, photo_url=?
-    WHERE id=? AND centre_id=?`)
-    .run(str(b.name, 100), str(b.father_name, 100), str(b.mobile, 15), str(b.email, 200), str(b.dob, 10), +b.course_id, str(b.session, 20), +b.fee_total || 12000, +b.fee_paid || 0, str(b.photo_url, 500) || null, +req.params.id, cid(req));
-  if (!r.changes) throw new HttpError(404, 'Student not found');
-  res.json({ ok: true });
+  const updates = [];
+  const vals = [];
+  if (b.name !== undefined) { updates.push('name=?'); vals.push(str(b.name, 100)); }
+  if (b.father_name !== undefined) { updates.push('father_name=?'); vals.push(str(b.father_name, 100)); }
+  if (b.mother_name !== undefined) { updates.push('mother_name=?'); vals.push(str(b.mother_name, 100)); }
+  if (b.gender !== undefined) { updates.push('gender=?'); vals.push(str(b.gender, 20)); }
+  if (b.category !== undefined) { updates.push('category=?'); vals.push(str(b.category, 20)); }
+  if (b.blood_group !== undefined) { updates.push('blood_group=?'); vals.push(str(b.blood_group, 10)); }
+  if (b.mobile !== undefined) { updates.push('mobile=?'); vals.push(str(b.mobile, 15)); }
+  if (b.email !== undefined) { updates.push('email=?'); vals.push(str(b.email, 200)); }
+  if (b.dob !== undefined) { updates.push('dob=?'); vals.push(str(b.dob, 10)); }
+  if (b.course_id !== undefined && !isNaN(+b.course_id)) { updates.push('course_id=?'); vals.push(+b.course_id); }
+  if (b.session !== undefined) { updates.push('session=?'); vals.push(str(b.session, 20)); }
+  if (b.fee_total !== undefined && !isNaN(+b.fee_total)) { updates.push('fee_total=?'); vals.push(+b.fee_total); }
+  if (b.fee_paid !== undefined && !isNaN(+b.fee_paid)) { updates.push('fee_paid=?'); vals.push(+b.fee_paid); }
+  if (b.address !== undefined || b.local_address !== undefined) { updates.push('address=?'); vals.push(str(b.address || b.local_address, 300)); }
+  if (b.qualifications !== undefined || b.academic_qualifications !== undefined) {
+    const rawQ = b.academic_qualifications || b.qualifications;
+    updates.push('qualifications=?'); vals.push(typeof rawQ === 'string' ? rawQ : JSON.stringify(rawQ));
+  }
+  if (b.photo_url !== undefined || b.photo !== undefined) { updates.push('photo_url=?'); vals.push(str(b.photo_url || b.photo, 500)); }
+
+  if (updates.length > 0) {
+    vals.push(+req.params.id, cid(req));
+    const r = db.prepare(`UPDATE students SET ${updates.join(', ')} WHERE id=? AND centre_id=?`).run(...vals);
+    if (!r.changes) throw new HttpError(404, 'Student not found');
+  }
+  const s = db.prepare('SELECT * FROM students WHERE id=? AND centre_id=?').get(+req.params.id, cid(req));
+  res.json({ ok: true, message: 'Student details & fees updated successfully!', student: s });
 });
 
 router.delete('/students/:id', (req, res) => {
@@ -628,11 +652,8 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM marksheets WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
 
-  // 🔒 FEE LOCK: Marksheet tab tak issue nahi hogi jab tak poori fee jama na ho
+  // Fee info (advisory only - do not block marksheet issuance)
   const feePending = Math.max(0, (s.fee_total || 12000) - (s.fee_paid || 0));
-  if (feePending > 0) {
-    throw new HttpError(402, `❌ अंकतालिका जारी नहीं हो सकती!\n\nछात्र की फीस अभी बकाया है (₹${feePending.toLocaleString('en-IN')} शेष)।\nपहले पूरी फीस जमा करें, उसके बाद ही अंकतालिका जारी होगी।`);
-  }
 
   const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
   const termVal = req.body.term || (isSem ? 'Semester 1' : 'Annual');
@@ -730,11 +751,8 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM certificates WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
 
-  // 🔒 FEE LOCK: Certificate tab tak issue nahi hoga jab tak poori fee jama na ho
+  // Fee info (advisory only - do not block certificate issuance)
   const certFeePending = Math.max(0, (s.fee_total || 12000) - (s.fee_paid || 0));
-  if (certFeePending > 0) {
-    throw new HttpError(402, `❌ प्रमाणपत्र जारी नहीं हो सकता!\n\nछात्र की फीस अभी बकाया है (₹${certFeePending.toLocaleString('en-IN')} शेष)।\nपहले पूरी फीस जमा करें, उसके बाद ही प्रमाणपत्र जारी होगा।`);
-  }
 
   const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
   if (isSem) {
@@ -976,7 +994,8 @@ router.get('/wallet', (req, res) => {
   const ledger = db.prepare('SELECT * FROM wallet_transactions WHERE centre_id=? ORDER BY id DESC LIMIT 50').all(c);
   const feeList = fees.all();
   const lowest = Math.min(...Object.values(feeList).filter((x) => x > 0), Infinity);
-  res.json({ balance_paise: w.balance_paise, ledger, fees: feeList, low_balance: w.balance_paise < lowest * 5 });
+  const balInr = Math.round((w.balance_paise || 0) / 100);
+  res.json({ ok: true, balance: balInr, wallet_balance: balInr, wallet_balance_inr: balInr, balance_paise: w.balance_paise || 0, ledger, fees: feeList, low_balance: w.balance_paise < lowest * 5 });
 });
 
 // Fees the Head Office currently charges, and whether this centre can afford each one right now.

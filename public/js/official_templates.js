@@ -210,10 +210,18 @@
 
     const isMale = s.gender && s.gender.toLowerCase() === 'male';
     const isFemale = s.gender && s.gender.toLowerCase() === 'female';
-    const cat = s.category || '';
+    const cat = String(s.category || '').toUpperCase();
     const durationStr = s.duration_months ? `${Math.round(s.duration_months/12) || 1} Year` : '1 Year';
 
-    const quals = s.academic_qualifications || {};
+    let quals = s.academic_qualifications || {};
+    if (typeof quals === 'string') {
+      try { quals = JSON.parse(quals); } catch (_) { quals = {}; }
+    }
+    if ((!quals || !Object.keys(quals).length) && s.qualifications) {
+      try {
+        quals = typeof s.qualifications === 'string' ? JSON.parse(s.qualifications) : s.qualifications;
+      } catch (_) { quals = {}; }
+    }
     const q10 = quals.tenth || quals['10th'] || {};
     const q12 = quals.twelfth || quals['12th'] || {};
     const qGrad = quals.graduation || {};
@@ -357,22 +365,22 @@
                 <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">High School (10<sup>th</sup>)</td>
                 <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.board || '—')}</td>
                 <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.year || '—')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.marks || '—')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(q10.pct || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q10.marks || q10.marks_obt || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(q10.pct || q10.percentage || '—')}</td>
               </tr>
               <tr style="background:#f8fafc;">
                 <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">Intermediate (12<sup>th</sup>)</td>
                 <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.board || '—')}</td>
                 <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.year || '—')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.marks || '—')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(q12.pct || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(q12.marks || q12.marks_obt || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(q12.pct || q12.percentage || '—')}</td>
               </tr>
               <tr>
                 <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">Graduation</td>
                 <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.board || '—')}</td>
                 <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.year || '—')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.marks || '—')}</td>
-                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(qGrad.pct || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8;">${esc(qGrad.marks || qGrad.marks_obt || '—')}</td>
+                <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">${esc(qGrad.pct || qGrad.percentage || '—')}</td>
               </tr>
               <tr style="background:#f8fafc;">
                 <td style="padding:5px 6px; border:1px solid #94a3b8; font-weight:700;">Others</td>

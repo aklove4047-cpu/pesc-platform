@@ -4901,14 +4901,36 @@ export default {
           const body = await request.json();
           if (body.name !== undefined) stu.name = String(body.name).trim();
           if (body.father_name !== undefined) stu.father_name = String(body.father_name).trim();
+          if (body.mother_name !== undefined) stu.mother_name = String(body.mother_name).trim();
+          if (body.gender !== undefined) stu.gender = String(body.gender).trim();
+          if (body.category !== undefined) stu.category = String(body.category).trim();
+          if (body.blood_group !== undefined) stu.blood_group = String(body.blood_group).trim();
           if (body.mobile !== undefined) stu.mobile = String(body.mobile).trim();
           if (body.email !== undefined) stu.email = String(body.email).trim().toLowerCase();
+          if (body.dob !== undefined) stu.dob = String(body.dob).trim();
+          if (body.course_id !== undefined && !isNaN(+body.course_id)) {
+            stu.course_id = +body.course_id;
+            const co = store.courses.find(c => c.id === +body.course_id);
+            if (co) {
+              stu.course_name = co.name;
+              stu.course = co.name;
+            }
+          }
+          if (body.session !== undefined) stu.session = String(body.session).trim();
+          if (body.fee_total !== undefined && !isNaN(+body.fee_total)) stu.fee_total = +body.fee_total;
+          if (body.fee_paid !== undefined && !isNaN(+body.fee_paid)) stu.fee_paid = +body.fee_paid;
+          if (body.address !== undefined || body.local_address !== undefined) {
+            stu.address = String(body.address || body.local_address).trim();
+          }
+          if (body.qualifications !== undefined || body.academic_qualifications !== undefined) {
+            stu.qualifications = body.qualifications || body.academic_qualifications;
+          }
           if (body.photo !== undefined || body.photo_url !== undefined) {
             stu.photo = String(body.photo || body.photo_url || '').trim();
             stu.photo_url = stu.photo;
           }
           await persistToKV(env, 'students', store.students);
-          return jsonResponse({ ok: true, message: 'Student details & photo saved successfully!', student: stu });
+          return jsonResponse({ ok: true, message: 'Student details & fees saved successfully!', student: stu });
         }
         if (request.method === 'DELETE') {
           const sidNum = Number(sId);

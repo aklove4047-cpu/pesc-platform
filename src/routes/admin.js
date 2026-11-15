@@ -660,6 +660,18 @@ router.post('/certificates/:id/edit', h(async (req, res) => {
   res.json({ ok: true, message: 'Certificate details updated successfully!', certificate: cert });
 }));
 
+// Admin Marksheets List
+router.get('/marksheets', (req, res) => {
+  const rows = db.prepare(`SELECT m.*, s.name AS student, s.name AS student_name, s.father_name, s.mother_name, s.student_code, s.photo_url,
+    co.name AS course, co.name AS course_name, co.code AS course_code, ce.name AS centre_name, ce.centre_code
+    FROM marksheets m
+    LEFT JOIN students s ON s.id=m.student_id
+    LEFT JOIN courses co ON co.id=m.course_id
+    LEFT JOIN centres ce ON ce.id=m.centre_id
+    ORDER BY m.id DESC LIMIT 300`).all();
+  res.json({ ok: true, marksheets: rows });
+});
+
 // Admin Edit Marksheet Details & Marks (Signatures & Seals Permanently Locked)
 router.post('/marksheets/:id/edit', h(async (req, res) => {
   const mid = +req.params.id;

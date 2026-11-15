@@ -50,10 +50,14 @@ window.refreshCentreWalletBadge = async function(knownBalance) {
       bal = (w && w.balance !== undefined) ? w.balance : ((w && w.wallet_balance !== undefined) ? w.wallet_balance : ((w && w.balance_paise !== undefined) ? w.balance_paise / 100 : 0));
     }
     const formatted = '₹' + (+bal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedSimple = '₹' + (+bal || 0).toLocaleString('en-IN');
     const el = document.getElementById('topbarWalletAmount');
     if (el) el.textContent = formatted;
     const badge = document.getElementById('centreWalletBadge');
     if (badge) badge.textContent = formatted;
+    const dashW = document.getElementById('dashWalletDisplay');
+    if (dashW) dashW.textContent = formatted;
+    document.querySelectorAll('.topbar-wallet-val, .wallet-balance-val').forEach(elem => elem.textContent = formatted);
     if (window._currentCentre) window._currentCentre.wallet_balance = +bal;
     if (typeof currentCentre !== 'undefined' && currentCentre) currentCentre.wallet_balance = +bal;
     return +bal;
@@ -951,12 +955,16 @@ window.getStudentMarksheetInfo = function(s, mrkList) {
 const views = {
   // 1. My Students / Dashboard
   async MyStudents() {
-    const [dash, sData] = await Promise.all([
+    const [dash, sData, mrkData] = await Promise.all([
       api('/api/centre/dashboard').catch(() => ({})),
-      api('/api/centre/students').catch(() => ({ students: [] }))
+      api('/api/centre/students').catch(() => ({ students: [] })),
+      api('/api/centre/marksheets').catch(() => ({ marksheets: [] }))
     ]);
     const c = dash.centre || currentCentre || {};
     const students = sData.students || [];
+    if (mrkData && mrkData.marksheets) {
+      window._centreMarksheets = mrkData.marksheets;
+    }
 
     const bal = (dash.wallet_balance_inr !== undefined) ? dash.wallet_balance_inr : ((dash.wallet_paise || 0) / 100);
     window.refreshCentreWalletBadge(bal);
@@ -4175,6 +4183,7 @@ function renderStudentTable(students, isPassout = false) {
           <div style="position:relative; display:inline-block;">
             <button type="button" class="btn sm" style="background:#475569; color:#fff; font-weight:700; padding:6px 12px; border-radius:6px;" onclick="toggleStudentActionMenu(event, ${r.id})">Action ▾</button>
             <div id="stuActionDropdown_${r.id}" class="stu-action-menu" style="display:none; position:absolute; right:0; top:100%; margin-top:4px; z-index:99999; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.18); min-width:220px; text-align:left; overflow:hidden;">
+              <a href="javascript:void(0)" onclick="openEditStudentModal(${r.id})" style="display:block; padding:9px 14px; color:#4f46e5; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">✏️ Edit Student Details &amp; Fees</a>
               <a href="javascript:void(0)" onclick="quickViewStudent(${r.id})" style="display:block; padding:9px 14px; color:#1e293b; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">👁️ View Student Details</a>
               <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0284c7; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📄 Download Admission Form (A4)</a>
               <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0f766e; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">🪪 Download / Print ID Card</a>
@@ -4209,14 +4218,12 @@ function renderStudentTable(students, isPassout = false) {
       return `<span style="color:${pend > 0 ? '#ea580c' : '#16a34a'}; font-weight:700;">₹${pend.toLocaleString('en-IN')}</span>`;
     }],
     ['Actions', (r) => {
-      const fPend = Math.max(0, (r.fee_total || 12000) - (r.fee_paid || 0));
-      const feeLocked = fPend > 0;
-      const certBtn = feeLocked
-        ? `<button class="btn sm" style="background:#94a3b8;color:#fff;font-weight:700;cursor:not-allowed;opacity:0.65;" title="Fee baki hai - Rs.${fPend} pending" onclick="alert('Marksheet/Certificate issue nahi ho sakta!\\nFee baki hai: Rs.${fPend}\\nPehle Fees Collection se poori fee jama karen.')">🔒 Cert</button>`
-        : (r.certificate_id ? `<a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm gold" style="font-weight:700;text-decoration:none;" title="Print Certificate">🎓 Cert</a>` : `<button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Issue/Print Certificate">🎓 Cert</button>`);
-      const mrkBtn = feeLocked
-        ? `<button class="btn sm" style="background:#94a3b8;color:#fff;font-weight:700;cursor:not-allowed;opacity:0.65;" title="Fee baki hai - Rs.${fPend} pending" onclick="alert('Marksheet/Certificate issue nahi ho sakta!\\nFee baki hai: Rs.${fPend}\\nPehle Fees Collection se poori fee jama karen.')">🔒 Mrk</button>`
-        : (r.marksheet_id ? `<a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0284c7;color:#fff;font-weight:700;text-decoration:none;" title="Print Marksheet">📊 Mrk</a>` : `<button class="btn sm" style="background:#0284c7;color:#fff;font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Issue/Print Marksheet">📊 Mrk</button>`);
+      const certBtn = r.certificate_id 
+        ? `<a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm gold" style="font-weight:700;text-decoration:none;" title="Print Certificate">🎓 Cert</a>` 
+        : `<button class="btn sm gold" onclick="viewIssuedStudentCert(${r.id})" title="Issue / Print Certificate">🎓 Cert</button>`;
+      const mrkBtn = r.marksheet_id 
+        ? `<a href="/print?type=marksheet&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0284c7;color:#fff;font-weight:700;text-decoration:none;" title="Print Marksheet">📊 Mrk</a>` 
+        : `<button class="btn sm" style="background:#0284c7;color:#fff;font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Issue / Print Marksheet">📊 Mrk</button>`;
       return `
       <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
         <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Download Admission Form (A4)">📄 Form</a>
@@ -4226,6 +4233,7 @@ function renderStudentTable(students, isPassout = false) {
         <div style="position:relative; display:inline-block;">
           <button type="button" class="btn sm" style="background:#475569; color:#fff; font-weight:700; padding:6px 12px; border-radius:6px;" onclick="toggleStudentActionMenu(event, ${r.id})">Action ▾</button>
           <div id="stuActionDropdown_${r.id}" class="stu-action-menu" style="display:none; position:absolute; right:0; top:100%; margin-top:4px; z-index:99999; background:#fff; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.18); min-width:220px; text-align:left; overflow:hidden;">
+            <a href="javascript:void(0)" onclick="openEditStudentModal(${r.id})" style="display:block; padding:9px 14px; color:#4f46e5; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">✏️ Edit Student Details &amp; Fees</a>
             <a href="javascript:void(0)" onclick="quickViewStudent(${r.id})" style="display:block; padding:9px 14px; color:#1e293b; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">👁️ View Student Details</a>
             <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0284c7; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">📄 Download Admission Form (A4)</a>
             <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" style="display:block; padding:9px 14px; color:#0f766e; font-weight:700; font-size:0.86rem; text-decoration:none; border-bottom:1px solid #f1f5f9;">🪪 Download / Print ID Card</a>
@@ -4426,6 +4434,222 @@ window.quickViewStudent = function(id) {
   showAdmissionFormModal(id);
 };
 
+// Edit Student Particulars & Fees Modal
+window.openEditStudentModal = async function(id) {
+  try {
+    const existing = document.getElementById('centreEditStudentModal');
+    if (existing) existing.remove();
+
+    let stu = (window._currentStudents || []).find(s => Number(s.id) === Number(id));
+    if (!stu) {
+      const res = await api('/api/centre/students/' + id).catch(() => null);
+      if (res && res.student) stu = res.student;
+    }
+    if (!stu) {
+      alert('छात्र का रिकॉर्ड नहीं मिला!');
+      return;
+    }
+
+    let courses = window._currentCourses || [];
+    if (!courses.length) {
+      const cRes = await api('/api/centre/courses').catch(() => null);
+      if (cRes && cRes.courses) {
+        courses = cRes.courses;
+        window._currentCourses = courses;
+      }
+    }
+
+    const safeEsc = (typeof window.esc === 'function') ? window.esc : ((s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
+    const currentFeeTotal = stu.fee_total !== undefined ? stu.fee_total : 12000;
+    const currentFeePaid = stu.fee_paid !== undefined ? stu.fee_paid : 0;
+    const currentFeePending = Math.max(0, currentFeeTotal - currentFeePaid);
+
+    const modal = document.createElement('div');
+    modal.id = 'centreEditStudentModal';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.78); display:flex; align-items:center; justify-content:center; z-index:9999999 !important; padding:16px; overflow-y:auto;';
+
+    modal.innerHTML = `
+      <div style="background:#ffffff; border-radius:14px; max-width:820px; width:100%; max-height:92vh; overflow-y:auto; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.45); position:relative;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1.5px solid #e2e8f0; padding-bottom:10px;">
+          <div>
+            <h3 style="margin:0; color:#064e3b; font-size:1.35rem;">✏️ Edit Student Details &amp; Fees (छात्र विवरण व फीस संपादन)</h3>
+            <span class="muted" style="font-size:0.85rem;">Candidate: <b>${safeEsc(stu.name)}</b> &bull; Code: <b>${safeEsc(stu.student_code || stu.roll_no || 'STU01')}</b></span>
+          </div>
+          <button type="button" class="btn danger sm" onclick="document.getElementById('centreEditStudentModal').remove()">✕ Close</button>
+        </div>
+
+        <form id="centreEditStudentForm">
+          <!-- Fees Adjustment Box (Prominently Highlighted) -->
+          <div style="background:#fefce8; border:2px solid #eab308; border-radius:10px; padding:16px; margin-bottom:18px;">
+            <h4 style="margin:0 0 10px; color:#854d0e; font-size:1.02rem; display:flex; align-items:center; gap:8px;">
+              💰 Course Fees &amp; Payment Adjustment (कोर्स फीस व भुगतान)
+            </h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:center;">
+              <div>
+                <label style="font-size:0.85rem; font-weight:800; color:#475569; display:block; margin-bottom:4px;">Total Course Fee (₹)</label>
+                <input type="number" id="editStuFeeTotal" name="fee_total" value="${currentFeeTotal}" required style="width:100%; padding:10px; border:1.5px solid #cbd5e1; border-radius:6px; font-weight:700; font-size:1.05rem;">
+              </div>
+              <div>
+                <label style="font-size:0.85rem; font-weight:800; color:#475569; display:block; margin-bottom:4px;">Fee Paid by Student (₹)</label>
+                <input type="number" id="editStuFeePaid" name="fee_paid" value="${currentFeePaid}" required style="width:100%; padding:10px; border:1.5px solid #cbd5e1; border-radius:6px; font-weight:700; color:#16a34a; font-size:1.05rem;">
+              </div>
+              <div>
+                <label style="font-size:0.85rem; font-weight:800; color:#475569; display:block; margin-bottom:4px;">Pending Balance (₹)</label>
+                <div id="lblEditStuPending" style="padding:10px; background:#ffffff; border:1.5px solid #cbd5e1; border-radius:6px; font-weight:800; color:${currentFeePending > 0 ? '#ea580c' : '#16a34a'}; font-size:1.05rem;">
+                  ₹${currentFeePending.toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+            <span class="muted" style="font-size:0.8rem; display:block; margin-top:8px;">
+              💡 यदि छात्र की वास्तविक कुल फीस या जमा राशि गलत दर्ज हो गई थी, तो यहाँ सही करके सहेजें।
+            </span>
+          </div>
+
+          <!-- Personal Information -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Candidate Name (पूरा नाम) *</label>
+              <input type="text" name="name" value="${safeEsc(stu.name || '')}" required style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Father's Name (पिता का नाम)</label>
+              <input type="text" name="father_name" value="${safeEsc(stu.father_name || '')}" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Mother's Name (माता का नाम)</label>
+              <input type="text" name="mother_name" value="${safeEsc(stu.mother_name || '')}" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Mobile Number (मोबाइल नं.)</label>
+              <input type="text" name="mobile" value="${safeEsc(stu.mobile || '')}" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Email Address</label>
+              <input type="email" name="email" value="${safeEsc(stu.email || '')}" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Date of Birth (जन्म तिथि - YYYY-MM-DD)</label>
+              <input type="date" name="dob" value="${safeEsc(stu.dob || '')}" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Gender (लिंग)</label>
+              <select name="gender" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="Female" ${String(stu.gender || '').toLowerCase() === 'female' ? 'selected' : ''}>Female (महिला)</option>
+                <option value="Male" ${String(stu.gender || '').toLowerCase() === 'male' ? 'selected' : ''}>Male (पुरुष)</option>
+                <option value="Other" ${String(stu.gender || '').toLowerCase() === 'other' ? 'selected' : ''}>Other</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Category (वर्ग)</label>
+              <select name="category" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="General" ${['gen', 'general'].includes(String(stu.category || '').toLowerCase()) ? 'selected' : ''}>General</option>
+                <option value="OBC" ${String(stu.category || '').toLowerCase() === 'obc' ? 'selected' : ''}>OBC</option>
+                <option value="SC" ${String(stu.category || '').toLowerCase() === 'sc' ? 'selected' : ''}>SC</option>
+                <option value="ST" ${String(stu.category || '').toLowerCase() === 'st' ? 'selected' : ''}>ST</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Blood Group</label>
+              <input type="text" name="blood_group" value="${safeEsc(stu.blood_group || '')}" placeholder="e.g. O+, B+, A+" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Session</label>
+              <input type="text" name="session" value="${safeEsc(stu.session || '2026-27')}" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+          </div>
+
+          <!-- Course & Address -->
+          <div style="display:grid; grid-template-columns:1fr; gap:14px; margin-bottom:18px;">
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Course (पाठ्यक्रम)</label>
+              <select name="course_id" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+                ${courses.map(co => `<option value="${co.id}" ${Number(stu.course_id) === Number(co.id) ? 'selected' : ''}>${safeEsc(co.code)} - ${safeEsc(co.name)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Permanent Address (स्थायी पता)</label>
+              <textarea name="address" rows="2" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">${safeEsc(stu.address || stu.local_address || '')}</textarea>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn alt" onclick="document.getElementById('centreEditStudentModal').remove()">Cancel</button>
+            <button type="submit" class="btn gold" style="font-weight:800; padding:10px 24px;">💾 Save Student Details &amp; Fees</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const fTot = modal.querySelector('#editStuFeeTotal');
+    const fPd = modal.querySelector('#editStuFeePaid');
+    const lblPend = modal.querySelector('#lblEditStuPending');
+    const updatePending = () => {
+      const tot = +fTot.value || 0;
+      const pd = +fPd.value || 0;
+      const pend = Math.max(0, tot - pd);
+      lblPend.textContent = '₹' + pend.toLocaleString('en-IN');
+      lblPend.style.color = pend > 0 ? '#ea580c' : '#16a34a';
+    };
+    fTot.addEventListener('input', updatePending);
+    fPd.addEventListener('input', updatePending);
+
+    modal.querySelector('#centreEditStudentForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = {
+        name: fd.get('name'),
+        father_name: fd.get('father_name'),
+        mother_name: fd.get('mother_name'),
+        mobile: fd.get('mobile'),
+        email: fd.get('email'),
+        dob: fd.get('dob'),
+        gender: fd.get('gender'),
+        category: fd.get('category'),
+        blood_group: fd.get('blood_group'),
+        session: fd.get('session'),
+        course_id: +fd.get('course_id'),
+        address: fd.get('address'),
+        fee_total: +fd.get('fee_total') || 0,
+        fee_paid: +fd.get('fee_paid') || 0
+      };
+
+      try {
+        const res = await api('/api/centre/students/' + id, {
+          method: 'PUT',
+          body: payload
+        });
+
+        // Update local object in _currentStudents
+        if (window._currentStudents) {
+          const sIdx = window._currentStudents.findIndex(x => Number(x.id) === Number(id));
+          if (sIdx >= 0) {
+            window._currentStudents[sIdx] = { ...window._currentStudents[sIdx], ...payload };
+            const selCo = courses.find(co => Number(co.id) === Number(payload.course_id));
+            if (selCo) {
+              window._currentStudents[sIdx].course = selCo.name;
+              window._currentStudents[sIdx].course_name = selCo.name;
+            }
+          }
+        }
+
+        modal.remove();
+        if (typeof toast === 'function') toast('छात्र विवरण एवं फीस सफलतापूर्वक सहेज दिए गए!');
+        else alert('✅ छात्र विवरण एवं फीस सफलतापूर्वक सहेज दिए गए!');
+
+        if (typeof views !== 'undefined' && typeof views.MyStudents === 'function') {
+          views.MyStudents();
+        }
+      } catch (err) {
+        alert('त्रुटि: ' + (err.message || 'छात्र विवरण सहेजने में विफल'));
+      }
+    };
+  } catch (err) {
+    console.error('openEditStudentModal error:', err);
+  }
+};
+
 window.printReceipt = function(id) {
   const stu = (window._currentStudents || []).find(s => s.id == id);
   if (!stu) return;
@@ -4445,12 +4669,8 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
   const regNo = stu.student_code || (opt ? opt.dataset.code : '');
   const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 200;
 
-  // 🔒 FEE LOCK: Certificate issue se pehle poori fee check karo
+  // Fee check (informational - do not block issuance)
   const stuFeePending = Math.max(0, (stu.fee_total || 12000) - (stu.fee_paid || 0));
-  if (stuFeePending > 0) {
-    alert(`🔒 प्रमाणपत्र जारी नहीं हो सकता!\n\n❌ छात्र की फीस अभी बकाया है:\n👤 छात्र: ${stuName} (${regNo})\n💰 बकाया फीस: ₹${stuFeePending.toLocaleString('en-IN')}\n\nपहले "Fees Collection" मॉड्यूल से पूरी फीस जमा करें, उसके बाद ही प्रमाणपत्र जारी हो सकेगा।`);
-    return;
-  }
 
   const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
   if (!mrkInfo.isFullyIssued) {
@@ -4458,7 +4678,7 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
     return;
   }
 
-  const confirmed = confirm(`⚠️ प्रमाणपत्र जारीकरण एवं सत्यापन (Official Certificate Issuance):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) का अधिकृत प्रमाणपत्र जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित प्रमाणपत्र जनरेट हो जाएगा और प्रिंट/PDF विकल्प खुल जाएगा।`);
+  const confirmed = confirm(`⚠️ प्रमाणपत्र जारीकरण एवं सत्यापन (Official Certificate Issuance):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) का अधिकृत प्रमाणपत्र जारी करना चाहते हैं?${stuFeePending > 0 ? `\n(सूचना: छात्र की ₹${stuFeePending.toLocaleString('en-IN')} फीस बकाया है)` : ''}\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित प्रमाणपत्र जनरेट हो जाएगा और प्रिंट/PDF विकल्प खुल जाएगा।`);
   if (!confirmed) return;
 
   try {
@@ -4471,8 +4691,7 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
 
     if (res.wallet_balance !== undefined) {
       if (currentCentre) currentCentre.wallet_balance = res.wallet_balance;
-      const wEl = document.getElementById('centreWalletBadge');
-      if (wEl) wEl.textContent = `₹${res.wallet_balance}`;
+      window.refreshCentreWalletBadge(res.wallet_balance);
     }
 
     window._issuedCerts = window._issuedCerts || {};
@@ -5295,12 +5514,8 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
   const regNo = stu.student_code || (opt ? opt.dataset.code : '');
   const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 100;
 
-  // 🔒 FEE LOCK: Marksheet issue se pehle poori fee check karo
+  // Fee check (informational - do not block issuance)
   const mrkFeePending = Math.max(0, (stu.fee_total || 12000) - (stu.fee_paid || 0));
-  if (mrkFeePending > 0) {
-    alert(`🔒 अंकतालिका जारी नहीं हो सकती!\n\n❌ छात्र की फीस अभी बकाया है:\n👤 छात्र: ${stuName} (${regNo})\n💰 बकाया फीस: ₹${mrkFeePending.toLocaleString('en-IN')}\n\nपहले "Fees Collection" मॉड्यूल से पूरी फीस जमा करें, उसके बाद ही अंकतालिका जारी हो सकेगी।`);
-    return;
-  }
 
   const termSel = $('#mrkTermSelect');
   const chosenTerm = (termSel && termSel.value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
@@ -5315,7 +5530,7 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
     }
   }
 
-  const confirmed = confirm(`⚠️ अंकतालिका जारीकरण एवं सत्यापन (${chosenTerm}):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) की अधिकृत अंकतालिका जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जनरेट हो जाएगी और प्रिंट/PDF विकल्प खुल जाएगा।`);
+  const confirmed = confirm(`⚠️ अंकतालिका जारीकरण एवं सत्यापन (${chosenTerm}):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) की अधिकृत अंकतालिका जारी करना चाहते हैं?${mrkFeePending > 0 ? `\n(सूचना: छात्र की ₹${mrkFeePending.toLocaleString('en-IN')} फीस बकाया है)` : ''}\n\nभुगतान होते ही हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जनरेट हो जाएगी और प्रिंट/PDF विकल्प खुल जाएगा।`);
   if (!confirmed) return;
 
   try {
@@ -5347,8 +5562,7 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
 
     if (res.wallet_balance !== undefined) {
       if (currentCentre) currentCentre.wallet_balance = res.wallet_balance;
-      const wEl = document.getElementById('centreWalletBadge');
-      if (wEl) wEl.textContent = `₹${res.wallet_balance}`;
+      window.refreshCentreWalletBadge(res.wallet_balance);
     }
 
     if (res.marksheet) {
@@ -5542,7 +5756,10 @@ async function updateMrkPreview(targetStudentId) {
               <span style="font-size:0.85rem; color:#713f12;">हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जारी करने के लिए सेंटर वॉलेट से ₹${currentFee} कटेगा।</span>
             </div>
           </div>
-          <div style="display:flex; align-items:center; gap:12px;">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:12px 18px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">
+              ✏️ Edit Marksheet &amp; Marks First
+            </button>
             <span style="background:#dc2626; color:#ffffff; font-weight:900; font-size:1.25rem; padding:8px 20px; border-radius:20px; box-shadow:0 2px 8px rgba(220,38,38,0.3);">₹${currentFee}</span>
             <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 26px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.4); border:none; cursor:pointer;">
               ⚡ Pay ₹${currentFee} from Wallet &amp; Issue (पैसे वॉलेट से काटें व जारी करें)
@@ -5569,8 +5786,8 @@ async function updateMrkPreview(targetStudentId) {
   }
 
   if (printWrap) {
+    printWrap.style.display = 'block';
     if (isIssued) {
-      printWrap.style.display = 'block';
       printWrap.innerHTML = `
         <div style="display:flex; gap:8px;">
           <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
@@ -5579,8 +5796,11 @@ async function updateMrkPreview(targetStudentId) {
         </div>
       `;
     } else {
-      printWrap.style.display = 'none';
-      printWrap.innerHTML = '';
+      printWrap.innerHTML = `
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
+        </div>
+      `;
     }
   }
 
