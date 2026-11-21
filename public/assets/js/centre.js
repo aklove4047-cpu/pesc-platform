@@ -955,15 +955,19 @@ window.getStudentMarksheetInfo = function(s, mrkList) {
 const views = {
   // 1. My Students / Dashboard
   async MyStudents() {
-    const [dash, sData, mrkData] = await Promise.all([
+    const [dash, sData, mrkData, cData] = await Promise.all([
       api('/api/centre/dashboard').catch(() => ({})),
       api('/api/centre/students').catch(() => ({ students: [] })),
-      api('/api/centre/marksheets').catch(() => ({ marksheets: [] }))
+      api('/api/centre/marksheets').catch(() => ({ marksheets: [] })),
+      api('/api/centre/courses').catch(() => ({ courses: [] }))
     ]);
     const c = dash.centre || currentCentre || {};
     const students = sData.students || [];
     if (mrkData && mrkData.marksheets) {
       window._centreMarksheets = mrkData.marksheets;
+    }
+    if (cData && cData.courses) {
+      window._currentCourses = cData.courses;
     }
 
     const bal = (dash.wallet_balance_inr !== undefined) ? dash.wallet_balance_inr : ((dash.wallet_paise || 0) / 100);
@@ -3731,8 +3735,9 @@ const views = {
                   Aapke centre ko council dwara mile sabhi courses yahan hain. Apni website ke homepage par jo-jo courses dikhana chahte hain, unhe tick karein.
                 </p>
               </div>
-              <div style="display:flex; gap:8px; align-items:center;">
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                 <button type="button" class="btn sm alt" onclick="window.selectAllPopularCourses(true)">✓ Select All</button>
+                <button type="button" class="btn sm alt" onclick="window.selectTopCourses(6)">⭐ Top 6 Only</button>
                 <button type="button" class="btn sm alt" onclick="window.selectAllPopularCourses(false)">✕ Clear All</button>
               </div>
             </div>
@@ -4051,6 +4056,20 @@ const views = {
           card.style.borderColor = select ? '#047857' : '#cbd5e1';
           card.style.background = select ? '#f0fdf4' : '#ffffff';
         }
+      });
+    };
+
+    window.selectTopCourses = function(count) {
+      let idx = 0;
+      $('.chk-popular-course', V).forEach(chk => {
+        const isSelected = idx < count;
+        chk.checked = isSelected;
+        const card = chk.closest('.popular-course-card');
+        if (card) {
+          card.style.borderColor = isSelected ? '#047857' : '#cbd5e1';
+          card.style.background = isSelected ? '#f0fdf4' : '#ffffff';
+        }
+        idx++;
       });
     };
 
@@ -4667,7 +4686,11 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
   const stu = (window._currentStudents || []).find(s => s.id == studentId) || {};
   const stuName = stu.name || (opt ? opt.dataset.name : 'छात्र');
   const regNo = stu.student_code || (opt ? opt.dataset.code : '');
-  const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 200;
+  let fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount) && +feeAmount > 0) ? +feeAmount : null;
+  if (!fee) {
+    const cMatch = (window._currentCourses || []).find(c => Number(c.id) === Number(stu.course_id));
+    fee = cMatch ? (cMatch.single_fee_rupees || 200) : 200;
+  }
 
   // Fee check (informational - do not block issuance)
   const stuFeePending = Math.max(0, (stu.fee_total || 12000) - (stu.fee_paid || 0));
@@ -4813,11 +4836,13 @@ async function updateCertPreview(targetStudentId) {
   const isSemester = certEvalPattern === 'semester';
 
   const courses = window._currentCourses || [];
+  const stuCourseId = Number(stu.course_id || (opt ? opt.dataset.courseId : 0));
+  const target = String(course || '').toUpperCase().trim();
   const foundCourse = courses.find(c => {
+    if (stuCourseId && Number(c.id) === stuCourseId) return true;
     const cCode = String(c.code || '').toUpperCase().trim();
     const cName = String(c.name || '').toUpperCase().trim();
-    const target = String(course || '').toUpperCase().trim();
-    return cCode === target || cName === target || (cCode && target.includes(cCode)) || (cName && target.includes(cName));
+    return (cCode && cCode === target) || (cName && cName === target) || (cCode && target.includes(cCode)) || (cName && target.includes(cName));
   });
   const singleFee = foundCourse ? (foundCourse.single_fee_rupees !== undefined ? foundCourse.single_fee_rupees : Math.round((foundCourse.single_fee_paise || 20000)/100)) : 200;
   const semFee = foundCourse ? (foundCourse.semester_fee_rupees !== undefined ? foundCourse.semester_fee_rupees : Math.round((foundCourse.semester_fee_paise || 60000)/100)) : 600;
@@ -5512,15 +5537,20 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
   const stu = (window._currentStudents || []).find(s => s.id == studentId) || {};
   const stuName = stu.name || (opt ? opt.dataset.name : 'छात्र');
   const regNo = stu.student_code || (opt ? opt.dataset.code : '');
-  const fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount)) ? +feeAmount : 100;
-
-  // Fee check (informational - do not block issuance)
-  const mrkFeePending = Math.max(0, (stu.fee_total || 12000) - (stu.fee_paid || 0));
 
   const termSel = $('#mrkTermSelect');
   const chosenTerm = (termSel && termSel.value) || (mrkEvalPattern === 'semester' ? 'Semester 1' : 'Annual Examination');
   const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
   const isSemesterMode = mrkEvalPattern === 'semester' || mrkInfo.isSemester || (stu.evaluation_type && stu.evaluation_type.toLowerCase().includes('semester')) || chosenTerm.toLowerCase().includes('sem');
+
+  let fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount) && +feeAmount > 0) ? +feeAmount : null;
+  if (!fee) {
+    const cMatch = (window._currentCourses || []).find(c => Number(c.id) === Number(stu.course_id));
+    fee = cMatch ? (isSemesterMode ? (cMatch.semester_fee_rupees || 200) : (cMatch.single_fee_rupees || 100)) : (isSemesterMode ? 200 : 100);
+  }
+
+  // Fee check (informational - do not block issuance)
+  const mrkFeePending = Math.max(0, (stu.fee_total || 12000) - (stu.fee_paid || 0));
 
   if (isSemesterMode) {
     const isSem2 = chosenTerm.toLowerCase().includes('sem 2') || chosenTerm.toLowerCase().includes('semester 2') || chosenTerm.toLowerCase().includes('2nd');
@@ -5672,11 +5702,13 @@ async function updateMrkPreview(targetStudentId) {
   const isSelectedSem2 = mrkTerm.toLowerCase().includes('sem 2') || mrkTerm.toLowerCase().includes('semester 2') || mrkTerm.toLowerCase().includes('2nd');
 
   const courses = window._currentCourses || [];
+  const stuCourseId = Number(stu.course_id || (opt ? opt.dataset.courseId : 0));
+  const target = String(course || '').toUpperCase().trim();
   const foundCourse = courses.find(c => {
+    if (stuCourseId && Number(c.id) === stuCourseId) return true;
     const cCode = String(c.code || '').toUpperCase().trim();
     const cName = String(c.name || '').toUpperCase().trim();
-    const target = String(course || '').toUpperCase().trim();
-    return cCode === target || cName === target || (cCode && target.includes(cCode)) || (cName && target.includes(cName));
+    return (cCode && cCode === target) || (cName && cName === target) || (cCode && target.includes(cCode)) || (cName && target.includes(cName));
   });
   const singleFee = foundCourse ? (foundCourse.single_fee_rupees !== undefined ? foundCourse.single_fee_rupees : Math.round((foundCourse.single_fee_paise || 10000)/100)) : 100;
   const semFee = foundCourse ? (foundCourse.semester_fee_rupees !== undefined ? foundCourse.semester_fee_rupees : Math.round((foundCourse.semester_fee_paise || 20000)/100)) : 200;

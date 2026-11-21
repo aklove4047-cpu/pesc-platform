@@ -496,7 +496,7 @@ router.delete('/students/:id', (req, res) => {
   const centreId = cid(req);
   const s = db.prepare('SELECT * FROM students WHERE id=? AND centre_id=?').get(sId, centreId);
   if (!s) throw new HttpError(404, 'Student not found in this centre');
-  
+
   db.prepare('DELETE FROM certificates WHERE student_id=?').run(sId);
   db.prepare('DELETE FROM marksheets WHERE student_id=?').run(sId);
   if (s.user_id) {
@@ -551,6 +551,7 @@ router.post('/students/:id/account', h(async (req, res) => {
 // 3. My Courses - Centre apna selling price khud set karega (Head office courses read-only)
 router.get('/courses', (req, res) => {
   const courses = db.prepare(`SELECT co.id, co.code, co.name, co.duration_months, co.subjects, co.total_marks, co.fee_paise AS system_fee_paise,
+    co.single_fee_paise, co.semester_fee_paise,
     cc.selling_price_paise,
     (SELECT COUNT(*) FROM students WHERE course_id=co.id AND centre_id=?) AS enrolled_count
     FROM courses co
@@ -562,8 +563,14 @@ router.get('/courses', (req, res) => {
     const studentFeePaise = (co.selling_price_paise && co.selling_price_paise > 0)
       ? co.selling_price_paise
       : (getDefaultStudentFee(co.duration_months, co.code) * 100);
+    const sFeePaise = (co.single_fee_paise !== undefined && co.single_fee_paise !== null) ? co.single_fee_paise : 20000;
+    const semFeePaise = (co.semester_fee_paise !== undefined && co.semester_fee_paise !== null) ? co.semester_fee_paise : 60000;
     return {
       ...co,
+      single_fee_paise: sFeePaise,
+      semester_fee_paise: semFeePaise,
+      single_fee_rupees: Math.round(sFeePaise / 100),
+      semester_fee_rupees: Math.round(semFeePaise / 100),
       selling_price_paise: studentFeePaise,
       fee_rupees: Math.round(studentFeePaise / 100)
     };
@@ -673,13 +680,13 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
       courseFeePaise = isSem ? (co.semester_fee_paise || 20000) : (co.single_fee_paise || 10000);
     }
   }
-  const fee = (req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee >= 0)
-    ? Math.round(+req.body.fee * 100)
-    : courseFeePaise;
-  
+  const fee = (courseFeePaise > 0)
+    ? courseFeePaise
+    : ((req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee >= 0) ? Math.round(+req.body.fee * 100) : 10000);
+
   const token = crypto.randomBytes(16).toString('hex');
   const mrkNo = `PESC-MRK-2026-${String(s.id).padStart(5, '0')}`;
-  
+
   let mid = db.prepare('SELECT id FROM marksheets WHERE student_id=? AND term=?').get(s.id, termVal)?.id;
   if (!mid) {
     let subjects = null;
@@ -707,7 +714,7 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
               };
             });
           }
-        } catch (_) {}
+        } catch (_) { }
       }
     }
     if (!subjects || subjects.length === 0) {
@@ -776,13 +783,13 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
       courseFeePaise = isSem ? (co.semester_fee_paise || 60000) : (co.single_fee_paise || 20000);
     }
   }
-  const fee = (req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee >= 0)
-    ? Math.round(+req.body.fee * 100)
-    : courseFeePaise;
-  
+  const fee = (courseFeePaise > 0)
+    ? courseFeePaise
+    : ((req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee >= 0) ? Math.round(+req.body.fee * 100) : 20000);
+
   const token = crypto.randomBytes(16).toString('hex');
   const certNo = `PESC-CERT-2026-${String(s.id).padStart(5, '0')}`;
-  
+
   let certId = db.prepare('SELECT id FROM certificates WHERE student_id=?').get(s.id)?.id;
   if (!certId) {
     const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
@@ -1300,7 +1307,7 @@ router.get('/website-settings', (req, res) => {
   try {
     const s = JSON.parse(c?.settings || '{}');
     ws = s.website_settings || {};
-  } catch (_) {}
+  } catch (_) { }
   res.json({ ok: true, website_settings: ws });
 });
 
@@ -1309,7 +1316,7 @@ router.post('/website-settings', (req, res) => {
   const c = db.prepare('SELECT id, settings FROM centres WHERE id=?').get(centreId);
   if (!c) throw new HttpError(404, 'Centre not found');
   let s = {};
-  try { s = JSON.parse(c.settings || '{}'); } catch (_) {}
+  try { s = JSON.parse(c.settings || '{}'); } catch (_) { }
   const ws = req.body.website_settings || req.body || {};
   s.website_settings = { ...(s.website_settings || {}), ...ws };
   db.prepare('UPDATE centres SET settings=? WHERE id=?').run(JSON.stringify(s), centreId);

@@ -708,7 +708,7 @@ async function syncFromKV(env, force = false) {
       return;
     }
 
-    const [c, a, s, u, certs, mrks, courses, settings, notices, coordCerts, wt] = await Promise.all([
+    const [c, a, s, u, certs, mrks, courses, settings, notices, coordCerts, wt, fees] = await Promise.all([
       env.PESC_KV.get('centres', 'json'),
       env.PESC_KV.get('applications', 'json'),
       env.PESC_KV.get('students', 'json'),
@@ -720,6 +720,7 @@ async function syncFromKV(env, force = false) {
       env.PESC_KV.get('notices', 'json'),
       env.PESC_KV.get('coordinator_certificates', 'json'),
       env.PESC_KV.get('wallet_topups', 'json'),
+      env.PESC_KV.get('fee_policy', 'json'),
     ]);
     if (Array.isArray(c)) store.centres = c;
     if (Array.isArray(a)) store.applications = a;
@@ -732,6 +733,7 @@ async function syncFromKV(env, force = false) {
     if (Array.isArray(coordCerts)) store.coordinator_certificates = coordCerts;
     if (Array.isArray(wt)) store.wallet_topups = wt;
     if (Array.isArray(u) && u.length) store.users = u;
+    if (fees && typeof fees === 'object') store.fee_policy = fees;
     kvLoaded = true;
     lastKvSync = now;
   } catch (_) {}
@@ -1022,11 +1024,12 @@ ${JSON.stringify(schemaJson, null, 2)}
   let heroBanners = [];
   if (Array.isArray(ws.hero_banners) && ws.hero_banners.length > 0) {
     heroBanners = ws.hero_banners.filter(Boolean);
-  } else if (ws.hero_banner_url || centre.center_photo || centre.photo_url) {
-    heroBanners = [ws.hero_banner_url || centre.center_photo || centre.photo_url];
-  }
-  if (!heroBanners.length) {
-    heroBanners = ['/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+  } else if (ws.hero_banner_url) {
+    heroBanners = [ws.hero_banner_url, '/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+  } else if (centre.center_photo || centre.photo_url) {
+    heroBanners = [centre.center_photo || centre.photo_url, '/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+  } else {
+    heroBanners = ['/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg', 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&q=80'];
   }
 
   const sliderSlidesHtml = heroBanners.map((bUrl, idx) => `
@@ -1358,62 +1361,84 @@ export default {
 
     // 0c. Guaranteed Direct HTML Page Routing for Portals & Panels (Fixes Error 1102 & ERR_TOO_MANY_REDIRECTS)
     const fetchAssetSafe = async (targetPath) => {
-      // Clean path without .html to match Cloudflare Pages canonical routing
-      const cleanPath = targetPath.endsWith('.html') ? targetPath.slice(0, -5) : targetPath;
+      const cleanPath = targetPath.replace(/\/+$/, '').replace(/\.html$/, '');
+      const htmlPath = cleanPath + '.html';
+
+      // 1. First attempt: fetch exact .html asset directly
+      const htmlUrl = new URL(htmlPath, 'https://pescouncil.in');
+      htmlUrl.search = url.search;
+      let res = await env.ASSETS.fetch(new Request(htmlUrl.toString(), request));
+      if (res.status === 200) {
+        return new Response(res.body, {
+          status: 200,
+          headers: {
+            'content-type': 'text/html; charset=utf-8',
+            'cache-control': 'public, max-age=0, must-revalidate'
+          }
+        });
+      }
+
+      // 2. Second attempt: clean URL path without .html
       const cleanUrl = new URL(cleanPath, 'https://pescouncil.in');
       cleanUrl.search = url.search;
-      let res = await env.ASSETS.fetch(new Request(cleanUrl.toString(), request));
-
-      // If Cloudflare Pages issues a redirect (e.g. 308/301 Clean URLs canonicalization), follow it internally so client never loops!
-      if (res.status >= 300 && res.status < 400) {
-        const loc = res.headers.get('location');
-        if (loc) {
-          const followUrl = new URL(loc, cleanUrl);
-          res = await env.ASSETS.fetch(new Request(followUrl.toString(), request));
-        }
-      }
-
-      // If clean URL was not found (404) or still a redirect, fallback to .html asset
-      if (res.status === 404 || (res.status >= 300 && res.status < 400)) {
-        const htmlUrl = new URL(cleanPath + '.html', 'https://pescouncil.in');
-        htmlUrl.search = url.search;
-        const resHtml = await env.ASSETS.fetch(new Request(htmlUrl.toString(), request));
-        if (resHtml.status === 200) return resHtml;
-        if (resHtml.status >= 300 && resHtml.status < 400) {
-          const locHtml = resHtml.headers.get('location');
-          if (locHtml) {
-            const followHtml = new URL(locHtml, htmlUrl);
-            const resFollow = await env.ASSETS.fetch(new Request(followHtml.toString(), request));
-            if (resFollow.status === 200) return resFollow;
+      let resClean = await env.ASSETS.fetch(new Request(cleanUrl.toString(), request));
+      if (resClean.status === 200) {
+        return new Response(resClean.body, {
+          status: 200,
+          headers: {
+            'content-type': 'text/html; charset=utf-8',
+            'cache-control': 'public, max-age=0, must-revalidate'
           }
+        });
+      }
+
+      // 3. Follow redirect internally (up to 4 hops) so client browser NEVER loops into ERR_TOO_MANY_REDIRECTS
+      let currentRes = (res.status >= 300 && res.status < 400) ? res : resClean;
+      let currentUrl = (res.status >= 300 && res.status < 400) ? htmlUrl : cleanUrl;
+      let hops = 0;
+      while (currentRes.status >= 300 && currentRes.status < 400 && hops < 4) {
+        hops++;
+        const loc = currentRes.headers.get('location');
+        if (!loc) break;
+        const nextUrl = new URL(loc, currentUrl);
+        currentUrl = nextUrl;
+        currentRes = await env.ASSETS.fetch(new Request(nextUrl.toString(), request));
+        if (currentRes.status === 200) {
+          return new Response(currentRes.body, {
+            status: 200,
+            headers: {
+              'content-type': 'text/html; charset=utf-8',
+              'cache-control': 'public, max-age=0, must-revalidate'
+            }
+          });
         }
       }
-      return res;
+      return currentRes;
     };
 
     if (['/portal', '/portal/', '/centre', '/centre/', '/center', '/center/', '/centre-portal', '/center-portal'].includes(path)) {
-      return fetchAssetSafe('/portal');
+      return fetchAssetSafe('/portal.html');
     }
     if (['/admin', '/admin/'].includes(path)) {
-      return fetchAssetSafe('/admin');
+      return fetchAssetSafe('/admin.html');
     }
     if (['/student', '/student/'].includes(path)) {
-      return fetchAssetSafe('/student');
+      return fetchAssetSafe('/student.html');
     }
     if (['/coordinator', '/coordinator/'].includes(path)) {
-      return fetchAssetSafe('/coordinator');
+      return fetchAssetSafe('/coordinator.html');
     }
     if (path === '/print' || path === '/print/' || path.startsWith('/print/') || path === '/print.html') {
-      return fetchAssetSafe('/print');
+      return fetchAssetSafe('/print.html');
     }
     if (path === '/verify' || path === '/verify/' || path.startsWith('/verify/') || path === '/verify.html') {
-      return fetchAssetSafe('/verify');
+      return fetchAssetSafe('/verify.html');
     }
     if (['/login', '/login/'].includes(path)) {
-      return fetchAssetSafe('/login');
+      return fetchAssetSafe('/login.html');
     }
     if (['/setup', '/setup/'].includes(path)) {
-      return fetchAssetSafe('/setup');
+      return fetchAssetSafe('/setup.html');
     }
 
     // Synchronize dynamic updates from Cloudflare KV for APIs and dynamic tenant site rendering
@@ -2655,6 +2680,30 @@ export default {
           return jsonResponse({ ok: true, message: `Franchise centre ${targetC.name} (${targetC.centre_code}) deleted permanently!` });
         }
         return jsonResponse({ ok: true, centre: targetC });
+      }
+
+      if (path === '/api/admin/fees') {
+        if (!store.fee_policy) {
+          store.fee_policy = {
+            admission: 3500,
+            certificate: 20000,
+            marksheet: 10000
+          };
+        }
+        if (request.method === 'PUT' || request.method === 'POST') {
+          try {
+            const body = await request.json();
+            const rawFees = body.fees || body;
+            if (rawFees.admission !== undefined) store.fee_policy.admission = Math.round(+rawFees.admission);
+            if (rawFees.certificate !== undefined) store.fee_policy.certificate = Math.round(+rawFees.certificate);
+            if (rawFees.marksheet !== undefined) store.fee_policy.marksheet = Math.round(+rawFees.marksheet);
+            await persistToKV(env, 'fee_policy', store.fee_policy);
+            return jsonResponse({ ok: true, message: 'Fee policy updated successfully!', fees: store.fee_policy });
+          } catch (err) {
+            return jsonResponse({ error: err.message }, 400);
+          }
+        }
+        return jsonResponse({ ok: true, fees: store.fee_policy });
       }
 
       if (path === '/api/admin/courses') {
@@ -5426,8 +5475,9 @@ export default {
           }
         }
 
-        const course = student ? store.courses.find(co => co.id === student.course_id) : null;
-        const fee = (body.fee !== undefined && !isNaN(+body.fee)) ? +body.fee : (course ? (course.single_fee_rupees || 100) : 100);
+        const course = student ? store.courses.find(co => Number(co.id) === Number(student.course_id)) : null;
+        const courseSingleFee = course ? (course.single_fee_rupees || (course.single_fee_paise ? Math.round(course.single_fee_paise / 100) : 200)) : 200;
+        const fee = (courseSingleFee > 0) ? courseSingleFee : ((body.fee !== undefined && !isNaN(+body.fee) && +body.fee > 0) ? +body.fee : 200);
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
         if (bal < fee) {
           return jsonResponse({
@@ -5523,7 +5573,11 @@ export default {
           }
         }
 
-        const fee = (body.fee !== undefined && !isNaN(+body.fee)) ? +body.fee : (course ? (course.single_fee_rupees || 100) : 100);
+        const course = student ? store.courses.find(co => Number(co.id) === Number(student.course_id)) : null;
+        const courseSemFee = course ? (course.semester_fee_rupees || (course.semester_fee_paise ? Math.round(course.semester_fee_paise / 100) : 200)) : 200;
+        const courseSingleFee = course ? (course.single_fee_rupees || (course.single_fee_paise ? Math.round(course.single_fee_paise / 100) : 100)) : 100;
+        const targetCourseFee = (evalType.includes('semester') || isSemesterReq) ? courseSemFee : courseSingleFee;
+        const fee = (targetCourseFee > 0) ? targetCourseFee : ((body.fee !== undefined && !isNaN(+body.fee) && +body.fee > 0) ? +body.fee : 100);
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
         if (bal < fee) {
           return jsonResponse({

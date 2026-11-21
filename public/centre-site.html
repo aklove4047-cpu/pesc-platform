@@ -2027,11 +2027,12 @@
       let heroBanners = [];
       if (Array.isArray(ws.hero_banners) && ws.hero_banners.length > 0) {
         heroBanners = ws.hero_banners.filter(Boolean);
-      } else if (ws.hero_banner_url || c.center_photo || c.photo_url) {
-        heroBanners = [ws.hero_banner_url || c.center_photo || c.photo_url];
-      }
-      if (!heroBanners.length) {
-        heroBanners = ['/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+      } else if (ws.hero_banner_url) {
+        heroBanners = [ws.hero_banner_url, '/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+      } else if (c.center_photo || c.photo_url) {
+        heroBanners = [c.center_photo || c.photo_url, '/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg'];
+      } else {
+        heroBanners = ['/assets/img/classroom.jpg', '/assets/img/centre_varanasi.jpg', 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&q=80'];
       }
 
       const sliderEl = document.getElementById('heroSlider');
