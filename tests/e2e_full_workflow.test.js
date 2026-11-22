@@ -349,15 +349,30 @@ test('6. Center wallet check (fails ₹35), requests ₹1000 topup, HO approves,
 });
 
 test('7. Marksheet and Certificate issued with Head Office, Coordinator & Center seals', async () => {
-  // Generate marksheet (debits ₹150)
+  // Marksheet issuance is FREE (₹0 wallet fee)
   const mrkRes = await call('POST', `/api/centre/marksheets/${studentId}/sign-issue`, {
     cookie: centreCookie,
-    body: { fee: 150, student_id: studentId }
+    body: { fee: 0, student_id: studentId }
   });
   assert.equal(mrkRes.status, 200);
   assert.equal(mrkRes.json.ok, true);
 
-  // Generate certificate (debits ₹200)
+  // Attempting to issue certificate before student fees are paid returns 400
+  const blockedCert = await call('POST', `/api/centre/certificates/${studentId}/sign-issue`, {
+    cookie: centreCookie,
+    body: { fee: 200, student_id: studentId }
+  });
+  assert.equal(blockedCert.status, 400);
+  assert.match(blockedCert.json.error, /छात्र की फीस अभी/);
+
+  // Collect student pending fee via Fees Collection
+  const feeRec = await call('POST', '/api/centre/fees/record', {
+    cookie: centreCookie,
+    body: { student_id: studentId, amount: 12000, mode: 'Cash' }
+  });
+  assert.equal(feeRec.status, 200);
+
+  // Generate certificate (debits ₹200 from centre wallet)
   const certRes = await call('POST', `/api/centre/certificates/${studentId}/sign-issue`, {
     cookie: centreCookie,
     body: { fee: 200, student_id: studentId }
@@ -365,10 +380,10 @@ test('7. Marksheet and Certificate issued with Head Office, Coordinator & Center
   assert.equal(certRes.status, 200);
   assert.equal(certRes.json.ok, true);
 
-  // Balance after 96500 - 35000 = 61500 paise (₹615)
+  // Balance after: 96500 - 20000 = 76500 paise (₹765)
   const walletAfter = await call('GET', '/api/centre/wallet', { cookie: centreCookie });
   assert.equal(walletAfter.status, 200);
-  assert.equal(walletAfter.json.balance_paise, 61500);
+  assert.equal(walletAfter.json.balance_paise, 76500);
 });
 
 test('8. Student logs in with Student@123, views profile, admission form, I-card, marksheet & cert', async () => {

@@ -672,17 +672,8 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
     }
   }
 
-  // Look up course fee dynamically from courses table
-  let courseFeePaise = 10000; // default ₹100
-  if (s && s.course_id) {
-    const co = db.prepare('SELECT single_fee_paise, semester_fee_paise FROM courses WHERE id=?').get(s.course_id);
-    if (co) {
-      courseFeePaise = isSem ? (co.semester_fee_paise || 20000) : (co.single_fee_paise || 10000);
-    }
-  }
-  const fee = (courseFeePaise > 0)
-    ? courseFeePaise
-    : ((req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee >= 0) ? Math.round(+req.body.fee * 100) : 10000);
+  // Marksheet issuance is FREE (₹0 wallet fee). Course fee is charged on final Certificate issuance.
+  const fee = 0;
 
   const token = crypto.randomBytes(16).toString('hex');
   const mrkNo = `PESC-MRK-2026-${String(s.id).padStart(5, '0')}`;
@@ -741,11 +732,13 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
     db.prepare("UPDATE marksheets SET status='Approved', issue_date=? WHERE id=?").run(now(), mid);
   }
 
-  try {
-    wallet.debit(cid(req), fee, `fee:marksheet:${mid}:${Date.now()}`, 'Marksheet issue fee', req.user.id);
-  } catch (e) {
-    if (e.status === 409 && /Insufficient/i.test(e.message)) {
-      throw new HttpError(402, 'Insufficient wallet balance for marksheet issuance');
+  if (fee > 0) {
+    try {
+      wallet.debit(cid(req), fee, `fee:marksheet:${mid}:${Date.now()}`, 'Marksheet issue fee', req.user.id);
+    } catch (e) {
+      if (e.status === 409 && /Insufficient/i.test(e.message)) {
+        throw new HttpError(402, 'Insufficient wallet balance for marksheet issuance');
+      }
     }
   }
 
@@ -758,8 +751,11 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM certificates WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
 
-  // Fee info (advisory only - do not block certificate issuance)
-  const certFeePending = Math.max(0, (s.fee_total || 12000) - (s.fee_paid || 0));
+  // Student fee clearance check prior to Certificate issuance
+  const certFeePending = Math.max(0, (s.fee_total !== undefined ? s.fee_total : 12000) - (s.fee_paid || 0));
+  if (certFeePending > 0) {
+    throw new HttpError(400, `छात्र की फीस अभी ₹${certFeePending.toLocaleString('en-IN')} बकाया है! पहले 'Fees Collection' से छात्र की पूरी फीस जमा करें, उसके बाद ही अधिकृत प्रमाणपत्र जारी हो सकेगा।`);
+  }
 
   const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
   if (isSem) {

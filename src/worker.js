@@ -1356,6 +1356,13 @@ export default {
         fallbackUrl.search = url.search;
         res = await env.ASSETS.fetch(new Request(fallbackUrl.toString(), request));
       }
+      if (path.endsWith('.js')) {
+        const newHeaders = new Headers(res.headers);
+        newHeaders.set('cache-control', 'no-cache, no-store, must-revalidate');
+        newHeaders.set('pragma', 'no-cache');
+        newHeaders.set('expires', '0');
+        return new Response(res.body, { status: res.status, headers: newHeaders });
+      }
       return res;
     }
 
@@ -5475,6 +5482,14 @@ export default {
           }
         }
 
+        // Require student course fee clearance prior to Certificate issuance
+        const stuFeePending = student ? Math.max(0, (student.fee_total !== undefined ? student.fee_total : 12000) - (student.fee_paid || 0)) : 0;
+        if (stuFeePending > 0) {
+          return jsonResponse({
+            error: `छात्र की फीस अभी ₹${stuFeePending.toLocaleString('en-IN')} बकाया है! पहले 'Fees Collection' से छात्र की पूरी फीस जमा करें, उसके बाद ही अधिकृत प्रमाणपत्र जारी किया जा सकता है।`
+          }, 400);
+        }
+
         const course = student ? store.courses.find(co => Number(co.id) === Number(student.course_id)) : null;
         const courseSingleFee = course ? (course.single_fee_rupees || (course.single_fee_paise ? Math.round(course.single_fee_paise / 100) : 200)) : 200;
         const fee = (courseSingleFee > 0) ? courseSingleFee : ((body.fee !== undefined && !isNaN(+body.fee) && +body.fee > 0) ? +body.fee : 200);
@@ -5573,20 +5588,9 @@ export default {
           }
         }
 
-        const course = student ? store.courses.find(co => Number(co.id) === Number(student.course_id)) : null;
-        const courseSemFee = course ? (course.semester_fee_rupees || (course.semester_fee_paise ? Math.round(course.semester_fee_paise / 100) : 200)) : 200;
-        const courseSingleFee = course ? (course.single_fee_rupees || (course.single_fee_paise ? Math.round(course.single_fee_paise / 100) : 100)) : 100;
-        const targetCourseFee = (evalType.includes('semester') || isSemesterReq) ? courseSemFee : courseSingleFee;
-        const fee = (targetCourseFee > 0) ? targetCourseFee : ((body.fee !== undefined && !isNaN(+body.fee) && +body.fee > 0) ? +body.fee : 100);
+        // Marksheet issuance is FREE (₹0 wallet fee). Course fee is charged on final Certificate issuance.
+        const fee = 0;
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
-        if (bal < fee) {
-          return jsonResponse({
-            error: `सेंटर वॉलेट में अपर्याप्त बैलेंस है! आवश्यक: ₹${fee}, उपलब्ध: ₹${bal}। कृपया पहले वॉलेट रिचार्ज करें।`
-          }, 402);
-        }
-        bal -= fee;
-        if (c) c.wallet_balance = bal;
-        await persistToKV(env, 'centres', store.centres);
 
         let mrk = store.marksheets.find(x => 
           (Number(x.student_id) === studentId || (student && student.student_code && x.student_code === student.student_code)) &&
