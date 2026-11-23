@@ -3736,6 +3736,9 @@ const views = {
                 </p>
               </div>
               <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <div style="position:relative; min-width:240px;">
+                  <input type="text" id="courseFilterSearch" placeholder="🔍 Search courses (ADCA, DCA, Tally)..." oninput="window.filterPopularCoursesList(this.value)" style="width:100%; padding:7px 12px; border:1.5px solid #047857; border-radius:6px; font-size:0.86rem;">
+                </div>
                 <button type="button" class="btn sm alt" onclick="window.selectAllPopularCourses(true)">✓ Select All</button>
                 <button type="button" class="btn sm alt" onclick="window.selectTopCourses(6)">⭐ Top 6 Only</button>
                 <button type="button" class="btn sm alt" onclick="window.selectAllPopularCourses(false)">✕ Clear All</button>
@@ -4245,6 +4248,7 @@ function renderStudentTable(students, isPassout = false) {
         : `<button class="btn sm" style="background:#0284c7;color:#fff;font-weight:700;" onclick="viewIssuedStudentMrk(${r.id})" title="Issue / Print Marksheet">📊 Mrk</button>`;
       return `
       <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <button type="button" class="btn sm" style="background:#4f46e5; color:#fff; font-weight:700; padding:6px 10px;" onclick="openEditStudentModal(${r.id})" title="Admission hone ke baad bhi edit karein">✏️ Edit Form</button>
         <a href="/print?type=admission-form&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#047857; color:#fff; font-weight:700; text-decoration:none;" title="Download Admission Form (A4)">📄 Form</a>
         <a href="/print?type=id-card&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm" style="background:#0f766e; color:#fff; font-weight:700; text-decoration:none;" title="Download ID Card">🪪 ID</a>
         ${certBtn}
@@ -4569,7 +4573,17 @@ window.openEditStudentModal = async function(id) {
             </div>
             <div>
               <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Blood Group</label>
-              <input type="text" name="blood_group" value="${safeEsc(stu.blood_group || '')}" placeholder="e.g. O+, B+, A+" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+              <select name="blood_group" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; background:#fff;">
+                <option value="—" ${!stu.blood_group || stu.blood_group === '—' ? 'selected' : ''}>— Not Specified / खाली छोड़ें</option>
+                <option value="A+" ${stu.blood_group === 'A+' ? 'selected' : ''}>A+</option>
+                <option value="A-" ${stu.blood_group === 'A-' ? 'selected' : ''}>A-</option>
+                <option value="B+" ${stu.blood_group === 'B+' ? 'selected' : ''}>B+</option>
+                <option value="B-" ${stu.blood_group === 'B-' ? 'selected' : ''}>B-</option>
+                <option value="AB+" ${stu.blood_group === 'AB+' ? 'selected' : ''}>AB+</option>
+                <option value="AB-" ${stu.blood_group === 'AB-' ? 'selected' : ''}>AB-</option>
+                <option value="O+" ${stu.blood_group === 'O+' ? 'selected' : ''}>O+</option>
+                <option value="O-" ${stu.blood_group === 'O-' ? 'selected' : ''}>O-</option>
+              </select>
             </div>
             <div>
               <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Session</label>
@@ -4588,6 +4602,42 @@ window.openEditStudentModal = async function(id) {
             <div>
               <label style="font-size:0.85rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Permanent Address (स्थायी पता)</label>
               <textarea name="address" rows="2" style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">${safeEsc(stu.address || stu.local_address || '')}</textarea>
+            </div>
+          </div>
+
+          <!-- Academic Qualifications (10th / 12th) -->
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:16px; margin-bottom:18px;">
+            <div style="font-weight:800; color:#1e293b; font-size:0.95rem; margin-bottom:10px;">
+              🎓 Educational Qualifications (शैक्षणिक योग्यता - यदि उपलब्ध हो)
+            </div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.84rem;">
+                <thead>
+                  <tr style="background:#f1f5f9; text-align:left; color:#334155;">
+                    <th style="padding:6px 8px; border:1px solid #cbd5e1;">Class</th>
+                    <th style="padding:6px 8px; border:1px solid #cbd5e1;">Board</th>
+                    <th style="padding:6px 8px; border:1px solid #cbd5e1;">Passing Year</th>
+                    <th style="padding:6px 8px; border:1px solid #cbd5e1;">Marks Obt. / Max</th>
+                    <th style="padding:6px 8px; border:1px solid #cbd5e1;">Percentage (%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding:6px 8px; border:1px solid #cbd5e1; font-weight:700;">10th</td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_10_board" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.tenth && stu.academic_qualifications.tenth.board) || '')}" placeholder="e.g. UP Board" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_10_year" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.tenth && stu.academic_qualifications.tenth.year) || '')}" placeholder="2022" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_10_marks" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.tenth && (stu.academic_qualifications.tenth.marks || stu.academic_qualifications.tenth.marks_obt)) || '')}" placeholder="420/600" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_10_pct" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.tenth && (stu.academic_qualifications.tenth.pct || stu.academic_qualifications.tenth.percentage)) || '')}" placeholder="70%" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 8px; border:1px solid #cbd5e1; font-weight:700;">12th</td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_board" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.twelfth && stu.academic_qualifications.twelfth.board) || '')}" placeholder="e.g. UP Board" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_year" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.twelfth && stu.academic_qualifications.twelfth.year) || '')}" placeholder="2024" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_marks" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.twelfth && (stu.academic_qualifications.twelfth.marks || stu.academic_qualifications.twelfth.marks_obt)) || '')}" placeholder="380/500" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_pct" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.twelfth && (stu.academic_qualifications.twelfth.pct || stu.academic_qualifications.twelfth.percentage)) || '')}" placeholder="76%" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -4617,6 +4667,18 @@ window.openEditStudentModal = async function(id) {
     modal.querySelector('#centreEditStudentForm').onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
+      const q10 = {
+        board: fd.get('qual_10_board') || '',
+        year: fd.get('qual_10_year') || '',
+        marks_obt: fd.get('qual_10_marks') || '',
+        percentage: fd.get('qual_10_pct') || ''
+      };
+      const q12 = {
+        board: fd.get('qual_12_board') || '',
+        year: fd.get('qual_12_year') || '',
+        marks_obt: fd.get('qual_12_marks') || '',
+        percentage: fd.get('qual_12_pct') || ''
+      };
       const payload = {
         name: fd.get('name'),
         father_name: fd.get('father_name'),
@@ -4631,7 +4693,9 @@ window.openEditStudentModal = async function(id) {
         course_id: +fd.get('course_id'),
         address: fd.get('address'),
         fee_total: +fd.get('fee_total') || 0,
-        fee_paid: +fd.get('fee_paid') || 0
+        fee_paid: +fd.get('fee_paid') || 0,
+        academic_qualifications: { tenth: q10, twelfth: q12 },
+        qualifications: { tenth: q10, twelfth: q12 }
       };
 
       try {
@@ -4692,12 +4756,8 @@ window.signAndIssueCert = async function(certDbId, studentId, feeAmount) {
     fee = cMatch ? (cMatch.single_fee_rupees || 200) : 200;
   }
 
-  // Fee check: Require full student fees to be settled before certificate issuance
+  // Student fee balance does not block issuance - collected by centre as per institute policy
   const stuFeePending = Math.max(0, (stu.fee_total !== undefined ? stu.fee_total : 12000) - (stu.fee_paid || 0));
-  if (stuFeePending > 0) {
-    alert(`🔒 प्रमाणपत्र जारी नहीं हो सकता!\n\n❌ छात्र की फीस अभी बकाया है:\n👤 छात्र: ${stuName} (${regNo})\n💰 बकाया फीस: ₹${stuFeePending.toLocaleString('en-IN')}\n\nपहले "Fees Collection" मॉड्यूल से पूरी फीस जमा करें, उसके बाद ही प्रमाणपत्र जारी हो सकेगा।`);
-    return;
-  }
 
   const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
   if (!mrkInfo.isFullyIssued) {
@@ -4920,42 +4980,23 @@ async function updateCertPreview(targetStudentId) {
 
   if (feeNoticeEl) {
     if (!isIssued) {
-      if (certStudentFeePending > 0) {
-        feeNoticeEl.innerHTML = `
-          <div style="background:#fef2f2; border:2px solid #ef4444; border-radius:12px; padding:16px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(239,68,68,0.15);">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <span style="font-size:2.2rem;">🔒</span>
-              <div>
-                <b style="color:#991b1b; font-size:1.05rem; display:block;">प्रमाणपत्र रुका हुआ है: छात्र की ₹${certStudentFeePending.toLocaleString('en-IN')} फीस बकाया है!</b>
-                <span style="font-size:0.85rem; color:#7f1d1d;">काउंसिल नियमानुसार जब तक छात्र की पूरी फीस जमा नहीं होगी, तब तक अधिकृत प्रमाणपत्र जारी नहीं हो सकेगा।</span>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <button type="button" class="btn" onclick="switchModule('FeesCollection')" style="background:#dc2626; color:#ffffff; font-weight:800; padding:10px 20px; border-radius:8px; border:none; cursor:pointer;">
-                💰 Fees Collection में जाएं
-              </button>
+      feeNoticeEl.innerHTML = `
+        <div style="background:#fefce8; border:2px solid #eab308; border-radius:12px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(234,179,8,0.18);">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:2.2rem;">🔒</span>
+            <div>
+              <b style="color:#854d0e; font-size:1.05rem; display:block;">प्रमाणपत्र जारीकरण एवं सत्यापन शुल्क (Course Fee Wallet Deduction)</b>
+              <span style="font-size:0.85rem; color:#713f12;">हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंतिम प्रमाणपत्र जारी करने के लिए सेंटर वॉलेट से ₹${currentFee} कटेगा।${certStudentFeePending > 0 ? ` (छात्र बकाया फीस: ₹${certStudentFeePending.toLocaleString('en-IN')})` : ''}</span>
             </div>
           </div>
-        `;
-      } else {
-        feeNoticeEl.innerHTML = `
-          <div style="background:#fefce8; border:2px solid #eab308; border-radius:12px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(234,179,8,0.18);">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <span style="font-size:2.2rem;">🔒</span>
-              <div>
-                <b style="color:#854d0e; font-size:1.05rem; display:block;">प्रमाणपत्र जारीकरण एवं सत्यापन शुल्क (Course Fee Wallet Deduction)</b>
-                <span style="font-size:0.85rem; color:#713f12;">छात्र फीस पूरी जमा है। हेड ऑफिस व कोऑर्डिनेटर की अधिकृत मुहर व हस्ताक्षर सहित अंतिम प्रमाणपत्र जारी करने के लिए सेंटर वॉलेट से ₹${currentFee} कटेगा।</span>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:12px;">
-              <span style="background:#dc2626; color:#ffffff; font-weight:900; font-size:1.25rem; padding:8px 20px; border-radius:20px; box-shadow:0 2px 8px rgba(220,38,38,0.3);">₹${currentFee}</span>
-              <button type="button" class="btn" onclick="signAndIssueCert(${certDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 26px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.4); border:none; cursor:pointer;">
-                ⚡ Pay ₹${currentFee} from Wallet &amp; Issue (पैसे वॉलेट से काटें व जारी करें)
-              </button>
-            </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="background:#dc2626; color:#ffffff; font-weight:900; font-size:1.25rem; padding:8px 20px; border-radius:20px; box-shadow:0 2px 8px rgba(220,38,38,0.3);">₹${currentFee}</span>
+            <button type="button" class="btn" onclick="signAndIssueCert(${certDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 26px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.4); border:none; cursor:pointer;">
+              ⚡ Pay ₹${currentFee} from Wallet &amp; Issue (पैसे वॉलेट से काटें व जारी करें)
+            </button>
           </div>
-        `;
-      }
+        </div>
+      `;
     }
     } else {
       feeNoticeEl.innerHTML = `
@@ -4996,24 +5037,6 @@ async function updateCertPreview(targetStudentId) {
   const issueDate = '04-10-2026';
 
   if (!isIssued) {
-    if (certStudentFeePending > 0) {
-      $('#certPreviewContainer').innerHTML = `
-        <div style="background:#ffffff; padding:45px 20px; text-align:center; border-radius:12px; border:2px dashed #ef4444;">
-          <div style="width:72px; height:72px; border-radius:50%; background:#fee2e2; border:2.5px solid #ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:2.4rem;">🔒</div>
-          <h3 style="margin:0 0 8px; color:#991b1b; font-size:1.45rem; font-weight:800;">Official Certificate Locked (Student Pending Fee: ₹${certStudentFeePending.toLocaleString('en-IN')})</h3>
-          <p style="margin:0 0 16px; color:#64748b; font-size:1rem;">
-            Candidate: <b style="color:#0f172a;">${esc(name)}</b> (${esc(code)}) • Course: <b style="color:#0f172a;">${esc(course)}</b>
-          </p>
-          <div style="max-width:540px; margin:0 auto 24px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:14px; font-size:0.92rem; color:#7f1d1d; line-height:1.6;">
-            🔒 <b>फीस बकाया नियम:</b> छात्र की कुल फीस में से <b>₹${certStudentFeePending.toLocaleString('en-IN')}</b> अभी बकाया है। कृपया पहले <b>Fees Collection</b> मॉड्यूल से छात्र की पूरी फीस जमा करें, उसके बाद ही अधिकृत प्रमाणपत्र जारी हो सकेगा।
-          </div>
-          <button type="button" class="btn" onclick="switchModule('FeesCollection')" style="background:linear-gradient(135deg, #dc2626, #b91c1c); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 28px; border-radius:8px; border:none; cursor:pointer;">
-            ➔ Fees Collection में जाकर छात्र फीस जमा करें
-          </button>
-        </div>
-      `;
-      return;
-    }
     $('#certPreviewContainer').innerHTML = `
       <div style="background:#ffffff; padding:45px 20px; text-align:center; border-radius:12px;">
         <div style="width:72px; height:72px; border-radius:50%; background:#fef3c7; border:2.5px solid #f59e0b; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:2.4rem;">🔒</div>

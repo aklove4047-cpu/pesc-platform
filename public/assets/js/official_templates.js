@@ -300,14 +300,14 @@
                   <span>| &nbsp; Date of Birth: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.dob || 'DD/MM/YYYY')}</b></span>
                 </div>
                 <div>
-                  Father's/Husband's Name: <b style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.father_name || 'N/A')}</b>
+                  Father's/Husband's Name: <b style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.father_name || '________________')}</b>
                 </div>
                 <div>
-                  Mother's Name: <b style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.mother_name || 'N/A')}</b>
+                  Mother's Name: <b style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.mother_name || '________________')}</b>
                 </div>
                 <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                  <span>Category: [${cat==='Gen'||cat==='General'?'✓':'&nbsp;'}] Gen &nbsp; [${cat==='OBC'?'✓':'&nbsp;'}] OBC &nbsp; [${cat==='SC'?'✓':'&nbsp;'}] SC &nbsp; [${cat==='ST'?'✓':'&nbsp;'}] ST</span>
-                  <span>| &nbsp; Blood Group: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.blood_group || '—')}</b></span>
+                  <span>Category: [${['GEN', 'GENERAL'].includes(cat) ? '✓' : '&nbsp;'}] Gen &nbsp; [${cat === 'OBC' ? '✓' : '&nbsp;'}] OBC &nbsp; [${cat === 'SC' ? '✓' : '&nbsp;'}] SC &nbsp; [${cat === 'ST' ? '✓' : '&nbsp;'}] ST</span>
+                  <span>| &nbsp; Blood Group: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${(s.blood_group && s.blood_group !== '—' && !s.blood_group.includes('Not Specified')) ? esc(s.blood_group) : '______'}</b></span>
                 </div>
               </div>
             </div>
@@ -335,16 +335,16 @@
           <!-- Section: CONTACT & COMMUNICATION DETAILS -->
           ${renderAdmissionRibbon('CONTACT & COMMUNICATION DETAILS')}
           <div style="font-size:0.84rem; line-height:1.75; color:#0f172a;">
-            <div>Permanent Address: <span style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.address || s.local_address || 'Village & Post Shahgarh, Azamgarh, Uttar Pradesh')}</span></div>
+            <div>Permanent Address: <span style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.address || s.local_address || '________________________________________________')}</span></div>
             <div style="display:flex; gap:14px; flex-wrap:wrap;">
-              <span>City/Village: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.village || c.district || 'Shahgarh')}</b></span>
-              <span>District: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(c.district || 'Azamgarh')}</b></span>
-              <span>State: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(c.state || 'Uttar Pradesh')}</b></span>
-              <span>PIN: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.pin || c.pin || '276001')}</b></span>
+              <span>City/Village: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.village || '____________')}</b></span>
+              <span>District: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.district || c.district || '____________')}</b></span>
+              <span>State: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.state || c.state || '____________')}</b></span>
+              <span>PIN: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${esc(s.pin || '______')}</b></span>
             </div>
             <div style="display:flex; gap:20px; flex-wrap:wrap;">
-              <span>Mobile No.: <b style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.mobile || s.student_whatsapp || '+91 98765 43210')}</b></span>
-              <span>Email ID: <span style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.email || 'candidate@student.pescouncil.in')}</span></span>
+              <span>Mobile No.: <b style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.mobile || s.student_whatsapp || '________________')}</b></span>
+              <span>Email ID: <span style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.email || '________________')}</span></span>
             </div>
           </div>
 
@@ -1113,7 +1113,7 @@
     const rollNo = s.roll_no || s.student_code || `PESC-${String(s.id || '00001').padStart(5, '0')}`;
     const courseName = s.course_name || s.course || 'Diploma in Computer Applications';
     const regNo = s.student_code || rollNo;
-    const bloodGroup = s.blood_group || 'O+';
+    const bloodGroup = (s.blood_group && s.blood_group !== '—') ? s.blood_group : '—';
     const validUpto = data.validUpto || 'SEP 2026';
 
     const centreHindi = c.hindi_name || c.name || 'प्रशिक्षण एवं कौशल संस्थान';

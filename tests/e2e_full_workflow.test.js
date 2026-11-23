@@ -357,28 +357,20 @@ test('7. Marksheet and Certificate issued with Head Office, Coordinator & Center
   assert.equal(mrkRes.status, 200);
   assert.equal(mrkRes.json.ok, true);
 
-  // Attempting to issue certificate before student fees are paid returns 400
-  const blockedCert = await call('POST', `/api/centre/certificates/${studentId}/sign-issue`, {
-    cookie: centreCookie,
-    body: { fee: 200, student_id: studentId }
-  });
-  assert.equal(blockedCert.status, 400);
-  assert.match(blockedCert.json.error, /छात्र की फीस अभी/);
-
-  // Collect student pending fee via Fees Collection
-  const feeRec = await call('POST', '/api/centre/fees/record', {
-    cookie: centreCookie,
-    body: { student_id: studentId, amount: 12000, mode: 'Cash' }
-  });
-  assert.equal(feeRec.status, 200);
-
-  // Generate certificate (debits ₹200 from centre wallet)
+  // Certificate is issued directly without blocking on student pending fees (debits ₹200 from centre wallet)
   const certRes = await call('POST', `/api/centre/certificates/${studentId}/sign-issue`, {
     cookie: centreCookie,
     body: { fee: 200, student_id: studentId }
   });
   assert.equal(certRes.status, 200);
   assert.equal(certRes.json.ok, true);
+
+  // Student fees can be collected after certificate issuance
+  const feeRec = await call('POST', '/api/centre/fees/record', {
+    cookie: centreCookie,
+    body: { student_id: studentId, amount: 12000, mode: 'Cash' }
+  });
+  assert.equal(feeRec.status, 200);
 
   // Balance after: 96500 - 20000 = 76500 paise (₹765)
   const walletAfter = await call('GET', '/api/centre/wallet', { cookie: centreCookie });

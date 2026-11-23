@@ -5482,13 +5482,7 @@ export default {
           }
         }
 
-        // Require student course fee clearance prior to Certificate issuance
-        const stuFeePending = student ? Math.max(0, (student.fee_total !== undefined ? student.fee_total : 12000) - (student.fee_paid || 0)) : 0;
-        if (stuFeePending > 0) {
-          return jsonResponse({
-            error: `छात्र की फीस अभी ₹${stuFeePending.toLocaleString('en-IN')} बकाया है! पहले 'Fees Collection' से छात्र की पूरी फीस जमा करें, उसके बाद ही अधिकृत प्रमाणपत्र जारी किया जा सकता है।`
-          }, 400);
-        }
+        // No student fee blocking - centre collects remaining fees after certificate printing per policy
 
         const course = student ? store.courses.find(co => Number(co.id) === Number(student.course_id)) : null;
         const courseSingleFee = course ? (course.single_fee_rupees || (course.single_fee_paise ? Math.round(course.single_fee_paise / 100) : 200)) : 200;
@@ -5589,7 +5583,7 @@ export default {
         }
 
         // Marksheet issuance is FREE (₹0 wallet fee). Course fee is charged on final Certificate issuance.
-        const fee = 0;
+        const fee = 0; // Marksheet is free of wallet deduction
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
 
         let mrk = store.marksheets.find(x => 

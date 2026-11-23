@@ -751,11 +751,7 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
   const s = db.prepare('SELECT * FROM students WHERE (id=? OR id=(SELECT student_id FROM certificates WHERE id=?)) AND centre_id=?').get(sid, sid, cid(req));
   if (!s) throw new HttpError(404, 'Student not found');
 
-  // Student fee clearance check prior to Certificate issuance
-  const certFeePending = Math.max(0, (s.fee_total !== undefined ? s.fee_total : 12000) - (s.fee_paid || 0));
-  if (certFeePending > 0) {
-    throw new HttpError(400, `छात्र की फीस अभी ₹${certFeePending.toLocaleString('en-IN')} बकाया है! पहले 'Fees Collection' से छात्र की पूरी फीस जमा करें, उसके बाद ही अधिकृत प्रमाणपत्र जारी हो सकेगा।`);
-  }
+  // No student fee blocking - centre collects remaining fees after certificate printing per policy
 
   const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
   if (isSem) {
