@@ -5609,8 +5609,11 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
   const mrkInfo = window.getStudentMarksheetInfo(stu, window._centreMarksheets);
   const isSemesterMode = mrkEvalPattern === 'semester' || mrkInfo.isSemester || (stu.evaluation_type && stu.evaluation_type.toLowerCase().includes('semester')) || chosenTerm.toLowerCase().includes('sem');
 
-  // Marksheet issuance is FREE (₹0 wallet fee). Course fee is charged only upon final Certificate issuance.
-  const fee = 0;
+  let fee = (feeAmount !== undefined && feeAmount !== null && !isNaN(+feeAmount) && +feeAmount > 0) ? +feeAmount : null;
+  if (!fee) {
+    const cMatch = (window._currentCourses || []).find(c => Number(c.id) === Number(stu.course_id));
+    fee = isSemesterMode ? (cMatch ? (cMatch.semester_fee_rupees || 200) : 200) : (cMatch ? (cMatch.single_fee_rupees || 100) : 100);
+  }
 
   if (isSemesterMode) {
     const isSem2 = chosenTerm.toLowerCase().includes('sem 2') || chosenTerm.toLowerCase().includes('semester 2') || chosenTerm.toLowerCase().includes('2nd');
@@ -5620,7 +5623,7 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
     }
   }
 
-  const confirmed = confirm(`⚠️ अधिकृत अंकतालिका जारीकरण (${chosenTerm}):\n\nक्या आप ${stuName} (${regNo}) की अधिकृत अंकतालिका जारी करना चाहते हैं?\n(अंकतालिका जारीकरण निःशुल्क है - सेंटर वॉलेट से ₹0 कटेगा)\n\nजारी करते ही हेड ऑफिस एवं समन्वयक की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जनरेट हो जाएगी और प्रिंट/PDF विकल्प खुल जाएगा।`);
+  const confirmed = confirm(`⚠️ अधिकृत अंकतालिका जारीकरण (${chosenTerm}):\n\nक्या आप सेंटर वॉलेट से ₹${fee} का भुगतान करके ${stuName} (${regNo}) की अधिकृत अंकतालिका जारी करना चाहते हैं?\n\nभुगतान होते ही हेड ऑफिस एवं समन्वयक की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जनरेट हो जाएगी और प्रिंट/PDF विकल्प खुल जाएगा।`);
   if (!confirmed) return;
 
   try {
@@ -5662,7 +5665,7 @@ window.signAndIssueMrk = async function(mrkDbId, studentId, feeAmount) {
       else window._centreMarksheets.push(res.marksheet);
     }
 
-    toast(`🎉 ${chosenTerm} की अधिकृत अंकतालिका सफलतापूर्वक जारी हो गई!`);
+    toast(`🎉 ${chosenTerm} की अधिकृत अंकतालिका सफलतापूर्वक जारी हो गई! (₹${fee} वॉलेट से कटे)`);
     if (typeof views !== 'undefined' && typeof views.MarksheetPrinting === 'function') {
       await views.MarksheetPrinting();
       const sSel = $('#mrkStudentSelect');
@@ -5840,20 +5843,18 @@ async function updateMrkPreview(targetStudentId) {
   if (feeNoticeEl) {
     if (!isIssued) {
       feeNoticeEl.innerHTML = `
-        <div style="background:#f0fdf4; border:1.8px solid #86efac; border-radius:12px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(16,185,129,0.12);">
+        <div style="background:#fefce8; border:2px solid #eab308; border-radius:12px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(234,179,8,0.18);">
           <div style="display:flex; align-items:center; gap:12px;">
-            <span style="font-size:2.2rem;">📄</span>
+            <span style="font-size:2.2rem;">🔒</span>
             <div>
-              <b style="color:#065f46; font-size:1.05rem; display:block;">अंकतालिका तैयार है (Marksheet Ready - Free Issuance)</b>
-              <span style="font-size:0.85rem; color:#047857;">अंकतालिका जारीकरण पूर्णतः निःशुल्क है (वॉलेट शुल्क: ₹0)। ओरिजिनल प्रमाण-पत्र पर ही कोर्स शुल्क देय होगा।</span>
+              <b style="color:#854d0e; font-size:1.05rem; display:block;">अंकतालिका जारीकरण शुल्क (Marksheet Wallet Deduction)</b>
+              <span style="font-size:0.85rem; color:#713f12;">हेड ऑफिस व समन्वयक की अधिकृत मुहर व हस्ताक्षर सहित अंकतालिका जारी करने व प्रिंट करने के लिए सेंटर वॉलेट से ₹${currentFee} कटेगा।</span>
             </div>
           </div>
-          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:12px 18px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">
-              ✏️ Edit Marksheet &amp; Marks
-            </button>
-            <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, 0)" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 26px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.4); border:none; cursor:pointer;">
-              ⚡ Issue Marksheet (जारी करें - ₹0)
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="background:#dc2626; color:#ffffff; font-weight:900; font-size:1.25rem; padding:8px 20px; border-radius:20px; box-shadow:0 2px 8px rgba(220,38,38,0.3);">₹${currentFee}</span>
+            <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.05rem; padding:12px 26px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.4); border:none; cursor:pointer;">
+              ⚡ Pay ₹${currentFee} from Wallet &amp; Issue (पैसे वॉलेट से काटें व जारी करें)
             </button>
           </div>
         </div>
@@ -5865,11 +5866,11 @@ async function updateMrkPreview(targetStudentId) {
             <span style="font-size:2.2rem;">✅</span>
             <div>
               <b style="color:#065f46; font-size:1.05rem; display:block;">अंकतालिका आधिकारिक रूप से जारी हो चुकी है (Officially Issued &amp; Sealed)</b>
-              <span style="font-size:0.85rem; color:#047857;">हेड ऑफिस, समन्वयक एवं संस्थान निदेशक की अधिकृत मुहर लग चुकी है। आप इसे कभी भी निःशुल्क Print या PDF Save कर सकते हैं।</span>
+              <span style="font-size:0.85rem; color:#047857;">हेड ऑफिस, समन्वयक एवं संस्थान निदेशक की अधिकृत मुहर लग चुकी है। आप इसे Print या PDF Save कर सकते हैं।</span>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <span style="background:#15803d; color:#ffffff; font-weight:900; font-size:1.05rem; padding:6px 18px; border-radius:20px;">✓ ISSUED (FREE DOWNLOAD)</span>
+            <span style="background:#15803d; color:#ffffff; font-weight:900; font-size:1.05rem; padding:6px 18px; border-radius:20px;">✓ ISSUED (PAID ₹${currentFee})</span>
           </div>
         </div>
       `;
@@ -5877,8 +5878,8 @@ async function updateMrkPreview(targetStudentId) {
   }
 
   if (printWrap) {
-    printWrap.style.display = 'block';
     if (isIssued) {
+      printWrap.style.display = 'block';
       printWrap.innerHTML = `
         <div style="display:flex; gap:8px;">
           <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
@@ -5887,11 +5888,8 @@ async function updateMrkPreview(targetStudentId) {
         </div>
       `;
     } else {
-      printWrap.innerHTML = `
-        <div style="display:flex; gap:8px;">
-          <button type="button" class="btn sm" style="background:#d97706; color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
-        </div>
-      `;
+      printWrap.style.display = 'none';
+      printWrap.innerHTML = '';
     }
   }
 
@@ -5946,35 +5944,36 @@ async function updateMrkPreview(targetStudentId) {
     term: mrkItem?.term || mrkTerm
   }) : '<p>Loading Marksheet Template...</p>';
 
-  // UNLOCKED: Marksheet preview is ALWAYS rendered directly.
-  if (printWrap) printWrap.style.display = 'block';
-
   if (!isIssued) {
     $('#mrkPreviewContainer').innerHTML = `
-      <div class="no-print" style="margin-bottom:14px; background:#f0fdf4; border:1.8px solid #86efac; border-radius:10px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 3px 12px rgba(16,185,129,0.12);">
-        <div>
-          <b style="color:#065f46; font-size:1.02rem; display:block;">⚡ अंकतालिका पूर्वावलोकन (Marksheet Preview)</b>
-          <span style="font-size:0.86rem; color:#047857;">अंकतालिका जारीकरण पूर्णतः निःशुल्क है (वॉलेट से ₹0 कटेगा)। अधिकृत मुहर व हस्ताक्षर सहित जारी करने के लिए बटन दबाएं:</span>
+      <div style="background:#ffffff; padding:45px 20px; text-align:center; border-radius:12px;">
+        <div style="width:72px; height:72px; border-radius:50%; background:#fef3c7; border:2.5px solid #f59e0b; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:2.4rem;">🔒</div>
+        <h3 style="margin:0 0 8px; color:#064e3b; font-size:1.45rem; font-weight:800;">Official Marksheet Ready (Wallet Fee Payment Required)</h3>
+        <p style="margin:0 0 16px; color:#64748b; font-size:1rem;">
+          Candidate: <b style="color:#0f172a;">${esc(candidateName)}</b> (${esc(candidateCode)}) • Term: <b style="color:#0f172a;">${esc(mrkTerm)}</b>
+        </p>
+        <div style="max-width:540px; margin:0 auto 24px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; font-size:0.9rem; color:#475569; line-height:1.6;">
+          🔒 <b>अधिकृत सत्यापन:</b> हेड ऑफिस एवं समन्वयक की अधिकृत मुहर व डिजिटल हस्ताक्षर सहित अंकतालिका जारी करने के लिए सेंटर वॉलेट से <b>₹${currentFee}</b> का भुगतान करके जारी करें। फीस कटने के बाद ही अंकतालिका Print व PDF Save हो सकेगी।
         </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:10px 16px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marks</button>
-          <button type="button" class="btn sm" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1rem; padding:10px 22px; border-radius:8px; box-shadow:0 4px 14px rgba(22,163,74,0.35); border:none; cursor:pointer;" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, 0)">
-            ⚡ Sign &amp; Issue Marksheet (जारी करें - ₹0)
+        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+          <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:12px 18px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marks First</button>
+          <button type="button" class="btn" onclick="signAndIssueMrk(${mrkDbId}, ${studentId}, ${currentFee})" style="background:linear-gradient(135deg, #16a34a, #15803d); color:#ffffff; font-weight:900; font-size:1.1rem; padding:14px 34px; border-radius:10px; box-shadow:0 6px 20px rgba(22,163,74,0.35); border:none; cursor:pointer;">
+            ⚡ Pay ₹${currentFee} from Wallet &amp; Issue Marksheet
           </button>
         </div>
       </div>
-      ${marksheetHtml}
     `;
-  } else {
-    $('#mrkPreviewContainer').innerHTML = `
-      <div class="no-print" style="margin-bottom:12px; display:flex; justify-content:flex-end; gap:10px;">
-        <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:10px 18px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
-        <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Marksheet (A4)</button>
-        <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
-      </div>
-      ${marksheetHtml}
-    `;
+    return;
   }
+
+  $('#mrkPreviewContainer').innerHTML = `
+    <div class="no-print" style="margin-bottom:12px; display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" class="btn sm" style="background:#d97706; color:#fff; font-weight:800; padding:10px 18px; border-radius:8px; border:none; cursor:pointer;" onclick="openCentreEditMrkModal(${mrkDbId}, ${studentId})">✏️ Edit Marksheet &amp; Marks</button>
+      <button type="button" class="btn sm" style="background:linear-gradient(135deg, #065f46, #047857); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(6,95,70,0.3); border:none; cursor:pointer;" onclick="window.print()">🖨️ Print Marksheet (A4)</button>
+      <button type="button" class="btn sm" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; padding:10px 18px; font-weight:800; border-radius:8px; box-shadow:0 3px 10px rgba(2,132,199,0.3); border:none; cursor:pointer;" onclick="window.print()">💾 Save as PDF</button>
+    </div>
+    ${marksheetHtml}
+  `;
 }
 async function updateSemCertPreview() {
   await window.ensureAuthoritiesLoaded();

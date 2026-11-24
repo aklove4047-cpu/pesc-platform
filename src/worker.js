@@ -5582,9 +5582,20 @@ export default {
           }
         }
 
-        // Marksheet issuance is FREE (₹0 wallet fee). Course fee is charged on final Certificate issuance.
-        const fee = 0; // Marksheet is free of wallet deduction
+        const course = student ? store.courses.find(co => Number(co.id) === Number(student.course_id)) : null;
+        const courseSemFee = course ? (course.semester_fee_rupees || (course.semester_fee_paise ? Math.round(course.semester_fee_paise / 100) : 200)) : 200;
+        const courseSingleFee = course ? (course.single_fee_rupees || (course.single_fee_paise ? Math.round(course.single_fee_paise / 100) : 100)) : 100;
+        const targetCourseFee = (evalType.includes('semester') || isSemesterReq) ? courseSemFee : courseSingleFee;
+        const fee = (body.fee !== undefined && !isNaN(+body.fee) && +body.fee > 0) ? +body.fee : targetCourseFee;
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
+        if (bal < fee) {
+          return jsonResponse({
+            error: `सेंटर वॉलेट में अपर्याप्त बैलेंस है! आवश्यक: ₹${fee}, उपलब्ध: ₹${bal}। कृपया पहले वॉलेट रिचार्ज करें।`
+          }, 402);
+        }
+        bal -= fee;
+        if (c) c.wallet_balance = bal;
+        await persistToKV(env, 'centres', store.centres);
 
         let mrk = store.marksheets.find(x => 
           (Number(x.student_id) === studentId || (student && student.student_code && x.student_code === student.student_code)) &&

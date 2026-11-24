@@ -349,10 +349,10 @@ test('6. Center wallet check (fails ₹35), requests ₹1000 topup, HO approves,
 });
 
 test('7. Marksheet and Certificate issued with Head Office, Coordinator & Center seals', async () => {
-  // Marksheet issuance is FREE (₹0 wallet fee)
+  // Marksheet issuance debits ₹100 (10000 paise) from centre wallet
   const mrkRes = await call('POST', `/api/centre/marksheets/${studentId}/sign-issue`, {
     cookie: centreCookie,
-    body: { fee: 0, student_id: studentId }
+    body: { fee: 100, student_id: studentId }
   });
   assert.equal(mrkRes.status, 200);
   assert.equal(mrkRes.json.ok, true);
@@ -372,10 +372,10 @@ test('7. Marksheet and Certificate issued with Head Office, Coordinator & Center
   });
   assert.equal(feeRec.status, 200);
 
-  // Balance after: 96500 - 20000 = 76500 paise (₹765)
+  // Balance after: 96500 - 10000 - 20000 = 66500 paise (₹665)
   const walletAfter = await call('GET', '/api/centre/wallet', { cookie: centreCookie });
   assert.equal(walletAfter.status, 200);
-  assert.equal(walletAfter.json.balance_paise, 76500);
+  assert.equal(walletAfter.json.balance_paise, 66500);
 });
 
 test('8. Student logs in with Student@123, views profile, admission form, I-card, marksheet & cert', async () => {

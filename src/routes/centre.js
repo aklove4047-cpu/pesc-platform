@@ -672,8 +672,12 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
     }
   }
 
-  // Marksheet issuance is FREE (₹0 wallet fee). Course fee is charged on final Certificate issuance.
-  const fee = 0;
+  const co = s.course_id ? db.prepare('SELECT * FROM courses WHERE id=?').get(s.course_id) : null;
+  const courseSemFee = co ? (co.semester_fee_paise || 20000) : 20000;
+  const courseSingleFee = co ? (co.single_fee_paise || 10000) : 10000;
+  const targetFeePaise = isSem ? courseSemFee : courseSingleFee;
+  const reqFeePaise = (req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee > 0) ? Math.round(+req.body.fee * 100) : null;
+  const fee = reqFeePaise !== null ? reqFeePaise : targetFeePaise;
 
   const token = crypto.randomBytes(16).toString('hex');
   const mrkNo = `PESC-MRK-2026-${String(s.id).padStart(5, '0')}`;
