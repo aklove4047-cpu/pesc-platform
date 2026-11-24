@@ -4997,7 +4997,6 @@ async function updateCertPreview(targetStudentId) {
           </div>
         </div>
       `;
-    }
     } else {
       feeNoticeEl.innerHTML = `
         <div style="background:#ecfdf5; border:1.8px solid #86efac; border-radius:12px; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; box-shadow:0 4px 16px rgba(16,185,129,0.12);">
