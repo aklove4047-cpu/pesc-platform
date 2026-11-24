@@ -5582,7 +5582,6 @@ export default {
           }
         }
 
-        const course = student ? store.courses.find(co => Number(co.id) === Number(student.course_id)) : null;
         const courseSemFee = course ? (course.semester_fee_rupees || (course.semester_fee_paise ? Math.round(course.semester_fee_paise / 100) : 200)) : 200;
         const courseSingleFee = course ? (course.single_fee_rupees || (course.single_fee_paise ? Math.round(course.single_fee_paise / 100) : 100)) : 100;
         const targetCourseFee = (evalType.includes('semester') || isSemesterReq) ? courseSemFee : courseSingleFee;
