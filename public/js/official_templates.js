@@ -306,8 +306,8 @@
                   Mother's Name: <b style="border-bottom:1px solid #94a3b8; padding:0 8px;">${esc(s.mother_name || '________________')}</b>
                 </div>
                 <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                  <span>Category: [${['GEN', 'GENERAL'].includes(cat) ? '✓' : '&nbsp;'}] Gen &nbsp; [${cat === 'OBC' ? '✓' : '&nbsp;'}] OBC &nbsp; [${cat === 'SC' ? '✓' : '&nbsp;'}] SC &nbsp; [${cat === 'ST' ? '✓' : '&nbsp;'}] ST</span>
-                  <span>| &nbsp; Blood Group: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${(s.blood_group && s.blood_group !== '—' && !s.blood_group.includes('Not Specified')) ? esc(s.blood_group) : '______'}</b></span>
+                  <span>Category: [${(['GEN', 'GENERAL'].includes(cat) && cat !== '') ? '✓' : '&nbsp;'}] Gen &nbsp; [${cat === 'OBC' ? '✓' : '&nbsp;'}] OBC &nbsp; [${cat === 'SC' ? '✓' : '&nbsp;'}] SC &nbsp; [${cat === 'ST' ? '✓' : '&nbsp;'}] ST</span>
+                  <span>| &nbsp; Blood Group: <b style="border-bottom:1px solid #94a3b8; padding:0 6px;">${(s.blood_group && s.blood_group !== '—' && !s.blood_group.includes('Not Specified') && s.blood_group.trim() !== '') ? esc(s.blood_group) : '______'}</b></span>
                 </div>
               </div>
             </div>

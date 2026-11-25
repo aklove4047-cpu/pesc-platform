@@ -869,6 +869,13 @@
         <p>Government recognized computer diploma &amp; certificate courses with affordable local fees</p>
       </div>
 
+      <div style="max-width:540px; margin:0 auto 28px; padding:0 16px;">
+        <div style="position:relative; display:flex; align-items:center;">
+          <input type="text" id="publicCourseSearchInput" placeholder="🔍 Search courses (e.g. ADCA, DCA, Tally, CCC, Yoga)..." oninput="window.searchPublicCourses(this.value)" style="width:100%; padding:12px 20px 12px 42px; border:2px solid #047857; border-radius:30px; font-size:0.95rem; outline:none; box-shadow:0 3px 12px rgba(4,120,87,0.1); background:#ffffff;">
+          <span style="position:absolute; left:16px; font-size:1.1rem; pointer-events:none;">🔍</span>
+        </div>
+      </div>
+
       <div class="c-course-grid" id="courseGrid">
         <!-- 5 Cards Rendered Dynamically -->
       </div>
@@ -2121,6 +2128,15 @@
           <option value="5">CCC - Course on Computer Concepts (3 Months)</option>
         `;
       }
+
+      window.searchPublicCourses = function(q) {
+        const query = (q || '').trim().toLowerCase();
+        const cards = document.querySelectorAll('#courseGrid .c-course-card');
+        cards.forEach(card => {
+          const text = (card.textContent || '').toLowerCase();
+          card.style.display = (!query || text.includes(query)) ? '' : 'none';
+        });
+      };
     }
   </script>
 </body>

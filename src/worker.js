@@ -678,36 +678,6 @@ async function syncFromKV(env, force = false) {
   const now = Date.now();
   if (!force && kvLoaded && (now - lastKvSync < 30000)) return;
   try {
-    const currentVersion = await env.PESC_KV.get('data_version');
-    if (currentVersion !== DATA_VERSION) {
-      // Overwrite KV with 100% clean fresh zero state (all centres, coords, students deleted)
-      const existingUsers = (await env.PESC_KV.get('users', 'json')) || store.users || [];
-      const existingAdmin = (Array.isArray(existingUsers) && existingUsers.find(u => u.role === 'super_admin' || u.role === 'admin')) || CLEAN_ADMIN_USER;
-
-      await Promise.all([
-        env.PESC_KV.put('data_version', DATA_VERSION),
-        env.PESC_KV.put('centres', JSON.stringify([])),
-        env.PESC_KV.put('applications', JSON.stringify([])),
-        env.PESC_KV.put('students', JSON.stringify([])),
-        env.PESC_KV.put('certificates', JSON.stringify([])),
-        env.PESC_KV.put('marksheets', JSON.stringify([])),
-        env.PESC_KV.put('coordinator_certificates', JSON.stringify([])),
-        env.PESC_KV.put('wallet_topups', JSON.stringify([])),
-        env.PESC_KV.put('users', JSON.stringify([existingAdmin])),
-      ]);
-      store.centres = [];
-      store.applications = [];
-      store.students = [];
-      store.certificates = [];
-      store.marksheets = [];
-      store.coordinator_certificates = [];
-      store.wallet_topups = [];
-      store.users = [existingAdmin];
-      kvLoaded = true;
-      lastKvSync = now;
-      return;
-    }
-
     const [c, a, s, u, certs, mrks, courses, settings, notices, coordCerts, wt, fees] = await Promise.all([
       env.PESC_KV.get('centres', 'json'),
       env.PESC_KV.get('applications', 'json'),

@@ -1027,9 +1027,9 @@ const views = {
           <span>Fees Collected</span>
           <b style="color:#16a34a;">₹${(dash.fee_paid_rupees || 0).toLocaleString('en-IN')}</b>
         </div>
-        <div class="stat" style="border-left: 4px solid #ea580c;">
-          <span>Fees Pending</span>
-          <b style="color:#ea580c;">₹${(dash.fee_pending_rupees || 0).toLocaleString('en-IN')}</b>
+        <div class="stat" style="border-left: 4px solid #d97706;">
+          <span>Total Admissions</span>
+          <b style="color:#d97706;">${(activeList.length + passoutList.length)}</b>
         </div>
         <div class="stat" style="border-left: 4px solid #047857;">
           <span>Courses Offered</span>
@@ -4235,10 +4235,6 @@ function renderStudentTable(students, isPassout = false) {
     ['Course', (r) => esc(r.course || r.course_name || 'Diploma')],
     ['Total Fees', (r) => `₹${(r.fee_total || 12000).toLocaleString('en-IN')}`],
     ['Paid', (r) => `<span style="color:#16a34a; font-weight:700;">₹${(r.fee_paid || 0).toLocaleString('en-IN')}</span>`],
-    ['Pending', (r) => {
-      const pend = Math.max(0, (r.fee_total || 12000) - (r.fee_paid || 0));
-      return `<span style="color:${pend > 0 ? '#ea580c' : '#16a34a'}; font-weight:700;">₹${pend.toLocaleString('en-IN')}</span>`;
-    }],
     ['Actions', (r) => {
       const certBtn = r.certificate_id 
         ? `<a href="/print?type=certificate&student_id=${r.id}&slug=${encodeURIComponent(currentSlug)}" target="_blank" class="btn sm gold" style="font-weight:700;text-decoration:none;" title="Print Certificate">🎓 Cert</a>` 
@@ -4434,6 +4430,7 @@ window.showAdmissionFormModal = async function(studentOrId) {
       <div class="no-print" style="background:#072a60; color:#fff; padding:12px 20px; display:flex; justify-content:space-between; align-items:center;">
         <span style="font-weight:700; font-size:1rem;">📄 Official Student Admission Form</span>
         <div style="display:flex; gap:10px;">
+          <button type="button" class="btn sm" style="background:#059669; color:#fff; font-weight:700; padding:6px 16px;" onclick="document.getElementById('admissionFormViewModal').style.display='none'; openEditStudentModal(${stu.id})">✏️ Edit Form</button>
           <button type="button" class="btn sm" style="background:#0284c7; color:#fff; font-weight:700; padding:6px 18px;" onclick="window.print()">🖨️ Print Form (A4)</button>
           <button type="button" class="btn sm danger" style="background:#dc2626; color:#fff; font-weight:700; padding:6px 14px;" onclick="document.getElementById('admissionFormViewModal').style.display='none'; deleteCentreStudent(${stu.id}, '${esc(stu.name)}', '${esc(stu.student_code)}')">🗑️ Delete Student</button>
           <button type="button" class="btn sm alt" style="padding:6px 14px;" onclick="document.getElementById('admissionFormViewModal').style.display='none'">✕ Close</button>
@@ -4636,6 +4633,13 @@ window.openEditStudentModal = async function(id) {
                     <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_marks" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.twelfth && (stu.academic_qualifications.twelfth.marks || stu.academic_qualifications.twelfth.marks_obt)) || '')}" placeholder="380/500" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
                     <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_12_pct" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.twelfth && (stu.academic_qualifications.twelfth.pct || stu.academic_qualifications.twelfth.percentage)) || '')}" placeholder="76%" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
                   </tr>
+                  <tr>
+                    <td style="padding:6px 8px; border:1px solid #cbd5e1; font-weight:700;">Graduation</td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_grad_board" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.graduation && stu.academic_qualifications.graduation.board) || '')}" placeholder="e.g. University" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_grad_year" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.graduation && stu.academic_qualifications.graduation.year) || '')}" placeholder="2025" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_grad_marks" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.graduation && (stu.academic_qualifications.graduation.marks || stu.academic_qualifications.graduation.marks_obt)) || '')}" placeholder="Marks" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                    <td style="padding:4px; border:1px solid #cbd5e1;"><input name="qual_grad_pct" value="${safeEsc((stu.academic_qualifications && stu.academic_qualifications.graduation && (stu.academic_qualifications.graduation.pct || stu.academic_qualifications.graduation.percentage)) || '')}" placeholder="%" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px;"></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -4679,6 +4683,12 @@ window.openEditStudentModal = async function(id) {
         marks_obt: fd.get('qual_12_marks') || '',
         percentage: fd.get('qual_12_pct') || ''
       };
+      const qGrad = {
+        board: fd.get('qual_grad_board') || '',
+        year: fd.get('qual_grad_year') || '',
+        marks_obt: fd.get('qual_grad_marks') || '',
+        percentage: fd.get('qual_grad_pct') || ''
+      };
       const payload = {
         name: fd.get('name'),
         father_name: fd.get('father_name'),
@@ -4694,8 +4704,8 @@ window.openEditStudentModal = async function(id) {
         address: fd.get('address'),
         fee_total: +fd.get('fee_total') || 0,
         fee_paid: +fd.get('fee_paid') || 0,
-        academic_qualifications: { tenth: q10, twelfth: q12 },
-        qualifications: { tenth: q10, twelfth: q12 }
+        academic_qualifications: { tenth: q10, twelfth: q12, graduation: qGrad },
+        qualifications: { tenth: q10, twelfth: q12, graduation: qGrad }
       };
 
       try {
