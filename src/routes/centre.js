@@ -480,7 +480,10 @@ router.put('/students/:id', (req, res) => {
     const rawQ = b.academic_qualifications || b.qualifications;
     updates.push('qualifications=?'); vals.push(typeof rawQ === 'string' ? rawQ : JSON.stringify(rawQ));
   }
-  if (b.photo_url !== undefined || b.photo !== undefined) { updates.push('photo_url=?'); vals.push(str(b.photo_url || b.photo, 500)); }
+  if (b.photo_url !== undefined || b.photo !== undefined) {
+    const rawPhoto = b.photo_url || b.photo || '';
+    updates.push('photo_url=?'); vals.push(typeof rawPhoto === 'string' ? rawPhoto.slice(0, 2000000) : null);
+  }
 
   if (updates.length > 0) {
     vals.push(+req.params.id, cid(req));
@@ -682,37 +685,53 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
   const token = crypto.randomBytes(16).toString('hex');
   const mrkNo = `PESC-MRK-2026-${String(s.id).padStart(5, '0')}`;
 
-  let mid = db.prepare('SELECT id FROM marksheets WHERE student_id=? AND term=?').get(s.id, termVal)?.id;
-  if (!mid) {
+  const mid = db.transaction(() => {
+    let existingId = db.prepare('SELECT id FROM marksheets WHERE student_id=? AND term=?').get(s.id, termVal)?.id;
     let subjects = null;
     let totalMax = 0;
     let totalObt = 0;
-    if (s.course_id) {
-      const co = db.prepare('SELECT subjects, name FROM courses WHERE id=?').get(s.course_id);
-      if (co && co.subjects) {
-        try {
-          const parsed = typeof co.subjects === 'string' ? JSON.parse(co.subjects) : co.subjects;
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            subjects = parsed.map((sub, idx) => {
-              const max = sub.total_max || sub.max || sub.max_marks || ((+sub.max_theory || 0) + (+sub.max_practical || 0)) || 100;
-              const obt = sub.obt || sub.marks_obtained || sub.marks || ((+sub.obt_theory || 0) + (+sub.obt_practical || 0)) || Math.round(max * 0.76);
-              const min = sub.min || sub.min_marks || Math.round(max * 0.33);
-              const pct = max > 0 ? (obt / max) * 100 : 0;
-              const grade = sub.grade || (pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : pct >= 50 ? 'B' : 'C');
-              totalMax += max;
-              totalObt += obt;
-              return {
-                code: sub.code || `SUB-0${idx + 1}`,
-                name: sub.name || `Subject ${idx + 1}`,
-                max, min, obt, grade,
-                max_marks: max, min_marks: min, marks_obtained: obt
-              };
-            });
-          }
-        } catch (_) { }
-      }
+
+    const rawSubjects = Array.isArray(req.body.subjects) && req.body.subjects.length > 0 ? req.body.subjects : null;
+    if (rawSubjects) {
+      subjects = rawSubjects.map((sub, idx) => {
+        const max = +(sub.total_max || sub.max || sub.max_marks || ((+sub.max_theory || 0) + (+sub.max_practical || 0))) || 100;
+        const obt = +(sub.obt ?? sub.marks_obtained ?? sub.marks ?? ((+sub.obt_theory || 0) + (+sub.obt_practical || 0))) || 0;
+        const min = +(sub.min || sub.min_marks) || Math.round(max * 0.33);
+        const pct = max > 0 ? (obt / max) * 100 : 0;
+        const grade = sub.grade || (pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : pct >= 50 ? 'B' : 'C');
+        totalMax += max;
+        totalObt += obt;
+        return {
+          code: sub.code || `SUB-0${idx + 1}`,
+          name: sub.name || `Subject ${idx + 1}`,
+          max, min, obt, grade,
+          max_marks: max, min_marks: min, marks_obtained: obt
+        };
+      });
+    } else if (!existingId && s.course_id && co && co.subjects) {
+      try {
+        const parsed = typeof co.subjects === 'string' ? JSON.parse(co.subjects) : co.subjects;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          subjects = parsed.map((sub, idx) => {
+            const max = sub.total_max || sub.max || sub.max_marks || ((+sub.max_theory || 0) + (+sub.max_practical || 0)) || 100;
+            const obt = sub.obt || sub.marks_obtained || sub.marks || ((+sub.obt_theory || 0) + (+sub.obt_practical || 0)) || Math.round(max * 0.76);
+            const min = sub.min || sub.min_marks || Math.round(max * 0.33);
+            const pct = max > 0 ? (obt / max) * 100 : 0;
+            const grade = sub.grade || (pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : pct >= 50 ? 'B' : 'C');
+            totalMax += max;
+            totalObt += obt;
+            return {
+              code: sub.code || `SUB-0${idx + 1}`,
+              name: sub.name || `Subject ${idx + 1}`,
+              max, min, obt, grade,
+              max_marks: max, min_marks: min, marks_obtained: obt
+            };
+          });
+        }
+      } catch (_) { }
     }
-    if (!subjects || subjects.length === 0) {
+
+    if (!existingId && (!subjects || subjects.length === 0)) {
       subjects = [
         { code: 'DCA101', name: 'Information Technology & MS Windows', max: 100, min: 40, obt: 78, grade: 'A', max_marks: 100, min_marks: 40, marks_obtained: 78 },
         { code: 'DCA102', name: 'Office Automation Tools (Word, Excel, PPT)', max: 100, min: 40, obt: 72, grade: 'B+', max_marks: 100, min_marks: 40, marks_obtained: 72 },
@@ -723,28 +742,37 @@ router.post('/marksheets/:id/sign-issue', (req, res) => {
       totalMax = 500;
       totalObt = 403;
     }
-    const pct = totalMax > 0 ? +((totalObt / totalMax) * 100).toFixed(2) : 74.57;
-    const grade = pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : 'B';
-    const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
-    const evalType = isSem ? 'semester' : 'yearly';
-    const termVal = req.body.term || (isSem ? 'Semester 1' : 'Annual');
-    const r = db.prepare(`INSERT INTO marksheets(marksheet_no, token, student_id, centre_id, course_id, exam_session, roll_no, subjects, total_max, total_obtained, percentage, grade, result, status, issue_date, evaluation_type, term, requested_by, created_at)
-      VALUES(?,?,?,?,?,'2025-2026',?,?,?,?,?,?,'PASS','Approved',?,?,?,?,?)`)
-      .run(mrkNo, token, s.id, cid(req), s.course_id, s.student_code, JSON.stringify(subjects), totalMax, totalObt, pct, grade, now(), evalType, termVal, req.user.id, now());
-    mid = r.lastInsertRowid;
-  } else {
-    db.prepare("UPDATE marksheets SET status='Approved', issue_date=? WHERE id=?").run(now(), mid);
-  }
 
-  if (fee > 0) {
-    try {
-      wallet.debit(cid(req), fee, `fee:marksheet:${mid}:${Date.now()}`, 'Marksheet issue fee', req.user.id);
-    } catch (e) {
-      if (e.status === 409 && /Insufficient/i.test(e.message)) {
-        throw new HttpError(402, 'Insufficient wallet balance for marksheet issuance');
+    if (!existingId) {
+      const pct = totalMax > 0 ? +((totalObt / totalMax) * 100).toFixed(2) : 74.57;
+      const grade = pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : 'B';
+      const evalType = isSem ? 'semester' : 'yearly';
+      const r = db.prepare(`INSERT INTO marksheets(marksheet_no, token, student_id, centre_id, course_id, exam_session, roll_no, subjects, total_max, total_obtained, percentage, grade, result, status, issue_date, evaluation_type, term, requested_by, created_at)
+        VALUES(?,?,?,?,?,'2025-2026',?,?,?,?,?,?,'PASS','Approved',?,?,?,?,?)`)
+        .run(mrkNo, token, s.id, cid(req), s.course_id, s.student_code, JSON.stringify(subjects), totalMax, totalObt, pct, grade, now(), evalType, termVal, req.user.id, now());
+      existingId = r.lastInsertRowid;
+    } else if (subjects && subjects.length > 0) {
+      const pct = totalMax > 0 ? +((totalObt / totalMax) * 100).toFixed(2) : 74.57;
+      const grade = pct >= 85 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B+' : 'B';
+      db.prepare("UPDATE marksheets SET subjects=?, total_max=?, total_obtained=?, percentage=?, grade=?, status='Approved', issue_date=? WHERE id=?")
+        .run(JSON.stringify(subjects), totalMax, totalObt, pct, grade, now(), existingId);
+    } else {
+      db.prepare("UPDATE marksheets SET status='Approved', issue_date=? WHERE id=?").run(now(), existingId);
+    }
+
+    if (fee > 0) {
+      try {
+        wallet.debit(cid(req), fee, `fee:marksheet:${existingId}:${Date.now()}`, 'Marksheet issue fee', req.user.id);
+      } catch (e) {
+        if (e.status === 409 && /Insufficient/i.test(e.message)) {
+          throw new HttpError(402, 'Insufficient wallet balance for marksheet issuance');
+        }
+        throw e;
       }
     }
-  }
+
+    return existingId;
+  })();
 
   const w = db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(cid(req)) || { balance_paise: 0 };
   res.json({ ok: true, id: mid, marksheet_no: mrkNo, wallet_balance: Math.round(w.balance_paise / 100) });
@@ -786,26 +814,31 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
   const token = crypto.randomBytes(16).toString('hex');
   const certNo = `PESC-CERT-2026-${String(s.id).padStart(5, '0')}`;
 
-  let certId = db.prepare('SELECT id FROM certificates WHERE student_id=?').get(s.id)?.id;
-  if (!certId) {
-    const isSem = req.body.is_semester || (req.body.term && req.body.term.toLowerCase().includes('semester')) || s.evaluation_type === 'semester';
-    const evalType = isSem ? 'semester' : 'yearly';
-    const termVal = req.body.term || (isSem ? 'Semester 1' : 'Annual');
-    const r = db.prepare(`INSERT INTO certificates(token, student_id, centre_id, course_id, cert_no, status, evaluation_type, term, issued_at, requested_by, created_at)
-      VALUES(?,?,?,?,?,'Valid',?,?,?,?,?)`)
-      .run(token, s.id, cid(req), s.course_id, certNo, evalType, termVal, now(), req.user.id, now());
-    certId = r.lastInsertRowid;
-  } else {
-    db.prepare("UPDATE certificates SET status='Valid', cert_no=COALESCE(cert_no, ?), issued_at=? WHERE id=?").run(certNo, now(), certId);
-  }
-
-  try {
-    wallet.debit(cid(req), fee, `fee:certificate:${certId}:${Date.now()}`, 'Certificate issue fee', req.user.id);
-  } catch (e) {
-    if (e.status === 409 && /Insufficient/i.test(e.message)) {
-      throw new HttpError(402, 'Insufficient wallet balance for certificate issuance');
+  const certId = db.transaction(() => {
+    let existingCertId = db.prepare('SELECT id FROM certificates WHERE student_id=?').get(s.id)?.id;
+    if (!existingCertId) {
+      const evalType = isSem ? 'semester' : 'yearly';
+      const termVal = req.body.term || (isSem ? 'Semester 1' : 'Annual');
+      const r = db.prepare(`INSERT INTO certificates(token, student_id, centre_id, course_id, cert_no, status, evaluation_type, term, issued_at, requested_by, created_at)
+        VALUES(?,?,?,?,?,'Valid',?,?,?,?,?)`)
+        .run(token, s.id, cid(req), s.course_id, certNo, evalType, termVal, now(), req.user.id, now());
+      existingCertId = r.lastInsertRowid;
+    } else {
+      db.prepare("UPDATE certificates SET status='Valid', cert_no=COALESCE(cert_no, ?), issued_at=? WHERE id=?").run(certNo, now(), existingCertId);
     }
-  }
+
+    if (fee > 0) {
+      try {
+        wallet.debit(cid(req), fee, `fee:certificate:${existingCertId}:${Date.now()}`, 'Certificate issue fee', req.user.id);
+      } catch (e) {
+        if (e.status === 409 && /Insufficient/i.test(e.message)) {
+          throw new HttpError(402, 'Insufficient wallet balance for certificate issuance');
+        }
+        throw e;
+      }
+    }
+    return existingCertId;
+  })();
 
   const w = db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(cid(req)) || { balance_paise: 0 };
   res.json({ ok: true, id: certId, cert_no: certNo, wallet_balance: Math.round(w.balance_paise / 100) });
