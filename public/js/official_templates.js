@@ -50,9 +50,9 @@
     };
 
     // Centre Assets
-    const centreSeal = cleanUrl((c && c.seal_url) || centreAuth.seal_url || (data && data.centreSeal)) || SEALS.centreSeal;
-    const centreSign = cleanUrl((c && c.signature_url) || centreAuth.signature_url || (data && data.centreSign)) || SEALS.centreSign;
-    const centreLogo = cleanUrl((c && c.logo_url) || centreAuth.logo_url || (data && data.centreLogo));
+    const centreSeal = cleanUrl((c && c.seal_url) || centreAuth.seal_url || (data && (data.centreSeal || data.seal_url))) || SEALS.centreSeal;
+    const centreSign = cleanUrl((c && c.signature_url) || centreAuth.signature_url || (data && (data.centreSign || data.signature_url))) || SEALS.centreSign;
+    const centreLogo = cleanUrl((c && (c.logo_url || c.logo)) || centreAuth.logo_url || (data && (data.centreLogo || data.logo_url || data.logo)));
 
     // Coordinator Assets (Priority to live coordinator user uploaded assets)
     let coordSeal = '';
@@ -478,14 +478,14 @@
     const toDate = data.toDate || '12-09-2026';
 
     const rawHeaderType = String(data.header_type || data.headerMode || (data.format === 'council' ? 'council' : '')).toLowerCase();
-    const isExplicitCouncil = rawHeaderType === 'council' || data.format === 'council' || data.design_format === 'council';
     const isExplicitCentre = rawHeaderType === 'centre' || data.format === 'institute';
-    const hasCouncilTitle = String(data.header_title || '').toUpperCase().includes('COUNCIL') || 
+    const isExplicitCouncil = (rawHeaderType === 'council' || data.format === 'council' || data.design_format === 'council') && !isExplicitCentre;
+    const hasCouncilTitle = (String(data.header_title || '').toUpperCase().includes('COUNCIL') || 
                             String(data.header_title || '').toUpperCase().includes('PURVANCHAL') ||
                             String(data.header_hindi || '').includes('परिषद') ||
-                            String(data.header_hindi || '').includes('पूर्वांचल');
+                            String(data.header_hindi || '').includes('पूर्वांचल')) && !isExplicitCentre;
 
-    const isCouncilHeader = isExplicitCouncil || (!isExplicitCentre && hasCouncilTitle) || (!rawHeaderType && !data.format);
+    const isCouncilHeader = !isExplicitCentre && (isExplicitCouncil || hasCouncilTitle || (!rawHeaderType && !data.format));
 
     const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
     const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);
@@ -537,9 +537,9 @@
           <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:8px;">
             <!-- Left: Centre Logo or Council Logo -->
             <div style="width:85px; height:85px; border-radius:50%; border:2px solid #d4af37; padding:2px; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              ${isCouncilHeader 
-                ? `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`
-                : (centreLogo ? `<img src="${centreLogo}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`)}
+              ${(centreLogo && centreLogo.trim()) 
+                ? `<img src="${centreLogo}" alt="Centre Logo" style="width:100%; height:100%; object-fit:contain;">` 
+                : `<img src="${councilLogo}" alt="Council Logo" style="width:100%; height:100%; object-fit:contain;">`}
             </div>
 
             <!-- Center: Names and Accreditations -->
@@ -694,14 +694,14 @@
     const duration = data.duration || (s.duration_months ? `${Math.round(s.duration_months/12) || 1} Year` : '1 Year');
 
     const rawHeaderType = String(data.header_type || data.headerMode || (data.format === 'council' ? 'council' : '')).toLowerCase();
-    const isExplicitCouncil = rawHeaderType === 'council' || data.format === 'council' || data.design_format === 'council';
     const isExplicitCentre = rawHeaderType === 'centre' || data.format === 'institute';
-    const hasCouncilTitle = String(data.header_title || '').toUpperCase().includes('COUNCIL') || 
+    const isExplicitCouncil = (rawHeaderType === 'council' || data.format === 'council' || data.design_format === 'council') && !isExplicitCentre;
+    const hasCouncilTitle = (String(data.header_title || '').toUpperCase().includes('COUNCIL') || 
                             String(data.header_title || '').toUpperCase().includes('PURVANCHAL') ||
                             String(data.header_hindi || '').includes('परिषद') ||
-                            String(data.header_hindi || '').includes('पूर्वांचल');
+                            String(data.header_hindi || '').includes('पूर्वांचल')) && !isExplicitCentre;
 
-    const isCouncilHeader = isExplicitCouncil || (!isExplicitCentre && hasCouncilTitle) || (!rawHeaderType && !data.format);
+    const isCouncilHeader = !isExplicitCentre && (isExplicitCouncil || hasCouncilTitle || (!rawHeaderType && !data.format));
 
     const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
     const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);
@@ -909,9 +909,9 @@
           <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:8px;">
             <!-- Left: Centre Logo or Council Logo -->
             <div style="width:85px; height:85px; border-radius:50%; border:2px solid #d4af37; padding:2px; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              ${isCouncilHeader 
-                ? `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`
-                : (centreLogo ? `<img src="${centreLogo}" style="width:100%; height:100%; object-fit:contain;">` : `<img src="${councilLogo}" style="width:100%; height:100%; object-fit:contain;">`)}
+              ${(centreLogo && centreLogo.trim()) 
+                ? `<img src="${centreLogo}" alt="Centre Logo" style="width:100%; height:100%; object-fit:contain;">` 
+                : `<img src="${councilLogo}" alt="Council Logo" style="width:100%; height:100%; object-fit:contain;">`}
             </div>
 
             <!-- Center: Names and Accreditations -->

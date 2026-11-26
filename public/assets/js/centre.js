@@ -2036,8 +2036,8 @@ const views = {
           <div>
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Design Format:</label>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="btn gold sm active" id="btnFmtCouncil" onclick="setCertFormat('council')">Council Only</button>
-              <button type="button" class="btn alt sm" id="btnFmtInstitute" onclick="setCertFormat('institute')">Institute Only</button>
+              <button type="button" class="btn alt sm" id="btnFmtCouncil" onclick="setCertFormat('council')">Council Only</button>
+              <button type="button" class="btn gold sm active" id="btnFmtInstitute" onclick="setCertFormat('institute')">Institute Only</button>
               <button type="button" class="btn alt sm" id="btnFmtDual" onclick="setCertFormat('dual')">Both Dual</button>
             </div>
           </div>
@@ -2208,8 +2208,8 @@ const views = {
           <div>
             <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">Design Format:</label>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="btn gold sm active" id="btnMrkFmtCouncil" onclick="setMrkFormat('council')">Council Header</button>
-              <button type="button" class="btn alt sm" id="btnMrkFmtInstitute" onclick="setMrkFormat('institute')">🏫 Centre Name on Top</button>
+              <button type="button" class="btn alt sm" id="btnMrkFmtCouncil" onclick="setMrkFormat('council')">Council Header</button>
+              <button type="button" class="btn gold sm active" id="btnMrkFmtInstitute" onclick="setMrkFormat('institute')">🏫 Centre Name on Top</button>
               <button type="button" class="btn alt sm" id="btnMrkFmtDual" onclick="setMrkFormat('dual')">Both Dual</button>
             </div>
           </div>
@@ -4820,7 +4820,7 @@ window.reissueCert = async function(certDbId, studentId, feeAmount) {
 };
 
 // Certificate Preview Renderers
-let certFormat = 'council';
+let certFormat = 'institute';
 let certEvalPattern = 'yearly';
 
 function setCertFormat(fmt) {
@@ -5595,7 +5595,7 @@ function getCourseCurriculumSubjects(courseNameOrCode, evalPattern, termName) {
 }
 
 // Marksheet Format & Issuance Logic
-let mrkFormat = 'council';
+let mrkFormat = 'institute';
 function setMrkFormat(fmt) {
   mrkFormat = fmt;
   const bCouncil = $('#btnMrkFmtCouncil');
