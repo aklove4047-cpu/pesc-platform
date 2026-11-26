@@ -800,16 +800,9 @@ router.post('/certificates/:id/sign-issue', (req, res) => {
     }
   }
 
-  let courseFeePaise = 20000;
-  if (s && s.course_id) {
-    const co = db.prepare('SELECT single_fee_paise, semester_fee_paise FROM courses WHERE id=?').get(s.course_id);
-    if (co) {
-      courseFeePaise = isSem ? (co.semester_fee_paise || 60000) : (co.single_fee_paise || 20000);
-    }
-  }
-  const fee = (courseFeePaise > 0)
-    ? courseFeePaise
-    : ((req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee >= 0) ? Math.round(+req.body.fee * 100) : 20000);
+  const reqFeePaise = (req.body.fee !== undefined && !isNaN(+req.body.fee) && +req.body.fee >= 0) ? Math.round(+req.body.fee * 100) : null;
+  const policyFeePaise = fees.amount('certificate') || 20000;
+  const fee = reqFeePaise !== null ? reqFeePaise : policyFeePaise;
 
   const token = crypto.randomBytes(16).toString('hex');
   const certNo = `PESC-CERT-2026-${String(s.id).padStart(5, '0')}`;
