@@ -5456,7 +5456,7 @@ export default {
 
         const course = student ? store.courses.find(co => Number(co.id) === Number(student.course_id)) : null;
         const courseSingleFee = course ? (course.single_fee_rupees || (course.single_fee_paise ? Math.round(course.single_fee_paise / 100) : 200)) : 200;
-        const fee = (courseSingleFee > 0) ? courseSingleFee : ((body.fee !== undefined && !isNaN(+body.fee) && +body.fee > 0) ? +body.fee : 200);
+        const fee = (body.fee !== undefined && !isNaN(+body.fee) && +body.fee > 0) ? +body.fee : (courseSingleFee > 0 ? courseSingleFee : 200);
         let bal = (c && c.wallet_balance !== undefined) ? c.wallet_balance : 5000;
         if (bal < fee) {
           return jsonResponse({
