@@ -45,13 +45,11 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 
 function getDefaultStudentFee(durationMonths, code) {
   const c = String(code || '').toUpperCase();
-  if (c.includes('ADCA') || c.includes('PGDCA') || (durationMonths && durationMonths >= 12)) return 12000;
-  if (c.includes('DCA') || (durationMonths && durationMonths >= 6)) return 6500;
-  if (c.includes('TALLY') || durationMonths === 3) return 4000;
-  if (c.includes('CCC')) return 2500;
+  if (c.includes('ADCA') || c.includes('PGDCA') || c.includes('YOGA') || c.includes('FASHION') || c.includes('MED') || (durationMonths && durationMonths >= 12)) return 12000;
+  if (c.includes('DCA') || c.includes('DTP') || c.includes('HARDWARE') || (durationMonths && durationMonths >= 6)) return 6500;
+  if (c.includes('TALLY') || c.includes('CCC') || (durationMonths && durationMonths <= 3)) return 4000;
   if (c.includes('TYPING') || (durationMonths && durationMonths <= 2)) return 2000;
-  if (durationMonths && durationMonths >= 9) return 9000;
-  return (durationMonths && durationMonths >= 6) ? 6500 : 3500;
+  return (durationMonths && durationMonths >= 6) ? 6500 : 4000;
 }
 
 let centreSiteTemplate = null;

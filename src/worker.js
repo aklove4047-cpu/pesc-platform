@@ -364,6 +364,30 @@ const COURSE_CURRICULUM_DATA = {
         { code: 'FAS-S203', name: 'Final Garment Collection & Portfolio Viva', max_marks: 100, theory: 48, practical: 48 },
       ]
     }
+  },
+  MED: {
+    name: 'CMS ED',
+    yearly: {
+      'Annual Examination': [
+        { code: 'MED-Y101', name: 'Anatomy, Physiology & Pathology Basics', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'MED-Y102', name: 'Community Health, Sanitation & Hygiene', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'MED-Y103', name: 'Essential Drugs & Primary Pharmacology', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'MED-Y104', name: 'First Aid & Emergency Primary Healthcare', max_marks: 100, theory: 46, practical: 45 },
+        { code: 'MED-Y105', name: 'Clinical Assessment, Practical Lab & Viva-Voce', max_marks: 100, theory: 48, practical: 47 }
+      ]
+    },
+    semester: {
+      'Semester 1': [
+        { code: 'MED-S101', name: 'Human Anatomy & Fundamentals of Physiology', max_marks: 100, theory: 45, practical: 45 },
+        { code: 'MED-S102', name: 'Community Health, Preventive Medicine & First Aid', max_marks: 100, theory: 44, practical: 46 },
+        { code: 'MED-S103', name: 'Clinical Practical Demonstration & Viva - I', max_marks: 100, theory: 47, practical: 47 }
+      ],
+      'Semester 2': [
+        { code: 'MED-S201', name: 'Essential Drugs, Dosages & Basic Pharmacology', max_marks: 100, theory: 45, practical: 46 },
+        { code: 'MED-S202', name: 'Common Ailments, Primary Healthcare & Triage', max_marks: 100, theory: 44, practical: 45 },
+        { code: 'MED-S203', name: 'Field Healthcare Internship & Clinical Viva', max_marks: 100, theory: 48, practical: 48 }
+      ]
+    }
   }
 };
 
@@ -698,6 +722,49 @@ async function syncFromKV(env, force = false) {
     if (Array.isArray(certs)) store.certificates = certs;
     if (Array.isArray(mrks)) store.marksheets = mrks;
     if (Array.isArray(courses) && courses.length) store.courses = courses;
+
+    // Ensure Council Official Courses match latest definitions & fees
+    const targetDefs = [
+      { id: 1, code: 'DCA', name: 'Diploma in Computer Applications', duration_months: 6, fee_paise: 650000 },
+      { id: 2, code: 'ADCA', name: 'Advanced Diploma in Computer Applications', duration_months: 12, fee_paise: 1200000 },
+      { id: 3, code: 'TALLY', name: 'Tally with GST', duration_months: 3, fee_paise: 400000 },
+      { id: 4, code: 'CCC', name: 'Course on Computer Concepts', duration_months: 3, fee_paise: 400000 },
+      { id: 5, code: 'PGDCA', name: 'Post Graduate Diploma in Computer Applications', duration_months: 12, fee_paise: 1200000 },
+      { id: 6, code: 'DTP', name: 'Desktop Publishing & Graphic Designing', duration_months: 6, fee_paise: 650000 },
+      { id: 7, code: 'HARDWARE', name: 'Diploma in Computer Hardware & Networking (CHN)', duration_months: 6, fee_paise: 650000 },
+      { id: 8, code: 'YOGA', name: 'Diploma in Yoga & Naturopathy Education', duration_months: 12, fee_paise: 1200000 },
+      { id: 9, code: 'FASHION', name: 'Diploma in Fashion Designing & Garment Fabrication', duration_months: 12, fee_paise: 1200000 },
+      { id: 10, code: 'MED', name: 'CMS ED', duration_months: 12, fee_paise: 1200000 },
+      { id: 11, code: 'NTT', name: 'Nursery Teacher Training', duration_months: 12, fee_paise: 600000 }
+    ];
+    let coursesChanged = false;
+    for (const td of targetDefs) {
+      let found = store.courses.find(x => x.code === td.code || (td.code === 'MED' && (x.code === 'MED' || x.name === 'CMS ED')));
+      if (found) {
+        if (found.duration_months !== td.duration_months || found.fee_paise !== td.fee_paise || found.name !== td.name) {
+          found.duration_months = td.duration_months;
+          found.fee_paise = td.fee_paise;
+          found.name = td.name;
+          coursesChanged = true;
+        }
+      } else {
+        store.courses.push({
+          id: td.id,
+          code: td.code,
+          name: td.name,
+          duration_months: td.duration_months,
+          fee_paise: td.fee_paise,
+          total_marks: 100,
+          pass_marks: 33,
+          subjects: '[]',
+          active: 1
+        });
+        coursesChanged = true;
+      }
+    }
+    if (coursesChanged) {
+      await persistToKV(env, 'courses', store.courses);
+    }
     if (settings && typeof settings === 'object') store.site_settings = Object.assign(store.site_settings, settings);
     if (Array.isArray(notices) && notices.length) store.notices = notices;
     if (Array.isArray(coordCerts)) store.coordinator_certificates = coordCerts;
@@ -806,13 +873,11 @@ function slugOf(hostHeader) {
 
 function getDefaultStudentFee(durationMonths, code) {
   const c = String(code || '').toUpperCase();
-  if (c.includes('ADCA') || c.includes('PGDCA') || (durationMonths && durationMonths >= 12)) return 12000;
-  if (c.includes('DCA') || (durationMonths && durationMonths >= 6)) return 6500;
-  if (c.includes('TALLY') || durationMonths === 3) return 4000;
-  if (c.includes('CCC')) return 2500;
+  if (c.includes('ADCA') || c.includes('PGDCA') || c.includes('YOGA') || c.includes('FASHION') || c.includes('MED') || (durationMonths && durationMonths >= 12)) return 12000;
+  if (c.includes('DCA') || c.includes('DTP') || c.includes('HARDWARE') || (durationMonths && durationMonths >= 6)) return 6500;
+  if (c.includes('TALLY') || c.includes('CCC') || (durationMonths && durationMonths <= 3)) return 4000;
   if (c.includes('TYPING') || (durationMonths && durationMonths <= 2)) return 2000;
-  if (durationMonths && durationMonths >= 9) return 9000;
-  return (durationMonths && durationMonths >= 6) ? 6500 : 3500;
+  return (durationMonths && durationMonths >= 6) ? 6500 : 4000;
 }
 
 function renderCentreSite(templateHtml, centre, host) {
@@ -1049,12 +1114,32 @@ ${JSON.stringify(schemaJson, null, 2)}
       local_fee_rupees: studentFeeRupees,
       fee_rupees: studentFeeRupees,
       tag: (co.duration_months || 6) >= 12 ? 'Diploma' : (co.duration_months || 6) >= 6 ? 'Certificate' : 'Short Term',
-      description: co.description || ''
+      description: co.description || '',
+      is_custom: false
     };
   });
 
+  // Merge Centre's Custom Showcase Courses ("showoff" courses added by centre)
+  if (Array.isArray(centre.custom_courses) && centre.custom_courses.length > 0) {
+    centre.custom_courses.forEach(cc => {
+      const fee = Number(cc.fee_rupees) || 5000;
+      safeCoursesForClient.push({
+        id: cc.id,
+        code: cc.code || 'CERT',
+        name: cc.name,
+        duration_months: cc.duration_months || 6,
+        local_fee_rupees: fee,
+        fee_rupees: fee,
+        tag: cc.tag || ((cc.duration_months || 6) >= 12 ? 'Diploma' : 'Certificate'),
+        description: cc.description || '',
+        icon: cc.icon || '🌟',
+        is_custom: true
+      });
+    });
+  }
+
   const courseCardsHtml = safeCoursesForClient.map(co => {
-    const icon = co.code.includes('DCA') ? '📄' : co.code.includes('TALLY') ? '🧮' : co.code.includes('TYPE') ? '⌨️' : '💻';
+    const icon = co.icon || (co.code.includes('DCA') ? '📄' : co.code.includes('TALLY') ? '🧮' : co.code.includes('TYPE') ? '⌨️' : co.code.includes('YOGA') ? '🧘' : co.code.includes('FASHION') ? '👗' : co.code.includes('MED') ? '🩺' : '💻');
     const duration = `${co.duration_months} Months`;
     const feeStr = `₹${co.fee_rupees.toLocaleString('en-IN')}`;
     return `
@@ -1692,9 +1777,29 @@ export default {
           local_fee_rupees: studentFeeRupees,
           fee_rupees: studentFeeRupees,
           tag: (co.duration_months || 6) >= 12 ? 'Diploma' : (co.duration_months || 6) >= 6 ? 'Certificate' : 'Short Term',
-          description: co.description || ''
+          description: co.description || '',
+          is_custom: false
         };
       });
+
+      // Merge custom showcase courses
+      if (Array.isArray(c.custom_courses) && c.custom_courses.length > 0) {
+        c.custom_courses.forEach(cc => {
+          const fee = Number(cc.fee_rupees) || 5000;
+          safeCourses.push({
+            id: cc.id,
+            code: cc.code || 'CERT',
+            name: cc.name,
+            duration_months: cc.duration_months || 6,
+            local_fee_rupees: fee,
+            fee_rupees: fee,
+            tag: cc.tag || ((cc.duration_months || 6) >= 12 ? 'Diploma' : 'Certificate'),
+            description: cc.description || '',
+            icon: cc.icon || '🌟',
+            is_custom: true
+          });
+        });
+      }
 
       const ws = c.website_settings || {};
       let filteredSafeCourses = safeCourses;
@@ -5127,8 +5232,89 @@ export default {
         });
       }
 
+      if (path === '/api/centre/custom-courses') {
+        if (!Array.isArray(c.custom_courses)) c.custom_courses = [];
+        if (request.method === 'GET') {
+          return jsonResponse({ ok: true, custom_courses: c.custom_courses });
+        }
+        if (request.method === 'POST') {
+          const body = await request.json().catch(() => ({}));
+          if (!body.name || !String(body.name).trim()) {
+            return jsonResponse({ error: 'Course name is required' }, 400);
+          }
+          const rawCode = String(body.code || '').trim().toUpperCase() || 
+            String(body.name).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 8).toUpperCase();
+          const duration = Math.max(1, parseInt(body.duration_months, 10) || 6);
+          const fee = Math.max(0, parseInt(body.fee_rupees, 10) || 5000);
+          const newCourse = {
+            id: 'cust_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+            code: rawCode,
+            name: String(body.name).trim(),
+            duration_months: duration,
+            fee_rupees: fee,
+            local_fee_rupees: fee,
+            tag: body.tag || (duration >= 12 ? 'Diploma' : 'Certificate'),
+            description: String(body.description || '').trim(),
+            icon: String(body.icon || '').trim() || '🌟',
+            is_custom: true,
+            created_at: Date.now()
+          };
+          c.custom_courses.push(newCourse);
+          await persistToKV(env, 'centres', store.centres);
+          return jsonResponse({
+            ok: true,
+            message: 'Custom course added for website showcase successfully!',
+            course: newCourse,
+            custom_courses: c.custom_courses
+          });
+        }
+      }
+
+      if (path.match(/\/api\/centre\/custom-courses\/[^\/]+$/)) {
+        if (!Array.isArray(c.custom_courses)) c.custom_courses = [];
+        const courseId = path.split('/')[4];
+        if (request.method === 'DELETE') {
+          const beforeLen = c.custom_courses.length;
+          c.custom_courses = c.custom_courses.filter(x => String(x.id) !== String(courseId));
+          if (c.custom_courses.length === beforeLen) {
+            return jsonResponse({ error: 'Custom course not found' }, 404);
+          }
+          await persistToKV(env, 'centres', store.centres);
+          return jsonResponse({
+            ok: true,
+            message: 'Custom course removed from website showcase successfully!',
+            custom_courses: c.custom_courses
+          });
+        }
+        if (request.method === 'PUT' || request.method === 'POST') {
+          const body = await request.json().catch(() => ({}));
+          const existing = c.custom_courses.find(x => String(x.id) === String(courseId));
+          if (!existing) {
+            return jsonResponse({ error: 'Custom course not found' }, 404);
+          }
+          if (body.name) existing.name = String(body.name).trim();
+          if (body.code) existing.code = String(body.code).trim().toUpperCase();
+          if (body.duration_months !== undefined) existing.duration_months = Math.max(1, parseInt(body.duration_months, 10) || 6);
+          if (body.fee_rupees !== undefined) {
+            existing.fee_rupees = Math.max(0, parseInt(body.fee_rupees, 10) || 0);
+            existing.local_fee_rupees = existing.fee_rupees;
+          }
+          if (body.tag) existing.tag = String(body.tag).trim();
+          if (body.description !== undefined) existing.description = String(body.description).trim();
+          if (body.icon) existing.icon = String(body.icon).trim();
+          await persistToKV(env, 'centres', store.centres);
+          return jsonResponse({
+            ok: true,
+            message: 'Custom course updated successfully!',
+            course: existing,
+            custom_courses: c.custom_courses
+          });
+        }
+      }
+
       if (path === '/api/centre/courses') {
         if (!c.course_prices) c.course_prices = {};
+        if (!Array.isArray(c.custom_courses)) c.custom_courses = [];
         const centreCourses = store.courses.filter(co => co.active !== 0).map(co => {
           const sysFeePaise = co.fee_paise || 20000;
           const defaultStudentFee = getDefaultStudentFee(co.duration_months, co.code) * 100;
@@ -5159,17 +5345,55 @@ export default {
             selling_price_paise: sellFeePaise,
             fee_rupees: Math.round(sellFeePaise / 100),
             active: true,
-            description: co.description || ''
+            description: co.description || '',
+            is_custom: false
           };
         });
 
+        const customCourses = (c.custom_courses || []).map(cc => ({
+          id: cc.id,
+          code: cc.code,
+          name: cc.name,
+          duration_months: cc.duration_months || 6,
+          total_marks: cc.total_marks || 100,
+          fee_rupees: Number(cc.fee_rupees) || 5000,
+          selling_price_paise: (Number(cc.fee_rupees) || 5000) * 100,
+          description: cc.description || '',
+          icon: cc.icon || '🌟',
+          tag: cc.tag || ((cc.duration_months || 6) >= 12 ? 'Diploma' : 'Certificate'),
+          is_custom: true
+        }));
+
         if (request.method === 'POST') {
+          const body = await request.json().catch(() => ({}));
+          if (body.name) {
+            const rawCode = String(body.code || '').trim().toUpperCase() || 
+              String(body.name).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 8).toUpperCase();
+            const duration = Math.max(1, parseInt(body.duration_months, 10) || 6);
+            const fee = Math.max(0, parseInt(body.fee_rupees, 10) || 5000);
+            const newCourse = {
+              id: 'cust_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+              code: rawCode,
+              name: String(body.name).trim(),
+              duration_months: duration,
+              fee_rupees: fee,
+              local_fee_rupees: fee,
+              tag: body.tag || (duration >= 12 ? 'Diploma' : 'Certificate'),
+              description: String(body.description || '').trim(),
+              icon: String(body.icon || '').trim() || '🌟',
+              is_custom: true,
+              created_at: Date.now()
+            };
+            c.custom_courses.push(newCourse);
+            await persistToKV(env, 'centres', store.centres);
+            return jsonResponse({ ok: true, message: 'Custom course added for website showcase!', course: newCourse, custom_courses: c.custom_courses });
+          }
           return jsonResponse({
             error: 'Franchise centres cannot add new base courses. Courses are centrally managed by Head Office.'
           }, 403);
         }
 
-        return jsonResponse({ courses: centreCourses });
+        return jsonResponse({ courses: centreCourses, custom_courses: customCourses, all_courses: [...centreCourses, ...customCourses] });
       }
 
       if (path.match(/\/api\/centre\/courses\/\d+\/price/)) {
@@ -5182,7 +5406,13 @@ export default {
         return jsonResponse({ ok: true, message: 'Student training fee updated successfully!', selling_price_paise: feeRupees * 100 });
       }
 
-      if (path.match(/\/api\/centre\/courses\/\d+\/delete/) || (path.match(/\/api\/centre\/courses\/\d+$/) && request.method === 'DELETE')) {
+      if (path.match(/\/api\/centre\/courses\/[^\/]+\/delete/) || (path.match(/\/api\/centre\/courses\/[^\/]+$/) && request.method === 'DELETE')) {
+        const courseId = path.split('/')[4];
+        if (Array.isArray(c.custom_courses) && c.custom_courses.some(x => String(x.id) === String(courseId))) {
+          c.custom_courses = c.custom_courses.filter(x => String(x.id) !== String(courseId));
+          await persistToKV(env, 'centres', store.centres);
+          return jsonResponse({ ok: true, message: 'Custom course removed from website showcase!', custom_courses: c.custom_courses });
+        }
         return jsonResponse({
           error: 'Affiliated courses are authorized by Head Office and cannot be deleted by franchise centres.'
         }, 403);

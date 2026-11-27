@@ -1558,7 +1558,9 @@ const views = {
   async MyCourses() {
     const data = await api('/api/centre/courses');
     const courses = data.courses || [];
+    const customCourses = data.custom_courses || [];
     window._currentCourses = courses;
+    window._currentCustomCourses = customCourses;
 
     V.innerHTML = `
       <div style="margin-bottom:20px;">
@@ -1655,6 +1657,75 @@ const views = {
             </div>
           `;
         }).join('')}
+      </div>
+
+      <!-- Custom Showcase / Showoff Courses Section -->
+      <div style="background:#ffffff; border:1.5px solid #a7f3d0; border-radius:14px; padding:24px; margin-top:32px; box-shadow:0 4px 16px rgba(4,120,87,0.08);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:18px; border-bottom:1.5px solid #ecfdf5; padding-bottom:14px;">
+          <div>
+            <div style="display:inline-flex; align-items:center; gap:8px;">
+              <span style="font-size:1.4rem;">🌟</span>
+              <h3 style="margin:0; color:#064e3b; font-size:1.35rem; font-weight:800;">
+                Centre Custom Showcase Courses (वेबसाइट शोऑफ कोर्सेज)
+              </h3>
+            </div>
+            <p style="margin:6px 0 0; color:#047857; font-size:0.88rem; font-weight:600;">
+              आप अपनी सेंटर वेबसाइट पर मार्केटिंग और शोऑफ के लिए जितने चाहें उतने मनचाहे कोर्सेज जोड़ सकते हैं (जैसे AutoCAD, Spoken English, Mobile Repairing, Web Development, DMLT आदि)।
+            </p>
+          </div>
+          <button type="button" class="btn" onclick="openAddCustomCourseModal()" style="background:linear-gradient(135deg, #047857 0%, #064e3b 100%); color:#ffffff; font-weight:800; padding:10px 18px; border-radius:8px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(4,120,87,0.25); display:inline-flex; align-items:center; gap:6px;">
+            <span>➕</span> Add New Course for Website (नया कोर्स जोड़ें)
+          </button>
+        </div>
+
+        <div id="customCoursesContainer">
+          ${window.renderCustomCoursesHtml ? window.renderCustomCoursesHtml(customCourses) : ''}
+        </div>
+      </div>
+
+      <!-- Add/Edit Custom Course Modal -->
+      <div id="customCourseModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#fff; border-radius:14px; max-width:520px; width:100%; padding:26px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #cbd5e1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+            <h3 id="customCourseModalTitle" style="margin:0; color:#064e3b; font-size:1.3rem;">✨ Add Course for Website Showcase</h3>
+            <button type="button" onclick="$('#customCourseModal').style.display='none'" style="background:none; border:none; font-size:1.6rem; cursor:pointer; color:#64748b;">&times;</button>
+          </div>
+          <form id="customCourseForm" onsubmit="saveCustomCourse(event)">
+            <input type="hidden" id="customCourseId" value="">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+              <div>
+                <label style="font-size:0.82rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Course Code / Abbreviation *</label>
+                <input type="text" id="customCourseCode" required placeholder="e.g. AUTOCAD, ENG-01" style="width:100%; padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-weight:700; text-transform:uppercase;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Course Icon / Emoji</label>
+                <input type="text" id="customCourseIcon" value="🌟" placeholder="e.g. 💻, 📐, 🗣️, 🩺" style="width:100%; padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:1.1rem; text-align:center;">
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="font-size:0.82rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Full Course Title (कोर्स का पूरा नाम) *</label>
+              <input type="text" id="customCourseName" required placeholder="e.g. AutoCAD 2D/3D Drafting &amp; Design" style="width:100%; padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-weight:600;">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+              <div>
+                <label style="font-size:0.82rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Duration (Months) *</label>
+                <input type="number" id="customCourseDuration" required min="1" max="60" value="6" style="width:100%; padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-weight:700;">
+              </div>
+              <div>
+                <label style="font-size:0.82rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Course Fees (₹) *</label>
+                <input type="number" id="customCourseFee" required min="0" step="100" value="5000" style="width:100%; padding:9px 12px; border:1.5px solid #059669; border-radius:8px; font-weight:800; color:#064e3b; background:#f0fdf4;">
+              </div>
+            </div>
+            <div style="margin-bottom:14px;">
+              <label style="font-size:0.82rem; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Short Description / Overview</label>
+              <textarea id="customCourseDesc" rows="2" placeholder="Brief overview for website visitors..." style="width:100%; padding:8px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:0.86rem; resize:vertical;"></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e2e8f0; padding-top:14px;">
+              <button type="button" class="btn alt sm" onclick="$('#customCourseModal').style.display='none'">Cancel</button>
+              <button type="submit" class="btn gold sm" style="font-weight:800; padding:9px 18px;">💾 Save to Website</button>
+            </div>
+          </form>
+        </div>
       </div>
 
       <!-- Course Subjects Modal -->
@@ -6632,6 +6703,140 @@ async function saveCoursePrice(courseId) {
     views.MyCourses();
   });
 }
+
+// Custom Showcase Courses Helpers
+window.renderCustomCoursesHtml = function(customCourses) {
+  if (!customCourses || !customCourses.length) {
+    return `
+      <div style="background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:10px; padding:28px 16px; text-align:center;">
+        <span style="font-size:2rem; display:block; margin-bottom:8px;">🎓</span>
+        <b style="color:#334155; font-size:1rem; display:block; margin-bottom:4px;">No Custom Courses Added Yet</b>
+        <p style="margin:0 0 14px; font-size:0.85rem; color:#64748b;">
+          आप अपनी वेबसाइट पर शोऑफ करने हेतु यहाँ से जितने चाहें उतने मनचाहे कोर्सेज जोड़ सकते हैं।
+        </p>
+        <button type="button" class="btn sm" onclick="openAddCustomCourseModal()" style="background:#047857; color:#fff; font-weight:700;">
+          ➕ Add First Custom Course
+        </button>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+      ${customCourses.map(co => {
+        const icon = co.icon || '🌟';
+        const fee = Number(co.fee_rupees || co.local_fee_rupees || 5000);
+        return `
+          <div style="background:#ffffff; border:1.5px solid #d1fae5; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                <span class="badge" style="background:#ecfdf5; color:#065f46; font-weight:800; font-family:monospace; font-size:0.88rem;">${icon} ${esc(co.code)}</span>
+                <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">⏱️ ${co.duration_months} Months</span>
+              </div>
+              <h4 style="margin:0 0 6px; font-size:1.1rem; color:#0f172a; font-weight:800;">${esc(co.name)}</h4>
+              ${co.description ? `<p style="font-size:0.8rem; color:#64748b; margin:0 0 10px; line-height:1.4;">${esc(co.description)}</p>` : ''}
+              <div style="background:#f8fafc; border-radius:6px; padding:8px 12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.82rem; color:#475569; font-weight:600;">Website Display Fee:</span>
+                <b style="color:#047857; font-size:1.05rem;">₹${fee.toLocaleString('en-IN')}</b>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #f1f5f9; padding-top:10px;">
+              <button class="btn sm alt" onclick="openAddCustomCourseModal('${co.id}')" style="font-size:0.78rem; font-weight:700;">✏️ Edit</button>
+              <button class="btn sm danger" onclick="deleteCustomCourse('${co.id}')" style="font-size:0.78rem; font-weight:700; background:#fee2e2; color:#b91c1c; border:none; padding:4px 10px; border-radius:6px; cursor:pointer;">🗑️ Delete</button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+};
+
+window.openAddCustomCourseModal = function(courseId) {
+  const modal = $('#customCourseModal');
+  const title = $('#customCourseModalTitle');
+  const idInput = $('#customCourseId');
+  const codeInput = $('#customCourseCode');
+  const nameInput = $('#customCourseName');
+  const durInput = $('#customCourseDuration');
+  const feeInput = $('#customCourseFee');
+  const iconInput = $('#customCourseIcon');
+  const descInput = $('#customCourseDesc');
+  if (!modal) return;
+
+  if (courseId) {
+    const list = window._currentCustomCourses || [];
+    const co = list.find(x => String(x.id) === String(courseId));
+    if (co) {
+      if (title) title.textContent = '✏️ Edit Custom Course';
+      if (idInput) idInput.value = co.id;
+      if (codeInput) codeInput.value = co.code || '';
+      if (nameInput) nameInput.value = co.name || '';
+      if (durInput) durInput.value = co.duration_months || 6;
+      if (feeInput) feeInput.value = co.fee_rupees || co.local_fee_rupees || 5000;
+      if (iconInput) iconInput.value = co.icon || '🌟';
+      if (descInput) descInput.value = co.description || '';
+      modal.style.display = 'flex';
+      return;
+    }
+  }
+
+  if (title) title.textContent = '✨ Add Course for Website Showcase';
+  if (idInput) idInput.value = '';
+  if (codeInput) codeInput.value = '';
+  if (nameInput) nameInput.value = '';
+  if (durInput) durInput.value = '6';
+  if (feeInput) feeInput.value = '5000';
+  if (iconInput) iconInput.value = '🌟';
+  if (descInput) descInput.value = '';
+  modal.style.display = 'flex';
+};
+
+window.saveCustomCourse = async function(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const id = ($('#customCourseId') ? $('#customCourseId').value : '').trim();
+  const code = ($('#customCourseCode') ? $('#customCourseCode').value : '').trim().toUpperCase();
+  const name = ($('#customCourseName') ? $('#customCourseName').value : '').trim();
+  const duration = parseInt($('#customCourseDuration') ? $('#customCourseDuration').value : 6, 10) || 6;
+  const fee = parseInt($('#customCourseFee') ? $('#customCourseFee').value : 5000, 10) || 5000;
+  const icon = ($('#customCourseIcon') ? $('#customCourseIcon').value : '🌟').trim() || '🌟';
+  const desc = ($('#customCourseDesc') ? $('#customCourseDesc').value : '').trim();
+
+  if (!name) {
+    toast('Course full name is required', true);
+    return;
+  }
+
+  guard(async () => {
+    const url = id ? `/api/centre/custom-courses/${encodeURIComponent(id)}` : '/api/centre/custom-courses';
+    const method = id ? 'PUT' : 'POST';
+    const res = await api(url, {
+      method,
+      body: {
+        code,
+        name,
+        duration_months: duration,
+        fee_rupees: fee,
+        icon,
+        description: desc
+      }
+    });
+
+    if ($('#customCourseModal')) $('#customCourseModal').style.display = 'none';
+    toast(res.message || 'Course saved to website showcase!');
+    views.MyCourses();
+  });
+};
+
+window.deleteCustomCourse = async function(courseId) {
+  if (!confirm('Kya aap is course ko apni website showcase se hatana chahte hain?')) return;
+  guard(async () => {
+    const res = await api(`/api/centre/custom-courses/${encodeURIComponent(courseId)}`, {
+      method: 'DELETE'
+    });
+    toast(res.message || 'Course removed from website showcase!');
+    views.MyCourses();
+  });
+};
 
 window.showCentreCourseSubjects = function(courseId) {
   const courses = window._currentCourses || [];
