@@ -929,6 +929,17 @@ ${JSON.stringify(schemaJson, null, 2)}
   html = html.replace(/id="bankAcc">[^<]*</, `id="bankAcc">${esc(bankAcc)}<`);
   html = html.replace(/id="bankIfsc">[^<]*</, `id="bankIfsc">${esc(bankIfsc)}<`);
 
+  const upiQrUrl = centre.qr_code_url || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`upi://pay?pa=${upiId}&pn=${encodeURIComponent(cName)}&cu=INR`)}`;
+  html = html.replace(/id="contactPhone">[^<]*</, `id="contactPhone">${esc(cPhone)}<`);
+  html = html.replace(/id="contactEmail">[^<]*</, `id="contactEmail">${esc(cEmail)}<`);
+  html = html.replace(/id="contactAddress">[^<]*</, `id="contactAddress">${esc(cAddress)}<`);
+  html = html.replace(/id="footerEmail">[^<]*</, `id="footerEmail">${esc(cEmail)}<`);
+  html = html.replace(/id="footerBrandName"[^>]*>[^<]*</, `id="footerBrandName" style="color:#ffffff; font-size:1.1rem;">${esc(cName)}<`);
+  html = html.replace(/id="directorTitle">[^<]*</, `id="directorTitle">Director, ${esc(cName)}<`);
+  html = html.replace(/id="mapCentreName"[^>]*>[^<]*</, `id="mapCentreName" style="color:#064e3b; font-size:0.92rem;">${esc(cName)}<`);
+  html = html.replace(/id="mapLocation"[^>]*>[^<]*</, `id="mapLocation" style="font-size:0.8rem; color:#64748b; margin-top:2px;">${esc(cDistrict)}, ${esc(cState)}<`);
+  html = html.replace(/id="centreQrImg"[^>]*>/, `id="centreQrImg" src="${esc(upiQrUrl)}" alt="UPI QR Code" class="c-qr-img">`);
+
   // --- Dynamic Centre Website Customizations (Theme, Banners, Notices, WhatsApp) ---
   const ws = centre.website_settings || {};
 
@@ -1055,7 +1066,7 @@ ${JSON.stringify(schemaJson, null, 2)}
           <div class="c-course-fee">
             Course Fees: <b>${esc(feeStr)}</b>
           </div>
-          <button class="c-btn-enroll" onclick="openApplyWithCourse('${esc(co.code)}')">Apply Now</button>
+          <button class="c-btn-enroll" data-course-code="${esc(co.code)}" onclick="openApplyWithCourse('${esc(co.code)}')">Apply Now</button>
         </div>`;
   }).join('');
 
@@ -1302,6 +1313,16 @@ export default {
           'access-control-allow-origin': '*',
           'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'access-control-allow-headers': 'Content-Type, Authorization, x-centre-slug',
+        }
+      });
+    }
+
+    // Favicon handler (Zero 404s)
+    if (path === '/favicon.ico') {
+      return new Response('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎓</text></svg>', {
+        headers: {
+          'content-type': 'image/svg+xml',
+          'cache-control': 'public, max-age=86400'
         }
       });
     }
