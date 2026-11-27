@@ -738,9 +738,13 @@ router.post('/wallets/:centre_id/adjust', (req, res) => {
     : (+req.body.amount_paise / 100);
   const amountPaise = Math.round(amountRupees * 100);
   const reason = str(req.body.reason, 200) || 'Head Office Balance Adjustment';
-  if (!['credit', 'debit'].includes(kind) || !(amountPaise > 0)) throw new HttpError(400, 'Valid kind and positive amount required');
+  if (!['credit', 'debit', 'set'].includes(kind) || (kind !== 'set' && !(amountPaise > 0)) || (kind === 'set' && amountPaise < 0)) {
+    throw new HttpError(400, 'Valid kind and valid amount required');
+  }
   const w = db.prepare('SELECT balance_paise FROM wallets WHERE centre_id=?').get(cid) || { balance_paise: 0 };
-  let newBal = kind === 'credit' ? w.balance_paise + amountPaise : w.balance_paise - amountPaise;
+  let newBal = kind === 'credit' ? w.balance_paise + amountPaise 
+             : kind === 'debit' ? w.balance_paise - amountPaise 
+             : amountPaise;
   if (newBal < 0) throw new HttpError(400, 'Insufficient balance for debit');
   db.transaction(() => {
     db.prepare('INSERT INTO wallets(centre_id, balance_paise) VALUES(?,?) ON CONFLICT(centre_id) DO UPDATE SET balance_paise=excluded.balance_paise').run(cid, newBal);

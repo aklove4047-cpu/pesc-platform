@@ -741,9 +741,11 @@ const views = {
         ['Location', (r) => `${esc(r.district)}, ${esc(r.state)}`],
         ['Regional Coordinator', (r) => r.coordinator_name ? `<b style="color:#0284c7; font-size:0.85rem;">👔 ${esc(r.coordinator_name)}</b>` : `<span class="muted" style="font-size:0.82rem;">Direct Head Office</span>`],
         ['Students', (r) => `<button class="btn sm" data-a="view_centre_students" data-id="${r.id}" data-name="${esc(r.name)}" style="background:#0284c7; color:#fff;" title="Manage this centre's students">👥 ${r.students} Students</button>`],
+        ['Wallet Balance', (r) => `<b style="font-size:1.05rem; color:#15803d;">₹${(r.wallet_balance !== undefined ? r.wallet_balance : ((r.wallet_paise || 0) / 100)).toLocaleString('en-IN')}</b>`],
         ['Status', (r) => r.status === 'terminated' ? '<span class="badge" style="background:#fee2e2; color:#991b1b; font-weight:800; border:1px solid #f87171;">🔴 TERMINATED</span>' : badge(r.status)],
         ['Actions', (r) => `
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn sm" data-a="wallet_adj" data-id="${r.id}" data-name="${esc(r.name)}" data-bal="${r.wallet_balance !== undefined ? r.wallet_balance : ((r.wallet_paise || 0) / 100)}" style="background:#0284c7; color:#fff; font-weight:700;" title="Adjust Wallet Balance (कम / ज्यादा करें)">💳 Wallet (कम / ज्यादा)</button>
             <button class="btn sm" data-a="view_centre_creds" data-id="${r.id}" data-code="${esc(r.centre_code)}" data-name="${esc(r.name)}" data-slug="${esc(r.slug)}" data-pass="${esc(r.login_password || 'owner123')}" style="background:#047857; color:#fff; font-weight:700;" title="View &amp; Manage Login Credentials">🔑 ID &amp; Pass</button>
             <button class="btn sm" data-a="view_affiliation_cert" data-id="${r.id}" data-name="${esc(r.name)}" data-code="${esc(r.centre_code)}" style="background:#ca8a04; color:#fff; font-weight:700;" title="View Official Affiliation Certificate">📜 Affiliation Cert</button>
             <button class="btn sm" data-a="edit_affiliation_cert" data-id="${r.id}" style="background:#0284c7; color:#fff; font-weight:700;" title="Edit Certificate &amp; Centre Details">✏️ Edit Certificate</button>
@@ -1850,8 +1852,8 @@ const views = {
           ['Wallet Balance', (r) => `<b style="font-size:1.15rem; color:#15803d;">${inr(r.balance_paise)}</b>`],
           ['Status', (r) => badge(r.centre_status)],
           ['Actions', (r) => `
-            <button class="btn sm gold" data-a="wallet_adj" data-id="${r.centre_id}" data-name="${esc(r.centre_name)}" style="font-weight:700; padding:6px 14px;">
-              ⚡ Manual Balance Adjustment
+            <button class="btn sm gold" data-a="wallet_adj" data-id="${r.centre_id}" data-name="${esc(r.centre_name)}" data-bal="${r.balance !== undefined ? r.balance : ((r.balance_paise || 0) / 100)}" style="font-weight:700; padding:6px 14px;">
+              💳 Wallet (कम / ज्यादा / सेट)
             </button>
           `],
         ], wallets, 'No centre wallets found.')}
@@ -1918,6 +1920,119 @@ const show = (n) => {
   current = n;
   return guard(() => views[n]());
 };
+
+
+function openWalletAdjustModal(centreId, centreName, currentBalRupees) {
+  currentBalRupees = Number(currentBalRupees) || 0;
+  const modalHtml = `
+    <div style="font-size:0.95rem;">
+      <div style="background:#f1f5f9; padding:14px; border-radius:8px; margin-bottom:16px; border:1px solid #cbd5e1;">
+        <div style="font-weight:700; color:#0f172a; font-size:1.1rem; margin-bottom:4px;">🏢 ${esc(centreName)}</div>
+        <div style="color:#64748b; font-size:0.88rem;">Current Wallet Balance: <b style="color:#15803d; font-size:1.1rem;">₹${currentBalRupees.toLocaleString('en-IN')}</b></div>
+      </div>
+
+      <form id="walletAdjustForm">
+        <div style="margin-bottom:14px;">
+          <label style="display:block; font-weight:700; color:#1e293b; margin-bottom:6px;">कार्य का प्रकार (Operation Type):</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+            <label style="border:1.5px solid #16a34a; background:#f0fdf4; padding:10px; border-radius:8px; cursor:pointer; text-align:center; font-weight:700; font-size:0.88rem; display:block;">
+              <input type="radio" name="adj_kind" value="credit" checked style="margin-right:4px;">
+              <span style="color:#15803d;">➕ Credit<br>(बैलेंस जोड़ें)</span>
+            </label>
+            <label style="border:1.5px solid #dc2626; background:#fef2f2; padding:10px; border-radius:8px; cursor:pointer; text-align:center; font-weight:700; font-size:0.88rem; display:block;">
+              <input type="radio" name="adj_kind" value="debit" style="margin-right:4px;">
+              <span style="color:#b91c1c;">➖ Debit<br>(बैलेंस काटें)</span>
+            </label>
+            <label style="border:1.5px solid #2563eb; background:#eff6ff; padding:10px; border-radius:8px; cursor:pointer; text-align:center; font-weight:700; font-size:0.88rem; display:block;">
+              <input type="radio" name="adj_kind" value="set" style="margin-right:4px;">
+              <span style="color:#1d4ed8;">🎯 Set Exact<br>(सीधा नया बैलेंस)</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label id="adjAmountLabel" style="display:block; font-weight:700; color:#1e293b; margin-bottom:4px;">जोड़ने वाली राशि (Credit Amount in ₹):</label>
+          <input type="number" id="adjAmountInput" required min="0" step="1" placeholder="उदा. 500" style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:1.05rem; font-weight:700;">
+        </div>
+
+        <!-- Live Preview calculation box -->
+        <div id="adjPreviewBox" style="background:#e0f2fe; border:1px solid #7dd3fc; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:0.9rem; color:#0369a1;">
+          <b>अपडेट के बाद नया बैलेंस:</b> <span id="adjNewBalance" style="font-weight:800; font-size:1.1rem; color:#075985;">₹${currentBalRupees.toLocaleString('en-IN')}</span>
+        </div>
+
+        <div style="margin-bottom:18px;">
+          <label style="display:block; font-weight:700; color:#1e293b; margin-bottom:4px;">कारण / विवरण (Reason / Note):</label>
+          <input type="text" id="adjReasonInput" value="Head Office Balance Adjustment" placeholder="उदा. Offline Payment Received / Correction" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" onclick="document.getElementById('adminModalOverlay').style.display='none'" class="btn sm" style="background:#e2e8f0; color:#334155; font-weight:700; padding:10px 18px;">रद्द करें (Cancel)</button>
+          <button type="submit" id="btnSubmitAdj" class="btn sm" style="background:#047857; color:#fff; font-weight:700; padding:10px 20px; font-size:0.95rem;">💾 बैलेंस अपडेट करें (Confirm & Update)</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  showModal('💳 Centre Wallet Balance Adjustment (कम / ज्यादा / सेट)', modalHtml, null, '540px');
+
+  const form = document.getElementById('walletAdjustForm');
+  const amtInput = document.getElementById('adjAmountInput');
+  const previewSpan = document.getElementById('adjNewBalance');
+  const labelEl = document.getElementById('adjAmountLabel');
+
+  function updatePreview() {
+    const kind = form.querySelector('input[name="adj_kind"]:checked')?.value || 'credit';
+    const amt = parseFloat(amtInput.value) || 0;
+    let newBal = currentBalRupees;
+    if (kind === 'credit') {
+      newBal = currentBalRupees + amt;
+      labelEl.textContent = 'जोड़ने वाली राशि (Credit Amount in ₹):';
+    } else if (kind === 'debit') {
+      newBal = Math.max(0, currentBalRupees - amt);
+      labelEl.textContent = 'काटने वाली राशि (Debit Amount in ₹):';
+    } else if (kind === 'set') {
+      newBal = Math.max(0, amt);
+      labelEl.textContent = 'सीधा नया बैलेंस (Set Exact Balance in ₹):';
+    }
+    previewSpan.textContent = '₹' + newBal.toLocaleString('en-IN');
+  }
+
+  form.querySelectorAll('input[name="adj_kind"]').forEach(r => r.onchange = updatePreview);
+  amtInput.oninput = updatePreview;
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const kind = form.querySelector('input[name="adj_kind"]:checked')?.value || 'credit';
+    const amt = parseFloat(amtInput.value);
+    if (isNaN(amt) || (kind !== 'set' && amt <= 0) || (kind === 'set' && amt < 0)) {
+      alert('कृपया सही राशि दर्ज करें!');
+      return;
+    }
+    const reason = document.getElementById('adjReasonInput').value.trim() || 'Head Office Balance Adjustment';
+    const btn = document.getElementById('btnSubmitAdj');
+    btn.disabled = true;
+    btn.textContent = 'अपडेट हो रहा है...';
+
+    try {
+      await post('/api/admin/wallets/' + centreId + '/adjust', {
+        kind,
+        amount_rupees: amt,
+        reason
+      });
+      document.getElementById('adminModalOverlay').style.display = 'none';
+      toast(`✅ सफलता! ${centreName} का वॉलेट बैलेंस सफलता पूर्वक अपडेट किया गया।`);
+      if (document.querySelector('button[data-v="Wallets"]')?.classList.contains('active')) {
+        await views.Wallets();
+      } else {
+        await views.Centres();
+      }
+    } catch (err) {
+      alert('Error updating wallet: ' + (err.message || err));
+      btn.disabled = false;
+      btn.textContent = '💾 बैलेंस अपडेट करें (Confirm & Update)';
+    }
+  };
+}
 
 function showModal(title, bodyHtml, onSave, maxWidth = '640px') {
   let m = document.getElementById('adminModalOverlay');
@@ -2811,12 +2926,7 @@ V.addEventListener('click', (e) => {
       if (!r) return;
       await post(`/api/marksheets/${id}/decision`, { decision: 'reject', role: 'super_admin', reason: r });
     } else if (a === 'wallet_adj') {
-      const amt = ask(`Enter amount in Rupees (₹) to credit to ${b.dataset.name}:`);
-      if (!amt || isNaN(amt) || +amt <= 0) return;
-      const note = ask('Enter note/reason (e.g. Offline Payment / Promotion credit):') || 'Head Office Balance Credit';
-      await post(`/api/admin/wallets/${id}/adjust`, { kind: 'credit', amount_rupees: +amt, reason: note });
-      toast(`Successfully credited ₹${amt} to centre wallet!`);
-      show('Wallets');
+      openWalletAdjustModal(id, b.dataset.name, +(b.dataset.bal || 0));
       return;
     } else if (a === 'approve_topup') {
       const topupAmt = b.dataset.amount || '0';

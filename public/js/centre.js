@@ -4033,11 +4033,12 @@ const views = {
         fileInput.onchange = (ev) => {
           const file = ev.target.files[0];
           if (!file) return;
-          if (file.size > 4 * 1024 * 1024) { toast('Banner must be under 4MB', false); return; }
+          if (file.size > 8 * 1024 * 1024) { toast('Banner must be under 8MB', false); return; }
           const reader = new FileReader();
           reader.onload = (e2) => {
             urlInput.value = e2.target.result;
             previewImg.src = e2.target.result;
+            toast('✓ Photo uploaded and preview updated!');
           };
           reader.readAsDataURL(file);
         };
@@ -4054,7 +4055,7 @@ const views = {
       }
     };
 
-    const slideRows = $('.banner-slide-row', V);
+    const slideRows = $$('.banner-slide-row', V);
     slideRows.forEach(r => window.attachSlideEvents(r));
 
     const btnAddSlide = $('#btnAddBannerSlide');
@@ -4067,7 +4068,7 @@ const views = {
         newRow.className = 'banner-slide-row';
         newRow.style.cssText = 'background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;';
         newRow.innerHTML = `
-          <div style="width:110px; height:65px; border-radius:6px; overflow:hidden; border:1px solid #047857; background:#e2e8f0; flex-shrink:0;">
+          <div style="width:130px; height:75px; border-radius:8px; overflow:hidden; border:2px solid #047857; background:#e2e8f0; flex-shrink:0;">
             <img src="/assets/img/classroom.jpg" class="slide-thumb-preview" style="width:100%; height:100%; object-fit:cover;">
           </div>
           <div style="flex:1; min-width:240px;">
@@ -4097,7 +4098,7 @@ const views = {
       newRow.className = 'banner-slide-row';
       newRow.style.cssText = 'background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;';
       newRow.innerHTML = `
-        <div style="width:110px; height:65px; border-radius:6px; overflow:hidden; border:1px solid #047857; background:#e2e8f0; flex-shrink:0;">
+        <div style="width:130px; height:75px; border-radius:8px; overflow:hidden; border:2px solid #047857; background:#e2e8f0; flex-shrink:0;">
           <img src="${esc(presetUrl)}" class="slide-thumb-preview" style="width:100%; height:100%; object-fit:cover;">
         </div>
         <div style="flex:1; min-width:240px;">
@@ -4120,7 +4121,7 @@ const views = {
     };
 
     window.selectAllPopularCourses = function(select) {
-      $('.chk-popular-course', V).forEach(chk => {
+      $$('.chk-popular-course', V).forEach(chk => {
         chk.checked = select;
         const card = chk.closest('.popular-course-card');
         if (card) {
@@ -4132,7 +4133,7 @@ const views = {
 
     window.selectTopCourses = function(count) {
       let idx = 0;
-      $('.chk-popular-course', V).forEach(chk => {
+      $$('.chk-popular-course', V).forEach(chk => {
         const isSelected = idx < count;
         chk.checked = isSelected;
         const card = chk.closest('.popular-course-card');
@@ -4144,7 +4145,7 @@ const views = {
       });
     };
 
-    $('.chk-popular-course', V).forEach(chk => {
+    $$('.chk-popular-course', V).forEach(chk => {
       chk.onchange = () => {
         const card = chk.closest('.popular-course-card');
         if (card) {
@@ -4161,7 +4162,7 @@ const views = {
         const raw = form(e.target);
 
         // Collect all banner slides
-        const bannerInputs = $('.banner-slide-url-input', V);
+        const bannerInputs = $$('.banner-slide-url-input', V);
         const collectedBanners = [];
         bannerInputs.forEach(inp => {
           const val = inp.value.trim();
@@ -4171,7 +4172,7 @@ const views = {
 
         // Collect all selected popular courses
         const checkedCourses = [];
-        $('.chk-popular-course', V).forEach(chk => {
+        $$('.chk-popular-course', V).forEach(chk => {
           if (chk.checked) checkedCourses.push(+chk.value);
         });
 

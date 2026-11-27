@@ -2559,7 +2559,9 @@ export default {
             ...c,
             students: stus.length,
             login_id: c.centre_code,
-            login_password: c.login_password || 'owner123'
+            login_password: c.login_password || 'owner123',
+            wallet_balance: c.wallet_balance !== undefined ? c.wallet_balance : (c.wallet_paise ? c.wallet_paise / 100 : 0),
+            wallet_paise: c.wallet_paise !== undefined ? c.wallet_paise : (c.wallet_balance ? c.wallet_balance * 100 : 0)
           };
         });
         return jsonResponse({ centres: enriched });
@@ -3585,23 +3587,27 @@ export default {
         const amt = +body.amount_rupees || 0;
         const targetC = store.centres.find(ce => ce.id === centreId);
         if (targetC) {
-          if (body.kind === 'debit') {
+          const k = String(body.kind || 'credit').toLowerCase();
+          if (k === 'debit') {
             targetC.wallet_balance = Math.max(0, (targetC.wallet_balance || 0) - amt);
-            targetC.wallet_paise = Math.max(0, (targetC.wallet_paise || 0) - (amt * 100));
+            targetC.wallet_paise = Math.max(0, (targetC.wallet_paise || 0) - Math.round(amt * 100));
+          } else if (k === 'set') {
+            targetC.wallet_balance = Math.max(0, amt);
+            targetC.wallet_paise = Math.max(0, Math.round(amt * 100));
           } else {
             targetC.wallet_balance = (targetC.wallet_balance || 0) + amt;
-            targetC.wallet_paise = (targetC.wallet_paise || 0) + (amt * 100);
+            targetC.wallet_paise = (targetC.wallet_paise || 0) + Math.round(amt * 100);
           }
           if (!Array.isArray(targetC.wallet_ledger)) targetC.wallet_ledger = [];
           targetC.wallet_ledger.unshift({
             id: Date.now(),
-            kind: body.kind === 'debit' ? 'debit' : 'credit',
-            type: body.kind === 'debit' ? 'debit' : 'credit',
+            kind: k,
+            type: k,
             amount: amt,
-            amount_paise: amt * 100,
+            amount_paise: Math.round(amt * 100),
             balance_after: targetC.wallet_balance,
-            description: body.reason || `Head Office Manual Wallet Adjustment (${body.kind.toUpperCase()})`,
-            note: body.reason || `Head Office Manual Wallet Adjustment (${body.kind.toUpperCase()})`,
+            description: body.reason || `Head Office Manual Wallet Adjustment (${k.toUpperCase()})`,
+            note: body.reason || `Head Office Manual Wallet Adjustment (${k.toUpperCase()})`,
             reference: `ADJ-${Date.now()}`,
             created_at: Date.now(),
             date: new Date().toLocaleDateString('en-IN')
