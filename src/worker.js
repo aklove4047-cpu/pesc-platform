@@ -1644,12 +1644,14 @@ export default {
     if (path === '/api/public/centre-info') {
       const targetSlug = url.searchParams.get('slug') || url.searchParams.get('centre') || (tenantInfo.kind === 'tenant' ? tenantInfo.slug : null);
       const c = resolveSlug(targetSlug) || store.centres[0];
+      if (!c) return jsonResponse({ error: 'Centre not found' }, 404);
       return jsonResponse({ centre: c });
     }
 
     if (path === '/api/public/site') {
       const targetSlug = url.searchParams.get('slug') || url.searchParams.get('centre') || (tenantInfo.kind === 'tenant' ? tenantInfo.slug : null);
       const c = resolveSlug(targetSlug) || store.centres[0];
+      if (!c) return jsonResponse({ error: 'Centre not found' }, 404);
       const activeCourses = (c.courses_list && c.courses_list.length) 
         ? c.courses_list.filter(co => co.active !== false) 
         : store.courses.filter(co => co.active !== 0);
@@ -1728,6 +1730,7 @@ export default {
         const body = await request.json();
         const targetSlug = body.slug || url.searchParams.get('slug') || (tenantInfo.kind === 'tenant' ? tenantInfo.slug : null);
         const targetCentre = resolveSlug(targetSlug) || (body.centre_id ? store.centres.find(c => c.id === +body.centre_id) : null) || store.centres[0];
+        if (!targetCentre) return jsonResponse({ error: 'Centre not found' }, 404);
 
         const nextId = store.students.length + 1;
         const studentCode = `${targetCentre.centre_code}-2026-${String(nextId).padStart(5, '0')}`;
