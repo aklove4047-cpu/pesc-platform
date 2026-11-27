@@ -2297,6 +2297,37 @@ export default {
       if (cookies.pesc_auth) {
         try {
           const user = JSON.parse(decodeURIComponent(cookies.pesc_auth));
+          const domainAttr = (host && host.endsWith('pescouncil.in')) ? '; Domain=.pescouncil.in' : '';
+
+          // Validate centre_owner session against live centres
+          if (user && user.role === 'centre_owner') {
+            const exists = store.centres.some(c => 
+              (user.centre_id && Number(c.id) === Number(user.centre_id)) ||
+              (user.centre_slug && c.slug && c.slug.toLowerCase() === String(user.centre_slug).toLowerCase()) ||
+              (user.centre_code && c.centre_code && c.centre_code.toUpperCase() === String(user.centre_code).toUpperCase())
+            );
+            if (!exists) {
+              return jsonResponse({ user: null }, 200, {
+                'set-cookie': `pesc_auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT${domainAttr}`
+              });
+            }
+          }
+
+          // Validate student session against live students
+          if (user && user.role === 'student') {
+            const exists = store.students.some(s => 
+              (user.student_id && Number(s.id) === Number(user.student_id)) ||
+              (user.id && Number(s.id) === Number(user.id)) ||
+              (user.roll_no && s.roll_no && String(s.roll_no).toLowerCase() === String(user.roll_no).toLowerCase()) ||
+              (user.student_code && s.student_code && s.student_code.toLowerCase() === String(user.student_code).toLowerCase())
+            );
+            if (!exists) {
+              return jsonResponse({ user: null }, 200, {
+                'set-cookie': `pesc_auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT${domainAttr}`
+              });
+            }
+          }
+
           return jsonResponse({ user });
         } catch (_) {}
       }
@@ -4651,24 +4682,23 @@ export default {
         }
       } else {
         const targetSlug = (queryParamSlug && queryParamSlug !== 'aryavart-institute-of-technology-management') ? queryParamSlug : (headerSlug && headerSlug !== 'aryavart-institute-of-technology-management' ? headerSlug : null);
-        c = (targetSlug ? resolveSlug(targetSlug) : null) || store.centres.find(x => x.status === 'active') || store.centres[0];
+        c = (targetSlug ? resolveSlug(targetSlug) : null) || store.centres.find(x => x.status === 'active') || store.centres[0] || null;
       }
 
-      if (!c) {
-        c = {
-          id: 0,
-          name: 'Purvanchal Council Centre',
-          centre_code: 'PESC00001',
-          slug: 'main',
-          wallet_balance: 0,
-          wallet_paise: 0,
-          wallet_ledger: [],
-          status: 'active',
-          director_name: 'Centre Director'
-        };
+      if (!c && store.centres.length > 0) {
+        c = store.centres[0];
       }
 
       if (path === '/api/centre/dashboard') {
+        if (!c || !c.id) {
+          return jsonResponse({
+            error: 'No active centre registered',
+            centres: [],
+            students: 0,
+            courses: (store.courses || []).length,
+            authorities: getAuthorities(null)
+          }, 404);
+        }
         const stus = store.students.filter(s => s.centre_id === c.id);
         const certs = store.certificates.filter(x => x.centre_id === c.id);
         let totalPaid = 0;
@@ -5673,10 +5703,11 @@ export default {
           address: x.address,
           wallet_balance: (x.wallet_balance !== undefined) ? x.wallet_balance : ((x.wallet_paise || 0) / 100)
         }));
+        const hasActive = lightweightCentres.length > 0 && c && c.id;
         return jsonResponse({
           centres: lightweightCentres,
-          active_id: c.id,
-          active_centre: {
+          active_id: hasActive ? c.id : 0,
+          active_centre: hasActive ? {
             id: c.id,
             name: c.name,
             hindi_name: c.hindi_name,
@@ -5691,7 +5722,7 @@ export default {
             logo_url: c.logo_url,
             seal_url: c.seal_url,
             signature_url: c.signature_url
-          },
+          } : null,
           authorities: getAuthorities(c)
         });
       }

@@ -485,7 +485,7 @@
                             String(data.header_hindi || '').includes('परिषद') ||
                             String(data.header_hindi || '').includes('पूर्वांचल')) && !isExplicitCentre;
 
-    const isCouncilHeader = !isExplicitCentre && (isExplicitCouncil || hasCouncilTitle || (!rawHeaderType && !data.format));
+    const isCouncilHeader = isExplicitCouncil && !isExplicitCentre;
 
     const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
     const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);
@@ -537,9 +537,9 @@
           <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:8px;">
             <!-- Left: Centre Logo or Council Logo -->
             <div style="width:85px; height:85px; border-radius:50%; border:2px solid #d4af37; padding:2px; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              ${(centreLogo && centreLogo.trim()) 
+              ${(centreLogo && centreLogo.trim() && !centreLogo.includes('logo_council.svg')) 
                 ? `<img src="${centreLogo}" alt="Centre Logo" style="width:100%; height:100%; object-fit:contain;">` 
-                : `<img src="${councilLogo}" alt="Council Logo" style="width:100%; height:100%; object-fit:contain;">`}
+                : `<div style="text-align:center; padding:4px;"><div style="font-size:2.2rem; line-height:1;">🏫</div><div style="font-size:0.5rem; font-weight:800; color:#08244c; text-transform:uppercase; margin-top:2px;">CENTRE LOGO</div></div>`}
             </div>
 
             <!-- Center: Names and Accreditations -->
@@ -701,7 +701,7 @@
                             String(data.header_hindi || '').includes('परिषद') ||
                             String(data.header_hindi || '').includes('पूर्वांचल')) && !isExplicitCentre;
 
-    const isCouncilHeader = !isExplicitCentre && (isExplicitCouncil || hasCouncilTitle || (!rawHeaderType && !data.format));
+    const isCouncilHeader = isExplicitCouncil && !isExplicitCentre;
 
     const displayHindi = (data.header_hindi || '').trim() || (isCouncilHeader ? 'पूर्वांचल शिक्षा एवं कौशल परिषद' : centreHindi);
     const displayEnglish = (data.header_title || '').trim() || (isCouncilHeader ? 'PURVANCHAL EDUCATION & SKILL COUNCIL' : centreEnglish);
@@ -909,9 +909,9 @@
           <div style="display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:8px;">
             <!-- Left: Centre Logo or Council Logo -->
             <div style="width:85px; height:85px; border-radius:50%; border:2px solid #d4af37; padding:2px; background:#fff; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-              ${(centreLogo && centreLogo.trim()) 
+              ${(centreLogo && centreLogo.trim() && !centreLogo.includes('logo_council.svg')) 
                 ? `<img src="${centreLogo}" alt="Centre Logo" style="width:100%; height:100%; object-fit:contain;">` 
-                : `<img src="${councilLogo}" alt="Council Logo" style="width:100%; height:100%; object-fit:contain;">`}
+                : `<div style="text-align:center; padding:4px;"><div style="font-size:2.2rem; line-height:1;">🏫</div><div style="font-size:0.5rem; font-weight:800; color:#08244c; text-transform:uppercase; margin-top:2px;">CENTRE LOGO</div></div>`}
             </div>
 
             <!-- Center: Names and Accreditations -->

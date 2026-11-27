@@ -10,20 +10,17 @@ const V = {
 };
 const pathMatch = location.pathname.match(/\/c\/([a-z0-9-]+)/i);
 const urlParams = new URLSearchParams(location.search);
-let rawSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || (typeof localStorage !== 'undefined' ? localStorage.getItem('pesc_active_centre_slug') : '') || '';
+let rawSlug = (pathMatch && pathMatch[1]) || urlParams.get('slug') || urlParams.get('centre') || '';
 if (!rawSlug && typeof location !== 'undefined' && location.hostname && location.hostname.endsWith('.pescouncil.in')) {
   const sub = location.hostname.split('.')[0].toLowerCase();
   if (!['www', 'portal', 'centre', 'center', 'admin', 'student', 'coordinator', 'mail', 'api', 'app'].includes(sub)) {
     rawSlug = sub;
   }
 }
-if (!rawSlug || rawSlug.includes('navya') || rawSlug.includes('aryavart')) {
+if (!rawSlug || rawSlug.includes('navya') || rawSlug.includes('aryavart') || rawSlug.includes('gyan')) {
   rawSlug = '';
 }
 let currentSlug = rawSlug;
-try {
-  if (typeof localStorage !== 'undefined' && currentSlug) localStorage.setItem('pesc_active_centre_slug', currentSlug);
-} catch (_) {}
 // Intercept /api/centre requests to pass active slug & header when established
 const origFetch = window.fetch;
 window.fetch = function(url, init = {}) {
@@ -3489,7 +3486,7 @@ const views = {
     const c = cData.centre || currentCentre || {};
     const ws = wsData.website_settings || c.website_settings || {};
     const courses = (cCoursesData && cCoursesData.courses) || window._currentCourses || [];
-    const liveSiteUrl = `https://${(c.slug === 'aryavart-institute-of-technology-management' ? 'aryavart-institute-of-technology-management' : (c.slug || 'gyaneducation'))}.pescouncil.in`;
+    const liveSiteUrl = c.slug ? `https://${c.slug}.pescouncil.in` : 'https://pescouncil.in';
 
     // Ensure hero_banners list is populated
     let initialBanners = Array.isArray(ws.hero_banners) && ws.hero_banners.length > 0
@@ -6915,6 +6912,35 @@ async function initCentreHeader() {
 
     allCentresList = cData.centres || [];
 
+    if (!allCentresList || allCentresList.length === 0) {
+      try {
+        localStorage.removeItem('pesc_active_centre_slug');
+        localStorage.removeItem('pesc_active_centre_id');
+      } catch (_) {}
+      currentSlug = '';
+      currentCentre = null;
+      window.refreshCentreWalletBadge(0);
+      if ($('#headerCentreName')) $('#headerCentreName').textContent = 'Purvanchal Council Portal';
+      if ($('#headerCentreCode')) $('#headerCentreCode').textContent = 'NO ACTIVE CENTRE';
+      const erpView = document.getElementById('view');
+      if (erpView) {
+        erpView.innerHTML = `
+          <div style="text-align:center; padding:50px 20px; background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,0.06); max-width:620px; margin:40px auto; border:1px solid #e2e8f0;">
+            <div style="font-size:3.2rem; margin-bottom:12px;">🏫</div>
+            <h3 style="color:#0f172a; margin-bottom:8px; font-weight:800; font-size:1.4rem;">No Franchise Centre Available</h3>
+            <p style="color:#64748b; font-size:0.95rem; line-height:1.6; margin:0 0 20px;">
+              Currently, there are no registered centres in the system. You can add a new franchise centre from the Head Office Admin panel.
+            </p>
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+              <a href="/admin" class="btn primary" style="text-decoration:none; font-weight:700; padding:10px 24px; border-radius:8px;">Go to Admin Panel</a>
+              <button onclick="localStorage.clear(); location.reload();" class="btn" style="background:#f1f5f9; color:#475569; font-weight:700; padding:10px 20px; border-radius:8px;">Clear Browser Cache</button>
+            </div>
+          </div>
+        `;
+      }
+      return;
+    }
+
     // Prioritize active centre:
     // 1. Authenticated user (centre_id, centre_slug, centre_code)
     // 2. URL slug/centre parameter
@@ -6940,16 +6966,16 @@ async function initCentreHeader() {
     if (!activeCentre && savedCentreId) {
       activeCentre = allCentresList.find(c => Number(c.id) === Number(savedCentreId));
     }
-    if (!activeCentre && savedCentreSlug && savedCentreSlug !== 'aryavart-institute-of-technology-management') {
+    if (!activeCentre && savedCentreSlug && !['aryavart-institute-of-technology-management', 'gyaneducation'].includes(savedCentreSlug)) {
       activeCentre = allCentresList.find(c => c.slug === savedCentreSlug);
     }
-    if (!activeCentre && cData.active_centre) {
-      activeCentre = cData.active_centre;
+    if (!activeCentre && cData.active_centre && cData.active_centre.id) {
+      activeCentre = allCentresList.find(c => Number(c.id) === Number(cData.active_centre.id)) || (allCentresList.length > 0 ? allCentresList[0] : null);
     }
     if (!activeCentre && cData.active_id) {
       activeCentre = allCentresList.find(c => Number(c.id) === Number(cData.active_id));
     }
-    if (!activeCentre && currentSlug && currentSlug !== 'aryavart-institute-of-technology-management') {
+    if (!activeCentre && currentSlug && !['aryavart-institute-of-technology-management', 'gyaneducation'].includes(currentSlug)) {
       activeCentre = allCentresList.find(c => c.slug === currentSlug);
     }
     if (!activeCentre && allCentresList.length > 0) {
@@ -7403,6 +7429,21 @@ guard(async () => {
     if (forceLogin || !isAuthed) {
       showCentreAuthScreen();
       return;
+    }
+
+    if (meRes.user.role === 'centre_owner') {
+      const cData = await api('/api/centre/all-centres').catch(() => ({ centres: [] }));
+      const known = cData.centres || [];
+      const match = known.find(c => Number(c.id) === Number(meRes.user.centre_id) || (meRes.user.centre_slug && c.slug === meRes.user.centre_slug));
+      if (!match) {
+        await api('/api/auth/logout', { method: 'POST' }).catch(() => null);
+        try {
+          localStorage.removeItem('pesc_active_centre_slug');
+          localStorage.removeItem('pesc_active_centre_id');
+        } catch (_) {}
+        showCentreAuthScreen();
+        return;
+      }
     }
 
     if (meRes.user.centre_slug) {
